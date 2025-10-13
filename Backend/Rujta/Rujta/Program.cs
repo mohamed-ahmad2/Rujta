@@ -23,7 +23,7 @@ namespace Rujta
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             
-            builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+            builder.Services.AddIdentity<Person, IdentityRole>()
                 .AddEntityFrameworkStores<AppDbContext>();
 
             var app = builder.Build();
