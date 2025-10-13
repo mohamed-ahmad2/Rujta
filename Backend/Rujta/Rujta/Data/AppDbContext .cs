@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Rujta.Data
 {
-    public class AppDbContext : IdentityDbContext<ApplicationUser>
+    public class AppDbContext : IdentityDbContext<Person>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options)
             : base(options)
@@ -19,7 +19,7 @@ namespace Rujta.Data
             base.OnModelCreating(modelBuilder);
 
             //Rename Identity tables
-            modelBuilder.Entity<ApplicationUser>().ToTable("User");
+            modelBuilder.Entity<Person>().ToTable("User");
             modelBuilder.Entity<IdentityRole>().ToTable("Role");
             modelBuilder.Entity<IdentityUserRole<string>>().ToTable("UserRole");
             modelBuilder.Entity<IdentityUserClaim<string>>().ToTable("UserClaim");
