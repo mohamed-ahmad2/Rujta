@@ -2,7 +2,7 @@
 
 namespace Rujta.Models
 {
-    public class ApplicationUser : IdentityUser
+    public class Person : IdentityUser
     {
     }
 }
