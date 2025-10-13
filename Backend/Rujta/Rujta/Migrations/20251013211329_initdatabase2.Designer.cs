@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Rujta.Data;
 
@@ -11,9 +12,11 @@ using Rujta.Data;
 namespace Rujta.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251013211329_initdatabase2")]
+    partial class initdatabase2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -96,7 +99,7 @@ namespace Rujta.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PersonClaim", (string)null);
+                    b.ToTable("UserClaim", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
@@ -118,7 +121,7 @@ namespace Rujta.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PersonLogin", (string)null);
+                    b.ToTable("UserLogin", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
@@ -133,7 +136,7 @@ namespace Rujta.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("PersonRole", (string)null);
+                    b.ToTable("UserRole", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -152,7 +155,7 @@ namespace Rujta.Migrations
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("PersonToken", (string)null);
+                    b.ToTable("UserToken", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Models.InventoryItem", b =>
@@ -401,7 +404,7 @@ namespace Rujta.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.ToTable("Person", (string)null);
+                    b.ToTable("User", (string)null);
 
                     b.HasDiscriminator().HasValue("Person");
 
