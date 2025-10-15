@@ -13,7 +13,7 @@ namespace Rujta
 
     // Manage User Secrets
     // Access Token + Refresh Token store in DB
-    public class Program
+    public static class Program
     {
         public static void Main(string[] args)
         {
