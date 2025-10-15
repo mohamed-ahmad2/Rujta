@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Rujta.Data;
 
@@ -11,9 +12,11 @@ using Rujta.Data;
 namespace Rujta.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251015125440_addRoles")]
+    partial class addRoles
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,29 +54,25 @@ namespace Rujta.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "fe7572b9-abc8-4d9c-85a5-5335448db43b",
-                            ConcurrencyStamp = "e2bf7114-adc0-4f9b-a578-0ab7aa3facc6",
+                            Id = "c3cd465c-e506-4ade-ae6c-125cc832e614",
                             Name = "User",
                             NormalizedName = "USER"
                         },
                         new
                         {
-                            Id = "45bc5021-f81b-426a-8fcb-ebcd416b91c3",
-                            ConcurrencyStamp = "1739d064-eece-4d69-b766-f4a1eb38cd0b",
+                            Id = "455241de-a717-4e59-843e-a34504c0774e",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = "22a8f261-f8d4-424e-b1a2-58bf7fdaa5eb",
-                            ConcurrencyStamp = "323c6856-6398-4b08-babb-b1560dcdd8eb",
+                            Id = "00d288c0-a935-496c-a9af-98ee0e927f7a",
                             Name = "Staff",
                             NormalizedName = "STAFF"
                         },
                         new
                         {
-                            Id = "ae1e5168-472b-474a-9ccc-582f652aaaa9",
-                            ConcurrencyStamp = "a83d93fa-35a2-439d-bfc1-1ac1f5a62acc",
+                            Id = "bd8cad9e-a970-423c-a5c9-4de8948a3e51",
                             Name = "Manager",
                             NormalizedName = "MANAGER"
                         });

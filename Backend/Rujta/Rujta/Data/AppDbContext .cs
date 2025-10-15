@@ -41,6 +41,32 @@ namespace Rujta.Data
                 .HasValue<Staff>("Staff")
                 .HasValue<Admin>("Admin");
 
+            List<IdentityRole> identityRoles = new List<IdentityRole>()
+            {
+                new IdentityRole{
+                    Name = "User",
+                    NormalizedName = "USER",
+                    ConcurrencyStamp = Guid.NewGuid().ToString()
+                },
+                new IdentityRole{
+                    Name = "Admin",
+                    NormalizedName = "ADMIN",
+                    ConcurrencyStamp = Guid.NewGuid().ToString()
+                },
+                new IdentityRole{
+                    Name = "Staff",
+                    NormalizedName = "STAFF",
+                    ConcurrencyStamp = Guid.NewGuid().ToString()
+                },
+                new IdentityRole{
+                    Name = "Manager",
+                    NormalizedName = "MANAGER",
+                    ConcurrencyStamp = Guid.NewGuid().ToString()
+                },
+            };
+
+            modelBuilder.Entity<IdentityRole>().HasData(identityRoles);
+
             // Rename Identity Tables 
             modelBuilder.Entity<Person>().ToTable("Person");
             modelBuilder.Entity<IdentityRole>().ToTable("Role");
