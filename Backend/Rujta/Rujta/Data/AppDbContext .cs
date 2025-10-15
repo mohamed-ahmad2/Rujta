@@ -12,13 +12,14 @@ namespace Rujta.Data
         {
         }
 
-        // Entities
+        // Person table
         public DbSet<User> UsersExtended { get; set; }
         public DbSet<Pharmacist> Pharmacists { get; set; }
         public DbSet<Manager> Managers { get; set; }
         public DbSet<Staff> Staffs { get; set; }
         public DbSet<Admin> Admins { get; set; }
 
+        // Entities
         public DbSet<Pharmacy> Pharmacies { get; set; }
         public DbSet<Medicine> Medicines { get; set; }
         public DbSet<InventoryItem> InventoryItems { get; set; }
