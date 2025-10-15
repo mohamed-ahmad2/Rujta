@@ -53,6 +53,11 @@ namespace Rujta
                 options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(options =>
             {
+                var signingKey = jwtSection["SigningKey"];
+
+                if (string.IsNullOrEmpty(signingKey))
+                    throw new InvalidOperationException("JWT SigningKey is missing in configuration.");
+
                 options.TokenValidationParameters = new TokenValidationParameters()
                 {
                     ValidateIssuer = true,
@@ -60,9 +65,7 @@ namespace Rujta
                     ValidateAudience = true,
                     ValidAudience = jwtSection["Audience"],
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtSection["SigningKey"]!)
-                    ),
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.FromSeconds(30)
                 };
