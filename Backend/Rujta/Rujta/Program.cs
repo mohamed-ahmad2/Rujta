@@ -53,7 +53,7 @@ namespace Rujta
                 options.DefaultSignOutScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(options =>
             {
-                var signingKey = jwtSection["SigningKey"];
+                var signingKey = Environment.GetEnvironmentVariable("JWT_SIGNING_KEY"); ;
 
                 if (string.IsNullOrEmpty(signingKey))
                     throw new InvalidOperationException("JWT SigningKey is missing in configuration.");
