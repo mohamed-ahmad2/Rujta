@@ -1,7 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Identity.Entities;
-using Microsoft.AspNetCore.Identity;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Rujta.Infrastructure.Extensions
 {
@@ -9,62 +12,60 @@ namespace Rujta.Infrastructure.Extensions
     {
         public static void ApplyIdentityMapping(this ModelBuilder builder)
         {
-            builder.Entity<Person>()
-                .HasDiscriminator<string>("Discriminator")
-                .HasValue<User>("User")
-                .HasValue<Pharmacist>("Pharmacist")
-                .HasValue<Manager>("Manager")
-                .HasValue<Staff>("Staff")
-                .HasValue<Admin>("Admin");
-
-            List<IdentityRole<Guid>> identityRoles = new List<IdentityRole<Guid>>
+            // Discriminator mapping for Person hierarchy
+            var discriminatorMapping = new Dictionary<Type, string>
             {
-                new IdentityRole<Guid> {
-                    Id = Guid.NewGuid(),
-                    Name = "User",
-                    NormalizedName = "USER",
-                    ConcurrencyStamp = Guid.NewGuid().ToString()
-                },
-                new IdentityRole<Guid> {
-                    Id = Guid.NewGuid(),
-                    Name = "Admin",
-                    NormalizedName = "ADMIN",
-                    ConcurrencyStamp = Guid.NewGuid().ToString()
-                },
-                new IdentityRole<Guid> {
-                    Id = Guid.NewGuid(),
-                    Name = "Staff",
-                    NormalizedName = "STAFF",
-                    ConcurrencyStamp = Guid.NewGuid().ToString()
-                },
-                new IdentityRole<Guid> {
-                    Id = Guid.NewGuid(),
-                    Name = "Manager",
-                    NormalizedName = "MANAGER",
-                    ConcurrencyStamp = Guid.NewGuid().ToString()
-                }
+                { typeof(User), "User" },
+                { typeof(Pharmacist), "Pharmacist" },
+                { typeof(Manager), "Manager" },
+                { typeof(Staff), "Staff" },
+                { typeof(Admin), "Admin" }
             };
-            builder.Entity<IdentityRole<Guid>>().HasData(identityRoles);
 
-            // Rename Identity Tables
-            builder.Entity<Person>().ToTable("Person");
-            builder.Entity<IdentityRole<Guid>>().ToTable("Role");
-            builder.Entity<IdentityUserRole<Guid>>().ToTable("PersonRole");
-            builder.Entity<IdentityUserClaim<Guid>>().ToTable("PersonClaim");
-            builder.Entity<IdentityUserLogin<Guid>>().ToTable("PersonLogin");
-            builder.Entity<IdentityRoleClaim<Guid>>().ToTable("RoleClaim");
-            builder.Entity<IdentityUserToken<Guid>>().ToTable("PersonToken");
+            var discriminatorBuilder = builder.Entity<Person>().HasDiscriminator<string>("Discriminator");
+
+            foreach (var kvp in discriminatorMapping)
+            {
+                discriminatorBuilder.HasValue(kvp.Key, kvp.Value);
+            }
+
+            // Rename Identity tables
+            var identityTables = new Dictionary<Type, string>
+            {
+                { typeof(Person), "Person" },
+                { typeof(IdentityRole<Guid>), "Role" },
+                { typeof(IdentityUserRole<Guid>), "PersonRole" },
+                { typeof(IdentityUserClaim<Guid>), "PersonClaim" },
+                { typeof(IdentityUserLogin<Guid>), "PersonLogin" },
+                { typeof(IdentityRoleClaim<Guid>), "RoleClaim" },
+                { typeof(IdentityUserToken<Guid>), "PersonToken" }
+            };
+
+            foreach (var table in identityTables)
+            {
+                builder.Entity(table.Key).ToTable(table.Value);
+            }
         }
 
         public static void ApplyDecimalPrecision(this ModelBuilder builder)
         {
-            builder.Entity<InventoryItem>().Property(p => p.Price).HasPrecision(18, 2);
-            builder.Entity<Medicine>().Property(p => p.Price).HasPrecision(18, 2);
-            builder.Entity<Order>().Property(p => p.TotalPrice).HasPrecision(18, 2);
-            builder.Entity<OrderItem>().Property(p => p.PricePerUnit).HasPrecision(18, 2);
-            builder.Entity<OrderItem>().Property(p => p.SubTotal).HasPrecision(18, 2);
-            builder.Entity<SellDrugViaPharmacy>().Property(p => p.Price).HasPrecision(18, 2);
-            builder.Entity<Staff>().Property(p => p.Salary).HasPrecision(18, 2);
+            var decimalProperties = new Dictionary<Type, string[]>
+            {
+                { typeof(InventoryItem), new[] { "Price" } },
+                { typeof(Medicine), new[] { "Price" } },
+                { typeof(Order), new[] { "TotalPrice" } },
+                { typeof(OrderItem), new[] { "PricePerUnit", "SubTotal" } },
+                { typeof(SellDrugViaPharmacy), new[] { "Price" } },
+                { typeof(Staff), new[] { "Salary" } }
+            };
+
+            foreach (var entity in decimalProperties)
+            {
+                foreach (var prop in entity.Value)
+                {
+                    builder.Entity(entity.Key).Property(prop).HasPrecision(18, 2);
+                }
+            }
         }
     }
 }
