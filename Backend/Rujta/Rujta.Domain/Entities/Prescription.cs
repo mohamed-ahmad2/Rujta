@@ -8,7 +8,7 @@ namespace Rujta.Domain.Entities
 {
     public class Prescription : BaseEntity
     {
-        [ForeignKey("Patient")]
+        [ForeignKey("User")]
         public Guid PatientID { get; set; }
 
         public string DoctorName { get; set; } = string.Empty;

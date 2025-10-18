@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Rujta.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class UpdatePres : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -429,10 +429,10 @@ namespace Rujta.Infrastructure.Migrations
                 columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
                 values: new object[,]
                 {
-                    { new Guid("34f66785-853e-43c7-81ae-ef3ce269ab06"), "6f9887de-f6d8-408c-b441-3aa83aca5b48", "Manager", "MANAGER" },
-                    { new Guid("52c72525-03ef-447b-9e97-10895e0c12ac"), "2c73a0f1-cd77-43fe-beaf-68e5b85c949c", "User", "USER" },
-                    { new Guid("52dd0a11-8e0c-49b9-afe6-6a341852d4d1"), "af65a157-f260-42c5-bafb-71f9dedde9e3", "Staff", "STAFF" },
-                    { new Guid("679b9075-4331-4c44-86a1-eaee6d536013"), "721f7d37-3197-44d9-8e59-7be2a0a77e63", "Admin", "ADMIN" }
+                    { new Guid("6cb5f5ee-8cc8-4f06-8954-cdddea829edb"), "a45591b7-fa70-407b-8931-e80efddf87a7", "Staff", "STAFF" },
+                    { new Guid("7d5022cb-94dc-4d05-8557-608d3c5050e1"), "fbca5a39-27be-4560-a58a-12fe591f5ac5", "Admin", "ADMIN" },
+                    { new Guid("db07f611-8e81-41eb-ad90-4fae04103d1d"), "dfcc8efb-2e61-4a33-9c13-ff4e980a354a", "User", "USER" },
+                    { new Guid("ecd4b66e-4e19-4a54-bed5-e813497f41bc"), "35695dab-b5e8-4522-a4e7-15074757484e", "Manager", "MANAGER" }
                 });
 
             migrationBuilder.CreateIndex(

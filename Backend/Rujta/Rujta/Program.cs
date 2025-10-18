@@ -103,7 +103,7 @@ namespace Rujta.API
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
                 await IdentitySeeder.SeedRolesAsync(roleManager);
             }
-            app.Run();
+            await app.RunAsync();
            
         }
     }

@@ -26,8 +26,6 @@ namespace Rujta.Domain.Entities
         public int? ParentPharmacyID { get; set; }
 
 
-        //public virtual Admin? Admin { get; set; }
-        //public virtual Manager? Manager { get; set; }
         public virtual Pharmacy? ParentPharmacy { get; set; }
         public ICollection<InventoryItem>? InventoryItems { get; set; }
     }
