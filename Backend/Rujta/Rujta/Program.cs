@@ -5,9 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Rujta.Authorization;
 using Rujta.Data;
-using Rujta.Models;
+using Rujta.Models.Identity;
 using System.Text;
- 
+
 namespace Rujta
 {
 
@@ -29,7 +29,7 @@ namespace Rujta
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             // Identity
-            builder.Services.AddIdentity<Person, IdentityRole>(options =>
+            builder.Services.AddIdentity<Person, IdentityRole<Guid>>(options =>
             {
                 options.Password.RequireNonAlphanumeric = true;
                 options.Password.RequireDigit = true;

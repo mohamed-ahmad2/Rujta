@@ -1,13 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Rujta.Models.Common;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Rujta.Models
+namespace Rujta.Models.Entities
 {
-    public class OrderItem
+    public class OrderItem : BaseEntity
     {
-        [Key]
-        public int OrderItemID { get; set; }
-
         [ForeignKey("Order")]
         public int OrderID { get; set; }
 
@@ -20,7 +18,8 @@ namespace Rujta.Models
 
         public decimal SubTotal { get; set; }
 
-        public Order Order { get; set; } = new();
-        public Medicine Medicine { get; set; } = new Medicine();
+
+        public required virtual Order Order { get; set; }
+        public required virtual Medicine Medicine { get; set; } 
     }
 }

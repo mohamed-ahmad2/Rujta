@@ -1,13 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Rujta.Models.Common;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Rujta.Models
+namespace Rujta.Models.Entities
 {
-    public class InventoryItem
+    public class InventoryItem : BaseEntity
     {
-        [Key]
-        public int InventoryItemID { get; set; }
-
         [ForeignKey("Pharmacy")]
         public int PharmacyID { get; set; }
 
@@ -25,8 +23,8 @@ namespace Rujta.Models
 
         public bool IsDispensed { get; set; }
 
-        public Pharmacy Pharmacy { get; set; } = new();
-        public Medicine Medicine { get; set; } = new();
-        public Prescription? Prescription { get; set; }
+        public required virtual Pharmacy Pharmacy { get; set; }
+        public required virtual Medicine Medicine { get; set; }
+        public virtual Prescription? Prescription { get; set; }
     }
 }

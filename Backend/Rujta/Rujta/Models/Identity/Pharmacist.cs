@@ -1,4 +1,4 @@
-﻿namespace Rujta.Models
+﻿namespace Rujta.Models.Identity
 {
     public class Pharmacist : Person
     {

@@ -12,8 +12,8 @@ using Rujta.Data;
 namespace Rujta.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251015130903_addConcurrencyStampForRoles")]
-    partial class addConcurrencyStampForRoles
+    [Migration("20251018130353_initImproveEntity1")]
+    partial class initImproveEntity1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,10 +25,11 @@ namespace Rujta.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -54,35 +55,35 @@ namespace Rujta.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "fe7572b9-abc8-4d9c-85a5-5335448db43b",
-                            ConcurrencyStamp = "e2bf7114-adc0-4f9b-a578-0ab7aa3facc6",
+                            Id = new Guid("0133632f-e8a2-4d7c-8c40-adf9a576f76c"),
+                            ConcurrencyStamp = "0756d233-d25e-4885-8bb4-8a6b7b7b04d1",
                             Name = "User",
                             NormalizedName = "USER"
                         },
                         new
                         {
-                            Id = "45bc5021-f81b-426a-8fcb-ebcd416b91c3",
-                            ConcurrencyStamp = "1739d064-eece-4d69-b766-f4a1eb38cd0b",
+                            Id = new Guid("14d77198-f28b-4f5a-8513-0e2eb12e6adb"),
+                            ConcurrencyStamp = "17aa120a-9ce7-4e9b-8d5e-5b4b1892b186",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = "22a8f261-f8d4-424e-b1a2-58bf7fdaa5eb",
-                            ConcurrencyStamp = "323c6856-6398-4b08-babb-b1560dcdd8eb",
+                            Id = new Guid("d590b359-1850-4bb1-847c-d816e80f71d2"),
+                            ConcurrencyStamp = "eeb9c594-108c-4027-b6a3-7d7eac836e5d",
                             Name = "Staff",
                             NormalizedName = "STAFF"
                         },
                         new
                         {
-                            Id = "ae1e5168-472b-474a-9ccc-582f652aaaa9",
-                            ConcurrencyStamp = "a83d93fa-35a2-439d-bfc1-1ac1f5a62acc",
+                            Id = new Guid("2b26c35d-258e-46ff-87b6-d8be695ef189"),
+                            ConcurrencyStamp = "e73b0b1a-d0ab-4153-942e-b05df911ac39",
                             Name = "Manager",
                             NormalizedName = "MANAGER"
                         });
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -96,9 +97,8 @@ namespace Rujta.Migrations
                     b.Property<string>("ClaimValue")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("RoleId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -107,7 +107,7 @@ namespace Rujta.Migrations
                     b.ToTable("RoleClaim", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -121,9 +121,8 @@ namespace Rujta.Migrations
                     b.Property<string>("ClaimValue")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -132,7 +131,7 @@ namespace Rujta.Migrations
                     b.ToTable("PersonClaim", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
                     b.Property<string>("LoginProvider")
                         .HasColumnType("nvarchar(450)");
@@ -143,9 +142,8 @@ namespace Rujta.Migrations
                     b.Property<string>("ProviderDisplayName")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("LoginProvider", "ProviderKey");
 
@@ -154,13 +152,13 @@ namespace Rujta.Migrations
                     b.ToTable("PersonLogin", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("RoleId")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("UserId", "RoleId");
 
@@ -169,10 +167,10 @@ namespace Rujta.Migrations
                     b.ToTable("PersonRole", (string)null);
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("LoginProvider")
                         .HasColumnType("nvarchar(450)");
@@ -188,13 +186,17 @@ namespace Rujta.Migrations
                     b.ToTable("PersonToken", (string)null);
                 });
 
-            modelBuilder.Entity("Rujta.Models.InventoryItem", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.InventoryItem", b =>
                 {
-                    b.Property<int>("InventoryItemID")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InventoryItemID"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("datetime2");
@@ -218,7 +220,11 @@ namespace Rujta.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
-                    b.HasKey("InventoryItemID");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("MedicineID");
 
@@ -229,56 +235,57 @@ namespace Rujta.Migrations
                     b.ToTable("InventoryItems");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Medicine", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.Medicine", b =>
                 {
-                    b.Property<int>("MedicineID")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MedicineID"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ActiveIngredient")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Dosage")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<int?>("PharmacyID")
-                        .HasColumnType("int");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.HasKey("MedicineID");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2");
 
-                    b.HasIndex("PharmacyID");
+                    b.HasKey("Id");
 
                     b.ToTable("Medicines");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Order", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.Order", b =>
                 {
-                    b.Property<int>("OrderID")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderID"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeliveryAddress")
@@ -302,13 +309,13 @@ namespace Rujta.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("UserID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("OrderID");
+                    b.HasKey("Id");
 
                     b.HasIndex("PharmacyID");
 
@@ -319,13 +326,17 @@ namespace Rujta.Migrations
                     b.ToTable("Orders");
                 });
 
-            modelBuilder.Entity("Rujta.Models.OrderItem", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.OrderItem", b =>
                 {
-                    b.Property<int>("OrderItemID")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderItemID"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("MedicineID")
                         .HasColumnType("int");
@@ -344,7 +355,11 @@ namespace Rujta.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.HasKey("OrderItemID");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("MedicineID");
 
@@ -353,10 +368,209 @@ namespace Rujta.Migrations
                     b.ToTable("OrderItems");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Person", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.Pharmacy", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid?>("AdminId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContactNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ManagerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OpenHours")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ParentPharmacyID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminId");
+
+                    b.HasIndex("ManagerId");
+
+                    b.HasIndex("ParentPharmacyID");
+
+                    b.ToTable("Pharmacies");
+                });
+
+            modelBuilder.Entity("Rujta.Models.Entities.Prescription", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DateIssued")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Diagnosis")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DoctorName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OCR_Text")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("PatientID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PrescriptionImageURL")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientID");
+
+                    b.ToTable("Prescriptions");
+                });
+
+            modelBuilder.Entity("Rujta.Models.Entities.ProcessPrescription", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Comments")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DateProcessed")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("PharmacistID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("PrescriptionID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PharmacistID");
+
+                    b.HasIndex("PrescriptionID");
+
+                    b.ToTable("ProcessPrescriptions");
+                });
+
+            modelBuilder.Entity("Rujta.Models.Entities.SellDrugViaPharmacy", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ConditionNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpirationDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MedicineID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PharmacyID")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SellerID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MedicineID");
+
+                    b.HasIndex("PharmacyID");
+
+                    b.HasIndex("SellerID");
+
+                    b.ToTable("SellDrugViaPharmacies");
+                });
+
+            modelBuilder.Entity("Rujta.Models.Identity.Person", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
@@ -441,213 +655,16 @@ namespace Rujta.Migrations
                     b.UseTphMappingStrategy();
                 });
 
-            modelBuilder.Entity("Rujta.Models.Pharmacy", b =>
+            modelBuilder.Entity("Rujta.Models.Identity.Admin", b =>
                 {
-                    b.Property<int>("PharmacyID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PharmacyID"));
-
-                    b.Property<string>("ContactNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("CreatedByAdminId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Location")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("ManagedByManagerId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("OpenHours")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int?>("ParentPharmacyID")
-                        .HasColumnType("int");
-
-                    b.HasKey("PharmacyID");
-
-                    b.HasIndex("CreatedByAdminId");
-
-                    b.HasIndex("ManagedByManagerId");
-
-                    b.HasIndex("ParentPharmacyID");
-
-                    b.ToTable("Pharmacies");
-                });
-
-            modelBuilder.Entity("Rujta.Models.Prescription", b =>
-                {
-                    b.Property<int>("PrescriptionID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PrescriptionID"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("DateIssued")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Diagnosis")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DoctorName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OCR_Text")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PatientID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("PrescriptionImageURL")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("PrescriptionID");
-
-                    b.HasIndex("PatientID");
-
-                    b.ToTable("Prescriptions");
-                });
-
-            modelBuilder.Entity("Rujta.Models.ProcessPrescription", b =>
-                {
-                    b.Property<int>("ProcessPrescriptionID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProcessPrescriptionID"));
-
-                    b.Property<string>("Comments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("DateProcessed")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PharmacistID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("PrescriptionID")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("ProcessPrescriptionID");
-
-                    b.HasIndex("PharmacistID");
-
-                    b.HasIndex("PrescriptionID");
-
-                    b.ToTable("ProcessPrescriptions");
-                });
-
-            modelBuilder.Entity("Rujta.Models.SellDrugViaPharmacy", b =>
-                {
-                    b.Property<int>("SellID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SellID"));
-
-                    b.Property<string>("ConditionNote")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("ExpirationDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("MedicineID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PharmacyID")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Price")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("SellerID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("SellID");
-
-                    b.HasIndex("MedicineID");
-
-                    b.HasIndex("PharmacyID");
-
-                    b.HasIndex("SellerID");
-
-                    b.ToTable("SellDrugViaPharmacies");
-                });
-
-            modelBuilder.Entity("Rujta.Models.Admin", b =>
-                {
-                    b.HasBaseType("Rujta.Models.Person");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("LastLoginDate")
-                        .HasColumnType("datetime2");
+                    b.HasBaseType("Rujta.Models.Identity.Person");
 
                     b.HasDiscriminator().HasValue("Admin");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Pharmacist", b =>
+            modelBuilder.Entity("Rujta.Models.Identity.Pharmacist", b =>
                 {
-                    b.HasBaseType("Rujta.Models.Person");
+                    b.HasBaseType("Rujta.Models.Identity.Person");
 
                     b.Property<int>("ExperienceYears")
                         .HasColumnType("int");
@@ -665,9 +682,9 @@ namespace Rujta.Migrations
                     b.HasDiscriminator().HasValue("Pharmacist");
                 });
 
-            modelBuilder.Entity("Rujta.Models.User", b =>
+            modelBuilder.Entity("Rujta.Models.Identity.User", b =>
                 {
-                    b.HasBaseType("Rujta.Models.Person");
+                    b.HasBaseType("Rujta.Models.Identity.Person");
 
                     b.Property<string>("Allergies")
                         .HasColumnType("nvarchar(max)");
@@ -690,12 +707,12 @@ namespace Rujta.Migrations
                     b.HasDiscriminator().HasValue("User");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Manager", b =>
+            modelBuilder.Entity("Rujta.Models.Identity.Manager", b =>
                 {
-                    b.HasBaseType("Rujta.Models.Pharmacist");
+                    b.HasBaseType("Rujta.Models.Identity.Pharmacist");
 
-                    b.Property<string>("CreatedByAdminId")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid?>("AdminId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("datetime2");
@@ -703,20 +720,20 @@ namespace Rujta.Migrations
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
 
-                    b.HasIndex("CreatedByAdminId");
+                    b.HasIndex("AdminId");
 
                     b.HasDiscriminator().HasValue("Manager");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Staff", b =>
+            modelBuilder.Entity("Rujta.Models.Identity.Staff", b =>
                 {
-                    b.HasBaseType("Rujta.Models.Pharmacist");
+                    b.HasBaseType("Rujta.Models.Identity.Pharmacist");
 
                     b.Property<DateTime>("HireDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("ManagerID")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid?>("ManagerID")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int?>("PharmacyID")
                         .HasColumnType("int");
@@ -736,72 +753,72 @@ namespace Rujta.Migrations
                     b.HasDiscriminator().HasValue("Staff");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
-                    b.HasOne("Rujta.Models.Person", null)
+                    b.HasOne("Rujta.Models.Identity.Person", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
-                    b.HasOne("Rujta.Models.Person", null)
+                    b.HasOne("Rujta.Models.Identity.Person", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Rujta.Models.Person", null)
+                    b.HasOne("Rujta.Models.Identity.Person", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
-                    b.HasOne("Rujta.Models.Person", null)
+                    b.HasOne("Rujta.Models.Identity.Person", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Rujta.Models.InventoryItem", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.InventoryItem", b =>
                 {
-                    b.HasOne("Rujta.Models.Medicine", "Medicine")
+                    b.HasOne("Rujta.Models.Entities.Medicine", "Medicine")
                         .WithMany("InventoryItems")
                         .HasForeignKey("MedicineID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Rujta.Models.Pharmacy", "Pharmacy")
-                        .WithMany()
+                    b.HasOne("Rujta.Models.Entities.Pharmacy", "Pharmacy")
+                        .WithMany("InventoryItems")
                         .HasForeignKey("PharmacyID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Rujta.Models.Prescription", "Prescription")
+                    b.HasOne("Rujta.Models.Entities.Prescription", "Prescription")
                         .WithMany()
                         .HasForeignKey("PrescriptionID");
 
@@ -812,26 +829,19 @@ namespace Rujta.Migrations
                     b.Navigation("Prescription");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Medicine", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.Order", b =>
                 {
-                    b.HasOne("Rujta.Models.Pharmacy", null)
-                        .WithMany("Medicines")
-                        .HasForeignKey("PharmacyID");
-                });
-
-            modelBuilder.Entity("Rujta.Models.Order", b =>
-                {
-                    b.HasOne("Rujta.Models.Pharmacy", "Pharmacy")
+                    b.HasOne("Rujta.Models.Entities.Pharmacy", "Pharmacy")
                         .WithMany()
                         .HasForeignKey("PharmacyID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Rujta.Models.Prescription", "Prescription")
+                    b.HasOne("Rujta.Models.Entities.Prescription", "Prescription")
                         .WithMany()
                         .HasForeignKey("PrescriptionID");
 
-                    b.HasOne("Rujta.Models.Person", "User")
+                    b.HasOne("Rujta.Models.Identity.User", "User")
                         .WithMany()
                         .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -844,15 +854,15 @@ namespace Rujta.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Rujta.Models.OrderItem", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.OrderItem", b =>
                 {
-                    b.HasOne("Rujta.Models.Medicine", "Medicine")
+                    b.HasOne("Rujta.Models.Entities.Medicine", "Medicine")
                         .WithMany()
                         .HasForeignKey("MedicineID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Rujta.Models.Order", "Order")
+                    b.HasOne("Rujta.Models.Entities.Order", "Order")
                         .WithMany("OrderItems")
                         .HasForeignKey("OrderID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -863,19 +873,19 @@ namespace Rujta.Migrations
                     b.Navigation("Order");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Pharmacy", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.Pharmacy", b =>
                 {
-                    b.HasOne("Rujta.Models.Person", "Admin")
+                    b.HasOne("Rujta.Models.Identity.Admin", "Admin")
                         .WithMany()
-                        .HasForeignKey("CreatedByAdminId")
+                        .HasForeignKey("AdminId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Rujta.Models.Person", "Manager")
+                    b.HasOne("Rujta.Models.Identity.Manager", "Manager")
                         .WithMany()
-                        .HasForeignKey("ManagedByManagerId")
+                        .HasForeignKey("ManagerId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Rujta.Models.Pharmacy", "ParentPharmacy")
+                    b.HasOne("Rujta.Models.Entities.Pharmacy", "ParentPharmacy")
                         .WithMany()
                         .HasForeignKey("ParentPharmacyID")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -887,9 +897,9 @@ namespace Rujta.Migrations
                     b.Navigation("ParentPharmacy");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Prescription", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.Prescription", b =>
                 {
-                    b.HasOne("Rujta.Models.Person", "Patient")
+                    b.HasOne("Rujta.Models.Identity.User", "Patient")
                         .WithMany()
                         .HasForeignKey("PatientID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -898,15 +908,15 @@ namespace Rujta.Migrations
                     b.Navigation("Patient");
                 });
 
-            modelBuilder.Entity("Rujta.Models.ProcessPrescription", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.ProcessPrescription", b =>
                 {
-                    b.HasOne("Rujta.Models.Person", "Pharmacist")
+                    b.HasOne("Rujta.Models.Identity.Pharmacist", "Pharmacist")
                         .WithMany()
                         .HasForeignKey("PharmacistID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Rujta.Models.Prescription", "Prescription")
+                    b.HasOne("Rujta.Models.Entities.Prescription", "Prescription")
                         .WithMany()
                         .HasForeignKey("PrescriptionID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -917,21 +927,21 @@ namespace Rujta.Migrations
                     b.Navigation("Prescription");
                 });
 
-            modelBuilder.Entity("Rujta.Models.SellDrugViaPharmacy", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.SellDrugViaPharmacy", b =>
                 {
-                    b.HasOne("Rujta.Models.Medicine", "Medicine")
+                    b.HasOne("Rujta.Models.Entities.Medicine", "Medicine")
                         .WithMany()
                         .HasForeignKey("MedicineID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Rujta.Models.Pharmacy", "Pharmacy")
+                    b.HasOne("Rujta.Models.Entities.Pharmacy", "Pharmacy")
                         .WithMany()
                         .HasForeignKey("PharmacyID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Rujta.Models.Person", "Seller")
+                    b.HasOne("Rujta.Models.Identity.User", "Seller")
                         .WithMany()
                         .HasForeignKey("SellerID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -944,24 +954,24 @@ namespace Rujta.Migrations
                     b.Navigation("Seller");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Manager", b =>
+            modelBuilder.Entity("Rujta.Models.Identity.Manager", b =>
                 {
-                    b.HasOne("Rujta.Models.Admin", "Admin")
+                    b.HasOne("Rujta.Models.Identity.Admin", "Admin")
                         .WithMany()
-                        .HasForeignKey("CreatedByAdminId")
+                        .HasForeignKey("AdminId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Admin");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Staff", b =>
+            modelBuilder.Entity("Rujta.Models.Identity.Staff", b =>
                 {
-                    b.HasOne("Rujta.Models.Manager", "Manager")
+                    b.HasOne("Rujta.Models.Identity.Manager", "Manager")
                         .WithMany()
                         .HasForeignKey("ManagerID")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Rujta.Models.Pharmacy", "Pharmacy")
+                    b.HasOne("Rujta.Models.Entities.Pharmacy", "Pharmacy")
                         .WithMany()
                         .HasForeignKey("PharmacyID")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -971,19 +981,19 @@ namespace Rujta.Migrations
                     b.Navigation("Pharmacy");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Medicine", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.Medicine", b =>
                 {
                     b.Navigation("InventoryItems");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Order", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.Order", b =>
                 {
                     b.Navigation("OrderItems");
                 });
 
-            modelBuilder.Entity("Rujta.Models.Pharmacy", b =>
+            modelBuilder.Entity("Rujta.Models.Entities.Pharmacy", b =>
                 {
-                    b.Navigation("Medicines");
+                    b.Navigation("InventoryItems");
                 });
 #pragma warning restore 612, 618
         }
