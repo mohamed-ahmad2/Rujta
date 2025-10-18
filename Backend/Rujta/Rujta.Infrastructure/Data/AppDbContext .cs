@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Rujta.Domain.Common;
 using Rujta.Domain.Entities;
+using Rujta.Infrastructure.Extensions;
 using Rujta.Infrastructure.Identity.Entities;
 
 namespace Rujta.Infrastructure.Data
@@ -35,65 +36,11 @@ namespace Rujta.Infrastructure.Data
         {
             base.OnModelCreating(builder);
 
-            // Inheritance Mapping 
-            builder.Entity<Person>()
-                .HasDiscriminator<string>("Discriminator")
-                .HasValue<User>("User")
-                .HasValue<Pharmacist>("Pharmacist")
-                .HasValue<Manager>("Manager")
-                .HasValue<Staff>("Staff")
-                .HasValue<Admin>("Admin");
+            // استخدم الـ Extensions
+            builder.ApplyIdentityMapping();
+            builder.ApplyDecimalPrecision();
 
-            List<IdentityRole<Guid>> identityRoles = new List<IdentityRole<Guid>>
-{
-                new IdentityRole<Guid> {
-                    Id = Guid.NewGuid(),
-                    Name = "User",
-                    NormalizedName = "USER",
-                    ConcurrencyStamp = Guid.NewGuid().ToString()
-                },
-                new IdentityRole<Guid> {
-                    Id = Guid.NewGuid(),
-                    Name = "Admin",
-                    NormalizedName = "ADMIN",
-                    ConcurrencyStamp = Guid.NewGuid().ToString()
-                },
-                new IdentityRole<Guid> {
-                    Id = Guid.NewGuid(),
-                    Name = "Staff",
-                    NormalizedName = "STAFF",
-                    ConcurrencyStamp = Guid.NewGuid().ToString()
-                },
-                new IdentityRole<Guid> {
-                    Id = Guid.NewGuid(),
-                    Name = "Manager",
-                    NormalizedName = "MANAGER",
-                    ConcurrencyStamp = Guid.NewGuid().ToString()
-                }
-            };
-            builder.Entity<IdentityRole<Guid>>().HasData(identityRoles);
-
-
-            // Rename Identity Tables 
-            builder.Entity<Person>().ToTable("Person");
-            builder.Entity<IdentityRole<Guid>>().ToTable("Role");
-            builder.Entity<IdentityUserRole<Guid>>().ToTable("PersonRole");
-            builder.Entity<IdentityUserClaim<Guid>>().ToTable("PersonClaim");
-            builder.Entity<IdentityUserLogin<Guid>>().ToTable("PersonLogin");
-            builder.Entity<IdentityRoleClaim<Guid>>().ToTable("RoleClaim");
-            builder.Entity<IdentityUserToken<Guid>>().ToTable("PersonToken");
-
-
-            // Decimal Precision 
-            builder.Entity<InventoryItem>().Property(p => p.Price).HasPrecision(18, 2);
-            builder.Entity<Medicine>().Property(p => p.Price).HasPrecision(18, 2);
-            builder.Entity<Order>().Property(p => p.TotalPrice).HasPrecision(18, 2);
-            builder.Entity<OrderItem>().Property(p => p.PricePerUnit).HasPrecision(18, 2);
-            builder.Entity<OrderItem>().Property(p => p.SubTotal).HasPrecision(18, 2);
-            builder.Entity<SellDrugViaPharmacy>().Property(p => p.Price).HasPrecision(18, 2);
-            builder.Entity<Staff>().Property(p => p.Salary).HasPrecision(18, 2);
-
-            // Pharmacy Relationships 
+            // Relationships
             builder.Entity<Pharmacy>()
                 .HasOne(p => p.ParentPharmacy)
                 .WithMany()
@@ -130,18 +77,17 @@ namespace Rujta.Infrastructure.Data
                 .HasForeignKey(s => s.PharmacyID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            //  ProcessPrescription Relationships 
             builder.Entity<ProcessPrescription>()
                 .HasOne<Pharmacist>()
                 .WithMany()
                 .HasForeignKey(pp => pp.PharmacistID)
-                .OnDelete(DeleteBehavior.Restrict); 
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<ProcessPrescription>()
                 .HasOne(pp => pp.Prescription)
                 .WithMany()
                 .HasForeignKey(pp => pp.PrescriptionID)
-                .OnDelete(DeleteBehavior.Cascade); 
+                .OnDelete(DeleteBehavior.Cascade);
         }
 
 
