@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Rujta.Authorization;
-using Rujta.Data;
-using Rujta.Models;
+using Rujta.Infrastructure.Data;
+using Rujta.Infrastructure.Identity.Entities;
+using Rujta.Infrastructure.Identity.Handlers;
+using Rujta.Infrastructure.Identity.Helpers;
+using Rujta.Infrastructure.Identity.Requirements;
 using System.Text;
- 
-namespace Rujta
+
+namespace Rujta.API
 {
 
     public static class Program
@@ -29,7 +31,7 @@ namespace Rujta
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             // Identity
-            builder.Services.AddIdentity<Person, IdentityRole>(options =>
+            builder.Services.AddIdentity<Person, IdentityRole<Guid>>(options =>
             {
                 options.Password.RequireNonAlphanumeric = true;
                 options.Password.RequireDigit = true;
@@ -98,26 +100,11 @@ namespace Rujta
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
-                await SeedRolesAsync(services);
+                var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                await IdentitySeeder.SeedRolesAsync(roleManager);
             }
             app.Run();
            
-        }
-        //  Role Seeding Method
-        public static async Task SeedRolesAsync(IServiceProvider serviceProvider)
-        {
-            var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
-            string[] roleNames = { "SuperAdmin", "PharmacyAdmin", "Pharmacist", "User" };
-
-            foreach (var roleName in roleNames)
-            {
-                var roleExist = await roleManager.RoleExistsAsync(roleName);
-                if (!roleExist)
-                {
-                    await roleManager.CreateAsync(new IdentityRole(roleName));
-                }
-            }
         }
     }
 }
