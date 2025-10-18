@@ -27,7 +27,6 @@ namespace Rujta.Domain.Entities
         public SellStatus Status { get; set; }
 
 
-        //public required virtual User Seller { get; set; }
         public required virtual Pharmacy Pharmacy { get; set; }
         public required virtual Medicine Medicine { get; set; }
     }

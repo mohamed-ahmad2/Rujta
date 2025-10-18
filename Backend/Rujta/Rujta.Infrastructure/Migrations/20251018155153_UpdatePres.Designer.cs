@@ -12,8 +12,8 @@ using Rujta.Infrastructure.Data;
 namespace Rujta.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251018150721_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251018155153_UpdatePres")]
+    partial class UpdatePres
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -55,29 +55,29 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("52c72525-03ef-447b-9e97-10895e0c12ac"),
-                            ConcurrencyStamp = "2c73a0f1-cd77-43fe-beaf-68e5b85c949c",
+                            Id = new Guid("db07f611-8e81-41eb-ad90-4fae04103d1d"),
+                            ConcurrencyStamp = "dfcc8efb-2e61-4a33-9c13-ff4e980a354a",
                             Name = "User",
                             NormalizedName = "USER"
                         },
                         new
                         {
-                            Id = new Guid("679b9075-4331-4c44-86a1-eaee6d536013"),
-                            ConcurrencyStamp = "721f7d37-3197-44d9-8e59-7be2a0a77e63",
+                            Id = new Guid("7d5022cb-94dc-4d05-8557-608d3c5050e1"),
+                            ConcurrencyStamp = "fbca5a39-27be-4560-a58a-12fe591f5ac5",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = new Guid("52dd0a11-8e0c-49b9-afe6-6a341852d4d1"),
-                            ConcurrencyStamp = "af65a157-f260-42c5-bafb-71f9dedde9e3",
+                            Id = new Guid("6cb5f5ee-8cc8-4f06-8954-cdddea829edb"),
+                            ConcurrencyStamp = "a45591b7-fa70-407b-8931-e80efddf87a7",
                             Name = "Staff",
                             NormalizedName = "STAFF"
                         },
                         new
                         {
-                            Id = new Guid("34f66785-853e-43c7-81ae-ef3ce269ab06"),
-                            ConcurrencyStamp = "6f9887de-f6d8-408c-b441-3aa83aca5b48",
+                            Id = new Guid("ecd4b66e-4e19-4a54-bed5-e813497f41bc"),
+                            ConcurrencyStamp = "35695dab-b5e8-4522-a4e7-15074757484e",
                             Name = "Manager",
                             NormalizedName = "MANAGER"
                         });
@@ -560,7 +560,7 @@ namespace Rujta.Infrastructure.Migrations
                     b.ToTable("SellDrugViaPharmacies");
                 });
 
-            modelBuilder.Entity("Rujta.Infrastructure.Identity.Person", b =>
+            modelBuilder.Entity("Rujta.Infrastructure.Identity.Entities.Person", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -649,16 +649,16 @@ namespace Rujta.Infrastructure.Migrations
                     b.UseTphMappingStrategy();
                 });
 
-            modelBuilder.Entity("Rujta.Infrastructure.Identity.Admin", b =>
+            modelBuilder.Entity("Rujta.Infrastructure.Identity.Entities.Admin", b =>
                 {
-                    b.HasBaseType("Rujta.Infrastructure.Identity.Person");
+                    b.HasBaseType("Rujta.Infrastructure.Identity.Entities.Person");
 
                     b.HasDiscriminator().HasValue("Admin");
                 });
 
-            modelBuilder.Entity("Rujta.Infrastructure.Identity.Pharmacist", b =>
+            modelBuilder.Entity("Rujta.Infrastructure.Identity.Entities.Pharmacist", b =>
                 {
-                    b.HasBaseType("Rujta.Infrastructure.Identity.Person");
+                    b.HasBaseType("Rujta.Infrastructure.Identity.Entities.Person");
 
                     b.Property<int>("ExperienceYears")
                         .HasColumnType("int");
@@ -676,9 +676,9 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasDiscriminator().HasValue("Pharmacist");
                 });
 
-            modelBuilder.Entity("Rujta.Infrastructure.Identity.User", b =>
+            modelBuilder.Entity("Rujta.Infrastructure.Identity.Entities.User", b =>
                 {
-                    b.HasBaseType("Rujta.Infrastructure.Identity.Person");
+                    b.HasBaseType("Rujta.Infrastructure.Identity.Entities.Person");
 
                     b.Property<string>("Allergies")
                         .HasColumnType("nvarchar(max)");
@@ -701,9 +701,9 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasDiscriminator().HasValue("User");
                 });
 
-            modelBuilder.Entity("Rujta.Infrastructure.Identity.Manager", b =>
+            modelBuilder.Entity("Rujta.Infrastructure.Identity.Entities.Manager", b =>
                 {
-                    b.HasBaseType("Rujta.Infrastructure.Identity.Pharmacist");
+                    b.HasBaseType("Rujta.Infrastructure.Identity.Entities.Pharmacist");
 
                     b.Property<Guid?>("AdminId")
                         .HasColumnType("uniqueidentifier");
@@ -719,9 +719,9 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasDiscriminator().HasValue("Manager");
                 });
 
-            modelBuilder.Entity("Rujta.Infrastructure.Identity.Staff", b =>
+            modelBuilder.Entity("Rujta.Infrastructure.Identity.Entities.Staff", b =>
                 {
-                    b.HasBaseType("Rujta.Infrastructure.Identity.Pharmacist");
+                    b.HasBaseType("Rujta.Infrastructure.Identity.Entities.Pharmacist");
 
                     b.Property<DateTime>("HireDate")
                         .HasColumnType("datetime2");
@@ -758,7 +758,7 @@ namespace Rujta.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
-                    b.HasOne("Rujta.Infrastructure.Identity.Person", null)
+                    b.HasOne("Rujta.Infrastructure.Identity.Entities.Person", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -767,7 +767,7 @@ namespace Rujta.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
-                    b.HasOne("Rujta.Infrastructure.Identity.Person", null)
+                    b.HasOne("Rujta.Infrastructure.Identity.Entities.Person", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -782,7 +782,7 @@ namespace Rujta.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Rujta.Infrastructure.Identity.Person", null)
+                    b.HasOne("Rujta.Infrastructure.Identity.Entities.Person", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -791,7 +791,7 @@ namespace Rujta.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
-                    b.HasOne("Rujta.Infrastructure.Identity.Person", null)
+                    b.HasOne("Rujta.Infrastructure.Identity.Entities.Person", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -861,12 +861,12 @@ namespace Rujta.Infrastructure.Migrations
 
             modelBuilder.Entity("Rujta.Domain.Entities.Pharmacy", b =>
                 {
-                    b.HasOne("Rujta.Infrastructure.Identity.Admin", null)
+                    b.HasOne("Rujta.Infrastructure.Identity.Entities.Admin", null)
                         .WithMany()
                         .HasForeignKey("AdminId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Rujta.Infrastructure.Identity.Manager", null)
+                    b.HasOne("Rujta.Infrastructure.Identity.Entities.Manager", null)
                         .WithMany()
                         .HasForeignKey("ManagerId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -881,7 +881,7 @@ namespace Rujta.Infrastructure.Migrations
 
             modelBuilder.Entity("Rujta.Domain.Entities.ProcessPrescription", b =>
                 {
-                    b.HasOne("Rujta.Infrastructure.Identity.Pharmacist", null)
+                    b.HasOne("Rujta.Infrastructure.Identity.Entities.Pharmacist", null)
                         .WithMany()
                         .HasForeignKey("PharmacistID")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -915,9 +915,9 @@ namespace Rujta.Infrastructure.Migrations
                     b.Navigation("Pharmacy");
                 });
 
-            modelBuilder.Entity("Rujta.Infrastructure.Identity.Manager", b =>
+            modelBuilder.Entity("Rujta.Infrastructure.Identity.Entities.Manager", b =>
                 {
-                    b.HasOne("Rujta.Infrastructure.Identity.Admin", "Admin")
+                    b.HasOne("Rujta.Infrastructure.Identity.Entities.Admin", "Admin")
                         .WithMany()
                         .HasForeignKey("AdminId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -925,9 +925,9 @@ namespace Rujta.Infrastructure.Migrations
                     b.Navigation("Admin");
                 });
 
-            modelBuilder.Entity("Rujta.Infrastructure.Identity.Staff", b =>
+            modelBuilder.Entity("Rujta.Infrastructure.Identity.Entities.Staff", b =>
                 {
-                    b.HasOne("Rujta.Infrastructure.Identity.Manager", "Manager")
+                    b.HasOne("Rujta.Infrastructure.Identity.Entities.Manager", "Manager")
                         .WithMany()
                         .HasForeignKey("ManagerID")
                         .OnDelete(DeleteBehavior.Restrict);
