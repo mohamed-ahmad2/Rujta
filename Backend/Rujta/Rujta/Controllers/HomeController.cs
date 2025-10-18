@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace Rujta.Controllers
+namespace Rujta.API.Controllers
 {
     [ApiController]
     [Route("[controller]")]

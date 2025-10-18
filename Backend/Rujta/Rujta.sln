@@ -3,7 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36408.4
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta", "Rujta\Rujta.csproj", "{3E1095CF-56F3-421D-B24C-6CC2028FF21E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.API", "Rujta\Rujta.API.csproj", "{3E1095CF-56F3-421D-B24C-6CC2028FF21E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.Domain", "Rujta.Domain\Rujta.Domain.csproj", "{3CEA9918-050F-486E-A0A5-84EB4DEF3547}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.Application", "Rujta.Application\Rujta.Application.csproj", "{74EFD03F-DBAC-44CC-B21B-18FDCC01912D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.Infrastructure", "Rujta.Infrastructure\Rujta.Infrastructure.csproj", "{D314FC48-452F-4E6C-B8E0-1B429127BEC3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +21,18 @@ Global
 		{3E1095CF-56F3-421D-B24C-6CC2028FF21E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E1095CF-56F3-421D-B24C-6CC2028FF21E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E1095CF-56F3-421D-B24C-6CC2028FF21E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3CEA9918-050F-486E-A0A5-84EB4DEF3547}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CEA9918-050F-486E-A0A5-84EB4DEF3547}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3CEA9918-050F-486E-A0A5-84EB4DEF3547}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3CEA9918-050F-486E-A0A5-84EB4DEF3547}.Release|Any CPU.Build.0 = Release|Any CPU
+		{74EFD03F-DBAC-44CC-B21B-18FDCC01912D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74EFD03F-DBAC-44CC-B21B-18FDCC01912D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74EFD03F-DBAC-44CC-B21B-18FDCC01912D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74EFD03F-DBAC-44CC-B21B-18FDCC01912D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D314FC48-452F-4E6C-B8E0-1B429127BEC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D314FC48-452F-4E6C-B8E0-1B429127BEC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D314FC48-452F-4E6C-B8E0-1B429127BEC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D314FC48-452F-4E6C-B8E0-1B429127BEC3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
