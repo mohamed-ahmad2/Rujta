@@ -1,11 +1,14 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Rujta.Models;
+using Rujta.Models.Common;
+using Rujta.Models.Entities;
+using Rujta.Models.Identity;
+using System.Data;
 
 namespace Rujta.Data
 {
-    public class AppDbContext : IdentityDbContext<Person, IdentityRole, string>
+    public class AppDbContext : IdentityDbContext<Person, IdentityRole<Guid>, Guid>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options)
             : base(options)
@@ -42,40 +45,45 @@ namespace Rujta.Data
                 .HasValue<Staff>("Staff")
                 .HasValue<Admin>("Admin");
 
-            List<IdentityRole> identityRoles = new List<IdentityRole>()
-            {
-                new IdentityRole{
+            List<IdentityRole<Guid>> identityRoles = new List<IdentityRole<Guid>>
+{
+                new IdentityRole<Guid> {
+                    Id = Guid.NewGuid(),
                     Name = "User",
                     NormalizedName = "USER",
                     ConcurrencyStamp = Guid.NewGuid().ToString()
                 },
-                new IdentityRole{
+                new IdentityRole<Guid> {
+                    Id = Guid.NewGuid(),
                     Name = "Admin",
                     NormalizedName = "ADMIN",
                     ConcurrencyStamp = Guid.NewGuid().ToString()
                 },
-                new IdentityRole{
+                new IdentityRole<Guid> {
+                    Id = Guid.NewGuid(),
                     Name = "Staff",
                     NormalizedName = "STAFF",
                     ConcurrencyStamp = Guid.NewGuid().ToString()
                 },
-                new IdentityRole{
+                new IdentityRole<Guid> {
+                    Id = Guid.NewGuid(),
                     Name = "Manager",
                     NormalizedName = "MANAGER",
                     ConcurrencyStamp = Guid.NewGuid().ToString()
-                },
+                }
             };
+            builder.Entity<IdentityRole<Guid>>().HasData(identityRoles);
 
-            builder.Entity<IdentityRole>().HasData(identityRoles);
 
             // Rename Identity Tables 
             builder.Entity<Person>().ToTable("Person");
-            builder.Entity<IdentityRole>().ToTable("Role");
-            builder.Entity<IdentityUserRole<string>>().ToTable("PersonRole");
-            builder.Entity<IdentityUserClaim<string>>().ToTable("PersonClaim");
-            builder.Entity<IdentityUserLogin<string>>().ToTable("PersonLogin");
-            builder.Entity<IdentityRoleClaim<string>>().ToTable("RoleClaim");
-            builder.Entity<IdentityUserToken<string>>().ToTable("PersonToken");
+            builder.Entity<IdentityRole<Guid>>().ToTable("Role");
+            builder.Entity<IdentityUserRole<Guid>>().ToTable("PersonRole");
+            builder.Entity<IdentityUserClaim<Guid>>().ToTable("PersonClaim");
+            builder.Entity<IdentityUserLogin<Guid>>().ToTable("PersonLogin");
+            builder.Entity<IdentityRoleClaim<Guid>>().ToTable("RoleClaim");
+            builder.Entity<IdentityUserToken<Guid>>().ToTable("PersonToken");
+
 
             // Decimal Precision 
             builder.Entity<InventoryItem>().Property(p => p.Price).HasPrecision(18, 2);
@@ -96,19 +104,19 @@ namespace Rujta.Data
             builder.Entity<Pharmacy>()
                 .HasOne(p => p.Admin)
                 .WithMany()
-                .HasForeignKey(p => p.CreatedByAdminId)
+                .HasForeignKey(p => p.AdminId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Pharmacy>()
                 .HasOne(p => p.Manager)
                 .WithMany()
-                .HasForeignKey(p => p.ManagedByManagerId)
+                .HasForeignKey(p => p.ManagerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Manager>()
                 .HasOne(m => m.Admin)
                 .WithMany()
-                .HasForeignKey(m => m.CreatedByAdminId)
+                .HasForeignKey(m => m.AdminId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Staff>()
@@ -136,5 +144,21 @@ namespace Rujta.Data
                 .HasForeignKey(pp => pp.PrescriptionID)
                 .OnDelete(DeleteBehavior.Cascade); 
         }
+
+
+        public override int SaveChanges()
+        {
+            foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+            {
+                if (entry.State == EntityState.Added)
+                    entry.Entity.CreatedAt = DateTime.UtcNow;
+
+                if (entry.State == EntityState.Modified)
+                    entry.Entity.UpdatedAt = DateTime.UtcNow;
+            }
+
+            return base.SaveChanges();
+        }
+
     }
 }

@@ -11,7 +11,7 @@ namespace Rujta.Authorization
             SamePharmacyRequirement requirement)
         {
             var userPharmacyId = context.User.FindFirst("PharmacyId")?.Value;
-            var targetPharmacyId = context.Resource?.ToString(); // هتعدلها حسب API
+            var targetPharmacyId = context.Resource?.ToString();
 
             if (userPharmacyId != null && userPharmacyId == targetPharmacyId)
             {
