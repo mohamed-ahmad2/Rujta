@@ -1,10 +1,8 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Rujta.Domain.Common;
 using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Identity.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Infrastructure.Extensions
 {
@@ -24,6 +22,7 @@ namespace Rujta.Infrastructure.Extensions
 
             var discriminatorBuilder = builder.Entity<Person>().HasDiscriminator<string>("Discriminator");
 
+
             foreach (var kvp in discriminatorMapping)
             {
                 discriminatorBuilder.HasValue(kvp.Key, kvp.Value);
@@ -32,14 +31,15 @@ namespace Rujta.Infrastructure.Extensions
             // Rename Identity tables
             var identityTables = new Dictionary<Type, string>
             {
-                { typeof(Person), "Person" },
-                { typeof(IdentityRole<Guid>), "Role" },
-                { typeof(IdentityUserRole<Guid>), "PersonRole" },
-                { typeof(IdentityUserClaim<Guid>), "PersonClaim" },
-                { typeof(IdentityUserLogin<Guid>), "PersonLogin" },
-                { typeof(IdentityRoleClaim<Guid>), "RoleClaim" },
-                { typeof(IdentityUserToken<Guid>), "PersonToken" }
+                { typeof(ApplicationUser), "Users" },
+                { typeof(IdentityRole<Guid>), "Roles" },
+                { typeof(IdentityUserRole<Guid>), "UserRoles" },
+                { typeof(IdentityUserClaim<Guid>), "UserClaims" },
+                { typeof(IdentityUserLogin<Guid>), "UserLogins" },
+                { typeof(IdentityRoleClaim<Guid>), "RoleClaims" },
+                { typeof(IdentityUserToken<Guid>), "UserTokens" }
             };
+
 
             foreach (var table in identityTables)
             {
