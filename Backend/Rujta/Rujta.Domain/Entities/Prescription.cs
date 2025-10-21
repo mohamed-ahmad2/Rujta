@@ -24,5 +24,8 @@ namespace Rujta.Domain.Entities
         public PrescriptionStatus Status { get; set; }
 
         public string? Notes { get; set; }
+
+
+        public required virtual User Patient { get; set; }
     }
 }

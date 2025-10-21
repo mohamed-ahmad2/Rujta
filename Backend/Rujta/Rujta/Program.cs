@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Rujta.Infrastructure.Data;
-using Rujta.Infrastructure.Identity.Entities;
+using Rujta.Infrastructure.Identity;
 using Rujta.Infrastructure.Identity.Handlers;
 using Rujta.Infrastructure.Identity.Helpers;
 using Rujta.Infrastructure.Identity.Requirements;
@@ -31,7 +31,7 @@ namespace Rujta.API
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             // Identity
-            builder.Services.AddIdentity<Person, IdentityRole<Guid>>(options =>
+            builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
             {
                 options.Password.RequireNonAlphanumeric = true;
                 options.Password.RequireDigit = true;
