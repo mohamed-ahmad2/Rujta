@@ -21,8 +21,9 @@ namespace Rujta.Domain.Entities
 
         public string? Comments { get; set; }
 
-        
 
+
+        public required virtual Pharmacist Pharmacist { get; set; }
         public required virtual Prescription Prescription { get; set; }
     }
 }

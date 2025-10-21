@@ -1,4 +1,6 @@
-﻿namespace Rujta.Infrastructure.Identity.Entities
+﻿using Rujta.Domain.Common;
+
+namespace Rujta.Domain.Entities
 {
     public class Pharmacist : Person
     {

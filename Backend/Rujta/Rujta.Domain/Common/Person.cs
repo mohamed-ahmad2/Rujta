@@ -1,9 +1,8 @@
-﻿using Microsoft.AspNetCore.Identity;
-
-namespace Rujta.Infrastructure.Identity.Entities
+﻿namespace Rujta.Domain.Common
 {
-    public abstract class Person : IdentityUser<Guid>
+    public abstract class Person
     {
+        public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
         
