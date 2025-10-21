@@ -31,7 +31,7 @@ namespace Rujta.Infrastructure.Extensions
             // Rename Identity tables
             var identityTables = new Dictionary<Type, string>
             {
-                { typeof(ApplicationUser), "Users" },
+                { typeof(ApplicationUser), "AspNetUsers" },
                 { typeof(IdentityRole<Guid>), "Roles" },
                 { typeof(IdentityUserRole<Guid>), "UserRoles" },
                 { typeof(IdentityUserClaim<Guid>), "UserClaims" },
