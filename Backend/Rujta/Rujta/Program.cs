@@ -8,11 +8,12 @@ using Rujta.Infrastructure.Identity;
 using Rujta.Infrastructure.Identity.Handlers;
 using Rujta.Infrastructure.Identity.Helpers;
 using Rujta.Infrastructure.Identity.Requirements;
+using Rujta.Application.Interfaces;
+using Rujta.Application.Services;
 using System.Text;
 
 namespace Rujta.API
 {
-
     public static class Program
     {
         public static async Task Main(string[] args)
@@ -81,6 +82,11 @@ namespace Rujta.API
                 };
             });
 
+            // Application Services
+            builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+
+            // AutoMapper (???????)
+            builder.Services.AddAutoMapper(typeof(Program));
 
             var app = builder.Build();
 
@@ -97,14 +103,15 @@ namespace Rujta.API
 
             app.MapControllers();
 
+            // Role seeding
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
                 await IdentitySeeder.SeedRolesAsync(roleManager);
             }
+
             await app.RunAsync();
-           
         }
     }
 }
