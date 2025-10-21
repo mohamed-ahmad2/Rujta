@@ -4,11 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using Rujta.Domain.Common;
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Extensions;
-using Rujta.Infrastructure.Identity.Entities;
+using Rujta.Infrastructure.Identity;
+
 
 namespace Rujta.Infrastructure.Data
 {
-    public class AppDbContext : IdentityDbContext<Person, IdentityRole<Guid>, Guid>
+    public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options)
             : base(options)
@@ -36,7 +37,7 @@ namespace Rujta.Infrastructure.Data
         {
             base.OnModelCreating(builder);
 
-            // استخدم الـ Extensions
+            
             builder.ApplyIdentityMapping();
             builder.ApplyDecimalPrecision();
 
@@ -48,13 +49,13 @@ namespace Rujta.Infrastructure.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Pharmacy>()
-                .HasOne<Admin>()
+                .HasOne(p => p.Admin)
                 .WithMany()
                 .HasForeignKey(p => p.AdminId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Pharmacy>()
-                .HasOne<Manager>()
+                .HasOne(p => p.Manager)
                 .WithMany()
                 .HasForeignKey(p => p.ManagerId)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -78,7 +79,7 @@ namespace Rujta.Infrastructure.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<ProcessPrescription>()
-                .HasOne<Pharmacist>()
+                .HasOne(pp => pp.Pharmacist)
                 .WithMany()
                 .HasForeignKey(pp => pp.PharmacistID)
                 .OnDelete(DeleteBehavior.Restrict);

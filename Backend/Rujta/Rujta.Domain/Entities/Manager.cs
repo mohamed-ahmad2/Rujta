@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Rujta.Infrastructure.Identity.Entities
+namespace Rujta.Domain.Entities
 {
     public class Manager : Pharmacist
     {

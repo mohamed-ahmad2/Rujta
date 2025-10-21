@@ -27,6 +27,7 @@ namespace Rujta.Domain.Entities
         public OrderStatus Status { get; set; }
 
 
+        public required virtual User User { get; set; }
         public required virtual Pharmacy Pharmacy { get; set; }
         public virtual Prescription? Prescription { get; set; }
         public ICollection<OrderItem>? OrderItems { get; set; }
