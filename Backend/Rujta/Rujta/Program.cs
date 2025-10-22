@@ -5,14 +5,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Rujta.Application.Interfaces;
+using Rujta.Application.Services;
 using Rujta.Application.Validation;
 using Rujta.Infrastructure.Data;
 using Rujta.Infrastructure.Identity;
 using Rujta.Infrastructure.Identity.Handlers;
 using Rujta.Infrastructure.Identity.Helpers;
 using Rujta.Infrastructure.Identity.Requirements;
-using Rujta.Application.Interfaces;
-using Rujta.Application.Services;
+using Rujta.Infrastructure.Identity.Services;
+using Rujta.Infrastructure.Repositories;
 using System.Text;
 
 namespace Rujta.API
@@ -87,9 +89,10 @@ namespace Rujta.API
 
             // Application Services
             builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+            builder.Services.AddScoped<PharmacyDistanceService>();
+            builder.Services.AddScoped<IPharmacyRepository, PharmacyRepository>();
 
-            // AutoMapper (???????)
-            builder.Services.AddAutoMapper(typeof(Program));
+
             // Fluent Vaildation
             builder.Services.AddValidatorsFromAssemblyContaining<RegisterDTOValidator>();
             builder.Services.AddFluentValidationAutoValidation();
