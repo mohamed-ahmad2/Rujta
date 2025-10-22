@@ -7,9 +7,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.API", "Rujta\Rujta.AP
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.Domain", "Rujta.Domain\Rujta.Domain.csproj", "{3CEA9918-050F-486E-A0A5-84EB4DEF3547}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.Application", "Rujta.Application\Rujta.Application.csproj", "{74EFD03F-DBAC-44CC-B21B-18FDCC01912D}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.Infrastructure", "Rujta.Infrastructure\Rujta.Infrastructure.csproj", "{D314FC48-452F-4E6C-B8E0-1B429127BEC3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.Application", "Rujta.Application\Rujta.Application.csproj", "{4CC7E6E4-B2EA-D485-A9A2-CB9FB13AC579}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,14 +25,14 @@ Global
 		{3CEA9918-050F-486E-A0A5-84EB4DEF3547}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3CEA9918-050F-486E-A0A5-84EB4DEF3547}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3CEA9918-050F-486E-A0A5-84EB4DEF3547}.Release|Any CPU.Build.0 = Release|Any CPU
-		{74EFD03F-DBAC-44CC-B21B-18FDCC01912D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{74EFD03F-DBAC-44CC-B21B-18FDCC01912D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{74EFD03F-DBAC-44CC-B21B-18FDCC01912D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{74EFD03F-DBAC-44CC-B21B-18FDCC01912D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D314FC48-452F-4E6C-B8E0-1B429127BEC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D314FC48-452F-4E6C-B8E0-1B429127BEC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D314FC48-452F-4E6C-B8E0-1B429127BEC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D314FC48-452F-4E6C-B8E0-1B429127BEC3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4CC7E6E4-B2EA-D485-A9A2-CB9FB13AC579}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4CC7E6E4-B2EA-D485-A9A2-CB9FB13AC579}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4CC7E6E4-B2EA-D485-A9A2-CB9FB13AC579}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4CC7E6E4-B2EA-D485-A9A2-CB9FB13AC579}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

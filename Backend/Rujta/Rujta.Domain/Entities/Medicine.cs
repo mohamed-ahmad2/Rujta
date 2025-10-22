@@ -18,5 +18,7 @@ namespace Rujta.Domain.Entities
         public string? ActiveIngredient { get; set; }
 
         public ICollection<InventoryItem>? InventoryItems { get; set; }
+        public ICollection<SellDrugViaPharmacy>? SellDrugViaPharmacies { get; set; }
+        public ICollection<OrderItem>? OrderItems { get; set; }
     }
 }
