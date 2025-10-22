@@ -61,7 +61,7 @@ TestResult.xml
 nunit-*.xml
 
 Backend/Rujta/.vs
-
+Backend/Rujta/Rujta/Maps
 ## -----------------------------
 ## React frontend ignores
 ## -----------------------------
