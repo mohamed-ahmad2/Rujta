@@ -1,8 +1,11 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Rujta.Application.Validation;
 using Rujta.Infrastructure.Data;
 using Rujta.Infrastructure.Identity;
 using Rujta.Infrastructure.Identity.Handlers;
@@ -80,6 +83,19 @@ namespace Rujta.API
                     ClockSkew = TimeSpan.FromSeconds(30)
                 };
             });
+
+            // Fluent Vaildation
+            builder.Services.AddValidatorsFromAssemblyContaining<RegisterDTOValidator>();
+            builder.Services.AddFluentValidationAutoValidation();
+            builder.Services.AddFluentValidationClientsideAdapters();
+
+
+            // Mapper
+            builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+            
+            builder.Services.AddScoped<TokenService>();
+
 
 
             var app = builder.Build();
