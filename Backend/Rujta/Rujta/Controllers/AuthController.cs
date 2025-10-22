@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Rujta.Application.DTOs;
-using Rujta.Domain.Common;
 using Rujta.Domain.Entities;
+using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Data;
 using Rujta.Infrastructure.Identity;
 using Rujta.Infrastructure.Identity.Services;
+using System.Globalization;
+
 
 
 namespace Rujta.API.Controllers
@@ -63,7 +65,7 @@ namespace Rujta.API.Controllers
 
             // Auto-login: generate tokens
             var tokens = await _tokenService.GenerateTokensAsync(user);
-            await _userManager.SetAuthenticationTokenAsync(user, "RujtaApp", "RefreshToken", tokens.RefreshToken);
+            await _userManager.SetAuthenticationTokenAsync(user, TokenProviderConstants.AppProvider, TokenKeys.RefreshToken, tokens.RefreshToken);
 
             return Ok(tokens);
         }
@@ -81,7 +83,7 @@ namespace Rujta.API.Controllers
             var tokens = await _tokenService.GenerateTokensAsync(user);
 
             // Store refresh token in Identity table
-            await _userManager.SetAuthenticationTokenAsync(user, "RujtaApp", "RefreshToken", tokens.RefreshToken);
+            await _userManager.SetAuthenticationTokenAsync(user, TokenProviderConstants.AppProvider, TokenKeys.RefreshToken, tokens.RefreshToken);
 
             return Ok(tokens);
         }
@@ -91,15 +93,16 @@ namespace Rujta.API.Controllers
         {
             // Find user by refresh token
             var user = await _userManager.Users.FirstOrDefaultAsync(u =>
-                _userManager.GetAuthenticationTokenAsync(u, "RujtaApp", "RefreshToken").Result == refreshToken);
+                _userManager.GetAuthenticationTokenAsync(u, TokenProviderConstants.AppProvider, TokenKeys.RefreshToken).Result == refreshToken);
 
             if (user == null) return Unauthorized("Invalid refresh token");
 
             // Get expiration
-            var tokenExpirationStr = await _userManager.GetAuthenticationTokenAsync(user, "RujtaApp", "RefreshTokenExpiration");
+            var tokenExpirationStr = await _userManager.GetAuthenticationTokenAsync(user, TokenProviderConstants.AppProvider, TokenKeys.RefreshTokenExpiration);
 
-            if (!DateTime.TryParse(tokenExpirationStr, out var tokenExpiration))
+            if (!DateTime.TryParse(tokenExpirationStr, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var tokenExpiration))
                 return Unauthorized("Invalid refresh token expiration");
+
 
             if (tokenExpiration < DateTime.UtcNow) return Unauthorized("Refresh token expired");
 
@@ -108,16 +111,16 @@ namespace Rujta.API.Controllers
 
             // Rotate refresh token
             await _userManager.SetAuthenticationTokenAsync(
-                user, 
-                "RujtaApp", 
-                "RefreshToken", 
+                user,
+                TokenProviderConstants.AppProvider,
+                TokenKeys.RefreshToken,
                 tokens.RefreshToken
                 );
 
             await _userManager.SetAuthenticationTokenAsync(
                  user,
-                 "RujtaApp",
-                 "RefreshTokenExpiration",
+                 TokenProviderConstants.AppProvider,
+                 TokenKeys.RefreshTokenExpiration,
                  tokens.RefreshTokenExpiration?.ToString("o")
                 );
 
