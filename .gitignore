@@ -54,3 +54,6 @@ TestResult.xml
 nunit-*.xml
 
 Backend/Rujta/.vs
+
+# maps
+Backend/Rujta/Rujta/Maps
