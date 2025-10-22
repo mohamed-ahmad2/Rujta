@@ -27,5 +27,8 @@ namespace Rujta.Domain.Entities
 
 
         public required virtual User Patient { get; set; }
+        public  ICollection<ProcessPrescription>? ProcessPrescriptions { get; set; }
+        public ICollection<Order>? Orders { get; set; }
+        public ICollection<InventoryItem>? InventoryItems { get; set; }
     }
 }
