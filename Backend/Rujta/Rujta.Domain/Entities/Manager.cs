@@ -9,5 +9,7 @@ namespace Rujta.Domain.Entities
         [ForeignKey("Admin")]
         public Guid? AdminId { get; set; } 
         public Admin? Admin { get; set; }
+
+        public ICollection<Staff>? Staff { get; set; }
     }
 }

@@ -16,12 +16,11 @@ namespace Rujta.Infrastructure.Data
         {
         }
 
+
         // Person table
-        public DbSet<User> UsersExtended { get; set; }
-        public DbSet<Pharmacist> Pharmacists { get; set; }
-        public DbSet<Manager> Managers { get; set; }
-        public DbSet<Staff> Staffs { get; set; }
-        public DbSet<Admin> Admins { get; set; }
+        public DbSet<Person> People { get; set; }
+
+        
 
         // Entities
         public DbSet<Pharmacy> Pharmacies { get; set; }
@@ -41,54 +40,7 @@ namespace Rujta.Infrastructure.Data
             builder.ApplyIdentityMapping();
             builder.ApplyDecimalPrecision();
 
-            // Relationships
-            builder.Entity<Pharmacy>()
-                .HasOne(p => p.ParentPharmacy)
-                .WithMany()
-                .HasForeignKey(p => p.ParentPharmacyID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<Pharmacy>()
-                .HasOne(p => p.Admin)
-                .WithMany()
-                .HasForeignKey(p => p.AdminId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<Pharmacy>()
-                .HasOne(p => p.Manager)
-                .WithMany()
-                .HasForeignKey(p => p.ManagerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<Manager>()
-                .HasOne(m => m.Admin)
-                .WithMany()
-                .HasForeignKey(m => m.AdminId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<Staff>()
-                .HasOne(s => s.Manager)
-                .WithMany()
-                .HasForeignKey(s => s.ManagerID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<Staff>()
-                .HasOne(s => s.Pharmacy)
-                .WithMany()
-                .HasForeignKey(s => s.PharmacyID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<ProcessPrescription>()
-                .HasOne(pp => pp.Pharmacist)
-                .WithMany()
-                .HasForeignKey(pp => pp.PharmacistID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<ProcessPrescription>()
-                .HasOne(pp => pp.Prescription)
-                .WithMany()
-                .HasForeignKey(pp => pp.PrescriptionID)
-                .OnDelete(DeleteBehavior.Cascade);
+            builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         }
 
 
