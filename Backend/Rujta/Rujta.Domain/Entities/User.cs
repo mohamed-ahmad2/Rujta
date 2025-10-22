@@ -13,14 +13,13 @@ namespace Rujta.Domain.Entities
         public double? Weight { get; set; }
         public double? Height { get; set; }
 
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+
+
 
         public ICollection<Prescription>? Prescriptions { get; set; }
         public ICollection<SellDrugViaPharmacy>? SellDrugViaPharmacies { get; set; }
         public ICollection<Order>? Orders { get; set; }
-
-
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
-
     }
 }

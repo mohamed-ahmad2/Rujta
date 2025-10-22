@@ -11,7 +11,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Rujta.Infrastructure.Identity
+namespace Rujta.Infrastructure.Identity.Services
 {
     public class TokenService
     {

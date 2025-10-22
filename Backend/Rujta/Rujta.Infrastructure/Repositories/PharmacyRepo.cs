@@ -1,4 +1,5 @@
-﻿using Rujta.Domain.Entities;
+﻿using Rujta.Application.Interfaces;
+using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Data;
 using System;
 using System.Collections.Generic;
@@ -8,23 +9,22 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-public interface IPharmacyRepository
-{
-    IEnumerable<Pharmacy> GetAllPharmacies();
-}
 
-public class PharmacyRepository : IPharmacyRepository
+namespace Rujta.Infrastructure.Repositories
 {
-    private readonly AppDbContext _context;
-
-    public PharmacyRepository(AppDbContext context)
+    public class PharmacyRepository : IPharmacyRepository
     {
-        _context = context;
+        private readonly AppDbContext _context;
+
+        public PharmacyRepository(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        public IEnumerable<Pharmacy> GetAllPharmacies()
+        {
+            return _context.Pharmacies.ToList();
+        }
     }
 
-    public IEnumerable<Pharmacy> GetAllPharmacies()
-    {
-        return _context.Pharmacies.ToList();
-    }
 }
-

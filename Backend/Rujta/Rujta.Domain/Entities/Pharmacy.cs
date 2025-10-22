@@ -14,6 +14,10 @@ namespace Rujta.Domain.Entities
 
         public string OpenHours { get; set; } = string.Empty ;
 
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+
+
         public bool IsActive { get; set; }
 
         [ForeignKey("Admin")]
@@ -34,9 +38,5 @@ namespace Rujta.Domain.Entities
         public ICollection<InventoryItem>? InventoryItems { get; set; }
         public ICollection<SellDrugViaPharmacy>? SellDrugViaPharmacies { get; set; }
         public ICollection<Order>? Orders { get; set; }
-
-
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
     }
 }

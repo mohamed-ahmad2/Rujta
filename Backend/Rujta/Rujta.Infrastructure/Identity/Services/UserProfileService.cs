@@ -6,7 +6,7 @@ using Rujta.Domain.Common;
 using Rujta.Infrastructure.Identity;
 
 
-namespace Rujta.Application.Services
+namespace Rujta.Infrastructure.Identity.Services
 {
     public class UserProfileService : IUserProfileService
     {
