@@ -7,7 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Validation\DTOs\" />
+    <Compile Remove="Validation\DTOs\**" />
+    <EmbeddedResource Remove="Validation\DTOs\**" />
+    <None Remove="Validation\DTOs\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Interfaces\" />
     <Folder Include="Mapper\" />
     <Folder Include="Services\" />

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Rujta.Application.DTOs
 {
-    public class LoginDTO
+    public class LoginDto
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;

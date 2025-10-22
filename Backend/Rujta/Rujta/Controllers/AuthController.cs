@@ -38,7 +38,7 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDTO registerDTO)
+        public async Task<IActionResult> Register([FromBody] RegisterDto registerDTO)
         {
 
             var userExist = await _userManager.FindByEmailAsync(registerDTO.Email);
@@ -69,7 +69,7 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDTO loginDTO)
+        public async Task<IActionResult> Login([FromBody] LoginDto loginDTO)
         {
             var user = await _userManager.FindByEmailAsync(loginDTO.Email);
             if (user == null) return Unauthorized("Invalid credentials");

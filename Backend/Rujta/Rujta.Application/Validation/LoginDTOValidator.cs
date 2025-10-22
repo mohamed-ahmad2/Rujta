@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace Rujta.Application.Validation
 {
-    public class LoginDTOValidator : AbstractValidator<LoginDTO>
+    public class LoginDtoValidator : AbstractValidator<LoginDto>
     {
-        public LoginDTOValidator()
+        public LoginDtoValidator()
         {
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage("Email is required.")

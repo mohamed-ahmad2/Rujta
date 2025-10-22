@@ -94,7 +94,7 @@ namespace Rujta.API
 
 
             // Fluent Vaildation
-            builder.Services.AddValidatorsFromAssemblyContaining<RegisterDTOValidator>();
+            builder.Services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
             builder.Services.AddFluentValidationAutoValidation();
             builder.Services.AddFluentValidationClientsideAdapters();
 

@@ -14,13 +14,13 @@ namespace Rujta.Infrastructure.Identity.Mapper
     {
         public AuthProfile()
         {
-            CreateMap<RegisterDTO, ApplicationUser>()
+            CreateMap<RegisterDto, ApplicationUser>()
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.Phone))
                 .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.Name));
 
-            CreateMap<RegisterDTO, User>()
+            CreateMap<RegisterDto, User>()
             .ForMember(dest => dest.Id, opt => opt.Ignore());
         }
     }
