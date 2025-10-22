@@ -22,9 +22,9 @@ namespace Rujta.API.Controllers
             {
                 n.pharmacy.Id,
                 n.pharmacy.Name,
-                n.distance
+                DistanceKm = (n.distance / 1000).ToString("F2"),
+                DurationMinutes = (n.duration / 60).ToString("F1")
             }));
         }
     }
-
 }

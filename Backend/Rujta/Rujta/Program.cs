@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -15,7 +15,9 @@ using Rujta.Infrastructure.Identity.Helpers;
 using Rujta.Infrastructure.Identity.Requirements;
 using Rujta.Infrastructure.Identity.Services;
 using Rujta.Infrastructure.Repositories;
+using Rujta.Infrastructure.Services;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace Rujta.API
 {
@@ -87,26 +89,31 @@ namespace Rujta.API
                 };
             });
 
-            // Application Services
-            builder.Services.AddScoped<IUserProfileService, UserProfileService>();
-            builder.Services.AddScoped<PharmacyDistanceService>();
-            builder.Services.AddScoped<IPharmacyRepository, PharmacyRepository>();
-
-
-            // Fluent Vaildation
+            // Fluent Validation
             builder.Services.AddValidatorsFromAssemblyContaining<RegisterDTOValidator>();
             builder.Services.AddFluentValidationAutoValidation();
             builder.Services.AddFluentValidationClientsideAdapters();
 
-
-            // Mapper
+            // AutoMapper
             builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
-            
-            builder.Services.AddScoped<TokenService>();
+            // ⚡ Dynamic RouterDb Path
+            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            var solutionRoot = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\..\")); // Adjust based on your structure
+            var routerDbRelativePath = builder.Configuration["Routing:RouterDbRelativePath"]; // e.g., Maps/egypt.routerdb
+            var routerDbPath = Path.Combine(solutionRoot, "Rujta", routerDbRelativePath);
 
+            if (!File.Exists(routerDbPath))
+                throw new InvalidOperationException($"Routing:RouterDb file not found at {routerDbPath}");
 
+            builder.Services.AddSingleton<ItineroRoutingService>(sp =>
+                new ItineroRoutingService(routerDbPath, sp.GetRequiredService<ILogger<ItineroRoutingService>>()));
 
+            // Application Services
+            builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+            builder.Services.AddScoped<IPharmacyRepository, PharmacyRepo>();
+            builder.Services.AddScoped<PharmacyDistanceService>();
+            builder.Services.AddScoped<Rujta.Infrastructure.Identity.Services.TokenService>();
 
             var app = builder.Build();
 
