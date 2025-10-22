@@ -5,17 +5,20 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Rujta.Application.Interfaces;
+using Rujta.Application.Services;
 using Rujta.Application.Validation;
 using Rujta.Infrastructure.Data;
 using Rujta.Infrastructure.Identity;
 using Rujta.Infrastructure.Identity.Handlers;
 using Rujta.Infrastructure.Identity.Helpers;
 using Rujta.Infrastructure.Identity.Requirements;
+using Rujta.Infrastructure.Identity.Services;
+using Rujta.Infrastructure.Repositories;
 using System.Text;
 
 namespace Rujta.API
 {
-
     public static class Program
     {
         public static async Task Main(string[] args)
@@ -84,6 +87,12 @@ namespace Rujta.API
                 };
             });
 
+            // Application Services
+            builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+            builder.Services.AddScoped<PharmacyDistanceService>();
+            builder.Services.AddScoped<IPharmacyRepository, PharmacyRepository>();
+
+
             // Fluent Vaildation
             builder.Services.AddValidatorsFromAssemblyContaining<RegisterDTOValidator>();
             builder.Services.AddFluentValidationAutoValidation();
@@ -95,6 +104,7 @@ namespace Rujta.API
 
             
             builder.Services.AddScoped<TokenService>();
+
 
 
 
@@ -113,14 +123,15 @@ namespace Rujta.API
 
             app.MapControllers();
 
+            // Role seeding
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
                 await IdentitySeeder.SeedRolesAsync(roleManager);
             }
+
             await app.RunAsync();
-           
         }
     }
 }
