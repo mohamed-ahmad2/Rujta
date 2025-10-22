@@ -7,6 +7,7 @@ using Rujta.Domain.Common;
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Data;
 using Rujta.Infrastructure.Identity;
+using Rujta.Infrastructure.Identity.Services;
 
 
 namespace Rujta.API.Controllers
