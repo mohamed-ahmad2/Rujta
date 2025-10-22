@@ -8,8 +8,8 @@
 
   <ItemGroup>
     <Folder Include="Interfaces\" />
+    <Folder Include="Mapper\" />
     <Folder Include="Services\" />
-    <Folder Include="Validation\DTOs\" />
   </ItemGroup>
 
   <ItemGroup>
