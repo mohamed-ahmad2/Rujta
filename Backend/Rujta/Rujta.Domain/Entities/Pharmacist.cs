@@ -8,5 +8,7 @@ namespace Rujta.Domain.Entities
         public int ExperienceYears { get; set; }
         public TimeSpan WorkStartTime { get; set; }
         public TimeSpan WorkEndTime { get; set; }
+
+        public ICollection<ProcessPrescription>? ProcessPrescriptions { get; set; }
     }
 }
