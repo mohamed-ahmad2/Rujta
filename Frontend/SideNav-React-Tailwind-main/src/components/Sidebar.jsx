@@ -5,7 +5,6 @@ import logo from '../logo.png';
 // icons
 import { MdInventory, MdMenuOpen } from "react-icons/md";
 import { IoHomeOutline } from "react-icons/io5";
-import { FaProductHunt, FaUserCircle } from "react-icons/fa";
 import { TbMenuOrder, TbReportSearch } from "react-icons/tb";
 import { IoLogoBuffer } from "react-icons/io";
 import { CiSettings } from "react-icons/ci";

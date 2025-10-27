@@ -36,8 +36,7 @@ namespace Rujta.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to load RouterDb from {Path}", routerDbPath);
-                throw;
+                throw new InvalidOperationException($"Failed to load RouterDb from {routerDbPath}", ex);
             }
         }
 
