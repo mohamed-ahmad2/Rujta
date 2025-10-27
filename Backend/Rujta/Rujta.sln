@@ -3,22 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36408.4
 MinimumVisualStudioVersion = 10.0.40219.1
-<<<<<<< HEAD
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.API", "Rujta\Rujta.API.csproj", "{3E1095CF-56F3-421D-B24C-6CC2028FF21E}"
-EndProject
-=======
->>>>>>> origin/main
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.Domain", "Rujta.Domain\Rujta.Domain.csproj", "{3CEA9918-050F-486E-A0A5-84EB4DEF3547}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.Infrastructure", "Rujta.Infrastructure\Rujta.Infrastructure.csproj", "{D314FC48-452F-4E6C-B8E0-1B429127BEC3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.Infrastructure", "Rujta.Infrastructure\Rujta.Infrastructure.csproj", "{3045CFA5-7341-3602-9683-A686AFD3C294}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.Application", "Rujta.Application\Rujta.Application.csproj", "{4CC7E6E4-B2EA-D485-A9A2-CB9FB13AC579}"
 EndProject
-<<<<<<< HEAD
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RouterDbBuilder", "RouterDbBuilder\RouterDbBuilder.csproj", "{88F3EFF6-DE38-4AFB-94F4-38D310DA8D65}"
-=======
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.API", "Rujta.Api\Rujta.API.csproj", "{A4D32DF9-7731-1ED9-4DC5-1FBF80973A7B}"
->>>>>>> origin/main
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,36 +17,22 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-<<<<<<< HEAD
-		{3E1095CF-56F3-421D-B24C-6CC2028FF21E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3E1095CF-56F3-421D-B24C-6CC2028FF21E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3E1095CF-56F3-421D-B24C-6CC2028FF21E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3E1095CF-56F3-421D-B24C-6CC2028FF21E}.Release|Any CPU.Build.0 = Release|Any CPU
-=======
->>>>>>> origin/main
 		{3CEA9918-050F-486E-A0A5-84EB4DEF3547}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3CEA9918-050F-486E-A0A5-84EB4DEF3547}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3CEA9918-050F-486E-A0A5-84EB4DEF3547}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3CEA9918-050F-486E-A0A5-84EB4DEF3547}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D314FC48-452F-4E6C-B8E0-1B429127BEC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D314FC48-452F-4E6C-B8E0-1B429127BEC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D314FC48-452F-4E6C-B8E0-1B429127BEC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D314FC48-452F-4E6C-B8E0-1B429127BEC3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3045CFA5-7341-3602-9683-A686AFD3C294}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3045CFA5-7341-3602-9683-A686AFD3C294}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3045CFA5-7341-3602-9683-A686AFD3C294}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3045CFA5-7341-3602-9683-A686AFD3C294}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4CC7E6E4-B2EA-D485-A9A2-CB9FB13AC579}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4CC7E6E4-B2EA-D485-A9A2-CB9FB13AC579}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4CC7E6E4-B2EA-D485-A9A2-CB9FB13AC579}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4CC7E6E4-B2EA-D485-A9A2-CB9FB13AC579}.Release|Any CPU.Build.0 = Release|Any CPU
-<<<<<<< HEAD
-		{88F3EFF6-DE38-4AFB-94F4-38D310DA8D65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{88F3EFF6-DE38-4AFB-94F4-38D310DA8D65}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{88F3EFF6-DE38-4AFB-94F4-38D310DA8D65}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{88F3EFF6-DE38-4AFB-94F4-38D310DA8D65}.Release|Any CPU.Build.0 = Release|Any CPU
-=======
 		{A4D32DF9-7731-1ED9-4DC5-1FBF80973A7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A4D32DF9-7731-1ED9-4DC5-1FBF80973A7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A4D32DF9-7731-1ED9-4DC5-1FBF80973A7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A4D32DF9-7731-1ED9-4DC5-1FBF80973A7B}.Release|Any CPU.Build.0 = Release|Any CPU
->>>>>>> origin/main
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

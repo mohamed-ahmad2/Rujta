@@ -44,4 +44,8 @@
     <ProjectReference Include="..\Rujta.Infrastructure\Rujta.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Maps\" />
+  </ItemGroup>
+
 </Project>

@@ -9,12 +9,14 @@ using Rujta.Application.Interfaces;
 using Rujta.Application.Services;
 using Rujta.Application.Validation;
 using Rujta.Infrastructure.Data;
+using Rujta.Infrastructure.Helperrs;
 using Rujta.Infrastructure.Identity;
 using Rujta.Infrastructure.Identity.Handlers;
 using Rujta.Infrastructure.Identity.Helpers;
 using Rujta.Infrastructure.Identity.Requirements;
 using Rujta.Infrastructure.Identity.Services;
 using Rujta.Infrastructure.Repositories;
+using Rujta.Infrastructure.Services;
 using System.Text;
 
 namespace Rujta.API
@@ -32,9 +34,16 @@ namespace Rujta.API
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            Console.WriteLine("Current ConnectionString: " + builder.Configuration.GetConnectionString("DefaultConnection"));
+
+
             // Database
             builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(
+                    builder.Configuration.GetConnectionString("DefaultConnection")
+                )
+            );
+
 
             // Identity
             builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
@@ -87,10 +96,32 @@ namespace Rujta.API
                 };
             });
 
+
+            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            var solutionRoot = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\..\"));
+
+            var routerDbRelativePath = builder.Configuration["Routing:RouterDbRelativePath"]
+                ?? throw new InvalidOperationException("Routing:RouterDbRelativePath is missing in configuration.");
+
+            var routerDbPath = Path.Combine(solutionRoot, routerDbRelativePath);
+
+            // Check if RouterDb exists, else attempt to build it
+            if (!File.Exists(routerDbPath))
+            {
+                Console.WriteLine("RouterDb not found. Attempting to build it...");
+                bool built = RouterDbHelper.BuildRouterDb();
+
+                if (!built || !File.Exists(routerDbPath))
+                    throw new InvalidOperationException($"Routing:RouterDb file could not be created at {routerDbPath}");
+            }
+
+            builder.Services.AddSingleton<ItineroRoutingService>(sp =>
+                new ItineroRoutingService(routerDbPath, sp.GetRequiredService<ILogger<ItineroRoutingService>>()));
+
             // Application Services
             builder.Services.AddScoped<IUserProfileService, UserProfileService>();
             builder.Services.AddScoped<PharmacyDistanceService>();
-            builder.Services.AddScoped<IPharmacyRepository, PharmacyRepository>();
+            builder.Services.AddScoped<IPharmacyRepository, PharmacyRepo>();
 
 
             // Fluent Vaildation

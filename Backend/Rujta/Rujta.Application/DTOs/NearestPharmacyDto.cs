@@ -8,8 +8,9 @@ namespace Rujta.Application.DTOs
 {
     public class NearestPharmacyDto
     {
-        public Guid Id { get; set; }
+        public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public double Distance { get; set; }
+        public string DistanceKm { get; set; } = string.Empty;
+        public string DurationMinutes { get; set; } = string.Empty;
     }
 }

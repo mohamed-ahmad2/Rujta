@@ -72,6 +72,8 @@ namespace Rujta.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     DomainPersonId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Location = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -257,6 +259,9 @@ namespace Rujta.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Address = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ProfileImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Discriminator = table.Column<string>(type: "nvarchar(13)", maxLength: 13, nullable: false),
@@ -277,7 +282,9 @@ namespace Rujta.Infrastructure.Migrations
                     DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
                     ChronicDiseases = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
                     Weight = table.Column<double>(type: "float(5)", precision: 5, scale: 2, nullable: true),
-                    Height = table.Column<double>(type: "float(5)", precision: 5, scale: 2, nullable: true)
+                    Height = table.Column<double>(type: "float(5)", precision: 5, scale: 2, nullable: true),
+                    Latitude = table.Column<double>(type: "float", nullable: true),
+                    Longitude = table.Column<double>(type: "float", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -306,6 +313,8 @@ namespace Rujta.Infrastructure.Migrations
                     Location = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
                     ContactNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     OpenHours = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Latitude = table.Column<double>(type: "float", nullable: false),
+                    Longitude = table.Column<double>(type: "float", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     AdminId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ManagerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
