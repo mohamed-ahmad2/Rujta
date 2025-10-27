@@ -24,7 +24,11 @@ namespace Rujta.Infrastructure.Identity.Services
             _userManager = userManager;
         }
 
+<<<<<<< HEAD
         public async Task<TokenDTO> GenerateTokensAsync(ApplicationUser user)
+=======
+        public async Task<TokenDto> GenerateTokensAsync(ApplicationUser user)
+>>>>>>> origin/main
         {
             //Claims for Access Token
             var email = user.Email ?? throw new InvalidOperationException("User email is null");
@@ -58,7 +62,11 @@ namespace Rujta.Infrastructure.Identity.Services
             var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
             var refreshTokenExpiration = DateTime.UtcNow.AddDays(double.Parse(jwtSection["RefreshTokenExpirationDays"] ?? "7"));
 
+<<<<<<< HEAD
             return new TokenDTO
+=======
+            return new TokenDto
+>>>>>>> origin/main
             {
                 AccessToken = new JwtSecurityTokenHandler().WriteToken(accessToken),
                 Expiration = accessTokenExpiration,
