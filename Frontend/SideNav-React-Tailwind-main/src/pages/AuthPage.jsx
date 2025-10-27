@@ -1,20 +1,17 @@
 import React, { useState } from "react";
+import PropTypes from "prop-types";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 
 export default function AuthPage({ onAuthSuccess }) {
-
   const [isSignUp, setIsSignUp] = useState(false);
-  const navigate = useNavigate();
 
   const handleSignIn = (e) => {
-  e.preventDefault();
-  // 🔹 Call parent function to switch to dashboard
-  if (typeof onAuthSuccess === "function") {
-    onAuthSuccess();
-  }
-};
-
+    e.preventDefault();
+    // 🔹 Call parent function to switch to dashboard
+    if (typeof onAuthSuccess === "function") {
+      onAuthSuccess();
+    }
+  };
 
   const handleSignUp = (e) => {
     e.preventDefault();
@@ -131,3 +128,8 @@ export default function AuthPage({ onAuthSuccess }) {
     </div>
   );
 }
+
+// ✅ PropTypes validation
+AuthPage.propTypes = {
+  onAuthSuccess: PropTypes.func,
+};

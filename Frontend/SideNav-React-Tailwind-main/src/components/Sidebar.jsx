@@ -4,30 +4,27 @@ import logo from '../logo.png';
 
 // icons
 import { MdInventory, MdMenuOpen } from "react-icons/md";
-import { IoHomeOutline } from "react-icons/io5";
+import { IoHomeOutline, IoIosArrowDown } from "react-icons/io5";
 import { TbMenuOrder, TbReportSearch } from "react-icons/tb";
 import { IoLogoBuffer } from "react-icons/io";
 import { CiSettings } from "react-icons/ci";
-import { IoIosArrowDown } from "react-icons/io";
+import { FaUserCircle } from "react-icons/fa";
 
 const menuItems = [
   { icons: <IoHomeOutline size={30} />, label: 'Home', path: '/' },
   {
     icons: <MdInventory size={30} />,
     label: 'Products',
+    path: '/products',
     subItems: [
-  { label: 'Add Product', path: '/add' },
-  { label: 'View Products', path: '/view' }
-]
-
+      { label: 'Add Product', path: '/add' },
+      { label: 'View Products', path: '/view' }
+    ]
   },
-  
- 
-    { icons: <TbMenuOrder size={30} />, label: 'Orders', path: '/Orders' },
+  { icons: <TbMenuOrder size={30} />, label: 'Orders', path: '/Orders' },
   { icons: <TbReportSearch size={30} />, label: 'Report', path: '/report' },
   { icons: <IoLogoBuffer size={30} />, label: 'Log', path: '/log' },
-   { icons: <CiSettings size={30} />, label: 'Setting', path: '/settings' },
-
+  { icons: <CiSettings size={30} />, label: 'Setting', path: '/settings' },
 ];
 
 export default function Sidebar() {
@@ -35,8 +32,8 @@ export default function Sidebar() {
   const [expanded, setExpanded] = useState(null); // which dropdown is open
   const location = useLocation();
 
-  const toggleExpand = (index) => {
-    setExpanded(expanded === index ? null : index);
+  const toggleExpand = (path) => {
+    setExpanded(expanded === path ? null : path);
   };
 
   return (
@@ -53,17 +50,18 @@ export default function Sidebar() {
 
       {/* Menu */}
       <ul className='flex-1'>
-        {menuItems.map((item, index) => {
+        {menuItems.map((item) => {
           const isActive = location.pathname === item.path;
 
-          // If the item has subItems
           if (item.subItems) {
             return (
-              <li key={index}>
-                <div
-                  className={`px-3 py-2 my-2 rounded-md duration-300 cursor-pointer flex justify-between items-center relative group
-                    ${expanded === index ? 'bg-[#96C66C] text-black' : 'hover:bg-[#96C66C] hover:text-black'}`}
-                  onClick={() => toggleExpand(index)}
+              <li key={item.path}>
+                <button
+                  className={`px-3 py-2 my-2 rounded-md duration-300 cursor-pointer flex justify-between items-center w-full
+                    ${expanded === item.path ? 'bg-[#96C66C] text-black' : 'hover:bg-[#96C66C] hover:text-black'}`}
+                  onClick={() => toggleExpand(item.path)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleExpand(item.path); }}
+                  aria-expanded={expanded === item.path}
                 >
                   <div className='flex items-center gap-2'>
                     {item.icons}
@@ -71,14 +69,14 @@ export default function Sidebar() {
                       {item.label}
                     </p>
                   </div>
-                  {open && <IoIosArrowDown className={`duration-300 ${expanded === index ? 'rotate-180' : ''}`} />}
-                </div>
+                  {open && <IoIosArrowDown className={`duration-300 ${expanded === item.path ? 'rotate-180' : ''}`} />}
+                </button>
 
                 {/* Submenu */}
-                {expanded === index && (
+                {expanded === item.path && (
                   <ul className={`ml-10 mt-1 overflow-hidden transition-all duration-300 ${open ? 'block' : 'hidden'}`}>
-                    {item.subItems.map((sub, subIndex) => (
-                      <Link to={sub.path} key={subIndex}>
+                    {item.subItems.map((sub) => (
+                      <Link to={sub.path} key={sub.path}>
                         <li
                           className={`px-2 py-1 rounded-md my-1 text-sm cursor-pointer duration-200 
                             ${location.pathname === sub.path
@@ -98,7 +96,7 @@ export default function Sidebar() {
 
           // Normal item (no submenu)
           return (
-            <Link to={item.path} key={index}>
+            <Link to={item.path} key={item.path}>
               <li
                 className={`px-3 py-2 my-2 rounded-md duration-300 cursor-pointer flex gap-2 items-center relative group
                 ${isActive ? 'bg-[#96C66C] text-black' : 'hover:bg-[#96C66C] hover:text-black'}`}
