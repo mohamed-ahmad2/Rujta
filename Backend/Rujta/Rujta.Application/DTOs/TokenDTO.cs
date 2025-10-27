@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 
 namespace Rujta.Application.DTOs
 {
+<<<<<<< HEAD
+    public class TokenDTO
+=======
     public class TokenDto
+>>>>>>> origin/main
     {
         public string AccessToken { get; set; } = string.Empty;
         public DateTime Expiration { get; set; }

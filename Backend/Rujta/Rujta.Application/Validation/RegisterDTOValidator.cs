@@ -5,9 +5,15 @@ using Rujta.Application.DTOs;
 
 namespace Rujta.Application.Validation
 {
+<<<<<<< HEAD
+    public class RegisterDTOValidator : AbstractValidator<RegisterDTO>
+    {
+        public RegisterDTOValidator()
+=======
     public class RegisterDtoValidator : AbstractValidator<RegisterDto>
     {
         public RegisterDtoValidator()
+>>>>>>> origin/main
         {
             RuleFor(x => x.Name)
                 .NotEmpty().WithMessage("Name is required.")
