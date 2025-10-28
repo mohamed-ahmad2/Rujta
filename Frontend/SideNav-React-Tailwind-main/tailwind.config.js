@@ -1,10 +1,33 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
-    "./src/**/*.{js,jsx,ts,tsx}",
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily:{
+        playfair:["playfair Display","serif"],
+      },
+
+      colors:{
+        primary:"#000000",
+        secondary:"#9DC873",
+         page: "#F6F6F6",
+      },
+      container:{
+          center : true,
+          padding:{
+          DEFAULT: "1rem" ,
+          sm:"2rem" ,
+          lg:"4rem" ,
+          xl:"5rem" ,
+          "2xl": "6rem" ,
+
+        },
+      },
+      
+    },
   },
   plugins: [],
-}
+};
