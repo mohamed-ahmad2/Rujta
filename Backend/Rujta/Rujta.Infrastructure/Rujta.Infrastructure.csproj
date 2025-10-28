@@ -7,10 +7,7 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<Folder Include="Repositories\" />
-	</ItemGroup>
-
-	<ItemGroup>
+    <PackageReference Include="F23.StringSimilarity" Version="7.0.0" />
     <PackageReference Include="Itinero" Version="1.5.1" />
     <PackageReference Include="Itinero.IO.Osm" Version="1.5.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.21" />
