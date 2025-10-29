@@ -41,29 +41,42 @@ namespace Rujta.Infrastructure.Services
         }
 
         // Returns (distance in meters, duration in seconds)
-        public (double distance, double duration) GetRouteData(double fromLat, double fromLon, double toLat, double toLon)
+        public (double distance, double duration) GetRouteData(
+     double fromLat, double fromLon,
+     double toLat, double toLon,
+     Itinero.Profiles.Profile profile)
         {
             try
             {
-                var profile = _router.Db.GetSupportedProfile("car");
-                if (profile == null)
+                // ✅ Check correct profile exists
+                var supportedProfile = _router.Db.GetSupportedProfile(profile.Name);
+                if (supportedProfile == null)
                 {
-                    _logger.LogWarning("RouterDb does not contain a 'car' profile.");
+                    _logger.LogWarning("Profile '{ProfileName}' not supported by RouterDb.", profile.Name);
                     return (double.MaxValue, double.MaxValue);
                 }
 
-                var start = _router.Resolve(profile, new Coordinate((float)fromLat, (float)fromLon));
-                var end = _router.Resolve(profile, new Coordinate((float)toLat, (float)toLon));
+                // ✅ Resolve using selected profile
+                var start = _router.Resolve(supportedProfile,
+                    new Coordinate((float)fromLat, (float)fromLon));
+                var end = _router.Resolve(supportedProfile,
+                    new Coordinate((float)toLat, (float)toLon));
 
-                var route = _router.Calculate(profile, start, end);
+                // ✅ Route using selected profile
+                var route = _router.Calculate(supportedProfile, start, end);
 
+                // ✅ TotalTime is already in seconds
                 return (route.TotalDistance, route.TotalTime);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Routing failed for from ({FromLat},{FromLon}) to ({ToLat},{ToLon})", fromLat, fromLon, toLat, toLon);
+                _logger.LogWarning(ex,
+                    "Routing failed for from ({FromLat},{FromLon}) to ({ToLat},{ToLon})",
+                    fromLat, fromLon, toLat, toLon);
+
                 return (double.MaxValue, double.MaxValue);
             }
         }
+
     }
 }
