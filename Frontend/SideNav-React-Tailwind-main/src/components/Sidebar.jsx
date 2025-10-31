@@ -4,28 +4,31 @@ import logo from '../logo.png';
 
 // icons
 import { MdInventory, MdMenuOpen } from "react-icons/md";
-import { IoHomeOutline, IoIosArrowDown } from "react-icons/io5";
+import { IoHomeOutline } from "react-icons/io5";
+import { IoIosArrowDown } from "react-icons/io";
+
 import { TbMenuOrder, TbReportSearch } from "react-icons/tb";
 import { IoLogoBuffer } from "react-icons/io";
 import { CiSettings } from "react-icons/ci";
 import { FaUserCircle } from "react-icons/fa";
 
 const menuItems = [
-  { icons: <IoHomeOutline size={30} />, label: 'Home', path: '/' },
+  { icons: <IoHomeOutline size={30} />, label: 'Home', path: '/dashboard/home' },
   {
     icons: <MdInventory size={30} />,
     label: 'Products',
-    path: '/products',
+    path: '/dashboard/products',
     subItems: [
-      { label: 'Add Product', path: '/add' },
-      { label: 'View Products', path: '/view' }
+      { label: 'Add Product', path: '/dashboard/add' },
+      { label: 'View Products', path: '/dashboard/view' }
     ]
   },
-  { icons: <TbMenuOrder size={30} />, label: 'Orders', path: '/Orders' },
-  { icons: <TbReportSearch size={30} />, label: 'Report', path: '/report' },
-  { icons: <IoLogoBuffer size={30} />, label: 'Log', path: '/log' },
-  { icons: <CiSettings size={30} />, label: 'Setting', path: '/settings' },
+  { icons: <TbMenuOrder size={30} />, label: 'Orders', path: '/dashboard/orders' },
+  { icons: <TbReportSearch size={30} />, label: 'Report', path: '/dashboard/report' },
+  { icons: <IoLogoBuffer size={30} />, label: 'Log', path: '/dashboard/log' },
+  { icons: <CiSettings size={30} />, label: 'Settings', path: '/dashboard/settings' },
 ];
+
 
 export default function Sidebar() {
   const [open, setOpen] = useState(true);

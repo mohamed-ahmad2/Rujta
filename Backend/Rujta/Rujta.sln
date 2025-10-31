@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.Application", "Rujta.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rujta.API", "Rujta.Api\Rujta.API.csproj", "{A4D32DF9-7731-1ED9-4DC5-1FBF80973A7B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestSerach", "TestSerach\TestSerach.csproj", "{1A1C3C8E-06F7-D692-362E-3E6647FBE470}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{A4D32DF9-7731-1ED9-4DC5-1FBF80973A7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A4D32DF9-7731-1ED9-4DC5-1FBF80973A7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A4D32DF9-7731-1ED9-4DC5-1FBF80973A7B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A1C3C8E-06F7-D692-362E-3E6647FBE470}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A1C3C8E-06F7-D692-362E-3E6647FBE470}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A1C3C8E-06F7-D692-362E-3E6647FBE470}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A1C3C8E-06F7-D692-362E-3E6647FBE470}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

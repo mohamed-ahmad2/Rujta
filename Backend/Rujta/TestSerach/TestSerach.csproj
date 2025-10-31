@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="F23.StringSimilarity" Version="7.0.0" />
     <PackageReference Include="FuzzySharp" Version="2.0.2" />
+    <PackageReference Include="SimMetrics.Net" Version="1.0.5" />
   </ItemGroup>
 
 </Project>

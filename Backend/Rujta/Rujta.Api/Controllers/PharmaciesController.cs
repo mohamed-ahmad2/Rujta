@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.DTOs;
 using Rujta.Application.Services;
 
 namespace Rujta.API.Controllers
@@ -15,19 +14,20 @@ namespace Rujta.API.Controllers
             _distanceService = distanceService;
         }
 
-        [HttpGet("nearest")]
-        [ProducesResponseType(typeof(IEnumerable<NearestPharmacyDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public IActionResult GetNearest(double userLat, double userLon, int topK = 10)
+        [HttpGet("nearest-routed")]
+        [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
+        public IActionResult GetNearestWithRouting(double userLat, double userLon, string mode = "car", int topK = 5)
         {
-            var nearest = _distanceService.GetNearestPharmacies(userLat, userLon, topK);
-            return Ok(nearest.Select(n => new
+            var result = _distanceService.GetNearestPharmaciesRouted(userLat, userLon, mode, topK);
+
+            return Ok(result.Select(r => new
             {
-                n.pharmacy.Id,
-                n.pharmacy.Name,
-                n.distance
+                id = r.pharmacy.Id,
+                name = r.pharmacy.Name,
+                distanceMeters = Math.Round(r.distanceMeters, 2),
+                durationMinutes = Math.Round(r.durationMinutes, 1),
+                mode
             }));
         }
     }
-
 }

@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 using Rujta.Application.Interfaces.InterfaceRepositories;
+=======
+﻿using Itinero;
+using Itinero.Osm.Vehicles;
+using Rujta.Application.Interfaces;
+>>>>>>> d3292d7c9418d7495c533dc61c2bd0d6ab05047f
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Services;
 using System;
@@ -10,43 +16,38 @@ namespace Rujta.Application.Services
     public class PharmacyDistanceService
     {
         private readonly IPharmacyRepository _pharmacyRepository;
-        private readonly ItineroRoutingService? _itineroService;
+        private readonly ItineroRoutingService _itineroService;
 
-        // Constructor with routing service
         public PharmacyDistanceService(IPharmacyRepository pharmacyRepository, ItineroRoutingService itineroService)
         {
             _pharmacyRepository = pharmacyRepository;
             _itineroService = itineroService;
         }
 
-        // Constructor without routing service
-        public PharmacyDistanceService(IPharmacyRepository pharmacyRepository)
-        {
-            _pharmacyRepository = pharmacyRepository;
-        }
-
+        // 🌍 Haversine distance (approximate)
         private static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
         {
             const double R = 6371000; // meters
-            double toRad = Math.PI / 180;
-            double dLat = (lat2 - lat1) * toRad;
-            double dLon = (lon2 - lon1) * toRad;
+            double dLat = (lat2 - lat1) * Math.PI / 180.0;
+            double dLon = (lon2 - lon1) * Math.PI / 180.0;
 
-            double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                       Math.Cos(lat1 * toRad) * Math.Cos(lat2 * toRad) *
-                       Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+            double a =
+                Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                Math.Cos(lat1 * Math.PI / 180.0) *
+                Math.Cos(lat2 * Math.PI / 180.0) *
+                Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
 
-            double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-            return R * c;
+            return 2 * R * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
         }
 
-        // Using Itinero routing service
-        public List<(Pharmacy pharmacy, double distance, double duration)> GetNearestPharmaciesWithRoute(double userLat, double userLon, int topK = 10)
+        // 🚗 Get nearest pharmacies using both Haversine + Itinero
+        public List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>
+        GetNearestPharmaciesRouted(double userLat, double userLon, string mode = "car", int topK = 5)
         {
-            if (_itineroService == null)
-                throw new InvalidOperationException("Routing service is not available.");
+            var allPharmacies = _pharmacyRepository.GetAllPharmacies();
 
-            var preFiltered = _pharmacyRepository.GetAllPharmacies()
+            // ✅ Step 1: Use Haversine to pre-filter
+            var topCandidates = allPharmacies
                 .Select(p => new
                 {
                     Pharmacy = p,
@@ -56,31 +57,52 @@ namespace Rujta.Application.Services
                 .Take(topK * 3)
                 .ToList();
 
+            // ✅ Step 2: Prepare Itinero profile
+            var profile = mode.ToLower() switch
+            {
+                "walk" => Vehicle.Pedestrian.Fastest(),
+                _ => Vehicle.Car.Fastest()
+            };
+
+            // ✅ Step 3: Compute accurate distances
+            var results = new List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>();
             const double TOLERANCE = 1e-6;
 
-            var accurate = preFiltered
-                .Select(p =>
+            foreach (var entry in topCandidates)
+            {
+                var (dist, durSeconds) = _itineroService.GetRouteData(
+                    userLat, userLon,
+                    entry.Pharmacy.Latitude, entry.Pharmacy.Longitude,
+                    profile
+                );
+
+                if (Math.Abs(dist - double.MaxValue) < TOLERANCE)
                 {
-                    var (distance, duration) = _itineroService.GetRouteData(userLat, userLon, p.Pharmacy.Latitude, p.Pharmacy.Longitude);
-                    return (p.Pharmacy, distance, duration);
-                })
-                .Where(x => Math.Abs(x.distance - double.MaxValue) > TOLERANCE)
-                .OrderBy(x => x.distance)
-                .Take(topK)
-                .ToList();
+                    dist = entry.ApproxDistance;
 
+                    if (mode.ToLower() == "walk")
+                    {
+                        var walkSpeedMps = 1.4;
+                        durSeconds = dist / walkSpeedMps;
+                    }
+                    else
+                    {
+                        var speedKmh = 25.0;
+                        var speedMps = (speedKmh * 1000) / 3600;
+                        durSeconds = dist / speedMps;
+                    }
+                }
 
-            return accurate.OrderBy(x => x.distance).Take(topK).ToList();
-        }
+                results.Add((
+                    pharmacy: entry.Pharmacy,
+                    distanceMeters: dist,
+                    durationMinutes: durSeconds / 60.0
+                ));
+            }
 
-        // Only Haversine distance
-        public List<(Pharmacy pharmacy, double distance)> GetNearestPharmacies(double userLat, double userLon, int topK = 5)
-        {
-            var pharmacies = _pharmacyRepository.GetAllPharmacies();
-
-            return pharmacies
-                .Select(p => (pharmacy: p, distance: HaversineDistance(userLat, userLon, p.Latitude, p.Longitude)))
-                .OrderBy(x => x.distance)
+            // ✅ Step 4: Sort and return top K
+            return results
+                .OrderBy(r => r.distanceMeters)
                 .Take(topK)
                 .ToList();
         }
