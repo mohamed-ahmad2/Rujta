@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Rujta.Application.Interfaces;
+using Rujta.Application.Interfaces.InterfaceRepositories;
+using Rujta.Application.Interfaces.InterfaceServices;
+using Rujta.Application.Mapper;
 using Rujta.Application.Services;
 using Rujta.Application.Validation;
 using Rujta.Infrastructure.Data;
@@ -132,12 +135,13 @@ namespace Rujta.API
 
             // Mapper
             builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+            builder.Services.AddAutoMapper(typeof(MedicineProfile).Assembly);
 
-            
             builder.Services.AddScoped<TokenService>();
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+            builder.Services.AddScoped<IMedicineService, MedicineService>();
 
-
-
+            builder.Services.AddHttpClient<MedicineDataImportService>();
 
             var app = builder.Build();
 

@@ -22,10 +22,10 @@ namespace Rujta.Infrastructure.Configuration
                    .HasMaxLength(150);
 
             builder.Property(m => m.Description)
-                   .HasMaxLength(500);
+                   .HasColumnType("NVARCHAR(MAX)");
 
             builder.Property(m => m.Dosage)
-                   .HasMaxLength(100);
+                   .HasColumnType("NVARCHAR(MAX)");
 
             builder.Property(m => m.ActiveIngredient)
                    .HasMaxLength(150);
