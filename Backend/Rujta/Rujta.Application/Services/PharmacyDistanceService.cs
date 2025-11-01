@@ -20,6 +20,7 @@ namespace Rujta.Application.Services
             _itineroService = itineroService;
         }
 
+        // 🌍 Haversine distance (approximate)
         private static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
         {
             const double R = 6371000; // meters
@@ -35,11 +36,13 @@ namespace Rujta.Application.Services
             return 2 * R * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
         }
 
+        // 🚗 Get nearest pharmacies using both Haversine + Itinero
         public List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>
         GetNearestPharmaciesRouted(double userLat, double userLon, string mode = "car", int topK = 5)
         {
             var allPharmacies = _pharmacyRepository.GetAllPharmacies();
 
+            // ✅ Step 1: Use Haversine to pre-filter
             var topCandidates = allPharmacies
                 .Select(p => new
                 {
@@ -50,12 +53,14 @@ namespace Rujta.Application.Services
                 .Take(topK * 3)
                 .ToList();
 
+            // ✅ Step 2: Prepare Itinero profile
             var profile = mode.ToLower() switch
             {
                 "walk" => Vehicle.Pedestrian.Fastest(),
                 _ => Vehicle.Car.Fastest()
             };
 
+            // ✅ Step 3: Compute accurate distances
             var results = new List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>();
             const double TOLERANCE = 1e-6;
 
@@ -91,6 +96,7 @@ namespace Rujta.Application.Services
                 ));
             }
 
+            // ✅ Step 4: Sort and return top K
             return results
                 .OrderBy(r => r.distanceMeters)
                 .Take(topK)
