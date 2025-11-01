@@ -5,6 +5,7 @@ using Rujta.Domain.Common;
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Extensions;
 using Rujta.Infrastructure.Identity;
+using System.Reflection.Emit;
 
 
 namespace Rujta.Infrastructure.Data
@@ -31,12 +32,22 @@ namespace Rujta.Infrastructure.Data
         public DbSet<Prescription> Prescriptions { get; set; }
         public DbSet<ProcessPrescription> ProcessPrescriptions { get; set; }
         public DbSet<SellDrugViaPharmacy> SellDrugViaPharmacies { get; set; }
+        public DbSet<Notification> Notifications { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
-            
+            builder.Entity<Notification>(b =>
+            {
+                b.HasKey(n => n.Id);
+                b.Property(n => n.UserId).IsRequired().HasMaxLength(200);
+                b.Property(n => n.Title).IsRequired().HasMaxLength(250);
+                b.Property(n => n.Message).IsRequired().HasMaxLength(2048);
+                b.Property(n => n.Payload).HasMaxLength(4000);
+                b.Property(n => n.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            });
+
             builder.ApplyIdentityMapping();
             builder.ApplyDecimalPrecision();
 

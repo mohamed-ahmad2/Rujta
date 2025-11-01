@@ -1,10 +1,6 @@
-<<<<<<< HEAD
-using Rujta.Application.Interfaces.InterfaceRepositories;
-=======
-﻿using Itinero;
+using Itinero;
 using Itinero.Osm.Vehicles;
-using Rujta.Application.Interfaces;
->>>>>>> d3292d7c9418d7495c533dc61c2bd0d6ab05047f
+using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Services;
 using System;
