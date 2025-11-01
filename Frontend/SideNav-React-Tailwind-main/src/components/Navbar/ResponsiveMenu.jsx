@@ -27,7 +27,7 @@ const ResponsiveMenu = ({ open }) => {
   );
 };
 
-// 🔹 إضافة PropTypes للتحقق من props
+
 ResponsiveMenu.propTypes = {
   open: PropTypes.bool.isRequired,
 };

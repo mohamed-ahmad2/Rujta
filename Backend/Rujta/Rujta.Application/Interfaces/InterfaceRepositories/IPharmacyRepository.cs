@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Rujta.Application.Interfaces
+namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
     public interface IPharmacyRepository
     {

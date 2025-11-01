@@ -1,3 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Reem+Kufi:wght@400..700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components{
+    .primary-btn{
+        @apply bg-secondary text-white font-semibold py-2 px-11
+        rounded-xl hover:!scale-110 duration-300;
+    }
+}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .bg-gradient-primary {
+    @apply bg-gradient-to-r from-[#96C66C] to-[#7AB25A];
+  }
+
+  .bg-gradient-background {
+    @apply bg-gradient-to-br from-[#96C66C]/30 via-[#dff0c9]/40 to-white;
+  }
+
+  .text-primary {
+    color: #96C66C;
+  }
+
+  .bg-primary {
+    background-color: #96C66C;
+  }
+
+  .text-muted-foreground {
+    @apply text-gray-500;
+  }
+
+  .border-border {
+    @apply border-gray-300;
+  }
+
+  .shadow-elegant {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  .shadow-glass {
+    box-shadow: 0 10px 40px rgba(150, 198, 108, 0.2);
+  }
+
+  .backdrop-blur-glass {
+    @apply backdrop-blur-lg bg-white/70;
+  }
+}

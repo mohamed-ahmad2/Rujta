@@ -1,4 +1,4 @@
-﻿using Rujta.Application.Interfaces;
+﻿using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Data;
 using System;

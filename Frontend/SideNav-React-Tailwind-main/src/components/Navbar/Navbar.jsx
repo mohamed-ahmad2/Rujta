@@ -5,9 +5,11 @@ import { CiSearch } from "react-icons/ci";
 import { PiShoppingCartThin } from "react-icons/pi";
 import { MdMenu } from "react-icons/md";
 import ResponsiveMenu from "./ResponsiveMenu";
+import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
   const [open,setOpen] = React.useState(false);
+  const navigate = useNavigate();
 
   return (
     <> 
@@ -46,7 +48,9 @@ const Navbar = () => {
               <PiShoppingCartThin />
             </button>
 
-            <button className='hover:bg-secondary text-secondary font-semibold hover:text-white rounded-md border-2 border-secondary px-6 py-2 duration-200 hidden md:block'>
+            <button
+              onClick={() => navigate("/auth")}
+            className='hover:bg-secondary text-secondary font-semibold hover:text-white rounded-md border-2 border-secondary px-6 py-2 duration-200 hidden md:block'>
               Login
             </button>
 

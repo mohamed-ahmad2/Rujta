@@ -272,12 +272,10 @@ namespace Rujta.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("NVARCHAR(MAX)");
 
                     b.Property<string>("Dosage")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("NVARCHAR(MAX)");
 
                     b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("datetime2");
