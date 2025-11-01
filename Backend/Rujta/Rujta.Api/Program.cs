@@ -1,10 +1,11 @@
-using FluentValidation;
+﻿using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Rujta.Domain.Hubs;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Application.Interfaces.InterfaceServices;
@@ -34,6 +35,7 @@ namespace Rujta.API
 
             // Add services
             builder.Services.AddControllers();
+            builder.Services.AddSignalR();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
@@ -125,7 +127,12 @@ namespace Rujta.API
             builder.Services.AddScoped<IUserProfileService, UserProfileService>();
             builder.Services.AddScoped<PharmacyDistanceService>();
             builder.Services.AddScoped<IPharmacyRepository, PharmacyRepo>();
+            builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
 
+
+            // Add the IUserRepository registration so controllers can resolve it
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
 
             // Fluent Vaildation
             builder.Services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
@@ -165,6 +172,8 @@ namespace Rujta.API
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
                 await IdentitySeeder.SeedRolesAsync(roleManager);
             }
+            app.MapHub<NotificationHub>("/notificationHub");
+
 
             await app.RunAsync();
         }
