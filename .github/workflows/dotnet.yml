@@ -3,8 +3,12 @@ name: .NET Backend Build
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'Rujta/Backend/**'     
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'Rujta/Backend/**'    
 
 jobs:
   build:
