@@ -10,7 +10,7 @@ export default function AuthPage() {
 
   const handleSignIn = (e) => {
     e.preventDefault();
-    navigate("/dashboard");
+    navigate("/user");
   };
 
   const handleSignUp = (e) => {
