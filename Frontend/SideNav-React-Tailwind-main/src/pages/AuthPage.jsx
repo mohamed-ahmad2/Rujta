@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { jwtDecode } from "jwt-decode";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, User, Sparkles, Phone, MapPin } from "lucide-react";
@@ -25,74 +26,105 @@ export default function AuthPage() {
 
   // 🔹 Handle Login
   const handleSignIn = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  e.preventDefault();
 
-    try {
-      const response = await fetch(`${apiBase}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.createPassword,
-        }),
-      });
+  const response = await fetch("https://localhost:44390/api/Auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: formData.email,
+      password: formData.createPassword
+    }),
+  });
 
-      if (!response.ok) throw new Error("Invalid email or password");
-      const data = await response.json();
+  if (!response.ok) {
+    alert("Invalid credentials");
+    return;
+  }
 
-      localStorage.setItem("accessToken", data.accessToken);
-      localStorage.setItem("refreshToken", data.refreshToken);
-      localStorage.setItem("role", data.role);
+  const data = await response.json();
+  const token = data.accessToken;
 
-      if (data.role === "Pharmacist") navigate("/dashboard");
-      else navigate("/user");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  localStorage.setItem("token", token);
+
+  const decoded = jwtDecode(token);
+  const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+
+  if (role === "Admin") {
+    window.location.href = "/admin/dashboard";
+  } else if (role === "User") {
+    window.location.href = "/user/";
+  } else {
+    window.location.href = "/";
+  }
+};
+
+
 
   // 🔹 Handle Register
-  const handleSignUp = async (e) => {
-    e.preventDefault();
-    setError("");
+ const handleSignUp = async (e) => {
+  e.preventDefault();
+  setError("");
 
-    if (formData.createPassword !== formData.confirmPassword) {
-      setError("Passwords do not match!");
-      return;
+  if (formData.createPassword !== formData.confirmPassword) {
+    setError("Passwords do not match!");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const response = await fetch(`${apiBase}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        location: formData.location,
+        createPassword: formData.createPassword,
+        confirmPassword: formData.confirmPassword
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText || "Registration failed");
     }
 
-    setLoading(true);
+    const data = await response.json();
 
-    try {
-      const response = await fetch(`${apiBase}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          location: formData.location,
-          createPassword: formData.createPassword,
-        }),
-      });
+    // save tokens locally
+    localStorage.setItem("accessToken", data.accessToken);
+    localStorage.setItem("refreshToken", data.refreshToken);
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(errText || "Registration failed");
-      }
+    alert("Account created successfully!");
+    setIsSignUp(false);
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
-      alert("Account created successfully!");
-      setIsSignUp(false);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+async function refreshToken() {
+  const refreshToken = localStorage.getItem("refreshToken");
+  const response = await fetch(`${apiBase}/refresh-token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(refreshToken),
+  });
+
+  if (response.ok) {
+    const data = await response.json();
+    localStorage.setItem("accessToken", data.accessToken);
+    localStorage.setItem("refreshToken", data.refreshToken);
+  } else {
+    console.error("Refresh token failed");
+  }
+}
+
+
 
   return (
     <div className="min-h-screen bg-gradient-background flex items-center justify-center p-4 relative overflow-hidden">
