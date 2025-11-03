@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Infrastructure.Data;
-
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Repositories
 {
@@ -14,10 +16,29 @@ namespace Rujta.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<IEnumerable<T>> GetAllAsync() => await _context.Set<T>().ToListAsync();
-        public async Task<T?> GetByIdAsync(int id) => await _context.Set<T>().FindAsync(id);
-        public async Task AddAsync(T entity) => await _context.Set<T>().AddAsync(entity);
-        public void Update(T entity) => _context.Set<T>().Update(entity);
-        public void Delete(T entity) => _context.Set<T>().Remove(entity);
+        public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<T>().ToListAsync(cancellationToken);
+        }
+
+        public async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<T>().FindAsync(new object[] { id }, cancellationToken);
+        }
+
+        public async Task AddAsync(T entity, CancellationToken cancellationToken = default)
+        {
+            await _context.Set<T>().AddAsync(entity, cancellationToken);
+        }
+
+        public void Update(T entity, CancellationToken cancellationToken = default)
+        {
+            _context.Set<T>().Update(entity);
+        }
+
+        public void Delete(T entity, CancellationToken cancellationToken = default)
+        {
+            _context.Set<T>().Remove(entity);
+        }
     }
 }

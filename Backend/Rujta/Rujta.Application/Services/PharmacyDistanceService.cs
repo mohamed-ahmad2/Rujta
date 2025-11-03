@@ -1,10 +1,7 @@
-<<<<<<< HEAD
-using Rujta.Application.Interfaces.InterfaceRepositories;
-=======
-﻿using Itinero;
+using Itinero;
 using Itinero.Osm.Vehicles;
 using Rujta.Application.Interfaces;
->>>>>>> d3292d7c9418d7495c533dc61c2bd0d6ab05047f
+using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Services;
 using System;
@@ -41,10 +38,11 @@ namespace Rujta.Application.Services
         }
 
         // 🚗 Get nearest pharmacies using both Haversine + Itinero
-        public List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>
-        GetNearestPharmaciesRouted(double userLat, double userLon, string mode = "car", int topK = 5)
+        public async Task<List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>>
+GetNearestPharmaciesRouted(double userLat, double userLon, string mode = "car", int topK = 5)
         {
-            var allPharmacies = _pharmacyRepository.GetAllPharmacies();
+            // ✅ انتظر النتيجة من الـ repository
+            var allPharmacies = await _pharmacyRepository.GetAllPharmacies();
 
             // ✅ Step 1: Use Haversine to pre-filter
             var topCandidates = allPharmacies
@@ -106,5 +104,6 @@ namespace Rujta.Application.Services
                 .Take(topK)
                 .ToList();
         }
+
     }
 }

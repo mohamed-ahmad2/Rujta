@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Rujta.Application.DTOs
 {
-    class CheckoutDto
+    public class CheckoutDto
     {
         public Guid UserID { get; set; }              // The user placing the order
         public int PharmacyID { get; set; }           // The pharmacy receiving the order

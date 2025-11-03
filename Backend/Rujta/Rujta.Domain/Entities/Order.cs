@@ -1,7 +1,5 @@
 ﻿using Rujta.Domain.Common;
 using Rujta.Domain.Enums;
-using Rujta.Domain.Entities;
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
@@ -30,6 +28,6 @@ namespace Rujta.Domain.Entities
         public required virtual User User { get; set; }
         public required virtual Pharmacy Pharmacy { get; set; }
         public virtual Prescription? Prescription { get; set; }
-        public ICollection<OrderItem>? OrderItems { get; set; }
+        public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     }
 }

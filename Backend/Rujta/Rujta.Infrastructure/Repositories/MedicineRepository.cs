@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Repositories
@@ -19,21 +20,21 @@ namespace Rujta.Infrastructure.Repositories
 
         
 
-        public async Task<IEnumerable<Medicine>> GetExpiredMedicinesAsync()
+        public async Task<IEnumerable<Medicine>> GetExpiredMedicinesAsync( CancellationToken cancellationToken = default)
         {
-            var today = System.DateTime.UtcNow.Date;
+            var today = DateTime.UtcNow.Date;
             return await _context.Medicines
                 .Where(m => m.ExpiryDate < today)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
-        public async Task<IEnumerable<Medicine>> GetExpiringSoonMedicinesAsync(int days = 30)
+        public async Task<IEnumerable<Medicine>> GetExpiringSoonMedicinesAsync(int days = 30, CancellationToken cancellationToken = default)
         {
-            var today = System.DateTime.UtcNow.Date;
+            var today = DateTime.UtcNow.Date;
             var upcoming = today.AddDays(days);
             return await _context.Medicines
                 .Where(m => m.ExpiryDate >= today && m.ExpiryDate <= upcoming)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
     }
 }

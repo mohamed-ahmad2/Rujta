@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Rujta.Application.DTOs;
 using Rujta.Application.DTOs.UserProfile;
 using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Domain.Common;
+using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Identity;
-
 
 namespace Rujta.Infrastructure.Identity.Services
 {
@@ -17,43 +17,65 @@ namespace Rujta.Infrastructure.Identity.Services
             _userManager = userManager;
         }
 
-        public async Task<UserProfileDto?> GetProfileAsync(Guid userId)
+        public async Task<UserProfileDto?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             var appUser = await _userManager.Users
                 .Include(u => u.DomainPerson)
-                .FirstOrDefaultAsync(u => u.DomainPerson.Id == userId);
+                .FirstOrDefaultAsync(u => u.DomainPersonId == userId, cancellationToken);
 
-            if (appUser == null || appUser.DomainPerson == null)
+            if (appUser?.DomainPerson is not User user)
                 return null;
 
-            var person = appUser.DomainPerson;
+            var address = user.Address;
 
             return new UserProfileDto
             {
-                Id = person.Id,
-                Name = person.Name,
-                Email = appUser.Email, 
+                Id = user.Id,
+                Name = user.Name,
+                Email = appUser.Email,
                 PhoneNumber = appUser.PhoneNumber,
-                Address = person.Address,
-                ProfileImageUrl = person.ProfileImageUrl
+                ProfileImageUrl = user.ProfileImageUrl,
+                Address = address is null ? null : new AddressDto
+                {
+                    FullName = address.FullName,
+                    MobileNumber = address.MobileNumber,
+                    Street = address.Street,
+                    BuildingNo = address.BuildingNo,
+                    City = address.City,
+                    Governorate = address.Governorate,
+                    Instructions = address.Instructions
+                }
             };
         }
 
-        public async Task<bool> UpdateProfileAsync(Guid userId, UpdateUserProfileDto dto)
+        public async Task<bool> UpdateProfileAsync(Guid userId, UpdateUserProfileDto dto, CancellationToken cancellationToken = default)
         {
             var appUser = await _userManager.Users
                 .Include(u => u.DomainPerson)
-                .FirstOrDefaultAsync(u => u.DomainPerson.Id == userId);
+                .FirstOrDefaultAsync(u => u.DomainPersonId == userId, cancellationToken);
 
-            if (appUser == null || appUser.DomainPerson == null)
+            if (appUser?.DomainPerson is not User user)
                 return false;
 
-            var person = appUser.DomainPerson;
+            user.Name = dto.Name ?? user.Name;
 
-            person.Name = dto.Name ?? person.Name;
-            person.Address = dto.Address ?? person.Address;
-            person.ProfileImageUrl = dto.ProfileImageUrl ?? person.ProfileImageUrl;
+            if (dto.Address != null)
+            {
+                if (user.Address == null)
+                    user.Address = new Address { UserId = user.Id };
 
+                var address = user.Address;
+
+                address.FullName = dto.Address.FullName ?? address.FullName;
+                address.MobileNumber = dto.Address.MobileNumber ?? address.MobileNumber;
+                address.Street = dto.Address.Street ?? address.Street;
+                address.BuildingNo = dto.Address.BuildingNo ?? address.BuildingNo;
+                address.City = dto.Address.City ?? address.City;
+                address.Governorate = dto.Address.Governorate ?? address.Governorate;
+                address.Instructions = dto.Address.Instructions ?? address.Instructions;
+            }
+
+            user.ProfileImageUrl = dto.ProfileImageUrl ?? user.ProfileImageUrl;
             appUser.PhoneNumber = dto.PhoneNumber ?? appUser.PhoneNumber;
 
             var result = await _userManager.UpdateAsync(appUser);
