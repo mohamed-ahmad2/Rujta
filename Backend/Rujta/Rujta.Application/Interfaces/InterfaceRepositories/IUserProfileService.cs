@@ -5,7 +5,7 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
     public interface IUserProfileService
     {
-        Task<UserProfileDto?> GetProfileAsync(Guid userId);
-        Task<bool> UpdateProfileAsync(Guid userId, UpdateUserProfileDto dto);
+        Task<UserProfileDto?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default);
+        Task<bool> UpdateProfileAsync(Guid userId, UpdateUserProfileDto dto, CancellationToken cancellationToken = default);
     }
 }

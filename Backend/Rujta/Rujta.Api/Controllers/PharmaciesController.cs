@@ -16,9 +16,14 @@ namespace Rujta.API.Controllers
 
         [HttpGet("nearest-routed")]
         [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
-        public IActionResult GetNearestWithRouting(double userLat, double userLon, string mode = "car", int topK = 5)
+        public async Task<IActionResult> GetNearestWithRouting(
+            double userLat,
+            double userLon,
+            string mode = "car",
+            int topK = 5)
         {
-            var result = _distanceService.GetNearestPharmaciesRouted(userLat, userLon, mode, topK);
+            
+            var result = await _distanceService.GetNearestPharmaciesRouted(userLat, userLon, mode, topK);
 
             return Ok(result.Select(r => new
             {

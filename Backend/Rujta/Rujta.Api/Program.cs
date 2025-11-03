@@ -140,8 +140,10 @@ namespace Rujta.API
             builder.Services.AddScoped<TokenService>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IMedicineService, MedicineService>();
+            builder.Services.AddScoped<IOrderService, OrderService>();
 
             builder.Services.AddHttpClient<MedicineDataImportService>();
+
 
             var app = builder.Build();
 
@@ -156,6 +158,7 @@ namespace Rujta.API
             app.UseAuthentication();
             app.UseAuthorization();
 
+            app.UseCors("AllowReactApp");
             app.MapControllers();
 
             // Role seeding
