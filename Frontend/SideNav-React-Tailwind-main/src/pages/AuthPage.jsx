@@ -1,49 +1,116 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, User, Sparkles } from "lucide-react";
+import { Mail, Lock, User, Sparkles, Phone, MapPin } from "lucide-react";
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
-  const [focusedField, setFocusedField] = useState(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    location: "",
+    createPassword: "",
+    confirmPassword: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleSignIn = (e) => {
-    e.preventDefault();
-    navigate("/dashboard");
+  const apiBase = "https://localhost:44390/api/auth";
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSignUp = (e) => {
+  // 🔹 Handle Login
+  const handleSignIn = async (e) => {
     e.preventDefault();
-    alert("Account created successfully!");
-    setIsSignUp(false);
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${apiBase}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.createPassword,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Invalid email or password");
+      const data = await response.json();
+
+      localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
+      localStorage.setItem("role", data.role);
+
+      if (data.role === "Pharmacist") navigate("/dashboard");
+      else navigate("/user");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔹 Handle Register
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (formData.createPassword !== formData.confirmPassword) {
+      setError("Passwords do not match!");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${apiBase}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          location: formData.location,
+          createPassword: formData.createPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || "Registration failed");
+      }
+
+      alert("Account created successfully!");
+      setIsSignUp(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated Background Elements */}
+      {/* ✨ Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
-          animate={{ 
-            scale: [1, 1.2, 1],
-            rotate: [0, 90, 0],
-            opacity: [0.3, 0.5, 0.3]
-          }}
+          animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0], opacity: [0.3, 0.5, 0.3] }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           className="absolute -top-48 -left-48 w-96 h-96 bg-primary/20 rounded-full blur-3xl"
         />
         <motion.div
-          animate={{ 
-            scale: [1.2, 1, 1.2],
-            rotate: [90, 0, 90],
-            opacity: [0.3, 0.5, 0.3]
-          }}
+          animate={{ scale: [1.2, 1, 1.2], rotate: [90, 0, 90], opacity: [0.3, 0.5, 0.3] }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
           className="absolute -bottom-48 -right-48 w-96 h-96 bg-accent/20 rounded-full blur-3xl"
         />
       </div>
 
-      {/* Main Container */}
+      {/* ✨ Main Container */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -52,7 +119,7 @@ export default function AuthPage() {
       >
         <div className="relative bg-white/80 backdrop-blur-glass rounded-3xl shadow-glass overflow-hidden min-h-[700px]">
           <div className="relative flex flex-col md:flex-row min-h-[700px]">
-            {/* Form Section */}
+            {/* 🔹 Form Section */}
             <motion.div
               animate={{ x: isSignUp ? ["0%", "100%"] : ["100%", "0%"] }}
               transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
@@ -60,6 +127,7 @@ export default function AuthPage() {
             >
               <AnimatePresence mode="wait">
                 {!isSignUp ? (
+                  /* ✨ Sign In Form */
                   <motion.div
                     key="signin"
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -82,53 +150,56 @@ export default function AuthPage() {
                       </h2>
                       <p className="text-muted-foreground text-lg">Sign in to continue your journey</p>
                     </div>
-                    
+
                     <form onSubmit={handleSignIn} className="space-y-6">
                       <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors" />
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                         <input
                           type="email"
+                          name="email"
                           placeholder="Email address"
-                          onFocus={() => setFocusedField('email')}
-                          onBlur={() => setFocusedField(null)}
-                          className="w-full pl-12 pr-4 py-4 bg-background/50 border-2 border-border rounded-2xl text-lg focus:border-primary focus:bg-background outline-none transition-all"
+                          value={formData.email}
+                          onChange={handleChange}
                           required
+                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
                         />
                       </div>
-                      
+
                       <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors" />
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                         <input
                           type="password"
+                          name="createPassword"
                           placeholder="Password"
-                          onFocus={() => setFocusedField('password')}
-                          onBlur={() => setFocusedField(null)}
-                          className="w-full pl-12 pr-4 py-4 bg-background/50 border-2 border-border rounded-2xl text-lg focus:border-primary focus:bg-background outline-none transition-all"
+                          value={formData.createPassword}
+                          onChange={handleChange}
                           required
+                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
                         />
                       </div>
+
+                      {error && <p className="text-red-500 text-center">{error}</p>}
 
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
+                        disabled={loading}
                         type="submit"
-                        className="w-full bg-gradient-primary text-white py-4 text-lg rounded-2xl font-semibold shadow-elegant hover:shadow-xl transition-all"
+                        className="w-full bg-gradient-primary text-white py-4 text-lg rounded-2xl font-semibold"
                       >
-                        Sign In
+                        {loading ? "Signing In..." : "Sign In"}
                       </motion.button>
                     </form>
-                    
+
                     <p className="text-center text-muted-foreground mt-8">
-                      Don't have an account?{" "}
-                      <button
-                        onClick={() => setIsSignUp(true)}
-                        className="text-primary font-semibold hover:underline transition-all"
-                      >
+                      Don’t have an account?{" "}
+                      <button onClick={() => setIsSignUp(true)} className="text-primary font-semibold hover:underline">
                         Sign Up
                       </button>
                     </p>
                   </motion.div>
                 ) : (
+                  /* ✨ Sign Up Form */
                   <motion.div
                     key="signup"
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -151,54 +222,102 @@ export default function AuthPage() {
                       </h2>
                       <p className="text-muted-foreground text-lg">Join us and start your journey</p>
                     </div>
-                    
+
                     <form onSubmit={handleSignUp} className="space-y-6">
                       <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                         <input
                           type="text"
+                          name="name"
                           placeholder="Full name"
-                          className="w-full pl-12 pr-4 py-4 bg-background/50 border-2 border-border rounded-2xl text-lg focus:border-primary focus:bg-background outline-none transition-all"
+                          value={formData.name}
+                          onChange={handleChange}
                           required
+                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
                         />
                       </div>
-                      
+
                       <div className="relative">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                         <input
                           type="email"
+                          name="email"
                           placeholder="Email address"
-                          className="w-full pl-12 pr-4 py-4 bg-background/50 border-2 border-border rounded-2xl text-lg focus:border-primary focus:bg-background outline-none transition-all"
+                          value={formData.email}
+                          onChange={handleChange}
                           required
+                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
                         />
                       </div>
-                      
+
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <input
+                          type="text"
+                          name="phone"
+                          placeholder="Phone number"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          required
+                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+                        />
+                      </div>
+
+                      <div className="relative">
+                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <input
+                          type="text"
+                          name="location"
+                          placeholder="Location"
+                          value={formData.location}
+                          onChange={handleChange}
+                          required
+                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+                        />
+                      </div>
+
                       <div className="relative">
                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                         <input
                           type="password"
-                          placeholder="Password"
-                          className="w-full pl-12 pr-4 py-4 bg-background/50 border-2 border-border rounded-2xl text-lg focus:border-primary focus:bg-background outline-none transition-all"
+                          name="createPassword"
+                          placeholder="Create password"
+                          value={formData.createPassword}
+                          onChange={handleChange}
                           required
+                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
                         />
                       </div>
+
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <input
+                          type="password"
+                          name="confirmPassword"
+                          placeholder="Confirm password"
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          required
+                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+                        />
+                      </div>
+
+                      {error && <p className="text-red-500 text-center">{error}</p>}
 
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
+                        disabled={loading}
                         type="submit"
-                        className="w-full bg-gradient-primary text-white py-4 text-lg rounded-2xl font-semibold shadow-elegant hover:shadow-xl transition-all"
+                        className="w-full bg-gradient-primary text-white py-4 text-lg rounded-2xl font-semibold"
                       >
-                        Sign Up
+                        {loading ? "Creating Account..." : "Sign Up"}
                       </motion.button>
                     </form>
-                    
+
                     <p className="text-center text-muted-foreground mt-8">
                       Already have an account?{" "}
-                      <button
-                        onClick={() => setIsSignUp(false)}
-                        className="text-primary font-semibold hover:underline transition-all"
-                      >
+                      <button onClick={() => setIsSignUp(false)} className="text-primary font-semibold hover:underline">
                         Sign In
                       </button>
                     </p>
@@ -207,7 +326,7 @@ export default function AuthPage() {
               </AnimatePresence>
             </motion.div>
 
-            {/* Sliding Info Panel */}
+            {/* ✨ Right Panel */}
             <motion.div
               initial={false}
               animate={{ x: isSignUp ? "-100%" : "0%" }}
@@ -225,35 +344,21 @@ export default function AuthPage() {
                 >
                   {isSignUp ? (
                     <>
-                      <motion.div
-                        animate={{ rotate: [0, 360] }}
-                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                        className="w-32 h-32 mx-auto mb-6 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center"
-                      >
-                        <Sparkles className="w-16 h-16" />
-                      </motion.div>
                       <h2 className="text-4xl md:text-5xl font-bold mb-4">Hello, Friend! 👋</h2>
                       <p className="max-w-sm text-lg md:text-xl mb-8 opacity-90">
-                        Enter your details and embark on an amazing journey with Rujta
+                        Enter your details and join us today!
                       </p>
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setIsSignUp(false)}
-                        className="bg-white text-primary px-10 py-3 rounded-2xl text-lg font-semibold hover:bg-opacity-90 transition-all shadow-lg"
+                        className="bg-white text-primary px-10 py-3 rounded-2xl text-lg font-semibold hover:bg-opacity-90 shadow-lg"
                       >
                         Sign In
                       </motion.button>
                     </>
                   ) : (
                     <>
-                      <motion.div
-                        animate={{ rotate: [0, 360] }}
-                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                        className="w-32 h-32 mx-auto mb-6 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center"
-                      >
-                        <Sparkles className="w-16 h-16" />
-                      </motion.div>
                       <h2 className="text-4xl md:text-5xl font-bold mb-4">Welcome to Rujta 🌿</h2>
                       <p className="max-w-sm text-lg md:text-xl mb-8 opacity-90">
                         Create your account and discover the possibilities that await you
@@ -262,7 +367,7 @@ export default function AuthPage() {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setIsSignUp(true)}
-                        className="bg-white text-primary px-10 py-3 rounded-2xl text-lg font-semibold hover:bg-opacity-90 transition-all shadow-lg"
+                        className="bg-white text-primary px-10 py-3 rounded-2xl text-lg font-semibold hover:bg-opacity-90 shadow-lg"
                       >
                         Sign Up
                       </motion.button>
@@ -270,20 +375,6 @@ export default function AuthPage() {
                   )}
                 </motion.div>
               </AnimatePresence>
-
-              {/* Decorative Elements */}
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <motion.div
-                  animate={{ y: [0, -20, 0] }}
-                  transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute top-10 right-10 w-20 h-20 rounded-full bg-white/10 blur-xl"
-                />
-                <motion.div
-                  animate={{ y: [0, 20, 0] }}
-                  transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute bottom-10 left-10 w-32 h-32 rounded-full bg-white/10 blur-xl"
-                />
-              </div>
             </motion.div>
           </div>
         </div>
@@ -291,4 +382,3 @@ export default function AuthPage() {
     </div>
   );
 }
-
