@@ -1,12 +1,21 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-// Components
-import Navbar from "./components/Navbar/Navbar";
+// 🏠 Landing Page
+import NavbarLanding from "./components/Navbarlanding/Navbarlanding";
+import HeroLanding from "./components/Herolanding/Herolanding";
+
+// 👤 User Page
+import NavbarUser from "./components/Navbaruser/Navbaruser";
+import HeroUser from "./components/Herouser/Herouser";
+import ProductsUser from "./components/Productsuser/Products";
+import FooterUser from "./components/Footeruser/Footer";
+import CartDrawerUser from "./components/CartDraweruser/CartDrawer";
+
+// 🧭 Dashboard
 import Sidebar from "./components/Sidebar";
 
-// Pages
-import Hero from "./components/Hero/Hero";
+// 📄 Pages
 import AuthPage from "./pages/AuthPage";
 import Home from "./pages/Home";
 import Add from "./pages/add";
@@ -34,22 +43,59 @@ const DashboardLayout = () => {
     </div>
   );
 };
+
 const App = () => {
+  // ✅ 1. Load cart from localStorage (if exists)
+  const [cart, setCart] = useState(() => {
+    const saved = localStorage.getItem("cart");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  // ✅ 2. Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }, [cart]);
+
   return (
     <Router>
       <Routes>
-        {/* ✅ Home page with Navbar + Hero */}
+        {/* 🌍 Landing Page */}
         <Route
           path="/"
           element={
             <div className="overflow-x-hidden bg-page min-h-screen">
-              <Navbar />
-              <Hero />
+              <NavbarLanding />
+              <HeroLanding />
             </div>
           }
         />
 
-        {/* ✅ Full-page Auth (no Navbar, no Hero) */}
+        {/* 👤 User Shopping Page */}
+        <Route
+          path="/user"
+          element={
+            <div className="overflow-x-hidden bg-page min-h-screen">
+              <NavbarUser
+                cart={cart}
+                onCartClick={() => setIsCartOpen(true)}
+              />
+              <HeroUser />
+              <ProductsUser cart={cart} setCart={setCart} />
+              <FooterUser />
+
+              {/* 🛒 Cart Drawer */}
+              <CartDrawerUser
+                cart={cart}
+                setCart={setCart}
+                isOpen={isCartOpen}
+                onClose={() => setIsCartOpen(false)}
+              />
+            </div>
+          }
+        />
+
+        {/* 🔐 Auth Page */}
         <Route
           path="/auth"
           element={
@@ -58,7 +104,8 @@ const App = () => {
             </div>
           }
         />
-          {/* ✅ Dashboard Pages */}
+
+        {/* 🧾 Dashboard */}
         <Route path="/dashboard/*" element={<DashboardLayout />} />
       </Routes>
     </Router>

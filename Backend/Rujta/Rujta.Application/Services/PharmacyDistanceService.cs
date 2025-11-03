@@ -1,3 +1,4 @@
+
 using Itinero.Osm.Vehicles;
 using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Domain.Entities;
@@ -17,7 +18,7 @@ namespace Rujta.Application.Services
             _itineroService = itineroService;
         }
 
-        // 🌍 Haversine distance (approximate)
+        //  Haversine distance (approximate)
         private static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
         {
             const double R = 6371000; // meters
@@ -94,7 +95,7 @@ GetNearestPharmaciesRouted(double userLat, double userLon, string mode = "car", 
                 ));
             }
 
-            // ✅ Step 4: Sort and return top K
+            // Step 4: Sort and return top K
             return results
                 .OrderBy(r => r.distanceMeters)
                 .Take(topK)
