@@ -29,6 +29,7 @@ namespace Rujta.API
         public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+           
 
             var jwtSection = builder.Configuration.GetSection("JWT");
 
@@ -115,7 +116,7 @@ namespace Rujta.API
                 bool built = RouterDbHelper.BuildRouterDb();
 
                 if (!built || !File.Exists(routerDbPath))
-                    throw new InvalidOperationException($"Routing:RouterDb file could not be created at {routerDbPath}");
+                 throw new InvalidOperationException($"Routing:RouterDb file could not be created at {routerDbPath}");
             }
 
             builder.Services.AddSingleton<ItineroRoutingService>(sp =>
@@ -143,10 +144,19 @@ namespace Rujta.API
             builder.Services.AddScoped<IOrderService, OrderService>();
 
             builder.Services.AddHttpClient<MedicineDataImportService>();
+            //react fetching
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowReactApp",
+                    policy => policy.WithOrigins("http://localhost:3000") // React default port
+                                    .AllowAnyHeader()
+                                    .AllowAnyMethod());
+            });
 
 
             var app = builder.Build();
-
+        
+        
             // Middleware
             if (app.Environment.IsDevelopment())
             {
