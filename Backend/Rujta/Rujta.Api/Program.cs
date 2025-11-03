@@ -143,14 +143,6 @@ namespace Rujta.API
 
             builder.Services.AddHttpClient<MedicineDataImportService>();
 
-            builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("AllowReactApp",
-                    policy => policy.WithOrigins("http://localhost:3000") 
-                                    .AllowAnyHeader()
-                                    .AllowAnyMethod());
-            });
-
 
             var app = builder.Build();
 

@@ -22,7 +22,7 @@ namespace Rujta.Domain.Entities
 
         public string DeliveryAddress { get; set; } = string.Empty;
 
-        public OrderStatus Status { get; set; }
+        public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
 
         public required virtual User User { get; set; }

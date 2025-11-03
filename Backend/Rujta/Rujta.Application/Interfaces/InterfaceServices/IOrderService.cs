@@ -11,5 +11,11 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task<OrderDto> CreateOrderAsync(OrderDto orderDto, CancellationToken cancellationToken = default);
         Task<IEnumerable<OrderDto>> GetUserOrdersAsync(Guid userId, CancellationToken cancellationToken = default);
         Task<OrderDto?> GetOrderDetailsAsync(int orderId, CancellationToken cancellationToken = default);
+        Task<(bool success, string message)> AcceptOrderAsync(int id, CancellationToken cancellationToken = default);
+        Task<(bool success, string message)> CancelOrderByUserAsync(int id, CancellationToken cancellationToken = default);
+        Task<(bool success, string message)> CancelOrderByPharmacyAsync(int id, CancellationToken cancellationToken = default);
+        Task<(bool success, string message)> ProcessOrderAsync(int id, CancellationToken cancellationToken = default);
+        Task<(bool success, string message)> OutForDeliveryAsync(int id, CancellationToken cancellationToken = default);
+        Task<(bool success, string message)> MarkAsDeliveredAsync(int id, CancellationToken cancellationToken = default);
     }
 }

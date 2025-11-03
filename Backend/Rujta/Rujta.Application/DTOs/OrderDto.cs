@@ -16,9 +16,9 @@ namespace Rujta.Application.DTOs
         public DateTime OrderDate { get; set; } 
         public decimal TotalPrice { get; set; } 
         public string DeliveryAddress { get; set; } = string.Empty;
-        public OrderStatus Status { get; set; } 
+        public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
-        
+
         public string PharmacyName { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
 

@@ -1,12 +1,8 @@
-using Itinero;
 using Itinero.Osm.Vehicles;
-using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+
 
 namespace Rujta.Application.Services
 {
