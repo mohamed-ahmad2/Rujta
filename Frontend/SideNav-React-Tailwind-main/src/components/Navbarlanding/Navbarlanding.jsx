@@ -4,7 +4,7 @@ import { NavbarMenu } from '../../mockData/data'
 import { CiSearch } from "react-icons/ci";
 import { PiShoppingCartThin } from "react-icons/pi";
 import { MdMenu } from "react-icons/md";
-import ResponsiveMenu from "./ResponsiveMenu";
+import ResponsiveMenu from "./ResponsiveMenulanding";
 import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
