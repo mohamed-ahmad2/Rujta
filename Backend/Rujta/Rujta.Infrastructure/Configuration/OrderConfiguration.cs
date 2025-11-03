@@ -28,6 +28,7 @@ namespace Rujta.Infrastructure.Configuration
                    .HasForeignKey(o => o.UserID)
                    .OnDelete(DeleteBehavior.Restrict);
 
+
             builder.HasOne(o => o.Pharmacy)
                    .WithMany(p => p.Orders)
                    .HasForeignKey(o => o.PharmacyID)

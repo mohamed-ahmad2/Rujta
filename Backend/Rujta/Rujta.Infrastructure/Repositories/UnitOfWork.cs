@@ -17,6 +17,7 @@ namespace Rujta.Infrastructure.Repositories
 
         private IMedicineRepository? _medicines;
         private IPharmacyRepository? _pharmacies;
+        private IOrderRepository? _orders;
 
         public UnitOfWork(AppDbContext context)
         {
@@ -25,8 +26,9 @@ namespace Rujta.Infrastructure.Repositories
 
         public IMedicineRepository Medicines => _medicines ??= new MedicineRepository(_context);
         public IPharmacyRepository Pharmacies => _pharmacies ??= new PharmacyRepo(_context);
+        public IOrderRepository Orders => _orders ??= new OrderRepository(_context);
 
-        public async Task<int> SaveAsync() => await _context.SaveChangesAsync();
+        public async Task<int> SaveAsync(CancellationToken cancellationToken = default) => await _context.SaveChangesAsync(cancellationToken);
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposed)
@@ -44,5 +46,7 @@ namespace Rujta.Infrastructure.Repositories
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
+       
     }
 }

@@ -1,26 +1,20 @@
-﻿using Rujta.Application.Interfaces.InterfaceRepositories;
+﻿using Microsoft.EntityFrameworkCore;
+using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace Rujta.Infrastructure.Repositories
 {
-    public class PharmacyRepo : IPharmacyRepository
+    public class PharmacyRepo : GenericRepository<Pharmacy>, IPharmacyRepository
     {
-        private readonly AppDbContext _context;
+        
 
-        public PharmacyRepo(AppDbContext context)
-        {
-            _context = context;
-        }
+        public PharmacyRepo(AppDbContext context) : base(context) { }
+        
 
-        public IEnumerable<Pharmacy> GetAllPharmacies()
-        {
-            return _context.Pharmacies.ToList();
-        }
+        public async Task<IEnumerable<Pharmacy>> GetAllPharmacies(CancellationToken cancellationToken = default) =>
+             await _context.Pharmacies.ToListAsync(cancellationToken);
+        
     }
 }

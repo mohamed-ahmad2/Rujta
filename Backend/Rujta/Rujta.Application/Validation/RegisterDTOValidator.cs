@@ -20,8 +20,7 @@ namespace Rujta.Application.Validation
                 .Matches(@"^01[0125]\d{8}$")
                 .WithMessage("Phone number must be a valid Egyptian number (e.g., 010, 011, 012, 015).");
 
-            RuleFor(x => x.Location)
-                .NotEmpty().WithMessage("Location is required.");
+            
 
             RuleFor(x => x.CreatePassword)
                 .NotEmpty().WithMessage("Password is required.")

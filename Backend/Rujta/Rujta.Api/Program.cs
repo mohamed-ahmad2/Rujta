@@ -141,6 +141,7 @@ namespace Rujta.API
             builder.Services.AddScoped<TokenService>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IMedicineService, MedicineService>();
+            builder.Services.AddScoped<IOrderService, OrderService>();
 
             builder.Services.AddHttpClient<MedicineDataImportService>();
             //react fetching
@@ -151,6 +152,7 @@ namespace Rujta.API
                                     .AllowAnyHeader()
                                     .AllowAnyMethod());
             });
+
 
             var app = builder.Build();
         
@@ -165,6 +167,7 @@ namespace Rujta.API
             app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseAuthorization();
+
             app.UseCors("AllowReactApp");
             app.MapControllers();
 

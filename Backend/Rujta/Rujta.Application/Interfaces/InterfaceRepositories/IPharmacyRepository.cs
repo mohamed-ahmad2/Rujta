@@ -7,8 +7,9 @@ using System.Threading.Tasks;
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
-    public interface IPharmacyRepository
+    public interface IPharmacyRepository : IGenericRepository<Pharmacy>
     {
-        IEnumerable<Pharmacy> GetAllPharmacies();
+        Task<IEnumerable<Pharmacy>> GetAllPharmacies(CancellationToken cancellationToken = default);
+
     }
 }
