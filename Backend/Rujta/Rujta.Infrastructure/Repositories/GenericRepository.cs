@@ -31,14 +31,16 @@ namespace Rujta.Infrastructure.Repositories
             await _context.Set<T>().AddAsync(entity, cancellationToken);
         }
 
-        public void Update(T entity, CancellationToken cancellationToken = default)
+        public Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
         {
             _context.Set<T>().Update(entity);
+            return Task.CompletedTask;
         }
 
-        public void Delete(T entity, CancellationToken cancellationToken = default)
+        public  Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
         {
             _context.Set<T>().Remove(entity);
+            return Task.CompletedTask;
         }
     }
 }

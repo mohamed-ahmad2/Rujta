@@ -1,14 +1,13 @@
 ﻿using AutoMapper;
 using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceRepositories;
+using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Domain.Entities;
 using Rujta.Domain.Enums;
-using System.Threading;
 
 namespace Rujta.Application.Services
 {
-    public class OrderService
+    public class OrderService : IOrderService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
@@ -37,13 +36,13 @@ namespace Rujta.Application.Services
             if (order == null)
                 return (false, "Order not found.");
 
-            if(order.Status == OrderStatus.Pending)
-            {
-                order.Status = OrderStatus.Accepted;
-                await _unitOfWork.SaveAsync(cancellationToken);
-                return (true, "Order accepted.");
-            }
-            return (false, "Cannot accept this order now.");
+            if (!CanChangeStatus(order.Status, OrderStatus.Accepted))
+                return (false, "Invalid state transition.");
+
+            order.Status = OrderStatus.Accepted;
+            await _unitOfWork.SaveAsync(cancellationToken);
+            return (true, "Order accepted.");
+
         }
 
         public async Task<(bool success, string message)> CancelOrderByUserAsync(int id, CancellationToken cancellationToken = default)
@@ -52,14 +51,13 @@ namespace Rujta.Application.Services
             if (order == null)
                 return (false, "Order not found.");
 
-            if (order.Status == OrderStatus.Pending || order.Status == OrderStatus.Accepted)
-            {
-                order.Status = OrderStatus.CancelledByUser;
-                await _unitOfWork.SaveAsync(cancellationToken);
-                return (true, "Order Cancel By User");
-            }
+            if (!CanChangeStatus(order.Status, OrderStatus.CancelledByUser))
+                return (false, "Invalid state transition.");
 
-            return (false, "Cannot cancel this order now.");
+            order.Status = OrderStatus.CancelledByUser;
+            await _unitOfWork.SaveAsync(cancellationToken);
+            return (true, "Order Cancel By User");
+
         }
 
         public async Task<(bool success, string message)> CancelOrderByPharmacyAsync(int id, CancellationToken cancellationToken = default)
@@ -68,14 +66,12 @@ namespace Rujta.Application.Services
             if (order == null)
                 return (false, "Order not found.");
 
-            if (order.Status == OrderStatus.Pending || order.Status == OrderStatus.Accepted)
-            {
-                order.Status = OrderStatus.CancelledByPharmacy;
-                await _unitOfWork.SaveAsync(cancellationToken);
-                return (true, "Order Cancel By Pharmacy");
-            }
+            if (!CanChangeStatus(order.Status, OrderStatus.CancelledByPharmacy))
+                return (false, "Invalid state transition.");
+            order.Status = OrderStatus.CancelledByPharmacy;
+            await _unitOfWork.SaveAsync(cancellationToken);
+            return (true, "Order Cancel By Pharmacy");
 
-            return (false, "Cannot cancel this order now.");
         }
 
         public async Task<(bool success, string message)> ProcessOrderAsync(int id, CancellationToken cancellationToken = default)
@@ -83,13 +79,13 @@ namespace Rujta.Application.Services
             var order = await _unitOfWork.Orders.GetByIdAsync(id);
             if (order == null) return (false, "Order not found.");
 
-            if (order.Status == OrderStatus.Accepted)
-            {
-                order.Status = OrderStatus.Processing;
-                await _unitOfWork.SaveAsync(cancellationToken);
-                return (true, "Order procces now.");
-            }
-            return (false, "Cannot procces this order now.");
+            if (!CanChangeStatus(order.Status, OrderStatus.Processing))
+                return (false, "Invalid state transition.");
+
+            order.Status = OrderStatus.Processing;
+            await _unitOfWork.SaveAsync(cancellationToken);
+            return (true, "Order procces now.");
+
         }
 
         public async Task<(bool success, string message)> OutForDeliveryAsync(int id, CancellationToken cancellationToken = default)
@@ -97,13 +93,13 @@ namespace Rujta.Application.Services
             var order = await _unitOfWork.Orders.GetByIdAsync(id);
             if (order == null) return (false, "Order not found.");
 
-            if (order.Status == OrderStatus.Processing)
-            {
-                order.Status = OrderStatus.OutForDelivery;
-                await _unitOfWork.SaveAsync(cancellationToken);
-                return (true, "Order out for delivery now.");
-            }
-            return (false, "Cannot out for delivery this order now.");
+            if (!CanChangeStatus(order.Status, OrderStatus.OutForDelivery))
+                return (false, "Invalid state transition.");
+
+            order.Status = OrderStatus.OutForDelivery;
+            await _unitOfWork.SaveAsync(cancellationToken);
+            return (true, "Order out for delivery now.");
+
         }
 
         public async Task<(bool success, string message)> MarkAsDeliveredAsync(int id, CancellationToken cancellationToken = default)
@@ -111,13 +107,13 @@ namespace Rujta.Application.Services
             var order = await _unitOfWork.Orders.GetByIdAsync(id);
             if (order == null) return (false, "Order not found.");
 
-            if (order.Status == OrderStatus.OutForDelivery)
-            {
-                order.Status = OrderStatus.Delivered;
-                await _unitOfWork.SaveAsync(cancellationToken);
-                return (true, "Order mark as delivered now.");
-            }
-            return (false, "Cannot mark as delivered this order now.");
+            if (!CanChangeStatus(order.Status, OrderStatus.Delivered))
+                return (false, "Invalid state transition.");
+
+            order.Status = OrderStatus.Delivered;
+            await _unitOfWork.SaveAsync(cancellationToken);
+            return (true, "Order mark as delivered now.");
+
         }
 
         public async Task<IEnumerable<OrderDto>> GetUserOrdersAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -130,6 +126,58 @@ namespace Rujta.Application.Services
         {
             var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(orderId, cancellationToken);
             return _mapper.Map<OrderDto?>(order);
+        }
+
+        public async Task<IEnumerable<OrderDto>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            var orders = await _unitOfWork.Orders.GetAllAsync(cancellationToken);
+            return _mapper.Map<IEnumerable<OrderDto>>(orders);
+        }
+
+        public async Task<OrderDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
+            return order is null ? null : _mapper.Map<OrderDto>(order);
+        }
+
+        public async Task AddAsync(OrderDto dto, CancellationToken cancellationToken = default)
+        {
+            var order = _mapper.Map<Order>(dto);
+            await _unitOfWork.Orders.AddAsync(order, cancellationToken);
+            await _unitOfWork.SaveAsync(cancellationToken);
+        }
+
+        public async Task UpdateAsync(int id, OrderDto dto, CancellationToken cancellationToken = default)
+        {
+            var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
+            if (order == null) return;
+
+            _mapper.Map(dto, order);
+            await _unitOfWork.Orders.UpdateAsync(order, cancellationToken);
+            await _unitOfWork.SaveAsync(cancellationToken);
+        }
+
+        public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
+        {
+            var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
+            if (order == null) return;
+
+            await _unitOfWork.Orders.DeleteAsync(order, cancellationToken);
+            await _unitOfWork.SaveAsync(cancellationToken);
+        }
+
+        private static bool CanChangeStatus(OrderStatus current, OrderStatus next)
+        {
+            return (current, next) switch
+            {
+                (OrderStatus.Pending, OrderStatus.Accepted) => true,
+                (OrderStatus.Accepted, OrderStatus.Processing) => true,
+                (OrderStatus.Processing, OrderStatus.OutForDelivery) => true,
+                (OrderStatus.OutForDelivery, OrderStatus.Delivered) => true,
+                (OrderStatus.Pending or OrderStatus.Accepted, OrderStatus.CancelledByUser) => true,
+                (OrderStatus.Pending or OrderStatus.Accepted, OrderStatus.CancelledByPharmacy) => true,
+                _ => false
+            };
         }
 
     }

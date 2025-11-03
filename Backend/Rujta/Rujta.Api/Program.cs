@@ -140,6 +140,7 @@ namespace Rujta.API
             builder.Services.AddScoped<TokenService>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IMedicineService, MedicineService>();
+            builder.Services.AddScoped<IOrderService, OrderService>();
 
             builder.Services.AddHttpClient<MedicineDataImportService>();
 

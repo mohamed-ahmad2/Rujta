@@ -22,7 +22,6 @@ namespace Rujta.Application.DTOs
         public string PharmacyName { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
 
-        // لو عايز تعرض العناصر اللي جوه الطلب
         public List<OrderItemDto> OrderItems { get; set; } = new();
     }
 }

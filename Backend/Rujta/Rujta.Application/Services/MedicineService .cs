@@ -49,7 +49,7 @@ namespace Rujta.Application.Services
             if (medicine == null) return;
 
             _mapper.Map(dto, medicine);
-            _unitOfWork.Medicines.Update(medicine, cancellationToken);
+            await _unitOfWork.Medicines.UpdateAsync(medicine, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
         }
 
@@ -59,7 +59,7 @@ namespace Rujta.Application.Services
             var medicine = await _unitOfWork.Medicines.GetByIdAsync(id, cancellationToken);
             if (medicine == null) return;
 
-            _unitOfWork.Medicines.Delete(medicine, cancellationToken);
+            await _unitOfWork.Medicines.DeleteAsync(medicine, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
         }
 
