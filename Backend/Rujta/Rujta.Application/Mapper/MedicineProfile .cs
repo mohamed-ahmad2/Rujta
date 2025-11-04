@@ -9,7 +9,6 @@ namespace Rujta.Application.Mapper
     {
         public MedicineProfile()
         {
-            
             CreateMap<Medicine, MedicineDto>().ReverseMap();
         }
     }

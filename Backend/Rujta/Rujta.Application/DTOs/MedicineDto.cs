@@ -8,6 +8,7 @@ namespace Rujta.Application.DTOs
 {
     public class MedicineDto : BaseEntityDto
     {
+        
         public string Name { get; set; } = string.Empty;
 
         public string? Description { get; set; }

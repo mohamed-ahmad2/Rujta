@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Rujta.Application.DTOs
 {
-    class CartItemDto
+    public class CartItemDto
     {
         public int MedicineId { get; set; }
         public int Quantity { get; set; }
