@@ -20,9 +20,7 @@ namespace Rujta.Infrastructure.Configuration
                    .IsRequired()
                    .HasMaxLength(100);
 
-            builder.Property(p => p.Address)
-                   .IsRequired()
-                   .HasMaxLength(200);
+            
 
             builder.Property(p => p.CreatedAt)
                    .HasDefaultValueSql("GETUTCDATE()");

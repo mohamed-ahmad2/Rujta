@@ -141,15 +141,17 @@ namespace Rujta.API
             builder.Services.AddScoped<TokenService>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IMedicineService, MedicineService>();
+            builder.Services.AddScoped<IOrderService, OrderService>();
 
             builder.Services.AddHttpClient<MedicineDataImportService>();
             //react fetching
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowReactApp",
-                    policy => policy.WithOrigins("http://localhost:3000") // React default port
-                                    .AllowAnyHeader()
-                                    .AllowAnyMethod());
+        policy => policy.WithOrigins("http://localhost:5173") 
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials());
             });
 
             var app = builder.Build();
@@ -163,12 +165,14 @@ namespace Rujta.API
             }
 
             app.UseHttpsRedirection();
+
+            app.UseCors("AllowReactApp");
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseCors("AllowReactApp");
+
             app.MapControllers();
 
-            // Role seeding
+            
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;

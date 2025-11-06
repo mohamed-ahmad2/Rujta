@@ -16,6 +16,7 @@ namespace Rujta.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+
     public class AuthController : ControllerBase
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
@@ -37,6 +38,11 @@ namespace Rujta.API.Controllers
             _signInManager = signInManager;
             _userManager = userManager;
             _mapper = mapper;
+        }
+        [HttpGet("ping")]
+        public IActionResult Ping()
+        {
+            return Ok("Backend is connected!");
         }
 
         [HttpPost("register")]

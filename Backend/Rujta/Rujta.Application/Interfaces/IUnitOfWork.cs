@@ -11,7 +11,8 @@ namespace Rujta.Application.Interfaces
     {
         IMedicineRepository Medicines { get; }
         IPharmacyRepository Pharmacies { get; }
+        IOrderRepository Orders { get; }
          
-        Task<int> SaveAsync();
+        Task<int> SaveAsync(CancellationToken cancellationToken = default);
     }
 }
