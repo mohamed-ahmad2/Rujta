@@ -58,17 +58,17 @@ Backend/Rujta/Rujta.Api/Maps
 ## -----------------------------
 
 # Dependencies
-Frontend/SideNav-React-Tailwind-main/node_modules/
+Frontend/rujta-frontend/node_modules/
 
 # Build output
-Frontend/SideNav-React-Tailwind-main/build/
-Frontend/SideNav-React-Tailwind-main/dist/
+Frontend/rujta-frontend/build/
+Frontend/rujta-frontend/dist/
 
 # Logs
-Frontend/SideNav-React-Tailwind-main/*.log
+Frontend/rujta-frontend/*.log
 
 # Environment variables
-Frontend/SideNav-React-Tailwind-main/.env*
+Frontend/rujta-frontend/.env*
 
 ## -----------------------------
 ## Node/General ignores
