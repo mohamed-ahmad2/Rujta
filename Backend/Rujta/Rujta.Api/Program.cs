@@ -148,11 +148,11 @@ namespace Rujta.API
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowReactApp",
-        policy => policy.WithOrigins("http://localhost:5173") 
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowCredentials());
+                    policy => policy.WithOrigins("http://localhost:3000") // React default port
+                                    .AllowAnyHeader()
+                                    .AllowAnyMethod());
             });
+
 
             var app = builder.Build();
         
@@ -165,14 +165,13 @@ namespace Rujta.API
             }
 
             app.UseHttpsRedirection();
-
-            app.UseCors("AllowReactApp");
             app.UseAuthentication();
             app.UseAuthorization();
 
+            app.UseCors("AllowReactApp");
             app.MapControllers();
 
-            
+            // Role seeding
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
