@@ -39,11 +39,14 @@ namespace Rujta.API.Controllers
             _userManager = userManager;
             _mapper = mapper;
         }
+
         [HttpGet("ping")]
+        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
         public IActionResult Ping()
         {
             return Ok("Backend is connected!");
         }
+
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto registerDTO)
