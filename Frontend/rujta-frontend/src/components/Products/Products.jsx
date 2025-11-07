@@ -47,7 +47,7 @@ const ProductsData = [
     rating: 5.0,
     aosDelay: "600",
   },
-   {
+  {
     id: 5,
     img: imge5,
     title: "Omeprazole",
@@ -56,29 +56,29 @@ const ProductsData = [
     rating: 4.0,
     aosDelay: "600",
   },
-   {
+  {
     id: 6,
     img: imge6,
     title: "Omega 3",
-    description: "Intestinal anti-infection medication",
+    description: "Supports heart and brain health",
     price: "230 EGP",
     rating: 4.0,
     aosDelay: "600",
   },
-   {
+  {
     id: 7,
     img: imge7,
     title: "Bronchicum",
-    description: "Syrup is the 100% natural* cough",
+    description: "Natural cough syrup",
     price: "70 EGP",
     rating: 4.0,
     aosDelay: "600",
   },
-   {
+  {
     id: 8,
     img: imge8,
-    title: "starville  cream",
-    description: "whitening cream",
+    title: "Starville Cream",
+    description: "Whitening and skin care cream",
     price: "120 EGP",
     rating: 4.0,
     aosDelay: "600",
@@ -87,11 +87,23 @@ const ProductsData = [
 
 const Products = ({ cart, setCart }) => {
   const handleAddToCart = (product) => {
-    setCart((prevCart) => [...prevCart, product]);
+    setCart((prevCart) => {
+      const existingItem = prevCart.find((item) => item.id === product.id);
+      if (existingItem) {
+        // 🟢 If already in cart, increase quantity
+        return prevCart.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      } else {
+        // 🆕 Add new item with quantity 1
+        return [...prevCart, { ...product, quantity: 1 }];
+      }
+    });
   };
 
   return (
-
     <div className="bg-white py-20">
       <div className="container mx-auto px-4">
         {/* Header section */}
@@ -162,9 +174,9 @@ const Products = ({ cart, setCart }) => {
           <h2 className="text-xl font-bold mb-4 text-[#3C623C]">🛒 Your Cart</h2>
           {cart.length > 0 ? (
             <ul className="inline-block text-left text-gray-700 space-y-1">
-              {cart.map((item, index) => (
-                <li key={index} className="border-b pb-1">
-                  {item.title}
+              {cart.map((item) => (
+                <li key={item.id} className="border-b pb-1">
+                  {item.title} <span className="text-gray-500">× {item.quantity}</span>
                 </li>
               ))}
             </ul>
