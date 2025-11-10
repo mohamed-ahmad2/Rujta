@@ -1,7 +1,7 @@
 ﻿using Rujta.Application.DTOs.UserProfile;
 using System.Threading.Tasks;
 
-namespace Rujta.Application.Interfaces.InterfaceRepositories
+namespace Rujta.Application.Interfaces.InterfaceServices
 {
     public interface IUserProfileService
     {

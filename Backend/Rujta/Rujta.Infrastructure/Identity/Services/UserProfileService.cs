@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Rujta.Application.DTOs;
 using Rujta.Application.DTOs.UserProfile;
-using Rujta.Application.Interfaces.InterfaceRepositories;
+using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Identity;
 
