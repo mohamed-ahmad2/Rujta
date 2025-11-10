@@ -2,8 +2,9 @@ using Itinero;
 
 
 
-using Itinero.Osm.Vehicles;
 using Rujta.Application.Interfaces.InterfaceRepositories;
+﻿using Itinero;
+using Itinero.Osm.Vehicles;
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Services;
 

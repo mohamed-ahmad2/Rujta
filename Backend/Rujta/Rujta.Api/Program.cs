@@ -151,14 +151,20 @@ namespace Rujta.API
             builder.Services.AddScoped<IOrderService, OrderService>();
 
             builder.Services.AddHttpClient<MedicineDataImportService>();
-            //react fetching
+
+            // fetch react
+            // fetch react
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowReactApp",
-                    policy => policy.WithOrigins("http://localhost:3000") // React default port
-                                    .AllowAnyHeader()
-                                    .AllowAnyMethod());
+                    policy => policy.WithOrigins(
+                                    "http://localhost:5173",  
+                                    "http://localhost:3000")
+                                .AllowAnyHeader()
+                                .AllowAnyMethod()
+                                .AllowCredentials()); 
             });
+
 
 
             var app = builder.Build();
@@ -172,10 +178,11 @@ namespace Rujta.API
             }
 
             app.UseHttpsRedirection();
+            app.UseCors("AllowReactApp");
             app.UseAuthentication();
             app.UseAuthorization();
 
-            app.UseCors("AllowReactApp");
+            
             app.MapControllers();
 
             // Role seeding

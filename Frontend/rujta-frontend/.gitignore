@@ -1,7 +1,6 @@
 ## -----------------------------
 ## .NET backend ignores
 ## -----------------------------
-
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
@@ -47,32 +46,21 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
-# Visual Studio folder in backend
 Backend/Rujta/.vs
-
-# Maps folder inside API
-Backend/Rujta/Rujta.Api/Maps
+Backend/Rujta/Rujta/Maps
 
 ## -----------------------------
-## React frontend ignores
+## React / Node frontend ignores
 ## -----------------------------
-
 # Dependencies
-Frontend/rujta-frontend/node_modules/
+Frontend/SideNav-React-Tailwind-main/node_modules/
+node_modules/
 
 # Build output
-Frontend/rujta-frontend/build/
-Frontend/rujta-frontend/dist/
-
-# Logs
-Frontend/rujta-frontend/*.log
-
-# Environment variables
-Frontend/rujta-frontend/.env*
-
-## -----------------------------
-## Node/General ignores
-## -----------------------------
+Frontend/SideNav-React-Tailwind-main/build/
+Frontend/SideNav-React-Tailwind-main/dist/
+dist/
+dist-ssr/
 
 # Logs
 logs
@@ -83,10 +71,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Node modules and output
-node_modules
-dist
-dist-ssr
+# Environment variables
+Frontend/SideNav-React-Tailwind-main/.env*
+.env*
 *.local
 
 # Editor directories and files

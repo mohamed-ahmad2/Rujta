@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.Interfaces;
-using Rujta.Domain.Entities;
+using Rujta.Application.Interfaces.InterfaceServices;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -13,14 +12,13 @@ namespace Rujta.Api.Controllers
     public class NotificationController : ControllerBase
     {
         private readonly INotificationService _notificationService;
-        private readonly IUserRepository _userRepo;
 
-        public NotificationController(INotificationService notificationService, IUserRepository userRepo)
+        public NotificationController(INotificationService notificationService)
         {
             _notificationService = notificationService;
-            _userRepo = userRepo;
         }
 
+        // ✅ Fetch current user's notifications
         [HttpGet]
         public async Task<IActionResult> GetMyNotifications()
         {
@@ -29,27 +27,28 @@ namespace Rujta.Api.Controllers
             return Ok(notifications);
         }
 
+        // ✅ Mark notification as read
         [HttpPut("{id}/read")]
         public async Task<IActionResult> MarkAsRead(int id)
         {
             await _notificationService.MarkAsReadAsync(id);
-            return Ok();
+            return Ok(new { message = "Notification marked as read" });
         }
 
+        // ✅ For testing notifications from Swagger easily
         [HttpPost("test")]
         public async Task<IActionResult> CreateTestNotification([FromBody] string message)
         {
             string userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var user = await _userRepo.GetByIdAsync(userId);
-            if (user == null) return NotFound("User not found");
 
             await _notificationService.SendNotificationAsync(
-                user,
-                "Test Notification",
-                message ?? "Hello from SignalR!"
+                userId,
+                "Test Notification 🚀",
+                !string.IsNullOrWhiteSpace(message) ? message : "Hello from SignalR!",
+                payload: null
             );
 
-            return Ok("Notification sent!");
+            return Ok(new { message = "Test notification sent!" });
         }
     }
 }

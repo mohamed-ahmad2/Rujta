@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using Rujta.Application.Interfaces;
-using Rujta.Domain.Common;
+using Rujta.Application.DTOs;
+using Rujta.Application.Interfaces.InterfaceRepositories;
+using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Domain.Entities;
 using Rujta.Domain.Hubs;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Services
@@ -20,17 +22,8 @@ namespace Rujta.Infrastructure.Services
             _hubContext = hubContext;
         }
 
-        public async Task SendNotificationAsync(Person recipient, string title, string message, string? payload = null)
+        public async Task SendNotificationAsync(string userId, string title, string message, string? payload = null)
         {
-            string userId = recipient switch
-            {
-                User u => u.Id.ToString(),
-                Admin a => a.Id.ToString(),
-                Pharmacist p when p.ManagerData != null => p.Id.ToString(),
-                Pharmacist p => p.Id.ToString(),
-                _ => throw new ArgumentException("Unknown recipient type")
-            };
-
             var notification = new Notification
             {
                 UserId = userId,
@@ -42,20 +35,30 @@ namespace Rujta.Infrastructure.Services
             };
 
             await _repo.AddNotificationAsync(notification);
+
+            // Push to SignalR clients
             await _hubContext.Clients.User(userId)
                 .SendAsync("ReceiveNotification", title, message, payload);
         }
 
-
-
-        public Task<IEnumerable<Notification>> GetUserNotificationsAsync(string userId)
+        public async Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(string userId)
         {
-            return _repo.GetUserNotificationsAsync(userId);
+            var notifications = await _repo.GetUserNotificationsAsync(userId);
+
+            return notifications.Select(n => new NotificationDto
+            {
+                Id = n.Id,
+                Title = n.Title,
+                Message = n.Message,
+                IsRead = n.IsRead,
+                CreatedAt = n.CreatedAt,
+                Payload = n.Payload
+            });
         }
 
-        public Task MarkAsReadAsync(int notificationId)
+        public async Task MarkAsReadAsync(int notificationId)
         {
-            return _repo.MarkAsReadAsync(notificationId);
+            await _repo.MarkAsReadAsync(notificationId);
         }
     }
 }
