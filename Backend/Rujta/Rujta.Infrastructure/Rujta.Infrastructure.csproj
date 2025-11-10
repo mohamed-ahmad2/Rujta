@@ -29,4 +29,8 @@
     <ProjectReference Include="..\Rujta.Domain\Rujta.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Certificates\" />
+  </ItemGroup>
+
 </Project>

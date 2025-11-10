@@ -1,0 +1,13 @@
+﻿using Rujta.Domain.Entities;
+
+
+namespace Rujta.Application.Interfaces.InterfaceRepositories
+{
+    public interface IRefreshTokenRepository : IGenericRepository<RefreshToken>
+    {
+        Task<RefreshToken?> GetByTokenAsync(string token);
+        Task<RefreshToken?> GetValidTokenAsync(Guid userId, string tokenHash);
+        void RemoveRange(IEnumerable<RefreshToken> tokens);
+        Task<List<RefreshToken>> GetExpiredOrRevokedAsync(DateTime now);
+    }
+}

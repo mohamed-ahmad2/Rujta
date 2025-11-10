@@ -1,26 +1,5 @@
-using FluentValidation;
-using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Application.Mapper;
-using Rujta.Application.Services;
-using Rujta.Application.Validation;
-using Rujta.Infrastructure.Data;
-using Rujta.Infrastructure.Helperrs;
-using Rujta.Infrastructure.Identity;
-using Rujta.Infrastructure.Identity.Handlers;
-using Rujta.Infrastructure.Identity.Helpers;
-using Rujta.Infrastructure.Identity.Requirements;
-using Rujta.Infrastructure.Identity.Services;
-using Rujta.Infrastructure.Repositories;
-using Rujta.Infrastructure.Services;
-using System.Text;
 
 namespace Rujta.API
 {
@@ -29,9 +8,9 @@ namespace Rujta.API
         public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-           
 
-            var jwtSection = builder.Configuration.GetSection("JWT");
+
+            
 
             // Add services
             builder.Services.AddControllers();
@@ -74,7 +53,8 @@ namespace Rujta.API
 
             builder.Services.AddSingleton<IAuthorizationHandler, SamePharmacyHandler>();
 
-            // JWT Authentication
+
+            // JWT
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -82,23 +62,36 @@ namespace Rujta.API
             })
             .AddJwtBearer(options =>
             {
-                var signingKey = Environment.GetEnvironmentVariable("JWT_SIGNING_KEY");
+                var jwtSection = builder.Configuration.GetSection("JWT");
 
-                if (string.IsNullOrEmpty(signingKey))
-                    throw new InvalidOperationException("JWT SigningKey is missing in configuration.");
+                
+                var certPath = Path.Combine(AppContext.BaseDirectory, "Certificates", "jwt-cert.pfx");
+                var certPassword = "MyStrongPassword123";
+
+                var certificate = new X509Certificate2(certPath, certPassword);
+
+                
+                var rsa = certificate.GetRSAPublicKey();
+                var publicKey = new RsaSecurityKey(rsa);
 
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidIssuer = jwtSection["Issuer"],
+
                     ValidateAudience = true,
                     ValidAudience = jwtSection["Audience"],
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+
                     ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+
+                    
+                    IssuerSigningKey = publicKey,
+
                     ClockSkew = TimeSpan.FromSeconds(30)
                 };
             });
+
 
 
             var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -109,21 +102,21 @@ namespace Rujta.API
 
             var routerDbPath = Path.Combine(solutionRoot, routerDbRelativePath);
 
-            // Check if RouterDb exists, else attempt to build it
+            
             if (!File.Exists(routerDbPath))
             {
                 Console.WriteLine("RouterDb not found. Attempting to build it...");
                 bool built = RouterDbHelper.BuildRouterDb();
 
                 if (!built || !File.Exists(routerDbPath))
-                 throw new InvalidOperationException($"Routing:RouterDb file could not be created at {routerDbPath}");
+                    throw new InvalidOperationException($"Routing:RouterDb file could not be created at {routerDbPath}");
             }
 
             builder.Services.AddSingleton<ItineroRoutingService>(sp =>
                 new ItineroRoutingService(routerDbPath, sp.GetRequiredService<ILogger<ItineroRoutingService>>()));
 
             // Application Services
-            builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
             builder.Services.AddScoped<PharmacyDistanceService>();
             builder.Services.AddScoped<IPharmacyRepository, PharmacyRepo>();
 
@@ -142,6 +135,8 @@ namespace Rujta.API
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IMedicineService, MedicineService>();
             builder.Services.AddScoped<IOrderService, OrderService>();
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
+
 
             builder.Services.AddHttpClient<MedicineDataImportService>();
 
@@ -151,18 +146,18 @@ namespace Rujta.API
             {
                 options.AddPolicy("AllowReactApp",
                     policy => policy.WithOrigins(
-                                    "http://localhost:5173",  
+                                    "http://localhost:5173",
                                     "http://localhost:3000")
                                 .AllowAnyHeader()
                                 .AllowAnyMethod()
-                                .AllowCredentials()); 
+                                .AllowCredentials());
             });
 
 
 
             var app = builder.Build();
-        
-        
+
+
             // Middleware
             if (app.Environment.IsDevelopment())
             {
@@ -170,12 +165,16 @@ namespace Rujta.API
                 app.UseSwaggerUI();
             }
 
+            
             app.UseHttpsRedirection();
+
+            app.UseMiddleware<JwtCookieMiddleware>();
+
             app.UseCors("AllowReactApp");
             app.UseAuthentication();
             app.UseAuthorization();
 
-            
+
             app.MapControllers();
 
             // Role seeding

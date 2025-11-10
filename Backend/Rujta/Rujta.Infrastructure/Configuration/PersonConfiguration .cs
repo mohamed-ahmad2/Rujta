@@ -1,7 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Rujta.Domain.Common;
-using Rujta.Domain.Entities;
 
 namespace Rujta.Infrastructure.Configuration
 {

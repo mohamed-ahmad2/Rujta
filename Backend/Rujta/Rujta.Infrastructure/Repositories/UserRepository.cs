@@ -1,21 +1,13 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Rujta.Application.DTOs;
-using Rujta.Application.DTOs.UserProfile;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Identity;
+﻿using Rujta.Infrastructure.Identity;
 
-namespace Rujta.Infrastructure.Identity.Services
+namespace Rujta.Infrastructure.Repositories
 {
-    public class UserProfileService : IUserProfileService
+    public class UserRepository : GenericRepository<User>, IUserRepository
     {
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public UserProfileService(UserManager<ApplicationUser> userManager)
-        {
-            _userManager = userManager;
-        }
+        public UserRepository(AppDbContext context, UserManager<ApplicationUser> userManager)
+            : base(context) => _userManager = userManager;
 
         public async Task<UserProfileDto?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default)
         {
@@ -65,7 +57,6 @@ namespace Rujta.Infrastructure.Identity.Services
                     user.Address = new Address { UserId = user.Id };
 
                 var address = user.Address;
-
                 address.FullName = dto.Address.FullName ?? address.FullName;
                 address.MobileNumber = dto.Address.MobileNumber ?? address.MobileNumber;
                 address.Street = dto.Address.Street ?? address.Street;

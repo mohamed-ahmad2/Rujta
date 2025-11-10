@@ -1,11 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Rujta.Domain.Common;
-using System;
-using System.Collections.Generic;
+﻿using Rujta.Domain.Common;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Identity
 {
@@ -14,7 +8,9 @@ namespace Rujta.Infrastructure.Identity
         public Guid DomainPersonId { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string Location { get; set; } = string.Empty;
+        public string? DeviceInfo { get; set; }
 
+        public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         [ForeignKey("DomainPersonId")]
         public required virtual Person DomainPerson { get; set; }
     }

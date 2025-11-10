@@ -1,8 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Rujta.Domain.Common;
-using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Extensions;
 using Rujta.Infrastructure.Identity;
 
@@ -20,8 +17,6 @@ namespace Rujta.Infrastructure.Data
         // Person table
         public DbSet<Person> People { get; set; }
 
-        
-
         // Entities
         public DbSet<Pharmacy> Pharmacies { get; set; }
         public DbSet<Medicine> Medicines { get; set; }
@@ -31,6 +26,7 @@ namespace Rujta.Infrastructure.Data
         public DbSet<Prescription> Prescriptions { get; set; }
         public DbSet<ProcessPrescription> ProcessPrescriptions { get; set; }
         public DbSet<SellDrugViaPharmacy> SellDrugViaPharmacies { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

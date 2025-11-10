@@ -1,32 +1,32 @@
-﻿using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Infrastructure.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 namespace Rujta.Infrastructure.Repositories
 {
     public class UnitOfWork : IUnitOfWork
     {
         private readonly AppDbContext _context;
+        private readonly IServiceProvider _serviceProvider;
         private bool _disposed = false;
 
 
         private IMedicineRepository? _medicines;
         private IPharmacyRepository? _pharmacies;
         private IOrderRepository? _orders;
+        private IUserRepository? _users;
+        private IRefreshTokenRepository? _refreshTokenRepository;
 
-        public UnitOfWork(AppDbContext context)
+        public UnitOfWork(AppDbContext context, IServiceProvider serviceProvider)
         {
             _context = context;
+            _serviceProvider = serviceProvider;
         }
 
         public IMedicineRepository Medicines => _medicines ??= new MedicineRepository(_context);
         public IPharmacyRepository Pharmacies => _pharmacies ??= new PharmacyRepo(_context);
         public IOrderRepository Orders => _orders ??= new OrderRepository(_context);
+        public IRefreshTokenRepository RefreshTokens => _refreshTokenRepository ??= new RefreshTokenRepository(_context);
+        public IUserRepository Users => _users ??=
+            ActivatorUtilities.CreateInstance<UserRepository>(_serviceProvider);
 
         public async Task<int> SaveAsync(CancellationToken cancellationToken = default) => await _context.SaveChangesAsync(cancellationToken);
         protected virtual void Dispose(bool disposing)

@@ -13,9 +13,9 @@ namespace Rujta.API.Controllers
     [Authorize] 
     public class UserProfileController : ControllerBase
     {
-        private readonly IUserProfileService _userProfileService;
+        private readonly IUserRepository _userProfileService;
 
-        public UserProfileController(IUserProfileService userProfileService)
+        public UserProfileController(IUserRepository userProfileService)
         {
             _userProfileService = userProfileService;
         }

@@ -1,9 +1,5 @@
 ﻿using Rujta.Application.Interfaces.InterfaceRepositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace Rujta.Application.Interfaces
 {
@@ -12,6 +8,8 @@ namespace Rujta.Application.Interfaces
         IMedicineRepository Medicines { get; }
         IPharmacyRepository Pharmacies { get; }
         IOrderRepository Orders { get; }
+        IUserRepository Users { get; }
+        IRefreshTokenRepository RefreshTokens { get; }
          
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
     }

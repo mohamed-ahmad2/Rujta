@@ -1,16 +1,4 @@
-﻿using F23.StringSimilarity;
-using Microsoft.EntityFrameworkCore;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace Rujta.Infrastructure.Repositories
+﻿namespace Rujta.Infrastructure.Repositories
 {
     public class MedicineRepository : GenericRepository<Medicine>, IMedicineRepository
     {

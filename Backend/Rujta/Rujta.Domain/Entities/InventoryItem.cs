@@ -1,5 +1,4 @@
 ﻿using Rujta.Domain.Common;
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 

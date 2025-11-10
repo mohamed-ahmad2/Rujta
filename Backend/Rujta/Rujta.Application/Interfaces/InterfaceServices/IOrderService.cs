@@ -1,8 +1,4 @@
 ﻿using Rujta.Application.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Rujta.Application.Interfaces.InterfaceServices
 {

@@ -1,14 +1,4 @@
-﻿using AutoMapper;
-using Rujta.Application.DTOs;
-using Rujta.Domain.Common;
-using Rujta.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Rujta.Infrastructure.Identity.Mapper
+﻿namespace Rujta.Infrastructure.Identity.Mapper
 {
     public class AuthProfile : Profile
     {
@@ -22,6 +12,20 @@ namespace Rujta.Infrastructure.Identity.Mapper
 
             CreateMap<RegisterDto, User>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore());
+
+            CreateMap<ApplicationUser, ApplicationUserDto>()
+                .ForMember(dest => dest.Roles, opt => opt.Ignore())
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
+                .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
+                .ForMember(dest => dest.DeviceInfo, opt => opt.MapFrom(src => src.DeviceInfo))
+                .ForMember(dest => dest.DomainPersonId, opt => opt.MapFrom(src => src.DomainPersonId))
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id));
+
+            
+            CreateMap<ApplicationUserDto, ApplicationUser>()
+                .ForMember(dest => dest.RefreshTokens, opt => opt.Ignore())
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email));
         }
     }
 }
