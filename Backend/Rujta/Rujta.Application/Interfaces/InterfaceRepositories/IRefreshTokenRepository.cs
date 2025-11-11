@@ -9,5 +9,7 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
         Task<RefreshToken?> GetValidTokenAsync(Guid userId, string tokenHash);
         void RemoveRange(IEnumerable<RefreshToken> tokens);
         Task<List<RefreshToken>> GetExpiredOrRevokedAsync(DateTime now);
+        Task<List<RefreshToken>> GetAllValidTokensByUserIdAsync(Guid userId);
+        Task ExecuteWithSerializableTransactionAsync(Func<Task> action);
     }
 }

@@ -1,4 +1,7 @@
-﻿namespace Rujta.Infrastructure.Identity.Services
+﻿using Rujta.Domain.Entities;
+using Rujta.Infrastructure.Identity.Helpers;
+
+namespace Rujta.Infrastructure.Identity.Services
 {
     public class TokenService : ITokenService
     {
@@ -8,8 +11,8 @@
         private readonly ILogger<TokenService> _logger;
         private readonly IMapper _mapper;
 
-        private  RsaSecurityKey _privateKey = null!;
-        private  RsaSecurityKey _publicKey = null!;
+        private RsaSecurityKey _privateKey = null!;
+        private RsaSecurityKey _publicKey = null!;
 
 
         public TokenService(
@@ -131,81 +134,76 @@
             if (userDto == null || string.IsNullOrEmpty(providedToken))
                 return null;
 
-            ApplicationUser user = _mapper.Map<ApplicationUser>(userDto);
+            var storedToken = await RefreshTokenHelper.GetValidRefreshTokenAsync(_unitOfWork.RefreshTokens, providedToken);
+
+            if (storedToken.UserId != userDto.Id)
+            {
+                _logger.LogWarning("Refresh token does not belong to user {UserId}", userDto.Id);
+                return null;
+            }
 
             using var sha256 = SHA256.Create();
-            var hashedInput = Convert.ToBase64String(
-                sha256.ComputeHash(Encoding.UTF8.GetBytes(providedToken))
-            );
-
-            var token = await _unitOfWork.RefreshTokens.GetValidTokenAsync(user.Id, hashedInput);
-
-            if (token == null)
-            {
-                _logger.LogWarning("Refresh token not found or expired for user {UserId}", user.Id);
-                return null;
-            }
+            var hashedInput = Convert.ToBase64String(sha256.ComputeHash(Encoding.UTF8.GetBytes(providedToken)));
 
             if (!CryptographicOperations.FixedTimeEquals(
-                    Encoding.UTF8.GetBytes(token.Token),
+                    Encoding.UTF8.GetBytes(storedToken.Token),
                     Encoding.UTF8.GetBytes(hashedInput)))
             {
-                _logger.LogWarning("Refresh token verification failed for user {UserId}", user.Id);
+                _logger.LogWarning("Refresh token verification failed for user {UserId}", userDto.Id);
                 return null;
             }
 
-            token.Revoked = true;
-            token.RevokedAt = DateTime.UtcNow;
-            await _unitOfWork.SaveAsync();
+            await _unitOfWork.RefreshTokens.ExecuteWithSerializableTransactionAsync(async () =>
+            {
+                storedToken.Revoked = true;
+                storedToken.RevokedAt = DateTime.UtcNow;
+                await _unitOfWork.SaveAsync();
+            });
 
-            _logger.LogInformation("Refresh token revoked for user {UserId}", user.Id);
+            _logger.LogInformation("Refresh token revoked for user {UserId}", userDto.Id);
 
-            return token;
+            return storedToken;
         }
 
-        public async Task<string> GenerateAccessTokenFromRefreshTokenAsync(string rawRefreshToken)
+
+
+
+        public async Task<(string Token, string Jti, DateTime Expiration)> GenerateAccessTokenFromRefreshTokenAsync(string rawRefreshToken, ApplicationUserDto userDto)
         {
             if (string.IsNullOrWhiteSpace(rawRefreshToken))
                 throw new ArgumentException("Invalid refresh token", nameof(rawRefreshToken));
 
-            using var sha256 = SHA256.Create();
-            var hashedToken = Convert.ToBase64String(sha256.ComputeHash(Encoding.UTF8.GetBytes(rawRefreshToken)));
 
-            var storedToken = await _unitOfWork.RefreshTokens.GetByTokenAsync(hashedToken);
-            if (storedToken == null || storedToken.Expiration < DateTime.UtcNow)
-                throw new SecurityTokenException("Invalid or expired refresh token");
-
-            var user = await _userManager.FindByIdAsync(storedToken.UserId.ToString());
-            if (user == null)
-                throw new InvalidOperationException("User not found");
-
-            if (storedToken.DeviceInfo != user.DeviceInfo)
+            var verifiedToken = await VerifyRefreshTokenAsync(userDto, rawRefreshToken);
+            if (verifiedToken == null)
             {
-                _logger.LogWarning("Refresh token used from unknown device for user {UserId}", user.Id);
+                _logger.LogWarning("GenerateAccessTokenFromRefreshTokenAsync: Refresh token verification failed for user {UserId}", userDto.Id);
+                throw new SecurityTokenException("Invalid or expired refresh token.");
+            }
+
+            if (!string.Equals(verifiedToken.DeviceInfo, userDto.DeviceInfo, StringComparison.Ordinal))
+            {
+                _logger.LogWarning("Refresh token used from unknown device for user {UserId}", userDto.Id);
                 throw new SecurityTokenException("Refresh token used from unknown device");
             }
 
-            if (!CryptographicOperations.FixedTimeEquals(
-                Encoding.UTF8.GetBytes(hashedToken),
-                Encoding.UTF8.GetBytes(storedToken.Token)))
-            {
-                _logger.LogWarning("Refresh token verification failed for user {UserId}", user.Id);
-                throw new SecurityTokenException("Invalid refresh token");
-            }
-
             var jwtId = Guid.NewGuid().ToString();
-            ApplicationUserDto userDto = _mapper.Map<ApplicationUserDto>(user);
             var accessToken = await GenerateAccessTokenAsync(userDto, jwtId);
 
-            storedToken.Revoked = true;
-            storedToken.LastAccessTokenJti = jwtId;
-            storedToken.LastUsedAt = DateTime.UtcNow;
+
+            verifiedToken.LastAccessTokenJti = jwtId;
+            verifiedToken.LastUsedAt = DateTime.UtcNow;
             await _unitOfWork.SaveAsync();
 
-            _logger.LogInformation("Access token generated from refresh token for user {UserId}", user.Id);
+            _logger.LogInformation("Access token generated from refresh token for user {UserId}", userDto.Id);
 
-            return accessToken;
+            var jwtSection = _configuration.GetSection("JWT");
+            var accessTokenMinutes = double.TryParse(jwtSection["AccessTokenExpirationMinutes"], out var mins) ? mins : 10;
+            var expiration = DateTime.UtcNow.AddMinutes(accessTokenMinutes);
+
+            return (accessToken, jwtId, expiration);
         }
+
 
         public RsaSecurityKey GetPublicKey() => _publicKey;
     }

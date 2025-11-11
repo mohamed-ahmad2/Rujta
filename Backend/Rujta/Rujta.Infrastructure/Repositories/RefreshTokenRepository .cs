@@ -1,4 +1,6 @@
-﻿namespace Rujta.Infrastructure.Repositories
+﻿
+
+namespace Rujta.Infrastructure.Repositories
 {
     public class RefreshTokenRepository :GenericRepository<RefreshToken>, IRefreshTokenRepository
     {
@@ -25,8 +27,18 @@
             await _context.RefreshTokens
                 .Where(t => t.Revoked || t.Expiration < now)
                 .ToListAsync();
-        
 
 
+        public async Task<List<RefreshToken>> GetAllValidTokensByUserIdAsync(Guid userId) =>
+                await _context.RefreshTokens
+                    .Where(rt => rt.UserId == userId && !rt.Revoked && rt.Expiration > DateTime.UtcNow)
+                    .ToListAsync();
+
+        public async Task ExecuteWithSerializableTransactionAsync(Func<Task> action)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            await action();
+            await transaction.CommitAsync();
+        }
     }
 }

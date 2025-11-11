@@ -46,7 +46,5 @@ namespace Rujta.Infrastructure.Repositories
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
-       
     }
 }

@@ -10,7 +10,7 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task<string> GenerateAccessTokenAsync(ApplicationUserDto userDto, string? jwtId = null);
         Task<string> GenerateRefreshTokenAsync(ApplicationUserDto userDto);
         Task<RefreshToken?> VerifyRefreshTokenAsync(ApplicationUserDto userDto, string providedToken);
-        Task<string> GenerateAccessTokenFromRefreshTokenAsync(string rawRefreshToken);
+        Task<(string Token, string Jti, DateTime Expiration)> GenerateAccessTokenFromRefreshTokenAsync(string rawRefreshToken, ApplicationUserDto userDto);
         RsaSecurityKey GetPublicKey();
     }
 }
