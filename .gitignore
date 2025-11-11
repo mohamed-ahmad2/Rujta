@@ -52,6 +52,8 @@ Backend/Rujta/.vs
 
 # Maps folder inside API
 Backend/Rujta/Rujta.Api/Maps
+Rujta/Backend/Rujta/Rujta.Infrastructure/Certificates/*.pfx
+
 
 ## -----------------------------
 ## React frontend ignores
