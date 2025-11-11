@@ -1,14 +1,4 @@
-using AutoMapper;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Rujta.Application.DTOs;
-using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Constants;
-using Rujta.Infrastructure.Data;
-using Rujta.Infrastructure.Identity;
-using Rujta.Infrastructure.Identity.Services;
-using System.Globalization;
 
 
 
