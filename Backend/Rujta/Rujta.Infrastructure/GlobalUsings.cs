@@ -1,10 +1,4 @@
-﻿// GlobalUsings.cs
-
-global using System;
-global using System.Collections.Generic;
-global using System.Linq;
-global using System.Threading.Tasks;
-global using System.Globalization;
+﻿global using System.Globalization;
 global using System.Text;
 
 global using Microsoft.Extensions.Logging;
