@@ -24,8 +24,8 @@ namespace Rujta.Domain.Entities
 
         public bool IsDispensed { get; set; }
 
-        public required virtual Pharmacy Pharmacy { get; set; }
-        public required virtual Medicine Medicine { get; set; }
+        public  virtual Pharmacy Pharmacy { get; set; }
+        public  virtual Medicine Medicine { get; set; }
         public virtual Prescription? Prescription { get; set; }
     }
 }
