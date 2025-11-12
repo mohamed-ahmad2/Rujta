@@ -1,12 +1,12 @@
 import React from "react";
-import imge1 from "../../assets/hero/img1.png";
-import imge2 from "../../assets/hero/img2.png";
-import imge3 from "../../assets/hero/img3.png";
-import imge4 from "../../assets/hero/img4.png";
-import imge5 from "../../assets/hero/img5.png";
-import imge6 from "../../assets/hero/img6.png";
-import imge7 from "../../assets/hero/img7.png";
-import imge8 from "../../assets/hero/img8.png";
+import imge1 from "../../../assets/hero/img1.png";
+import imge2 from "../../../assets/hero/img2.png";
+import imge3 from "../../../assets/hero/img3.png";
+import imge4 from "../../../assets/hero/img4.png";
+import imge5 from "../../../assets/hero/img5.png";
+import imge6 from "../../../assets/hero/img6.png";
+import imge7 from "../../../assets/hero/img7.png";
+import imge8 from "../../../assets/hero/img8.png";
 
 import { FaStar } from "react-icons/fa";
 
