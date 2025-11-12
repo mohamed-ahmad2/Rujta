@@ -1,6 +1,6 @@
 import React from 'react';
-import Logo from "../../assets/Logo.png";
-import { NavbarMenu } from '../../mockData/data'
+import Logo from "../../../assets/Logo.png";
+import { NavbarMenu } from '../../../mockData/data'
 import { CiSearch } from "react-icons/ci";
 import { PiShoppingCartThin } from "react-icons/pi";
 import { MdMenu } from "react-icons/md";
@@ -54,7 +54,8 @@ const Navbar = () => {
               Login
             </button>
 
-            <button className='hover:bg-secondary text-secondary font-semibold hover:text-white rounded-md border-2 border-secondary px-6 py-2 duration-200 hidden md:block'>
+            <button  onClick={() => navigate("/auth")}
+            className='hover:bg-secondary text-secondary font-semibold hover:text-white rounded-md border-2 border-secondary px-6 py-2 duration-200 hidden md:block'>
               SignUp
             </button>
           </div>

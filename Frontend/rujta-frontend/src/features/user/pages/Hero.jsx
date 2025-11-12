@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
-<img src="/assets/change/HeroImg1.png" alt="Hero 1" />
-
-import HeroImg2 from "../../assets/change/HeroImg2.png";
-import HeroImg3 from "../../assets/change/HeroImg3.png"; // Lek Moisturizer
-import HeroImg4 from "../../assets/change/HeroImg4.png";
-import HeroImg5 from "../../assets/change/HeroImg5.png"; // Hyaluronic Acid
+import HeroImg1 from "../../../assets/change/HeroImg1.png";
+import HeroImg2 from "../../../assets/change/HeroImg2.png";
+import HeroImg3 from "../../../assets/change/HeroImg3.png"; // Lek Moisturizer
+import HeroImg4 from "../../../assets/change/HeroImg4.png";
+import HeroImg5 from "../../../assets/change/HeroImg5.png"; // Hyaluronic Acid
 
 const heroSlides = [
   {
