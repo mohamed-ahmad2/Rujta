@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Rujta.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class updateConfigMedicine : Migration
+    public partial class addRefreshToken : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -67,6 +67,29 @@ namespace Rujta.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Address",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    MobileNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Street = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    BuildingNo = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    City = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Governorate = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Instructions = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
+                    IsDefault = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Address", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetUsers",
                 columns: table => new
                 {
@@ -74,6 +97,7 @@ namespace Rujta.Infrastructure.Migrations
                     DomainPersonId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     FullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Location = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DeviceInfo = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -92,6 +116,34 @@ namespace Rujta.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RefreshTokens",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Token = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Expiration = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RevokedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Revoked = table.Column<bool>(type: "bit", nullable: false),
+                    DeviceInfo = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
+                    LastAccessTokenJti = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    LastUsedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefreshTokens", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RefreshTokens_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -258,7 +310,6 @@ namespace Rujta.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Address = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ProfileImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -446,6 +497,12 @@ namespace Rujta.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Address_UserId",
+                table: "Address",
+                column: "UserId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "EmailIndex",
                 table: "AspNetUsers",
                 column: "NormalizedEmail");
@@ -553,6 +610,11 @@ namespace Rujta.Infrastructure.Migrations
                 column: "PrescriptionID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_UserId",
+                table: "RefreshTokens",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RoleClaims_RoleId",
                 table: "RoleClaims",
                 column: "RoleId");
@@ -593,6 +655,14 @@ namespace Rujta.Infrastructure.Migrations
                 name: "IX_UserRoles_RoleId",
                 table: "UserRoles",
                 column: "RoleId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_Address_People_UserId",
+                table: "Address",
+                column: "UserId",
+                principalTable: "People",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_AspNetUsers_People_DomainPersonId",
@@ -671,6 +741,9 @@ namespace Rujta.Infrastructure.Migrations
                 table: "Pharmacies");
 
             migrationBuilder.DropTable(
+                name: "Address");
+
+            migrationBuilder.DropTable(
                 name: "InventoryItems");
 
             migrationBuilder.DropTable(
@@ -678,6 +751,9 @@ namespace Rujta.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "ProcessPrescriptions");
+
+            migrationBuilder.DropTable(
+                name: "RefreshTokens");
 
             migrationBuilder.DropTable(
                 name: "RoleClaims");

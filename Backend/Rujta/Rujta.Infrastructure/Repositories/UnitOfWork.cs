@@ -13,6 +13,8 @@ namespace Rujta.Infrastructure.Repositories
         private IPharmacyRepository? _pharmacies;
         private IOrderRepository? _orders;
         private IUserRepository? _users;
+        private IPeopleRepository? _people;
+        private IDeviceRepository? _device;
         private IRefreshTokenRepository? _refreshTokenRepository;
 
         public UnitOfWork(AppDbContext context, IServiceProvider serviceProvider)
@@ -24,6 +26,8 @@ namespace Rujta.Infrastructure.Repositories
         public IMedicineRepository Medicines => _medicines ??= new MedicineRepository(_context);
         public IPharmacyRepository Pharmacies => _pharmacies ??= new PharmacyRepo(_context);
         public IOrderRepository Orders => _orders ??= new OrderRepository(_context);
+        public IPeopleRepository People => _people ??= new PeopleRepository(_context);
+        public IDeviceRepository Devices => _device ??= new DeviceRepository(_context);
         public IRefreshTokenRepository RefreshTokens => _refreshTokenRepository ??= new RefreshTokenRepository(_context);
         public IUserRepository Users => _users ??=
             ActivatorUtilities.CreateInstance<UserRepository>(_serviceProvider);

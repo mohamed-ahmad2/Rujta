@@ -40,5 +40,12 @@ namespace Rujta.Infrastructure.Repositories
             await action();
             await transaction.CommitAsync();
         }
+
+        public async Task<IEnumerable<RefreshToken>> GetAllByDeviceIdAsync(Guid userId, string deviceId) =>
+   
+            await _context.RefreshTokens
+                .Where(t => t.UserId == userId && t.DeviceInfo == deviceId && !t.Revoked && t.Expiration > DateTime.UtcNow)
+                .ToListAsync();
+        
     }
 }

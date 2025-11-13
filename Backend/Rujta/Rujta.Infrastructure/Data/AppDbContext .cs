@@ -27,6 +27,7 @@ namespace Rujta.Infrastructure.Data
         public DbSet<ProcessPrescription> ProcessPrescriptions { get; set; }
         public DbSet<SellDrugViaPharmacy> SellDrugViaPharmacies { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<Device> Devices { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

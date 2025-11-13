@@ -33,7 +33,7 @@ namespace Rujta.API
             builder.Services.AddCustomFluentValidation();
 
             // Application Services
-            builder.Services.AddApplicationServices();
+            builder.Services.AddApplicationServices(builder.Configuration);
 
             var app = builder.Build();
 

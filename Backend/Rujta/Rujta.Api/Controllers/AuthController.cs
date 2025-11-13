@@ -1,4 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Rujta.Application.DTOs;
+using Rujta.Infrastructure.Identity;
+using System.IdentityModel.Tokens.Jwt;
 
 
 
@@ -9,122 +13,81 @@ namespace Rujta.API.Controllers
 
     public class AuthController : ControllerBase
     {
-        ///private readonly SignInManager<ApplicationUser> _signInManager;
-        ///private readonly UserManager<ApplicationUser> _userManager;
-        ///private readonly IMapper _mapper;
-        ///private readonly TokenService _tokenService;
-        ///private readonly AppDbContext _appDbContext;
 
-        ///public AuthController(
-        //    AppDbContext appDbContext,
-        //     TokenService tokenService,
-        //    IMapper mapper
-        //    , SignInManager<ApplicationUser> signInManager
-        //    , UserManager<ApplicationUser> userManager
-        //    )
-        ///{
-        ///    _appDbContext = appDbContext;
-        ///   _tokenService = tokenService;
-        ///    _signInManager = signInManager;
-        ///   _userManager = userManager;
-        ///    _mapper = mapper;
-        ///}
+        readonly private IAuthService _authService;
 
-        //[HttpGet("ping")]
-        //[ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
-        //public IActionResult Ping()
-        ///{
-        ///    return Ok("Backend is connected!");
-        ///}
+        public AuthController(IAuthService authService)
+        {
+            _authService = authService;
+        }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login(LoginDto dto)
+        {
+            try
+            {
+                var passwordValid = await _authService.CheckPasswordAsync(dto.Email, dto.Password);
+                if (!passwordValid) return Unauthorized();
+
+                var tokens = await _authService.GenerateTokensAsync(dto.Email);
+                return Ok(tokens);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
 
 
-        //[HttpPost("register")]
-        //public async Task<IActionResult> Register([FromBody] RegisterDto registerDTO)
-        ///{
+        [HttpPost("register")]
+        public async Task<IActionResult> Register(RegisterDto dto)
+        {
+            try
+            {
+                var userId = await _authService.CreateUserAsync(dto, UserRole.User);
+                var tokens = await _authService.GenerateTokensAsync(dto.Email);
+                return CreatedAtAction(nameof(Login), new { email = dto.Email }, new { UserId = userId, tokens });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
 
-        ///    var userExist = await _userManager.FindByEmailAsync(registerDTO.Email);
-        ///    if (userExist != null)
-        ///        return BadRequest("Email is already registered.");
-
-        ///   var person = _mapper.Map<User>(registerDTO);
-        ///    _appDbContext.People.Add(person);
-        ///    await _appDbContext.SaveChangesAsync();
-
-        ///    var user = _mapper.Map<ApplicationUser>(registerDTO);
-
-        ///    user.DomainPersonId = person.Id;
-
-        ///    var result = await _userManager.CreateAsync(user, registerDTO.CreatePassword);
-
-        ///    if (!result.Succeeded)
-        ///        return BadRequest(result.Errors);
-
-
-        ///    await _userManager.AddToRoleAsync(user, "User");
-
-        ///    // Auto-login: generate tokens
-        ///    var tokens = await _tokenService.GenerateTokensAsync(user);
-        ///    await _userManager.SetAuthenticationTokenAsync(user, TokenProviderConstants.AppProvider, TokenKeys.RefreshToken, tokens.RefreshToken);
-
-        ///    return Ok(tokens);
-        ///}
-
-        //[HttpPost("login")]
-        //public async Task<IActionResult> Login([FromBody] LoginDto loginDTO)
-        ///{
-        ///    var user = await _userManager.FindByEmailAsync(loginDTO.Email);
-        ///    if (user == null) return Unauthorized("Invalid credentials");
-
-        ///    var result = await _signInManager.CheckPasswordSignInAsync(user, loginDTO.Password, false);
-        ///    if (!result.Succeeded) return Unauthorized("Invalid credentials");
-
-        //    // Generate tokens
-        ///    var tokens = await _tokenService.GenerateTokensAsync(user);
-
-        //    // Store refresh token in Identity table
-        ///    await _userManager.SetAuthenticationTokenAsync(user, TokenProviderConstants.AppProvider, TokenKeys.RefreshToken, tokens.RefreshToken);
-
-        ///    return Ok(tokens);
-        ///}
-
-        //[HttpPost("refresh-token")]
-        //public async Task<IActionResult> RefreshToken([FromBody] string refreshToken)
-        ///{
-        //    // Find user by refresh token
-        //    var user = await _userManager.Users.FirstOrDefaultAsync(u =>
-        ///        _userManager.GetAuthenticationTokenAsync(u, TokenProviderConstants.AppProvider, TokenKeys.RefreshToken).Result == refreshToken);
-
-        ///    if (user == null) return Unauthorized("Invalid refresh token");
-
-        //    // Get expiration
-        ///    var tokenExpirationStr = await _userManager.GetAuthenticationTokenAsync(user, TokenProviderConstants.AppProvider, TokenKeys.RefreshTokenExpiration);
-
-        //    if (!DateTime.TryParse(tokenExpirationStr, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var tokenExpiration))
-        ///        return Unauthorized("Invalid refresh token expiration");
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto dto)
+        {
+            try
+            {
+                var tokens = await _authService.RefreshAccessTokenAsync(dto.RefreshToken);
+                return Ok(tokens);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
 
 
-        ///    if (tokenExpiration < DateTime.UtcNow) return Unauthorized("Refresh token expired");
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromBody] RefreshTokenDto dto)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+                if (userIdClaim == null)
+                    return Unauthorized("User not found in token.");
 
-        //    // Generate new tokens
-        ///    var tokens = await _tokenService.GenerateTokensAsync(user);
+                var userId = Guid.Parse(userIdClaim);
 
-        //    // Rotate refresh token
-        //    await _userManager.SetAuthenticationTokenAsync(
-        //        user,
-        //        TokenProviderConstants.AppProvider,
-        //        TokenKeys.RefreshToken,
-        //        tokens.RefreshToken
-        ///        );
-
-        //    await _userManager.SetAuthenticationTokenAsync(
-        //         user,
-        //         TokenProviderConstants.AppProvider,
-        //         TokenKeys.RefreshTokenExpiration,
-        //         tokens.RefreshTokenExpiration?.ToString("o")
-        ///        );
-
-
-        ///    return Ok(tokens);
-        ///}
+                await _authService.LogoutAsync(userId, dto.RefreshToken);
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

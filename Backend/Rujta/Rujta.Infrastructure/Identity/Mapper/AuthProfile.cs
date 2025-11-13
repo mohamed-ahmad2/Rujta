@@ -18,7 +18,6 @@
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
                 .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
                 .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
-                .ForMember(dest => dest.DeviceInfo, opt => opt.MapFrom(src => src.DeviceInfo))
                 .ForMember(dest => dest.DomainPersonId, opt => opt.MapFrom(src => src.DomainPersonId))
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id));
 

@@ -12,15 +12,15 @@ using Rujta.Infrastructure.Data;
 namespace Rujta.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251031152623_addAddressAndConfig")]
-    partial class addAddressAndConfig
+    [Migration("20251113002659_addConfigForDeviceForToken")]
+    partial class addConfigForDeviceForToken
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.21")
+                .HasAnnotation("ProductVersion", "8.0.22")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -264,6 +264,51 @@ namespace Rujta.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Address");
+                });
+
+            modelBuilder.Entity("Rujta.Domain.Entities.Device", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeviceId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DeviceName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("IPAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Devices");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.InventoryItem", b =>
@@ -616,6 +661,57 @@ namespace Rujta.Infrastructure.Migrations
                     b.ToTable("ProcessPrescriptions");
                 });
 
+            modelBuilder.Entity("Rujta.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeviceInfo")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<DateTime>("Expiration")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastAccessTokenJti")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Revoked")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens", (string)null);
+                });
+
             modelBuilder.Entity("Rujta.Domain.Entities.SellDrugViaPharmacy", b =>
                 {
                     b.Property<int>("Id")
@@ -680,6 +776,9 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DeviceInfo")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("DomainPersonId")
@@ -921,6 +1020,15 @@ namespace Rujta.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Rujta.Domain.Entities.Device", b =>
+                {
+                    b.HasOne("Rujta.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Rujta.Domain.Entities.InventoryItem", b =>
                 {
                     b.HasOne("Rujta.Domain.Entities.Medicine", "Medicine")
@@ -1046,6 +1154,15 @@ namespace Rujta.Infrastructure.Migrations
                     b.Navigation("Prescription");
                 });
 
+            modelBuilder.Entity("Rujta.Domain.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("Rujta.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Rujta.Domain.Entities.SellDrugViaPharmacy", b =>
                 {
                     b.HasOne("Rujta.Domain.Entities.Medicine", "Medicine")
@@ -1143,6 +1260,11 @@ namespace Rujta.Infrastructure.Migrations
                     b.Navigation("Orders");
 
                     b.Navigation("ProcessPrescriptions");
+                });
+
+            modelBuilder.Entity("Rujta.Infrastructure.Identity.ApplicationUser", b =>
+                {
+                    b.Navigation("RefreshTokens");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Admin", b =>

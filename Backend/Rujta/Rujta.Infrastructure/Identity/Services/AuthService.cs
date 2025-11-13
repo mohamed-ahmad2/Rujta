@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Rujta.Domain.Common;
+using Rujta.Infrastructure.Helperrs;
 using Rujta.Infrastructure.Identity.Helpers;
 
 namespace Rujta.Infrastructure.Identity.Services
@@ -8,30 +10,27 @@ namespace Rujta.Infrastructure.Identity.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly TokenService _tokenService;
         private readonly IMapper _mapper;
-        private readonly IConfiguration _configuration;
         private readonly ILogger<AuthService> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly TokenHelper _tokenHelper;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             IMapper mapper,
-            TokenService tokenService,
             IUnitOfWork unitOfWork,
-            IConfiguration configuration,
             ILogger<AuthService> logger,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            TokenHelper tokenHelper)
         {
             _unitOfWork = unitOfWork;
             _userManager = userManager;
             _signInManager = signInManager;
-            _tokenService = tokenService;
             _mapper = mapper;
-            _configuration = configuration;
             _logger = logger;
             _httpContextAccessor = httpContextAccessor;
+            _tokenHelper = tokenHelper;
         }
 
         public async Task<bool> CheckPasswordAsync(string email, string password, CancellationToken cancellationToken = default)
@@ -51,10 +50,35 @@ namespace Rujta.Infrastructure.Identity.Services
         }
 
 
-        public async Task<Guid> CreateUserAsync(RegisterDto dto, Guid domainPersonId, UserRole role, CancellationToken cancellationToken = default)
+        public async Task<Guid> CreateUserAsync(RegisterDto dto, UserRole role, CancellationToken cancellationToken = default)
         {
+
+            Person person;
+
+            switch (role)
+            {
+                case UserRole.User:
+                    person = _mapper.Map<User>(dto);
+                    break;
+                case UserRole.Pharmacist:
+                    person = _mapper.Map<Pharmacist>(dto);
+                    break;
+                case UserRole.Admin:
+                    person = _mapper.Map<Admin>(dto);
+                    break;
+                case UserRole.Manager:
+                    person = _mapper.Map<Manager>(dto);
+                    break;
+                default:
+                    throw new InvalidOperationException("Unknown role");
+            }
+
+            await _unitOfWork.People.AddAsync(person); 
+            await _unitOfWork.SaveAsync();
+
+            
             var user = _mapper.Map<ApplicationUser>(dto);
-            user.DomainPersonId = domainPersonId;
+            user.DomainPersonId = person.Id;
 
             var result = await _userManager.CreateAsync(user, dto.CreatePassword);
             if (!result.Succeeded)
@@ -69,6 +93,7 @@ namespace Rujta.Infrastructure.Identity.Services
 
             return user.Id;
         }
+
 
 
         public async Task<bool> IsEmailExistsAsync(string email, CancellationToken cancellationToken = default)
@@ -93,10 +118,51 @@ namespace Rujta.Infrastructure.Identity.Services
 
             ApplicationUserDto userDto = _mapper.Map<ApplicationUserDto>(user);
 
-            return await GenerateTokenPairAsync(userDto);
+            var context = _httpContextAccessor.HttpContext!;
+            var cookies = context.Request.Cookies;
+            string? deviceId;
+
+            if (!cookies.TryGetValue("device_id", out deviceId))
+            {
+                deviceId = Guid.NewGuid().ToString();
+
+                context.Response.Cookies.Append("device_id", deviceId, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None,
+                    Expires = DateTime.UtcNow.AddYears(1),
+                    Domain = "localhost" 
+                });
+
+                var device = new Device
+                {
+                    DeviceId = deviceId,
+                    UserId = user.Id,
+                    DeviceName = DeviceHelper.GetDeviceInfo(context),
+                    IPAddress = context.Connection.RemoteIpAddress?.MapToIPv4().ToString()
+                };
+
+                await _unitOfWork.Devices.AddAsync(device);
+
+                await _unitOfWork.SaveAsync();
+
+                userDto.DeviceId = deviceId;
+            }
+            else
+            {
+                var existingDevice = await _unitOfWork.Devices.GetByDeviceIdAsync(deviceId);
+                if (existingDevice != null)
+                {
+                    existingDevice.LastUsedAt = DateTime.UtcNow;
+                    await _unitOfWork.SaveAsync();
+                }
+            }
+
+            return await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId);
         }
 
-        
+
         public async Task<TokenDto> RefreshAccessTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(refreshToken))
@@ -106,6 +172,11 @@ namespace Rujta.Infrastructure.Identity.Services
             }
 
             var storedToken = await RefreshTokenHelper.GetValidRefreshTokenAsync(_unitOfWork.RefreshTokens, refreshToken);
+            if (storedToken == null)
+            {
+                _logger.LogWarning("RefreshAccessTokenAsync: Invalid or expired refresh token");
+                throw new InvalidOperationException("Invalid or expired refresh token.");
+            }
 
             var user = await _userManager.FindByIdAsync(storedToken.UserId.ToString());
             if (user == null)
@@ -113,7 +184,15 @@ namespace Rujta.Infrastructure.Identity.Services
 
             ApplicationUserDto userDto = _mapper.Map<ApplicationUserDto>(user);
 
-            return await GenerateTokenPairAsync(userDto);
+            var deviceId = storedToken.DeviceInfo;
+            if (string.IsNullOrEmpty(deviceId))
+            {
+                _logger.LogWarning("RefreshAccessTokenAsync: DeviceId missing in refresh token");
+                throw new InvalidOperationException("DeviceId is required for generating new tokens.");
+            }
+
+            
+            return await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId);
         }
 
 
@@ -133,62 +212,55 @@ namespace Rujta.Infrastructure.Identity.Services
 
         public async Task LogoutAsync(Guid userId, string? refreshToken = null)
         {
-            string? ipAddress = _httpContextAccessor?.HttpContext?.Connection?.RemoteIpAddress?.ToString();
-            string? deviceInfo = refreshToken != null
-                ? (await _unitOfWork.RefreshTokens.GetByTokenAsync(refreshToken))?.DeviceInfo
-                : "All devices";
+            var context = _httpContextAccessor?.HttpContext;
+            var ipAddress = context?.Connection?.RemoteIpAddress?.MapToIPv4().ToString();
+            var deviceId = context?.Request.Cookies["device_id"];
 
-            if (refreshToken != null)
+            if (!string.IsNullOrEmpty(refreshToken))
             {
                 await _unitOfWork.RefreshTokens.ExecuteWithSerializableTransactionAsync(async () =>
                 {
                     var token = await RefreshTokenHelper.GetValidRefreshTokenAsync(_unitOfWork.RefreshTokens, refreshToken);
-                    if (token.UserId != userId) return;
+                    if (token == null || token.UserId != userId) return;
 
                     token.Revoked = true;
                     token.RevokedAt = DateTime.UtcNow;
                     await _unitOfWork.SaveAsync();
                 });
 
+                _logger.LogInformation(
+                    "Logout executed for user {UserId} from IP {IP} using refresh token {RefreshToken}",
+                    userId, ipAddress, refreshToken
+                );
+            }
+            else if (!string.IsNullOrEmpty(deviceId))
+            {
+                
+                var tokens = await _unitOfWork.RefreshTokens.GetAllByDeviceIdAsync(userId, deviceId);
+                foreach (var token in tokens)
+                {
+                    token.Revoked = true;
+                    token.RevokedAt = DateTime.UtcNow;
+                }
+                await _unitOfWork.SaveAsync();
+
+                _logger.LogInformation(
+                    "Logout executed for user {UserId} from IP {IP} using device {DeviceId}",
+                    userId, ipAddress, deviceId
+                );
             }
             else
-                await RevokeOldRefreshTokensAsync(userId);
-
-            _logger.LogInformation(
-                "Logout executed for user {UserId} from IP {IP} using {Device}",
-                userId, ipAddress, deviceInfo
-            );
-        }
-
-        private async Task<TokenDto> GenerateTokenPairAsync(ApplicationUserDto userDto)
-        {
-            await RevokeOldRefreshTokensAsync(userDto.Id);
-            var refreshToken = await _tokenService.GenerateRefreshTokenAsync(userDto);
-            var (accessToken, accessTokenJti, accessTokenExpiration) = await _tokenService.GenerateAccessTokenFromRefreshTokenAsync(refreshToken, userDto);
-
-            var refreshTokenExpiration = DateTime.UtcNow.AddDays(
-                double.TryParse(_configuration["JWT:RefreshTokenExpirationDays"], out var days) ? days : 30
-            );
-
-            return new TokenDto
             {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken,
-                RefreshTokenExpiration = refreshTokenExpiration,
-                AccessTokenExpiration = accessTokenExpiration,
-                AccessTokenJti = accessTokenJti
-            };
-        }
+                await _tokenHelper.RevokeOldRefreshTokensAsync(userId);
 
-        private async Task RevokeOldRefreshTokensAsync(Guid userId)
-        {
-            var tokens = await _unitOfWork.RefreshTokens.GetAllValidTokensByUserIdAsync(userId);
-            foreach (var token in tokens)
-            {
-                token.Revoked = true;
-                token.RevokedAt = DateTime.UtcNow;
+                _logger.LogInformation(
+                    "Logout executed for user {UserId} from IP {IP} for all devices",
+                    userId, ipAddress
+                );
             }
-            await _unitOfWork.SaveAsync();
         }
+
+
+        
     }
 }

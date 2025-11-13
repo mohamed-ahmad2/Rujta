@@ -11,5 +11,6 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
         Task<List<RefreshToken>> GetExpiredOrRevokedAsync(DateTime now);
         Task<List<RefreshToken>> GetAllValidTokensByUserIdAsync(Guid userId);
         Task ExecuteWithSerializableTransactionAsync(Func<Task> action);
+        Task<IEnumerable<RefreshToken>> GetAllByDeviceIdAsync(Guid userId, string deviceId);
     }
 }

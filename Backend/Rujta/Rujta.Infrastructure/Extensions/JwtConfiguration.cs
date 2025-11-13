@@ -11,7 +11,7 @@ namespace Rujta.Infrastructure.Extensions
             var jwtSection = configuration.GetSection("JWT");
 
             var certPath = Path.Combine(AppContext.BaseDirectory, "Certificates", "jwt-cert.pfx");
-            var certPassword = "MyStrongPassword123";
+            var certPassword = "Rujta123987";
 
             var certificate = new X509Certificate2(certPath, certPassword);
             var rsa = certificate.GetRSAPublicKey();

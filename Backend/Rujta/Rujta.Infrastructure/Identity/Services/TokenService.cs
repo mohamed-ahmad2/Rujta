@@ -1,4 +1,5 @@
-﻿using Rujta.Domain.Entities;
+﻿using Microsoft.AspNetCore.Http;
+using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Identity.Helpers;
 
 namespace Rujta.Infrastructure.Identity.Services
@@ -96,10 +97,14 @@ namespace Rujta.Infrastructure.Identity.Services
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public async Task<string> GenerateRefreshTokenAsync(ApplicationUserDto userDto)
+        public async Task<string> GenerateRefreshTokenAsync(ApplicationUserDto userDto, string deviceId)
         {
             if (userDto == null)
                 throw new ArgumentNullException(nameof(userDto));
+
+            if (string.IsNullOrEmpty(deviceId))
+                throw new SecurityTokenException("Missing device identifier.");
+
 
             ApplicationUser user = _mapper.Map<ApplicationUser>(userDto);
 
@@ -110,14 +115,14 @@ namespace Rujta.Infrastructure.Identity.Services
 
             var jwtSection = _configuration.GetSection("JWT");
             var refreshDays = double.TryParse(jwtSection["RefreshTokenExpirationDays"], out var days) ? days : 30;
-
+            
             var refreshToken = new RefreshToken
             {
                 UserId = user.Id,
                 Token = hashedToken,
                 Expiration = DateTime.UtcNow.AddDays(refreshDays),
                 Revoked = false,
-                DeviceInfo = user.DeviceInfo,
+                DeviceInfo = deviceId,
                 LastUsedAt = null
             };
 
@@ -168,11 +173,14 @@ namespace Rujta.Infrastructure.Identity.Services
 
 
 
-        public async Task<(string Token, string Jti, DateTime Expiration)> GenerateAccessTokenFromRefreshTokenAsync(string rawRefreshToken, ApplicationUserDto userDto)
+        public async Task<(string Token, string Jti, DateTime Expiration)> GenerateAccessTokenFromRefreshTokenAsync(string rawRefreshToken, ApplicationUserDto userDto, string deviceId)
         {
             if (string.IsNullOrWhiteSpace(rawRefreshToken))
                 throw new ArgumentException("Invalid refresh token", nameof(rawRefreshToken));
+            
 
+            if (string.IsNullOrEmpty(deviceId))
+                throw new SecurityTokenException("Missing device identifier");
 
             var verifiedToken = await VerifyRefreshTokenAsync(userDto, rawRefreshToken);
             if (verifiedToken == null)
@@ -181,7 +189,7 @@ namespace Rujta.Infrastructure.Identity.Services
                 throw new SecurityTokenException("Invalid or expired refresh token.");
             }
 
-            if (!string.Equals(verifiedToken.DeviceInfo, userDto.DeviceInfo, StringComparison.Ordinal))
+            if (!string.Equals(verifiedToken.DeviceInfo, deviceId, StringComparison.Ordinal))
             {
                 _logger.LogWarning("Refresh token used from unknown device for user {UserId}", userDto.Id);
                 throw new SecurityTokenException("Refresh token used from unknown device");
