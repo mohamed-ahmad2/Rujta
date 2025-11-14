@@ -259,7 +259,7 @@ export default function AuthPage() {
                       Don’t have an account?{" "}
                       <button
                         onClick={() => setIsSignUp(true)}
-                        className="text-primary font-semibold hover:underline"
+                        className="text-secondary font-semibold hover:underline"
                       >
                         Sign Up
                       </button>
