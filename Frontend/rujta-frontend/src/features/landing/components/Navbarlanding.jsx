@@ -4,7 +4,7 @@ import { NavbarMenu } from '../../../mockData/data'
 import { CiSearch } from "react-icons/ci";
 import { PiShoppingCartThin } from "react-icons/pi";
 import { MdMenu } from "react-icons/md";
-import ResponsiveMenu from "./ResponsiveMenulanding";
+import ResponsiveMenulanding from "./ResponsiveMenulanding.jsx";
 import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
@@ -13,7 +13,7 @@ const Navbar = () => {
 
   return (
     <> 
-      <nav>
+      <nav >
         <div className="container flex justify-between items-center py-8">
           {/* Logo section */}
           <div className="flex items-center gap-2 ">
@@ -22,11 +22,14 @@ const Navbar = () => {
               alt="Logo" 
               className="w-16 h-16 object-contain"
             />
-            <p className="text-secondary text-2xl">Rujta</p>
+            <p className="font-extrabold text-2xl text-secondary sm:text-3xl flex gap-2">Rujta</p>
+            
+
           </div>
 
           {/* Menu section */}
-          <div className="hidden md:block">
+          <div className="bg-white hover:text-white rounded-md border-2 hidden md:block" style={{ marginLeft: "70px" }}>
+
             <ul className="flex items-center gap-6 text-gray-600">
               {NavbarMenu.map((item) => (
                 <li key={item.id}>
@@ -60,19 +63,17 @@ const Navbar = () => {
             </button>
           </div>
 
-          {/* Mobile hamburger menu */}
-          <button
-            className="md:hidden text-4xl"
-            onClick={() => setOpen(!open)}
-            aria-label="Toggle menu"
-          >
-            <MdMenu />
-          </button>
+        {/* Mobile hamburger Menu section */}
+          <div className="" onClick={() => setOpen(!open)}>
+            <MdMenu className="text-4xl " />
+          </div>
+
         </div>
+
       </nav>
 
       {/* Mobile Sidebar section */}
-      <ResponsiveMenu open={open}/>
+      <ResponsiveMenulanding open={open}/>
     </>
   );
 };

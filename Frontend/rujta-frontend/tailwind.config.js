@@ -2,10 +2,20 @@
 export default {
   content: [
     "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}", // صححت الشرطتين إلى النجمة المزدوجة
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   darkMode: "class",
   theme: {
+    container: {
+      center: true,
+      padding: {
+        DEFAULT: "1rem",
+        sm: "2rem",
+        lg: "4rem",
+        xl: "5rem",
+        "2xl": "6rem",
+      },
+    },
     extend: {
       fontFamily: {
         playfair: ["Playfair Display", "serif"],
@@ -20,7 +30,7 @@ export default {
         "muted-foreground": "#6B7280",
       },
       backgroundImage: {
-        "gradient-primary": "linear-gradient(135deg, #3C623C, #9DC873)",
+        "gradient-primary": "linear-gradient(135deg, #9DC873, #9DC873)",
         "gradient-background": "linear-gradient(135deg, #F5F5F5, #FFFFFF)",
       },
       backdropBlur: {
@@ -28,16 +38,6 @@ export default {
       },
       boxShadow: {
         glass: "0 8px 32px rgba(0, 0, 0, 0.1)",
-      },
-      container: {
-        center: true,
-        padding: {
-          DEFAULT: "1rem",
-          sm: "2rem",
-          lg: "4rem",
-          xl: "5rem",
-          "2xl": "6rem",
-        },
       },
     },
   },

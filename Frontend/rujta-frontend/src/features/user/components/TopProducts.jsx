@@ -62,7 +62,7 @@ const Products = ({ cart, setCart }) => {
       <div className="container mx-auto px-4">
         {/* Title Section */}
         <div className="text-center mb-14">
-          <h2 className="text-4xl font-extrabold text-[#3C623C] mb-3">
+          <h2 className="text-4xl font-extrabold text-secondary mb-3">
             Featured Medicines
           </h2>
           <p className="text-gray-600 max-w-[600px] mx-auto text-sm">
@@ -104,11 +104,11 @@ const Products = ({ cart, setCart }) => {
                   {data.description}
                 </p>
 
-                <p className="text-[#3C623C] font-bold mb-4">{data.price}</p>
+                <p className="text-secondary font-bold mb-4">{data.price}</p>
 
                 <button
                   onClick={() => handleAddToCart(data)}
-                  className="bg-gradient-to-r from-[#3C623C] to-[#6AA76A] 
+                  className="bg-gradient-to-r from-secondary to-[#6AA76A] 
                              hover:scale-105 transition-transform duration-500 
                              text-white text-sm font-medium py-2 px-4 rounded-md w-full"
                 >
@@ -121,7 +121,7 @@ const Products = ({ cart, setCart }) => {
 
         {/* Cart Section */}
         <div className="mt-16 text-center">
-          <h2 className="text-lg font-bold mb-3 text-[#3C623C]">
+          <h2 className="text-lg font-bold mb-3 text-secondary">
             🛒 Your Cart:
           </h2>
           {cart.length > 0 ? (
