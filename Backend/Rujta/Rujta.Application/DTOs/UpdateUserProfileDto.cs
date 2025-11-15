@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Rujta.Application.DTOs.UserProfile
 {
-    public class UpdateUserProfileDto
+    public class  UpdateUserProfileDto
     {
         public string? Name { get; set; }
         public string? PhoneNumber { get; set; }
