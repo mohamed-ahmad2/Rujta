@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Rujta.Application.DTOs;
 
 namespace Rujta.API.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class MedicinesController : ControllerBase
@@ -49,6 +51,7 @@ namespace Rujta.API.Controllers
             return NoContent();
         }
 
+        [AllowAnonymous]
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<MedicineDto>>> Search([FromQuery] string query)
         {

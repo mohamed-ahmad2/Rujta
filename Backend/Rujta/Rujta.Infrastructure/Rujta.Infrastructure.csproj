@@ -1,44 +1,44 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
 	<ItemGroup>
-    <PackageReference Include="F23.StringSimilarity" Version="7.0.0" />
-    <PackageReference Include="FluentValidation" Version="12.1.0" />
-    <PackageReference Include="Itinero" Version="1.5.1" />
-    <PackageReference Include="Itinero.IO.Osm" Version="1.5.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.22" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.22" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.6" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.22" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.21">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.22" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.21">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
+		<PackageReference Include="F23.StringSimilarity" Version="7.0.0" />
+		<PackageReference Include="FluentValidation" Version="12.1.0" />
+		<PackageReference Include="Itinero" Version="1.5.1" />
+		<PackageReference Include="Itinero.IO.Osm" Version="1.5.1" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.22" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.22" />
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.6" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.22" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.22">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.22" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.22">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Rujta.Application\Rujta.Application.csproj" />
-    <ProjectReference Include="..\Rujta.Domain\Rujta.Domain.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Rujta.Application\Rujta.Application.csproj" />
+		<ProjectReference Include="..\Rujta.Domain\Rujta.Domain.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Certificates\" />
-  </ItemGroup>
+	<ItemGroup>
+		<Folder Include="Certificates\" />
+	</ItemGroup>
 
-  <ItemGroup>
-	<None Update="Certificates\jwt-cert.pfx">
-	<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	</None>
-  </ItemGroup>
+	<ItemGroup>
+		<None Update="Certificates\jwt-cert.pfx">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
 </Project>

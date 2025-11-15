@@ -1,4 +1,4 @@
-﻿namespace Rujta.Infrastructure.Identity.Helpers
+namespace Rujta.Infrastructure.Identity.Helpers
 {
     public static class IdentitySeeder
     {
@@ -8,16 +8,16 @@
 
             foreach (var roleName in roleNames)
             {
-                var roleExist = await roleManager.RoleExistsAsync(roleName);
-                if (!roleExist)
+                if (!await roleManager.RoleExistsAsync(roleName))
                 {
-                    await roleManager.CreateAsync(new IdentityRole<Guid>
+                    var role = new IdentityRole<Guid>(roleName)
                     {
                         Id = Guid.NewGuid(),
-                        Name = roleName,
-                        NormalizedName = roleName.ToUpper(),
+                        NormalizedName = roleName.ToUpperInvariant(),
                         ConcurrencyStamp = Guid.NewGuid().ToString()
-                    });
+                    };
+
+                    await roleManager.CreateAsync(role);
                 }
             }
         }

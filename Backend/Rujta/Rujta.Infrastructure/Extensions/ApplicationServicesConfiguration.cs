@@ -5,11 +5,7 @@ using Rujta.Infrastructure.Identity.Helpers;
 using Rujta.Infrastructure.Identity.Services;
 using Rujta.Infrastructure.Repositories;
 using Rujta.Infrastructure.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace Rujta.Infrastructure.Extensions
 {
@@ -19,6 +15,9 @@ namespace Rujta.Infrastructure.Extensions
         {
             // Mapper
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+            // SignalR
+            services.AddSignalR();
 
             // Scoped services
             services.AddScoped<TokenService>();
@@ -30,6 +29,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IPharmacyRepository, PharmacyRepo>();
             services.AddScoped<PharmacyDistanceService>();
             services.AddScoped<IAuthService, AuthService>();
+
 
             services.AddScoped<PharmacyDistanceService>();
 

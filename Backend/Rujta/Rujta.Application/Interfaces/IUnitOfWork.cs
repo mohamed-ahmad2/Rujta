@@ -1,5 +1,5 @@
 ﻿using Rujta.Application.Interfaces.InterfaceRepositories;
-
+using Rujta.Application.Interfaces.InterfaceServices;
 
 namespace Rujta.Application.Interfaces
 {
@@ -12,7 +12,8 @@ namespace Rujta.Application.Interfaces
         IPeopleRepository People { get; }
         IDeviceRepository Devices { get; }
         IRefreshTokenRepository RefreshTokens { get; }
-         
+        INotificationRepository Notifications { get; }
+
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
     }
 }

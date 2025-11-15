@@ -6,7 +6,7 @@ namespace Rujta.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] 
+    [Authorize]
     public class UserProfileController : ControllerBase
     {
         private readonly IUserRepository _userProfileService;

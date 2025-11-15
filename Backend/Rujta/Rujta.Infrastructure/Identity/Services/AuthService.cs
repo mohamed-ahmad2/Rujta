@@ -138,7 +138,7 @@ namespace Rujta.Infrastructure.Identity.Services
                 var device = new Device
                 {
                     DeviceId = deviceId,
-                    UserId = user.Id,
+                    UserId = user.DomainPersonId,
                     DeviceName = DeviceHelper.GetDeviceInfo(context),
                     IPAddress = context.Connection.RemoteIpAddress?.MapToIPv4().ToString()
                 };
@@ -159,7 +159,12 @@ namespace Rujta.Infrastructure.Identity.Services
                 }
             }
 
-            return await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId);
+            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId);
+
+            
+            SetJwtCookie(tokens.AccessToken);
+
+            return tokens;
         }
 
 
@@ -192,7 +197,12 @@ namespace Rujta.Infrastructure.Identity.Services
             }
 
             
-            return await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId);
+            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId);
+
+            SetRefreshTokenCookie(tokens.RefreshToken);
+            SetJwtCookie(tokens.AccessToken);
+
+            return tokens;
         }
 
 
@@ -261,6 +271,38 @@ namespace Rujta.Infrastructure.Identity.Services
         }
 
 
-        
+        private void SetJwtCookie(string accessToken)
+        {
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null || string.IsNullOrEmpty(accessToken)) return;
+
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = context.Request.IsHttps,
+                SameSite = SameSiteMode.None,
+                Expires = DateTime.UtcNow.AddMinutes(10)
+            };
+
+            context.Response.Cookies.Append("jwt", accessToken, cookieOptions);
+        }
+
+        private void SetRefreshTokenCookie(string? refreshToken)
+        {
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null || string.IsNullOrEmpty(refreshToken)) return;
+
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true, 
+                Secure = context.Request.IsHttps,
+                SameSite = SameSiteMode.None, 
+                Expires = DateTime.UtcNow.AddDays(30)
+            };
+
+            context.Response.Cookies.Append("refresh_token", refreshToken, cookieOptions);
+        }
+
+
     }
 }

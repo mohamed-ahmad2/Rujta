@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Rujta.Domain.Hubs;
 using Rujta.Infrastructure.Extensions;
 
 namespace Rujta.API
@@ -38,7 +39,7 @@ namespace Rujta.API
             var app = builder.Build();
 
 
-            
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -48,9 +49,8 @@ namespace Rujta.API
             // Middleware
             app.UseHttpsRedirection();
 
-            app.UseMiddleware<JwtCookieMiddleware>();
-
             app.UseCors("AllowReactApp");
+
             app.UseAuthentication();
             app.UseAuthorization();
 
@@ -64,7 +64,7 @@ namespace Rujta.API
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
                 await IdentitySeeder.SeedRolesAsync(roleManager);
             }
-
+            app.MapHub<NotificationHub>("/notificationHub");
             await app.RunAsync();
         }
     }

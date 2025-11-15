@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Rujta.Application.DTOs;
 
 
 namespace Rujta.Api.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class OrdersController : ControllerBase
@@ -18,6 +20,13 @@ namespace Rujta.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] OrderDto orderDto, CancellationToken cancellationToken)
         {
+            var userIdClaim = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+            if (userIdClaim == null) return Unauthorized("User not found in token.");
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                    return BadRequest("Invalid user ID in token.");
+
+            orderDto.UserID = userId;
             var newOrder = await _orderService.CreateOrderAsync(orderDto, cancellationToken);
             return CreatedAtAction(nameof(GetById), new { Id = newOrder.Id }, newOrder);
         }
@@ -99,8 +108,14 @@ namespace Rujta.Api.Controllers
         }
 
         [HttpGet("user/{userId:guid}")]
-        public async Task<IActionResult> GetUserOrders( Guid userId, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetUserOrders(CancellationToken cancellationToken)
         {
+            var userIdClaim = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+            if (userIdClaim == null) return Unauthorized("User not found in token.");
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return BadRequest("Invalid user ID in token.");
+
             var orders = await _orderService.GetUserOrdersAsync(userId, cancellationToken);
             return Ok(orders);
         }

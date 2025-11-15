@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import logo from './logo.png';
+import logo from "../../../assets/Logo.png";
 
 // icons
 import { MdInventory, MdMenuOpen } from "react-icons/md";

@@ -10,7 +10,6 @@ namespace Rujta.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-
     public class AuthController : ControllerBase
     {
 
@@ -22,7 +21,7 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginDto dto)
+        public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             try
             {
@@ -30,6 +29,7 @@ namespace Rujta.API.Controllers
                 if (!passwordValid) return Unauthorized();
 
                 var tokens = await _authService.GenerateTokensAsync(dto.Email);
+
                 return Ok(tokens);
             }
             catch (InvalidOperationException ex)
@@ -40,13 +40,15 @@ namespace Rujta.API.Controllers
 
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterDto dto)
+        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
             try
             {
                 var userId = await _authService.CreateUserAsync(dto, UserRole.User);
                 var tokens = await _authService.GenerateTokensAsync(dto.Email);
+
                 return CreatedAtAction(nameof(Login), new { email = dto.Email }, new { UserId = userId, tokens });
+
             }
             catch (InvalidOperationException ex)
             {
@@ -60,6 +62,7 @@ namespace Rujta.API.Controllers
             try
             {
                 var tokens = await _authService.RefreshAccessTokenAsync(dto.RefreshToken);
+
                 return Ok(tokens);
             }
             catch (InvalidOperationException ex)
@@ -79,9 +82,13 @@ namespace Rujta.API.Controllers
                 if (userIdClaim == null)
                     return Unauthorized("User not found in token.");
 
-                var userId = Guid.Parse(userIdClaim);
+                if (!Guid.TryParse(userIdClaim, out var userId))
+                    return BadRequest("Invalid user ID in token.");
 
                 await _authService.LogoutAsync(userId, dto.RefreshToken);
+
+                Response.Cookies.Delete("jwt");
+
                 return NoContent();
             }
             catch (InvalidOperationException ex)
