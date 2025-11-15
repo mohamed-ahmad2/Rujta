@@ -11,11 +11,10 @@ namespace Rujta.Infrastructure.Repositories
 {
     public class InventoryRepository : GenericRepository<InventoryItem>, IInventoryRepository
     {
-        private readonly AppDbContext _context;
+        
 
         public InventoryRepository(AppDbContext context) : base(context)
         {
-            _context = context;
         }
 
         public async Task<IEnumerable<InventoryItem>> GetByPharmacyAsync(

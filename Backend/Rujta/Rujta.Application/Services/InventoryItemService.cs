@@ -1,81 +1,72 @@
 ﻿using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Application.Interfaces.InterfaceServices;
+using Rujta.Application.Interfaces;
 using Rujta.Domain.Entities;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace Rujta.Infrastructure.Services
+namespace Rujta.Application.Services
 {
     public class InventoryItemService : IInventoryItemService
     {
-        private readonly IInventoryRepository _inventoryRepo;
         private readonly IUnitOfWork _unitOfWork;
 
-        public InventoryItemService(IInventoryRepository inventoryRepo, IUnitOfWork unitOfWork)
+        public InventoryItemService(IUnitOfWork unitOfWork)
         {
-            _inventoryRepo = inventoryRepo;
             _unitOfWork = unitOfWork;
         }
 
-        // ----------------- GenericService Methods -----------------
-
         public async Task<IEnumerable<InventoryItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            var entities = await _inventoryRepo.GetAllAsync(cancellationToken);
+            var entities = await _unitOfWork.InventoryItems.GetAllAsync(cancellationToken);
             return entities.Select(ToDto);
         }
 
         public async Task<InventoryItemDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            var entity = await _inventoryRepo.GetByIdAsync(id, cancellationToken);
+            var entity = await _unitOfWork.InventoryItems.GetByIdAsync(id, cancellationToken);
             return entity is null ? null : ToDto(entity);
         }
 
         public async Task AddAsync(InventoryItemDto dto, CancellationToken cancellationToken = default)
         {
             var entity = ToEntity(dto);
-            await _inventoryRepo.AddAsync(entity, cancellationToken);
+
+            await _unitOfWork.InventoryItems.AddAsync(entity, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
         }
 
         public async Task UpdateAsync(int id, InventoryItemDto dto, CancellationToken cancellationToken = default)
         {
-            var existing = await _inventoryRepo.GetByIdAsync(id, cancellationToken);
-            if (existing == null || existing.PharmacyID != dto.PharmacyID)
-                throw new KeyNotFoundException("Inventory item not found or access denied.");
+            var existing = await _unitOfWork.InventoryItems.GetByIdAsync(id, cancellationToken);
+            if (existing == null)
+                throw new KeyNotFoundException("Inventory item not found.");
 
             existing.MedicineID = dto.MedicineID;
             existing.Quantity = dto.Quantity;
             existing.Price = dto.Price;
             existing.ExpiryDate = dto.ExpiryDate;
 
-            await _inventoryRepo.UpdateAsync(existing, cancellationToken);
+            await _unitOfWork.InventoryItems.UpdateAsync(existing, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
         }
 
         public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
-            var existing = await _inventoryRepo.GetByIdAsync(id, cancellationToken);
+            var existing = await _unitOfWork.InventoryItems.GetByIdAsync(id, cancellationToken);
             if (existing == null)
                 throw new KeyNotFoundException("Inventory item not found.");
 
-            await _inventoryRepo.DeleteAsync(existing, cancellationToken);
+            await _unitOfWork.InventoryItems.DeleteAsync(existing, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
         }
 
-        // ----------------- Custom method: Get by Pharmacy -----------------
-
         public async Task<IEnumerable<InventoryItemDto>> GetByPharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default)
         {
-            var entities = await _inventoryRepo.GetByPharmacyAsync(pharmacyId, cancellationToken);
+            var entities = await _unitOfWork.InventoryItems.GetByPharmacyAsync(pharmacyId, cancellationToken);
             return entities.Select(ToDto);
         }
 
-        // ----------------- Helpers -----------------
+        // Helpers
 
         private static InventoryItemDto ToDto(InventoryItem item)
             => new InventoryItemDto
