@@ -10,7 +10,7 @@ const Navbar = ({ cart, onCartClick }) => {
           {/* Logo */}
           <a
             href="#"
-            className="font-extrabold text-2xl text-[#3C623C] sm:text-3xl flex gap-2"
+            className="font-extrabold text-2xl text-secondary sm:text-3xl flex gap-2"
           >
             Rujta
           </a>
@@ -22,10 +22,10 @@ const Navbar = ({ cart, onCartClick }) => {
                 type="text"
                 placeholder="Search medicines..."
                 className="w-full rounded-full border border-gray-300 px-4 py-2 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-[#3C623C] transition-all duration-300"
+                           focus:outline-none focus:ring-2 focus:ring-secondary transition-all duration-300"
               />
               <IoMdSearch
-                className="text-gray-500 group-hover:text-[#3C623C] absolute 
+                className="text-gray-500 group-hover:text-secondary absolute 
                            top-1/2 -translate-y-1/2 right-3 text-lg"
               />
             </div>
@@ -33,7 +33,7 @@ const Navbar = ({ cart, onCartClick }) => {
 
           {/* Cart Icon */}
           <div className="relative cursor-pointer" onClick={onCartClick}>
-            <FaCartShopping className="text-2xl text-[#3C623C]" />
+            <FaCartShopping className="text-2xl text-secondary" />
             {cart.length > 0 && (
               <span
                 className="absolute -top-2 -right-2 bg-red-500 text-white text-xs 

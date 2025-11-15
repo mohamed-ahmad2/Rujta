@@ -108,7 +108,7 @@ const Products = ({ cart, setCart }) => {
       <div className="container mx-auto px-4">
         {/* Header section */}
         <div className="text-center mb-14">
-          <h2 className="text-4xl font-extrabold text-[#3C623C] mb-3">
+          <h2 className="text-4xl font-extrabold text-secondary mb-3">
             Top Rated Medicines
           </h2>
           <p className="text-gray-600 max-w-[600px] mx-auto text-sm">
@@ -134,7 +134,7 @@ const Products = ({ cart, setCart }) => {
                   alt={data.title}
                   className="w-[150px] object-contain group-hover:scale-110 duration-300"
                 />
-                <span className="absolute top-3 left-3 bg-[#3C623C] text-white text-xs px-3 py-1 rounded-full">
+                <span className="absolute top-3 left-3 bg-secondary text-white text-xs px-3 py-1 rounded-full">
                   Bestseller
                 </span>
               </div>
@@ -147,18 +147,18 @@ const Products = ({ cart, setCart }) => {
                   ))}
                 </div>
 
-                <h3 className="text-lg font-bold text-[#3C623C] group-hover:text-[#2b472b] transition-colors">
+                <h3 className="text-lg font-bold text-secondary group-hover:text-[#2b472b] transition-colors">
                   {data.title}
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">{data.description}</p>
 
-                <p className="text-lg font-semibold text-[#3C623C] mt-3">
+                <p className="text-lg font-semibold text-secondary mt-3">
                   {data.price}
                 </p>
 
                 <button
                   onClick={() => handleAddToCart(data)}
-                  className="mt-4 bg-gradient-to-r from-[#3C623C] to-[#6AA76A] 
+                  className="mt-4 bg-gradient-to-r from-secondary to-[#6AA76A] 
                              hover:scale-105 transition-transform duration-300 
                              text-white font-medium py-2 px-5 rounded-full w-full"
                 >
@@ -171,7 +171,7 @@ const Products = ({ cart, setCart }) => {
 
         {/* Cart Section */}
         <div className="mt-20 text-center">
-          <h2 className="text-xl font-bold mb-4 text-[#3C623C]">🛒 Your Cart</h2>
+          <h2 className="text-xl font-bold mb-4 text-secondary">🛒 Your Cart</h2>
           {cart.length > 0 ? (
             <ul className="inline-block text-left text-gray-700 space-y-1">
               {cart.map((item) => (
