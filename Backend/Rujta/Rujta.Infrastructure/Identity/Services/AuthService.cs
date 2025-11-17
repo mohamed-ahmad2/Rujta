@@ -315,7 +315,5 @@ namespace Rujta.Infrastructure.Identity.Services
 
             context.Response.Cookies.Append("refresh_token", refreshToken, cookieOptions);
         }
-
-
     }
 }
