@@ -1,7 +1,3 @@
-﻿using Microsoft.AspNetCore.Identity;
-using System;
-using System.Threading.Tasks;
-
 namespace Rujta.Infrastructure.Identity.Helpers
 {
     public static class IdentitySeeder

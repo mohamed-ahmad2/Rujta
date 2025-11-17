@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+This file is used by the publish/package process of your Web project. You can customize the behavior of this process
+by editing this MSBuild file. In order to learn more about this please visit https://go.microsoft.com/fwlink/?LinkID=208121. 
+-->
+<Project>
+  <PropertyGroup>
+    <TimeStampOfAssociatedLegacyPublishXmlFile />
+    <EncryptedPassword>AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAesWTLM4RekSl3GwZ/P9PSgAAAAACAAAAAAAQZgAAAAEAACAAAAAqMyi0Sz+yYKLDPR9cqTWON5t/vZTE1tucEPvPLrr6wgAAAAAOgAAAAAIAACAAAAApUkffJoFshcUiP4v91ppYT/Kacynui00BJcl9LJo84yAAAAAICKeVoevHK67IhHvX99XgiZR0KSA52R4fV4IVQFE8gEAAAAC3wx+rw1n/RFOXAbr43HSwvCjWGTGUUj42oaiiA6sl8QRmyyGKNlQl7afqZqTmxj4Dh2j6GB35yWiTs8tpq5Vk</EncryptedPassword>
+    <History>True|2025-11-17T00:40:17.7704391Z||;True|2025-11-17T02:39:03.8837775+02:00||;False|2025-11-17T02:10:08.6584568+02:00||;False|2025-11-17T02:07:40.3755141+02:00||;False|2025-11-17T02:06:15.4983001+02:00||;True|2025-11-17T01:45:29.9313901+02:00||;True|2025-11-17T01:34:24.2903796+02:00||;True|2025-11-17T01:24:04.9334596+02:00||;True|2025-11-17T01:22:30.2777457+02:00||;True|2025-11-17T00:55:07.5930647+02:00||;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+  <ItemGroup>
+    <DestinationConnectionStrings Include="DefaultConnection">
+      <Value>Server=db32648.public.databaseasp.net%3b Database=db32648%3b User Id=db32648%3b Password=R!d2=3LzpN+4%3b Encrypt=True%3b TrustServerCertificate=True%3b MultipleActiveResultSets=True%3b</Value>
+    </DestinationConnectionStrings>
+    <DestinationConnectionStrings Include="JWT:SigningKey">
+      <Value>Server=db32648.public.databaseasp.net%3b Database=db32648%3b User Id=db32648%3b Password=R!d2=3LzpN+4%3b Encrypt=True%3b TrustServerCertificate=True%3b MultipleActiveResultSets=True%3b</Value>
+    </DestinationConnectionStrings>
+  </ItemGroup>
+</Project>

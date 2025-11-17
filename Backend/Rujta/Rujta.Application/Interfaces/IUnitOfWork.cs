@@ -1,9 +1,5 @@
 ﻿using Rujta.Application.Interfaces.InterfaceRepositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Rujta.Application.Interfaces.InterfaceServices;
 
 namespace Rujta.Application.Interfaces
 {
@@ -12,6 +8,10 @@ namespace Rujta.Application.Interfaces
         IMedicineRepository Medicines { get; }
         IPharmacyRepository Pharmacies { get; }
         IOrderRepository Orders { get; }
+        IUserRepository Users { get; }
+        IPeopleRepository People { get; }
+        IDeviceRepository Devices { get; }
+        IRefreshTokenRepository RefreshTokens { get; }
         INotificationRepository Notifications { get; }
         IInventoryRepository InventoryItems { get; }
 
