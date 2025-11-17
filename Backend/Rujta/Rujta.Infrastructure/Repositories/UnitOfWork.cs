@@ -18,6 +18,7 @@ namespace Rujta.Infrastructure.Repositories
         private IOrderRepository? _orders;
         private INotificationRepository? _notifications;
         private IInventoryRepository? _inventoryItems;
+        private ILogRepository? _logs;
 
         public UnitOfWork(AppDbContext context)
         {
@@ -30,6 +31,7 @@ namespace Rujta.Infrastructure.Repositories
         public IOrderRepository Orders => _orders ??= new OrderRepository(_context);
         public INotificationRepository Notifications => _notifications ??= new NotificationRepository(_context);
         public IInventoryRepository InventoryItems => _inventoryItems ??= new InventoryRepository(_context);
+        public ILogRepository Logs => _logs ??= new LogRepository(_context);
 
         // Save changes
         public async Task<int> SaveAsync(CancellationToken cancellationToken = default)

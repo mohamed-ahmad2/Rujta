@@ -33,6 +33,7 @@ namespace Rujta.Infrastructure.Data
         public DbSet<ProcessPrescription> ProcessPrescriptions { get; set; }
         public DbSet<SellDrugViaPharmacy> SellDrugViaPharmacies { get; set; }
         public DbSet<Notification> Notifications { get; set; } = null!;
+        public DbSet<Log> Logs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

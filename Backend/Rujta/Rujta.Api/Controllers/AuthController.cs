@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Rujta.Application.DTOs;
+using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Data;
@@ -24,13 +25,16 @@ namespace Rujta.API.Controllers
         private readonly IMapper _mapper;
         private readonly TokenService _tokenService;
         private readonly AppDbContext _appDbContext;
+        private readonly ILogService _logService;
+
 
         public AuthController(
             AppDbContext appDbContext,
              TokenService tokenService,
             IMapper mapper
             , SignInManager<ApplicationUser> signInManager
-            , UserManager<ApplicationUser> userManager
+            , UserManager<ApplicationUser> userManager,
+            ILogService logService
             )
         {
             _appDbContext = appDbContext;
@@ -38,6 +42,7 @@ namespace Rujta.API.Controllers
             _signInManager = signInManager;
             _userManager = userManager;
             _mapper = mapper;
+            _logService = logService;
         }
 
         [HttpGet("ping")]
@@ -75,6 +80,11 @@ namespace Rujta.API.Controllers
             // Auto-login: generate tokens
             var tokens = await _tokenService.GenerateTokensAsync(user);
             await _userManager.SetAuthenticationTokenAsync(user, TokenProviderConstants.AppProvider, TokenKeys.RefreshToken, tokens.RefreshToken);
+            // LOG: New user registered
+            await _logService.AddLogAsync(
+                registerDTO.Email,
+                $"User registered with email {registerDTO.Email}"
+            );
 
             return Ok(tokens);
         }
@@ -93,6 +103,11 @@ namespace Rujta.API.Controllers
 
             // Store refresh token in Identity table
             await _userManager.SetAuthenticationTokenAsync(user, TokenProviderConstants.AppProvider, TokenKeys.RefreshToken, tokens.RefreshToken);
+            // LOG: User login
+            await _logService.AddLogAsync(
+                loginDTO.Email,
+                $"User logged in"
+            );
 
             return Ok(tokens);
         }
@@ -133,6 +148,11 @@ namespace Rujta.API.Controllers
                  tokens.RefreshTokenExpiration?.ToString("o")
                 );
 
+            // LOG: Refresh token success
+            await _logService.AddLogAsync(
+                user.Email,
+                $"User refreshed token"
+            );
 
             return Ok(tokens);
         }
