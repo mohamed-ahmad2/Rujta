@@ -15,6 +15,7 @@ namespace Rujta.Infrastructure.Extensions
             {
                 options.AddPolicy("AllowReactApp", policy =>
                     policy.WithOrigins(
+                            "https://localhost:5173",
                             "http://localhost:5173",
                             "http://localhost:3000")
                         .AllowAnyHeader()

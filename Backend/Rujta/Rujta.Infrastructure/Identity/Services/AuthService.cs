@@ -14,6 +14,7 @@ namespace Rujta.Infrastructure.Identity.Services
         private readonly ILogger<AuthService> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly TokenHelper _tokenHelper;
+        private readonly IConfiguration _configuration;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
@@ -22,7 +23,8 @@ namespace Rujta.Infrastructure.Identity.Services
             IUnitOfWork unitOfWork,
             ILogger<AuthService> logger,
             IHttpContextAccessor httpContextAccessor,
-            TokenHelper tokenHelper)
+            TokenHelper tokenHelper,
+            IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _userManager = userManager;
@@ -31,6 +33,7 @@ namespace Rujta.Infrastructure.Identity.Services
             _logger = logger;
             _httpContextAccessor = httpContextAccessor;
             _tokenHelper = tokenHelper;
+            _configuration = configuration;
         }
 
         public async Task<bool> CheckPasswordAsync(string email, string password, CancellationToken cancellationToken = default)
@@ -275,13 +278,14 @@ namespace Rujta.Infrastructure.Identity.Services
         {
             var context = _httpContextAccessor.HttpContext;
             if (context == null || string.IsNullOrEmpty(accessToken)) return;
-
+            var expirationMinutes = int.Parse(_configuration["JWT:AccessTokenExpirationMinutes"] ?? "10");
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
-                Secure = context.Request.IsHttps,
+                Secure = true,
                 SameSite = SameSiteMode.None,
-                Expires = DateTime.UtcNow.AddMinutes(10)
+                Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
+                Domain = "localhost"
             };
 
             context.Response.Cookies.Append("jwt", accessToken, cookieOptions);
@@ -292,12 +296,21 @@ namespace Rujta.Infrastructure.Identity.Services
             var context = _httpContextAccessor.HttpContext;
             if (context == null || string.IsNullOrEmpty(refreshToken)) return;
 
+
+            int expirationDays = 30;
+            var configValue = _configuration["JWT:RefreshTokenExpirationDays"];
+            if (!string.IsNullOrEmpty(configValue) && int.TryParse(configValue, out int days))
+            {
+                expirationDays = days;
+            }
+
+
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true, 
-                Secure = context.Request.IsHttps,
+                Secure = true,
                 SameSite = SameSiteMode.None, 
-                Expires = DateTime.UtcNow.AddDays(30)
+                Expires = DateTime.UtcNow.AddDays(expirationDays)
             };
 
             context.Response.Cookies.Append("refresh_token", refreshToken, cookieOptions);

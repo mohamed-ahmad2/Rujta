@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Rujta.Infrastructure.Extensions
 {
@@ -8,7 +8,20 @@ namespace Rujta.Infrastructure.Extensions
         public static IServiceCollection AddCustomDatabase(this IServiceCollection services, IConfiguration configuration)
         {
             var connectionString = configuration.GetConnectionString("DefaultConnection");
-            Console.WriteLine("Current ConnectionString: " + connectionString);
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new InvalidOperationException("Connection string 'DefaultConnection' not found in configuration.");
+            }
+
+            var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+            if (string.IsNullOrEmpty(dbPassword))
+            {
+                throw new InvalidOperationException("DB_PASSWORD environment variable is not set.");
+            }
+
+            connectionString = connectionString.Replace("{DB_PASSWORD}", dbPassword);
+
+            Console.WriteLine("Current ConnectionString (without password shown): Server=..., Database=...");
 
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString)
