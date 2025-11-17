@@ -260,7 +260,7 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Address");
+                    b.ToTable("Address", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Device", b =>
@@ -305,7 +305,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Devices");
+                    b.ToTable("Devices", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.InventoryItem", b =>
@@ -404,52 +404,6 @@ namespace Rujta.Infrastructure.Migrations
                     b.ToTable("Medicines", (string)null);
                 });
 
-            modelBuilder.Entity("Rujta.Domain.Entities.Notification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
-
-                    b.Property<string>("Payload")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<int?>("PharmacyId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ReceiverType")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Notifications");
-                });
-
             modelBuilder.Entity("Rujta.Domain.Entities.Order", b =>
                 {
                     b.Property<int>("Id")
@@ -498,7 +452,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("Orders");
+                    b.ToTable("Orders", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.OrderItem", b =>
@@ -540,7 +494,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("OrderID");
 
-                    b.ToTable("OrderItems");
+                    b.ToTable("OrderItems", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Pharmacy", b =>
@@ -605,7 +559,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("ParentPharmacyID");
 
-                    b.ToTable("Pharmacies");
+                    b.ToTable("Pharmacies", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Prescription", b =>
@@ -657,7 +611,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("PatientID");
 
-                    b.ToTable("Prescriptions");
+                    b.ToTable("Prescriptions", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.ProcessPrescription", b =>
@@ -701,7 +655,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("PrescriptionID");
 
-                    b.ToTable("ProcessPrescriptions");
+                    b.ToTable("ProcessPrescriptions", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.RefreshToken", b =>
@@ -805,7 +759,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("SellerID");
 
-                    b.ToTable("SellDrugViaPharmacies");
+                    b.ToTable("SellDrugViaPharmacies", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Infrastructure.Identity.ApplicationUser", b =>

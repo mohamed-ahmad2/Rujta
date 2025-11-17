@@ -11,7 +11,11 @@ namespace Rujta.Infrastructure.Extensions
             var jwtSection = configuration.GetSection("JWT");
 
             var certPath = Path.Combine(AppContext.BaseDirectory, "Certificates", "jwt-cert.pfx");
-            var certPassword = "Rujta123987";
+            var certPassword = Environment.GetEnvironmentVariable("JWT__CertPassword");
+
+            if (string.IsNullOrWhiteSpace(certPassword))
+                throw new InvalidOperationException("JWT certificate password not found in environment variables.");
+
 
             var certificate = new X509Certificate2(certPath, certPassword);
             var rsa = certificate.GetRSAPublicKey();

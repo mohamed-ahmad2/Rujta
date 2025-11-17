@@ -37,7 +37,10 @@ namespace Rujta.Infrastructure.Identity.Services
             try
             {
                 var certPath = Path.Combine(AppContext.BaseDirectory, "Certificates", "jwt-cert.pfx");
-                var certPassword = _configuration["JWT:CertPassword"] ?? "yourpassword";
+                var certPassword =
+                    Environment.GetEnvironmentVariable("JWT__CertPassword")
+                    ?? throw new InvalidOperationException("JWT certificate password not found in environment variables.");
+
 
                 if (!File.Exists(certPath))
                     throw new FileNotFoundException($"Certificate file not found at path: {certPath}");
