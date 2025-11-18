@@ -12,10 +12,12 @@ namespace Rujta.Api.Controllers
     public class NotificationController : ControllerBase
     {
         private readonly INotificationService _notificationService;
+        private readonly ILogService _logService;
 
-        public NotificationController(INotificationService notificationService)
+        public NotificationController(INotificationService notificationService, ILogService logService)
         {
             _notificationService = notificationService;
+            _logService = logService;
         }
 
         // ✅ Fetch current user's notifications
@@ -24,6 +26,9 @@ namespace Rujta.Api.Controllers
         {
             string userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
             var notifications = await _notificationService.GetUserNotificationsAsync(userId);
+
+            await _logService.AddLogAsync(GetUser(), "Fetched notifications");
+
             return Ok(notifications);
         }
 
@@ -32,6 +37,8 @@ namespace Rujta.Api.Controllers
         public async Task<IActionResult> MarkAsRead(int id)
         {
             await _notificationService.MarkAsReadAsync(id);
+            await _logService.AddLogAsync(GetUser(), $"Marked notification ID={id} as read");
+
             return Ok(new { message = "Notification marked as read" });
         }
 
@@ -48,7 +55,14 @@ namespace Rujta.Api.Controllers
                 payload: null
             );
 
+            await _logService.AddLogAsync(GetUser(), "Sent test notification");
+
             return Ok(new { message = "Test notification sent!" });
+        }
+
+        private string GetUser()
+        {
+            return User.Identity?.Name ?? "UnknownUser";
         }
     }
 }

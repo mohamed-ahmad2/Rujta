@@ -10,10 +10,13 @@ namespace Rujta.API.Controllers
     public class MedicinesController : ControllerBase
     {
         private readonly IMedicineService _medicineService;
+        private readonly ILogService _logService;
 
-        public MedicinesController(IMedicineService medicineService)
+
+        public MedicinesController(IMedicineService medicineService, ILogService logService)
         {
             _medicineService = medicineService;
+            _logService = logService;
         }
 
         [HttpGet]
@@ -34,6 +37,8 @@ namespace Rujta.API.Controllers
         public async Task<ActionResult> Add([FromBody] MedicineDto dto)
         {
             await _medicineService.AddAsync(dto);
+            await _logService.AddLogAsync(GetUser(), $"Added new medicine: {dto.Name}");
+
             return Ok();
         }
 
@@ -41,6 +46,8 @@ namespace Rujta.API.Controllers
         public async Task<ActionResult> Update(int id, [FromBody] MedicineDto dto)
         {
             await _medicineService.UpdateAsync(id, dto);
+            await _logService.AddLogAsync(GetUser(), $"Updated medicine ID={id}");
+
             return NoContent();
         }
 
@@ -48,6 +55,8 @@ namespace Rujta.API.Controllers
         public async Task<ActionResult> Delete(int id)
         {
             await _medicineService.DeleteAsync(id);
+            await _logService.AddLogAsync(GetUser(), $"Deleted medicine ID={id}");
+
             return NoContent();
         }
 
@@ -56,9 +65,16 @@ namespace Rujta.API.Controllers
         public async Task<ActionResult<IEnumerable<MedicineDto>>> Search([FromQuery] string query)
         {
             var results = await _medicineService.SearchAsync(query, top: 10);
+            await _logService.AddLogAsync(GetUser(), $"Searched medicines with query='{query}'");
+
             return Ok(results);
         }
 
-    }
 
+        private string GetUser()
+        {
+            return User.Identity?.Name ?? "UnknownUser";
+        }
+
+    }
 }

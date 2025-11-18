@@ -19,6 +19,7 @@ namespace Rujta.Infrastructure.Repositories
         private IRefreshTokenRepository? _refreshTokens;
         private INotificationRepository? _notifications;
         private IInventoryRepository? _inventoryItems;
+        private ILogRepository? _logs;
 
         public UnitOfWork(AppDbContext context, IServiceProvider serviceProvider)
         {
@@ -36,6 +37,7 @@ namespace Rujta.Infrastructure.Repositories
         public IUserRepository Users => _users ??= ActivatorUtilities.CreateInstance<UserRepository>(_serviceProvider);
         public INotificationRepository Notifications => _notifications ??= new NotificationRepository(_context);
         public IInventoryRepository InventoryItems => _inventoryItems ??= new InventoryRepository(_context);
+        public ILogRepository Logs => _logs ??= new LogRepository(_context);
 
         // Save changes
         public async Task<int> SaveAsync(CancellationToken cancellationToken = default)

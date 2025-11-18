@@ -14,6 +14,7 @@ namespace Rujta.Application.Interfaces
         IRefreshTokenRepository RefreshTokens { get; }
         INotificationRepository Notifications { get; }
         IInventoryRepository InventoryItems { get; }
+        ILogRepository Logs { get; } 
 
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
     }

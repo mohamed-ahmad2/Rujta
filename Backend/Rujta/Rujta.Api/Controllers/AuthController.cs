@@ -1,10 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Rujta.Application.DTOs;
+using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
-
-
 
 namespace Rujta.API.Controllers
 {
@@ -12,12 +11,13 @@ namespace Rujta.API.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
+        private readonly IAuthService _authService;
+        private readonly ILogService _logService;
 
-        readonly private IAuthService _authService;
-
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, ILogService logService)
         {
             _authService = authService;
+            _logService = logService;
         }
 
         [HttpPost("login")]
@@ -26,18 +26,24 @@ namespace Rujta.API.Controllers
             try
             {
                 var passwordValid = await _authService.CheckPasswordAsync(dto.Email, dto.Password);
-                if (!passwordValid) return Unauthorized();
+                if (!passwordValid)
+                {
+                    await _logService.AddLogAsync(dto.Email, "Failed login attempt");
+                    return Unauthorized();
+                }
 
                 var tokens = await _authService.GenerateTokensAsync(dto.Email);
+
+                await _logService.AddLogAsync(dto.Email, "User logged in successfully");
 
                 return Ok(tokens);
             }
             catch (InvalidOperationException ex)
             {
+                await _logService.AddLogAsync(dto.Email, $"Login error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
-
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
@@ -47,11 +53,13 @@ namespace Rujta.API.Controllers
                 var userId = await _authService.CreateUserAsync(dto, UserRole.User);
                 var tokens = await _authService.GenerateTokensAsync(dto.Email);
 
-                return CreatedAtAction(nameof(Login), new { email = dto.Email }, new { UserId = userId, tokens });
+                await _logService.AddLogAsync(dto.Email, "New user registered");
 
+                return CreatedAtAction(nameof(Login), new { email = dto.Email }, new { UserId = userId, tokens });
             }
             catch (InvalidOperationException ex)
             {
+                await _logService.AddLogAsync(dto.Email, $"Registration error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -63,14 +71,16 @@ namespace Rujta.API.Controllers
             {
                 var tokens = await _authService.RefreshAccessTokenAsync(dto.RefreshToken);
 
+                await _logService.AddLogAsync("UnknownUser", "Refresh token used");
+
                 return Ok(tokens);
             }
             catch (InvalidOperationException ex)
             {
+                await _logService.AddLogAsync("UnknownUser", $"Refresh token error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
-
 
         [Authorize]
         [HttpPost("logout")]
@@ -87,12 +97,15 @@ namespace Rujta.API.Controllers
 
                 await _authService.LogoutAsync(userId, dto.RefreshToken);
 
+                await _logService.AddLogAsync(userId.ToString(), "User logged out");
+
                 Response.Cookies.Delete("jwt");
 
                 return NoContent();
             }
             catch (InvalidOperationException ex)
             {
+                await _logService.AddLogAsync(User?.Identity?.Name ?? "UnknownUser", $"Logout error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
