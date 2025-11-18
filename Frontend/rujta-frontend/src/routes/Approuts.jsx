@@ -1,15 +1,17 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
+
 import NavbarLanding from "../features/landing/components/Navbarlanding";
 import HeroLanding from "../features/landing/pages/Herolanding";
+
 import NavbarUser from "../features/user/components/Navbar";
 import HeroUser from "../features/user/pages/Hero";
 import ProductsUser from "../features/user/components/Products";
-import OffersSectionUser from "../features/user/components/OffersSection";
-import TopProductsUser from "../features/user/components/TopProducts";
 import FooterUser from "../features/user/components/Footer";
 import CartDrawerUser from "../features/user/components/CartDrawer";
+
 import AuthPage from "../features/auth/pages/AuthPage";
+
 import Sidebar from "../features/dashboard/components/Sidebar";
 import Home from "../features/dashboard/pages/Home";
 import Add from "../features/dashboard/pages/add";
@@ -19,6 +21,13 @@ import Settings from "../features/dashboard/pages/Settings";
 import Log from "../features/dashboard/pages/Log";
 import Report from "../features/dashboard/pages/Report";
 
+import ForgotPassword from "../features/auth/pages/ForgotPassword";
+import ResetPassword from "../features/auth/pages/ResetPassword";
+
+
+// =============================================
+// DASHBOARD LAYOUT
+// =============================================
 const DashboardLayout = () => (
   <div className="flex min-h-screen bg-gray-50">
     <Sidebar />
@@ -36,8 +45,14 @@ const DashboardLayout = () => (
   </div>
 );
 
+
+// =============================================
+// APP ROUTES (FINAL)
+// =============================================
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Routes>
+
+    {/* Landing */}
     <Route
       path="/"
       element={
@@ -47,6 +62,8 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         </div>
       }
     />
+
+    {/* User */}
     <Route
       path="/user"
       element={
@@ -64,6 +81,8 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         </div>
       }
     />
+
+    {/* Auth */}
     <Route
       path="/auth"
       element={
@@ -72,6 +91,28 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         </div>
       }
     />
+
+    {/* ⭐ Forgot Password */}
+    <Route
+      path="/forgot-password"
+      element={
+        <div className="flex items-center justify-center h-screen bg-gray-100">
+          <ForgotPassword />
+        </div>
+      }
+    />
+
+    {/* ⭐ Reset Password */}
+    <Route
+      path="/reset-password"
+      element={
+        <div className="flex items-center justify-center h-screen bg-gray-100">
+          <ResetPassword />
+        </div>
+      }
+    />
+
+    {/* Dashboard */}
     <Route path="/dashboard/*" element={<DashboardLayout />} />
   </Routes>
 );

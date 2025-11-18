@@ -16,6 +16,10 @@ namespace Rujta.Infrastructure.Identity
         public string Location { get; set; } = string.Empty;
 
         [ForeignKey("DomainPersonId")]
-        public required virtual Person DomainPerson { get; set; }
+        public  virtual Person? DomainPerson { get; set; }
+
+        public string? PasswordResetToken { get; set; }
+        public DateTime? PasswordResetTokenExpiry { get; set; }
+
     }
 }

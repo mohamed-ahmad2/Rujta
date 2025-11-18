@@ -3,9 +3,14 @@ import { jwtDecode } from "jwt-decode";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, User, Sparkles, Phone, MapPin } from "lucide-react";
+import { FcGoogle } from "react-icons/fc";
+import { FaFacebookF } from "react-icons/fa";
+
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -23,6 +28,16 @@ export default function AuthPage() {
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
+  const handleGoogleLogin = async () => {
+  alert("Google login clicked — implement your OAuth logic here");
+  // Later: call your backend endpoint with the Google IdToken
+};
+
+const handleFacebookLogin = async () => {
+  alert("Facebook login clicked — implement your OAuth logic here");
+  // Later: call your backend endpoint with the Facebook AccessToken
+};
+
 
   // 🔹 Handle Login
   const handleSignIn = async (e) => {
@@ -213,47 +228,79 @@ export default function AuthPage() {
                       </p>
                     </div>
 
-                    <form onSubmit={handleSignIn} className="space-y-6">
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <input
-                          type="email"
-                          name="email"
-                          placeholder="Email address"
-                          value={formData.email}
-                          onChange={handleChange}
-                          required
-                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
-                        />
-                      </div>
+                   <form onSubmit={handleSignIn} className="space-y-6">
+  <div className="relative">
+    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+    <input
+      type="email"
+      name="email"
+      placeholder="Email address"
+      value={formData.email}
+      onChange={handleChange}
+      required
+      className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+    />
+  </div>
 
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <input
-                          type="password"
-                          name="createPassword"
-                          placeholder="Password"
-                          value={formData.createPassword}
-                          onChange={handleChange}
-                          required
-                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
-                        />
-                      </div>
+  <div className="relative">
+    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+    <input
+      type="password"
+      name="createPassword"
+      placeholder="Password"
+      value={formData.createPassword}
+      onChange={handleChange}
+      required
+      className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+    />
+  </div>
 
-                      {error && (
-                        <p className="text-red-500 text-center">{error}</p>
-                      )}
+  {error && <p className="text-red-500 text-center">{error}</p>}
 
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        disabled={loading}
-                        type="submit"
-                        className="w-full bg-gradient-primary text-white py-4 text-lg rounded-2xl font-semibold"
-                      >
-                        {loading ? "Signing In..." : "Sign In"}
-                      </motion.button>
-                    </form>
+  <motion.button
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+    disabled={loading}
+    type="submit"
+    className="w-full bg-gradient-primary text-white py-4 text-lg rounded-2xl font-semibold"
+  >
+    {loading ? "Signing In..." : "Sign In"}
+  </motion.button>
+
+  {/* ✅ Social Login Buttons */}
+  <div className="flex justify-center gap-4 mt-4">
+    <button
+      type="button"
+      onClick={handleGoogleLogin}
+      className="flex items-center justify-center gap-2 px-4 py-2 border rounded-xl hover:bg-gray-100 transition"
+    >
+      <FcGoogle size={24} />
+      Google
+    </button>
+
+    <button
+      type="button"
+      onClick={handleFacebookLogin}
+      className="flex items-center justify-center gap-2 px-4 py-2 border rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
+    >
+      <FaFacebookF size={20} />
+      Facebook
+    </button>
+  </div>
+ <p className="text-right text-sm">
+  <button
+  type="button"
+  onClick={() => navigate("/reset-password")}
+  className="text-primary hover:underline"
+>
+  Forgot Password?
+</button>
+
+</p>
+
+
+</form>
+
 
                     <p className="text-center text-muted-foreground mt-8">
                       Don’t have an account?{" "}
