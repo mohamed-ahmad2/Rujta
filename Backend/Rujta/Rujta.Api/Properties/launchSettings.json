@@ -35,7 +35,6 @@
       "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "DB_PASSWORD": "R!d2=3LzpN+4"
       }
     }
 
