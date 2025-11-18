@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Rujta.Infrastructure.Identity.Requirements;
-using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Identity.Handlers
 {

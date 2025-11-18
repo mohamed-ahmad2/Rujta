@@ -1,160 +1,113 @@
-using AutoMapper;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Constants;
-using Rujta.Infrastructure.Data;
 using Rujta.Infrastructure.Identity;
-using Rujta.Infrastructure.Identity.Services;
-using System.Globalization;
-
-
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Rujta.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-
     public class AuthController : ControllerBase
     {
-        private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IMapper _mapper;
-        private readonly TokenService _tokenService;
-        private readonly AppDbContext _appDbContext;
+        private readonly IAuthService _authService;
         private readonly ILogService _logService;
 
-
-        public AuthController(
-            AppDbContext appDbContext,
-             TokenService tokenService,
-            IMapper mapper
-            , SignInManager<ApplicationUser> signInManager
-            , UserManager<ApplicationUser> userManager,
-            ILogService logService
-            )
+        public AuthController(IAuthService authService, ILogService logService)
         {
-            _appDbContext = appDbContext;
-            _tokenService = tokenService;
-            _signInManager = signInManager;
-            _userManager = userManager;
-            _mapper = mapper;
+            _authService = authService;
             _logService = logService;
         }
 
-        [HttpGet("ping")]
-        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
-        public IActionResult Ping()
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            return Ok("Backend is connected!");
-        }
+            try
+            {
+                var passwordValid = await _authService.CheckPasswordAsync(dto.Email, dto.Password);
+                if (!passwordValid)
+                {
+                    await _logService.AddLogAsync(dto.Email, "Failed login attempt");
+                    return Unauthorized();
+                }
 
+                var tokens = await _authService.GenerateTokensAsync(dto.Email);
+
+                await _logService.AddLogAsync(dto.Email, "User logged in successfully");
+
+                return Ok(tokens);
+            }
+            catch (InvalidOperationException ex)
+            {
+                await _logService.AddLogAsync(dto.Email, $"Login error: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto registerDTO)
+        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
+            try
+            {
+                var userId = await _authService.CreateUserAsync(dto, UserRole.User);
+                var tokens = await _authService.GenerateTokensAsync(dto.Email);
 
-            var userExist = await _userManager.FindByEmailAsync(registerDTO.Email);
-            if (userExist != null)
-                return BadRequest("Email is already registered.");
+                await _logService.AddLogAsync(dto.Email, "New user registered");
 
-            var person = _mapper.Map<User>(registerDTO);
-            _appDbContext.People.Add(person);
-            await _appDbContext.SaveChangesAsync();
-
-            var user = _mapper.Map<ApplicationUser>(registerDTO);
-
-            user.DomainPersonId = person.Id;
-
-            var result = await _userManager.CreateAsync(user, registerDTO.CreatePassword);
-
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
-
-
-            await _userManager.AddToRoleAsync(user, "User");
-
-            // Auto-login: generate tokens
-            var tokens = await _tokenService.GenerateTokensAsync(user);
-            await _userManager.SetAuthenticationTokenAsync(user, TokenProviderConstants.AppProvider, TokenKeys.RefreshToken, tokens.RefreshToken);
-            // LOG: New user registered
-            await _logService.AddLogAsync(
-                registerDTO.Email,
-                $"User registered with email {registerDTO.Email}"
-            );
-
-            return Ok(tokens);
-        }
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDto loginDTO)
-        {
-            var user = await _userManager.FindByEmailAsync(loginDTO.Email);
-            if (user == null) return Unauthorized("Invalid credentials");
-
-            var result = await _signInManager.CheckPasswordSignInAsync(user, loginDTO.Password, false);
-            if (!result.Succeeded) return Unauthorized("Invalid credentials");
-
-            // Generate tokens
-            var tokens = await _tokenService.GenerateTokensAsync(user);
-
-            // Store refresh token in Identity table
-            await _userManager.SetAuthenticationTokenAsync(user, TokenProviderConstants.AppProvider, TokenKeys.RefreshToken, tokens.RefreshToken);
-            // LOG: User login
-            await _logService.AddLogAsync(
-                loginDTO.Email,
-                $"User logged in"
-            );
-
-            return Ok(tokens);
+                return CreatedAtAction(nameof(Login), new { email = dto.Email }, new { UserId = userId, tokens });
+            }
+            catch (InvalidOperationException ex)
+            {
+                await _logService.AddLogAsync(dto.Email, $"Registration error: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("refresh-token")]
-        public async Task<IActionResult> RefreshToken([FromBody] string refreshToken)
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto dto)
         {
-            // Find user by refresh token
-            var user = await _userManager.Users.FirstOrDefaultAsync(u =>
-                _userManager.GetAuthenticationTokenAsync(u, TokenProviderConstants.AppProvider, TokenKeys.RefreshToken).Result == refreshToken);
+            try
+            {
+                var tokens = await _authService.RefreshAccessTokenAsync(dto.RefreshToken);
 
-            if (user == null) return Unauthorized("Invalid refresh token");
+                await _logService.AddLogAsync("UnknownUser", "Refresh token used");
 
-            // Get expiration
-            var tokenExpirationStr = await _userManager.GetAuthenticationTokenAsync(user, TokenProviderConstants.AppProvider, TokenKeys.RefreshTokenExpiration);
+                return Ok(tokens);
+            }
+            catch (InvalidOperationException ex)
+            {
+                await _logService.AddLogAsync("UnknownUser", $"Refresh token error: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
 
-            if (!DateTime.TryParse(tokenExpirationStr, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var tokenExpiration))
-                return Unauthorized("Invalid refresh token expiration");
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromBody] RefreshTokenDto dto)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+                if (userIdClaim == null)
+                    return Unauthorized("User not found in token.");
 
+                if (!Guid.TryParse(userIdClaim, out var userId))
+                    return BadRequest("Invalid user ID in token.");
 
-            if (tokenExpiration < DateTime.UtcNow) return Unauthorized("Refresh token expired");
+                await _authService.LogoutAsync(userId, dto.RefreshToken);
 
-            // Generate new tokens
-            var tokens = await _tokenService.GenerateTokensAsync(user);
+                await _logService.AddLogAsync(userId.ToString(), "User logged out");
 
-            // Rotate refresh token
-            await _userManager.SetAuthenticationTokenAsync(
-                user,
-                TokenProviderConstants.AppProvider,
-                TokenKeys.RefreshToken,
-                tokens.RefreshToken
-                );
+                Response.Cookies.Delete("jwt");
 
-            await _userManager.SetAuthenticationTokenAsync(
-                 user,
-                 TokenProviderConstants.AppProvider,
-                 TokenKeys.RefreshTokenExpiration,
-                 tokens.RefreshTokenExpiration?.ToString("o")
-                );
-
-            // LOG: Refresh token success
-            await _logService.AddLogAsync(
-                user.Email,
-                $"User refreshed token"
-            );
-
-            return Ok(tokens);
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                await _logService.AddLogAsync(User?.Identity?.Name ?? "UnknownUser", $"Logout error: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

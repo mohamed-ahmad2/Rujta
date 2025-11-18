@@ -1,12 +1,7 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Rujta.Domain.Common;
-using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Extensions;
 using Rujta.Infrastructure.Identity;
-using System.Reflection.Emit;
-
 
 namespace Rujta.Infrastructure.Data
 {
@@ -17,21 +12,20 @@ namespace Rujta.Infrastructure.Data
         {
         }
 
-
         // Person table
-        public DbSet<Person> People { get; set; }
-
-        
+        public DbSet<Person> People { get; set; } = null!;
 
         // Entities
-        public DbSet<Pharmacy> Pharmacies { get; set; }
-        public DbSet<Medicine> Medicines { get; set; }
-        public DbSet<InventoryItem> InventoryItems { get; set; }
-        public DbSet<Order> Orders { get; set; }
-        public DbSet<OrderItem> OrderItems { get; set; }
-        public DbSet<Prescription> Prescriptions { get; set; }
-        public DbSet<ProcessPrescription> ProcessPrescriptions { get; set; }
-        public DbSet<SellDrugViaPharmacy> SellDrugViaPharmacies { get; set; }
+        public DbSet<Pharmacy> Pharmacies { get; set; } = null!;
+        public DbSet<Medicine> Medicines { get; set; } = null!;
+        public DbSet<InventoryItem> InventoryItems { get; set; } = null!;
+        public DbSet<Order> Orders { get; set; } = null!;
+        public DbSet<OrderItem> OrderItems { get; set; } = null!;
+        public DbSet<Prescription> Prescriptions { get; set; } = null!;
+        public DbSet<ProcessPrescription> ProcessPrescriptions { get; set; } = null!;
+        public DbSet<SellDrugViaPharmacy> SellDrugViaPharmacies { get; set; } = null!;
+        public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+        public DbSet<Device> Devices { get; set; } = null!;
         public DbSet<Notification> Notifications { get; set; } = null!;
         public DbSet<Log> Logs { get; set; }
 
@@ -39,6 +33,7 @@ namespace Rujta.Infrastructure.Data
         {
             base.OnModelCreating(builder);
 
+            // Notification configuration
             builder.Entity<Notification>(b =>
             {
                 b.HasKey(n => n.Id);
@@ -49,12 +44,13 @@ namespace Rujta.Infrastructure.Data
                 b.Property(n => n.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             });
 
+            // Identity & Decimal precision mappings
             builder.ApplyIdentityMapping();
             builder.ApplyDecimalPrecision();
 
+            // Apply all configurations from assembly
             builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         }
-
 
         public override int SaveChanges()
         {
@@ -69,6 +65,5 @@ namespace Rujta.Infrastructure.Data
 
             return base.SaveChanges();
         }
-
     }
 }

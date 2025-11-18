@@ -1,15 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Itinero;
+﻿using Itinero;
 using Itinero.IO.Osm;
 using Itinero.Osm.Vehicles;
-using Microsoft.AspNetCore.Components.Routing;
-using System;
-using System.IO;
 namespace Rujta.Infrastructure.Utiles
 {
         public static class ItineroMapBuilder
