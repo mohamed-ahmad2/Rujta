@@ -1,10 +1,15 @@
-﻿using Rujta.Domain.Entities;
+using Rujta.Application.DTOs.UserProfile;
+using Rujta.Domain.Entities;
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace Rujta.Application.Interfaces
+namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
-    public interface IUserRepository
+    public interface IUserRepository : IGenericRepository<User>
     {
-        Task<User?> GetByIdAsync(string userId);
+        Task<UserProfileDto?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default);
+
+        Task<bool> UpdateProfileAsync(Guid userId, UpdateUserProfileDto dto, CancellationToken cancellationToken = default);
     }
 }

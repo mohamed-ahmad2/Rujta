@@ -1,6 +1,4 @@
 ﻿using Rujta.Infrastructure.Utiles;
-using System;
-using System.IO;
 
 namespace Rujta.Infrastructure.Helperrs
 {

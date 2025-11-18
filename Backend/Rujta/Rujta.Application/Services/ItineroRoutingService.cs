@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using Itinero;
+﻿using Itinero;
 using Itinero.LocalGeo;
 using Microsoft.Extensions.Logging;
 

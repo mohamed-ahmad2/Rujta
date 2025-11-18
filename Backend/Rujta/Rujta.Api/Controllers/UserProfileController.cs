@@ -1,21 +1,17 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Rujta.Application.DTOs.UserProfile;
-using Rujta.Application.Interfaces.InterfaceServices;
-using System;
-using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace Rujta.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] 
+    [Authorize]
     public class UserProfileController : ControllerBase
     {
-        private readonly IUserProfileService _userProfileService;
+        private readonly IUserRepository _userProfileService;
 
-        public UserProfileController(IUserProfileService userProfileService)
+        public UserProfileController(IUserRepository userProfileService)
         {
             _userProfileService = userProfileService;
         }

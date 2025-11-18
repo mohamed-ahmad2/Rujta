@@ -1,5 +1,4 @@
 ﻿using Rujta.Domain.Common;
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
@@ -24,8 +23,8 @@ namespace Rujta.Domain.Entities
 
         public bool IsDispensed { get; set; }
 
-        public required virtual Pharmacy Pharmacy { get; set; }
-        public required virtual Medicine Medicine { get; set; }
+        public virtual Pharmacy? Pharmacy { get; set; }
+        public virtual Medicine? Medicine { get; set; }
         public virtual Prescription? Prescription { get; set; }
     }
 }

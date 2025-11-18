@@ -1,11 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Infrastructure.Data;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace Rujta.Infrastructure.Repositories
+﻿namespace Rujta.Infrastructure.Repositories
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
