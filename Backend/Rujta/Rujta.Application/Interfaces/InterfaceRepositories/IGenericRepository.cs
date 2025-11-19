@@ -1,4 +1,6 @@
-﻿namespace Rujta.Application.Interfaces.InterfaceRepositories
+﻿using System.Linq.Expressions;
+
+namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
     public interface IGenericRepository<T> where T : class
     {
@@ -7,5 +9,7 @@
         Task AddAsync(T entity, CancellationToken cancellationToken = default);
         Task UpdateAsync(T entity, CancellationToken cancellationToken = default);
         Task DeleteAsync(T entity, CancellationToken cancellationToken = default);
+        Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
+
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace Rujta.Infrastructure.Repositories
+﻿using System.Linq.Expressions;
+
+namespace Rujta.Infrastructure.Repositories
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
@@ -34,6 +36,10 @@
         {
             _context.Set<T>().Remove(entity);
             return Task.CompletedTask;
+        }
+        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<T>().Where(predicate).ToListAsync(cancellationToken);
         }
     }
 }
