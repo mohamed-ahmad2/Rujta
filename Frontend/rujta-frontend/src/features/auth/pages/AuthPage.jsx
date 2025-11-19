@@ -1,146 +1,80 @@
-import React, { useState } from "react";
-import { jwtDecode } from "jwt-decode";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { Mail, Lock, User, Sparkles, Phone, MapPin } from "lucide-react";
+import jwt_decode from "jwt-decode";
+import { useAuth } from "../hooks/useAuth";
+import LoginForm from "../components/LoginForm";
+import { RegisterForm } from "../components/RegisterForm";
+import AuthRightPanel from "../components/AuthRightPanel";
 
-export default function AuthPage() {
+export const AuthPage = () => {
+  const { handleLogin, handleRegister } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    location: "",
-    createPassword: "",
-    confirmPassword: "",
-  });
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [location, setLocation] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
-  const apiBase = "https://localhost:44390/api/auth";
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const redirectByRole = (role) => {
+    if (role === "Admin") window.location.href = "/admin/dashboard";
+    else if (role === "User") window.location.href = "/user/";
+    else window.location.href = "/";
   };
 
-  // 🔹 Handle Login
-  const handleSignIn = async (e) => {
+  const onLogin = async (e) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
+    setError("");
 
     try {
-      const response = await fetch(`${apiBase}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.createPassword,
-        }),
-      });
+      const tokens = await handleLogin(email, password);
 
-      if (!response.ok) {
-        // نحاول نجيب الرسالة من السيرفر
-        const text = await response.text();
-        throw new Error(
-          text || "Login failed! Please check your email or password."
-        );
-      }
+      const decoded = jwt_decode(tokens.accessToken);
+      const role = decoded.role;
 
-      const data = await response.json();
-      const token = data.accessToken;
-      localStorage.setItem("token", token);
-
-      const decoded = jwtDecode(token);
-      const role =
-        decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-
-      if (role === "Admin") {
-        window.location.href = "/admin/dashboard";
-      } else if (role === "User") {
-        window.location.href = "/user/";
-      } else {
-        window.location.href = "/";
-      }
+      redirectByRole(role);
     } catch (err) {
-      console.error("❌ Login error:", err);
-      // نعرض الخطأ بشكل واضح
-      setError(
-        err.message.includes("Failed to fetch")
-          ? "⚠️ Cannot connect to server. Make sure the backend is running on http://localhost:5273"
-          : `⚠️ ${err.message}`
-      );
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔹 Handle Register
-  const handleSignUp = async (e) => {
+  const onRegister = async (e) => {
     e.preventDefault();
+    setLoading(true);
     setError("");
 
-    if (formData.createPassword !== formData.confirmPassword) {
-      setError("⚠️ Passwords do not match!");
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-
     try {
-      const response = await fetch(`${apiBase}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          location: formData.location,
-          createPassword: formData.createPassword,
-          confirmPassword: formData.confirmPassword,
-        }),
+      const data = await handleRegister({
+        name,
+        email,
+        phone,
+        location,
+        createPassword: password,
+        confirmPassword,
       });
 
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Registration failed. Please try again.");
-      }
+      const tokens = data.tokens;
+      const decoded = jwt_decode(tokens.accessToken);
+      const role = decoded.role;
 
-      const data = await response.json();
-      localStorage.setItem("accessToken", data.accessToken);
-      localStorage.setItem("refreshToken", data.refreshToken);
-
-      alert("✅ Account created successfully!");
-      setIsSignUp(false);
+      redirectByRole(role);
     } catch (err) {
-      console.error("❌ Register error:", err);
-      setError(
-        err.message.includes("Failed to fetch")
-          ? "⚠️ Cannot connect to server. Make sure the backend is running on http://localhost:5273"
-          : `⚠️ ${err.message}`
-      );
+      setError(err.message || "Registration failed");
     } finally {
       setLoading(false);
     }
   };
-
-  async function refreshToken() {
-    const refreshToken = localStorage.getItem("refreshToken");
-    const response = await fetch(`${apiBase}/refresh-token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(refreshToken),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      localStorage.setItem("accessToken", data.accessToken);
-      localStorage.setItem("refreshToken", data.refreshToken);
-    } else {
-      console.error("Refresh token failed");
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gradient-background flex items-center justify-center p-4 relative overflow-hidden">
@@ -166,7 +100,6 @@ export default function AuthPage() {
         />
       </div>
 
-      {/* ✨ Main Container */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -175,7 +108,7 @@ export default function AuthPage() {
       >
         <div className="relative bg-white/80 backdrop-blur-glass rounded-3xl shadow-glass overflow-hidden min-h-[700px]">
           <div className="relative flex flex-col md:flex-row min-h-[700px]">
-            {/* 🔹 Form Section */}
+            {/* Form Section */}
             <motion.div
               animate={{ x: isSignUp ? ["0%", "100%"] : ["100%", "0%"] }}
               transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
@@ -183,285 +116,46 @@ export default function AuthPage() {
             >
               <AnimatePresence mode="wait">
                 {!isSignUp ? (
-                  /* ✨ Sign In Form */
-                  <motion.div
-                    key="signin"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.4 }}
-                    className="w-full max-w-md"
-                  >
-                    <div className="text-center mb-10">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{
-                          delay: 0.2,
-                          type: "spring",
-                          stiffness: 200,
-                        }}
-                        className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-primary mb-4"
-                      >
-                        <Sparkles className="w-8 h-8 text-white" />
-                      </motion.div>
-                      <h2 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-3">
-                        Welcome Back
-                      </h2>
-                      <p className="text-muted-foreground text-lg">
-                        Sign in to continue your journey
-                      </p>
-                    </div>
-
-                    <form onSubmit={handleSignIn} className="space-y-6">
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <input
-                          type="email"
-                          name="email"
-                          placeholder="Email address"
-                          value={formData.email}
-                          onChange={handleChange}
-                          required
-                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
-                        />
-                      </div>
-
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <input
-                          type="password"
-                          name="createPassword"
-                          placeholder="Password"
-                          value={formData.createPassword}
-                          onChange={handleChange}
-                          required
-                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
-                        />
-                      </div>
-
-                      {error && (
-                        <p className="text-red-500 text-center">{error}</p>
-                      )}
-
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        disabled={loading}
-                        type="submit"
-                        className="w-full bg-gradient-primary text-white py-4 text-lg rounded-2xl font-semibold"
-                      >
-                        {loading ? "Signing In..." : "Sign In"}
-                      </motion.button>
-                    </form>
-
-                    <p className="text-center text-muted-foreground mt-8">
-                      Don’t have an account?{" "}
-                      <button
-                        onClick={() => setIsSignUp(true)}
-                        className="text-secondary font-semibold hover:underline"
-                      >
-                        Sign Up
-                      </button>
-                    </p>
-                  </motion.div>
+                  <LoginForm
+                    email={email}
+                    setEmail={setEmail}
+                    password={password}
+                    setPassword={setPassword}
+                    onLogin={onLogin}
+                    error={error}
+                    loading={loading}
+                    toggleForm={() => setIsSignUp(true)}
+                  />
                 ) : (
-                  /* ✨ Sign Up Form */
-                  <motion.div
-                    key="signup"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.4 }}
-                    className="w-full max-w-md"
-                  >
-                    <div className="text-center mb-10">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{
-                          delay: 0.2,
-                          type: "spring",
-                          stiffness: 200,
-                        }}
-                        className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-primary mb-4"
-                      >
-                        <Sparkles className="w-8 h-8 text-white" />
-                      </motion.div>
-                      <h2 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-3">
-                        Create Account
-                      </h2>
-                      <p className="text-muted-foreground text-lg">
-                        Join us and start your journey
-                      </p>
-                    </div>
-
-                    <form onSubmit={handleSignUp} className="space-y-6">
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <input
-                          type="text"
-                          name="name"
-                          placeholder="Full name"
-                          value={formData.name}
-                          onChange={handleChange}
-                          required
-                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
-                        />
-                      </div>
-
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <input
-                          type="email"
-                          name="email"
-                          placeholder="Email address"
-                          value={formData.email}
-                          onChange={handleChange}
-                          required
-                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
-                        />
-                      </div>
-
-                      <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <input
-                          type="text"
-                          name="phone"
-                          placeholder="Phone number"
-                          value={formData.phone}
-                          onChange={handleChange}
-                          required
-                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
-                        />
-                      </div>
-
-                      <div className="relative">
-                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <input
-                          type="text"
-                          name="location"
-                          placeholder="Location"
-                          value={formData.location}
-                          onChange={handleChange}
-                          required
-                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
-                        />
-                      </div>
-
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <input
-                          type="password"
-                          name="createPassword"
-                          placeholder="Create password"
-                          value={formData.createPassword}
-                          onChange={handleChange}
-                          required
-                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
-                        />
-                      </div>
-
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <input
-                          type="password"
-                          name="confirmPassword"
-                          placeholder="Confirm password"
-                          value={formData.confirmPassword}
-                          onChange={handleChange}
-                          required
-                          className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
-                        />
-                      </div>
-
-                      {error && (
-                        <p className="text-red-500 text-center">{error}</p>
-                      )}
-
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        disabled={loading}
-                        type="submit"
-                        className="w-full bg-gradient-primary text-white py-4 text-lg rounded-2xl font-semibold"
-                      >
-                        {loading ? "Creating Account..." : "Sign Up"}
-                      </motion.button>
-                    </form>
-
-                    <p className="text-center text-muted-foreground mt-8">
-                      Already have an account?{" "}
-                      <button
-                        onClick={() => setIsSignUp(false)}
-                        className="text-primary font-semibold hover:underline"
-                      >
-                        Sign In
-                      </button>
-                    </p>
-                  </motion.div>
+                  <RegisterForm
+                    name={name}
+                    setName={setName}
+                    email={email}
+                    setEmail={setEmail}
+                    phone={phone}
+                    setPhone={setPhone}
+                    location={location}
+                    setLocation={setLocation}
+                    password={password}
+                    setPassword={setPassword}
+                    confirmPassword={confirmPassword}
+                    setConfirmPassword={setConfirmPassword}
+                    onRegister={onRegister}
+                    error={error}
+                    loading={loading}
+                    toggleForm={() => setIsSignUp(false)}
+                  />
                 )}
               </AnimatePresence>
             </motion.div>
 
-            {/* ✨ Right Panel */}
-            <motion.div
-              initial={false}
-              animate={{ x: isSignUp ? "-100%" : "0%" }}
-              transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
-              className="absolute md:relative top-0 left-0 md:left-auto w-full md:w-1/2 h-64 md:h-auto bg-gradient-primary text-white flex flex-col items-center justify-center text-center p-8 md:p-12 order-1 md:order-2"
-            >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={isSignUp ? "signup-text" : "signin-text"}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.4 }}
-                  className="relative z-10"
-                >
-                  {isSignUp ? (
-                    <>
-                      <h2 className="text-4xl md:text-5xl font-bold mb-4">
-                        Hello, Friend! 👋
-                      </h2>
-                      <p className="max-w-sm text-lg md:text-xl mb-8 opacity-90">
-                        Enter your details and join us today!
-                      </p>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setIsSignUp(false)}
-                        className="bg-white text-primary px-10 py-3 rounded-2xl text-lg font-semibold hover:bg-opacity-90 shadow-lg"
-                      >
-                        Sign In
-                      </motion.button>
-                    </>
-                  ) : (
-                    <>
-                      <h2 className="text-4xl md:text-5xl font-bold mb-4">
-                        Welcome to Rujta 🌿
-                      </h2>
-                      <p className="max-w-sm text-lg md:text-xl mb-8 opacity-90">
-                        Create your account and discover the possibilities that
-                        await you
-                      </p>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setIsSignUp(true)}
-                        className="bg-white text-primary px-10 py-3 rounded-2xl text-lg font-semibold hover:bg-opacity-90 shadow-lg"
-                      >
-                        Sign Up
-                      </motion.button>
-                    </>
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </motion.div>
+            {/* Right Panel */}
+            <AuthRightPanel isSignUp={isSignUp} setIsSignUp={setIsSignUp} />
           </div>
         </div>
       </motion.div>
     </div>
   );
-}
+};
+
+export default AuthPage;

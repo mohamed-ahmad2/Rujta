@@ -260,7 +260,7 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Address", (string)null);
+                    b.ToTable("Address");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Device", b =>
@@ -305,7 +305,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Devices", (string)null);
+                    b.ToTable("Devices");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.InventoryItem", b =>
@@ -361,6 +361,38 @@ namespace Rujta.Infrastructure.Migrations
                     b.ToTable("InventoryItems", (string)null);
                 });
 
+            modelBuilder.Entity("Rujta.Domain.Entities.Log", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("User")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Logs");
+                });
+
             modelBuilder.Entity("Rujta.Domain.Entities.Medicine", b =>
                 {
                     b.Property<int>("Id")
@@ -402,6 +434,52 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Medicines", (string)null);
+                });
+
+            modelBuilder.Entity("Rujta.Domain.Entities.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("Payload")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int?>("PharmacyId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReceiverType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Order", b =>
@@ -452,7 +530,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.OrderItem", b =>
@@ -494,7 +572,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("OrderID");
 
-                    b.ToTable("OrderItems", (string)null);
+                    b.ToTable("OrderItems");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Pharmacy", b =>
@@ -559,7 +637,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("ParentPharmacyID");
 
-                    b.ToTable("Pharmacies", (string)null);
+                    b.ToTable("Pharmacies");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Prescription", b =>
@@ -611,7 +689,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("PatientID");
 
-                    b.ToTable("Prescriptions", (string)null);
+                    b.ToTable("Prescriptions");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.ProcessPrescription", b =>
@@ -655,7 +733,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("PrescriptionID");
 
-                    b.ToTable("ProcessPrescriptions", (string)null);
+                    b.ToTable("ProcessPrescriptions");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.RefreshToken", b =>
@@ -759,7 +837,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("SellerID");
 
-                    b.ToTable("SellDrugViaPharmacies", (string)null);
+                    b.ToTable("SellDrugViaPharmacies");
                 });
 
             modelBuilder.Entity("Rujta.Infrastructure.Identity.ApplicationUser", b =>
@@ -773,9 +851,6 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DeviceInfo")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("DomainPersonId")

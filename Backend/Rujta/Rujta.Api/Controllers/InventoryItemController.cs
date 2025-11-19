@@ -14,14 +14,19 @@ namespace Rujta.Api.Controllers
     public class InventoryItemController : ControllerBase
     {
         private readonly IInventoryItemService _inventoryService;
-        ILogService _logService;
+        private readonly ILogService _logService;
 
-        public InventoryItemController(IInventoryItemService inventoryService , ILogService logService)
+        public InventoryItemController(IInventoryItemService inventoryService, ILogService logService)
         {
             _inventoryService = inventoryService;
             _logService = logService;
+        }
 
-
+        private string GetCurrentUser()
+        {
+            return User.Identity?.Name
+                   ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                   ?? "UnknownUser";
         }
 
         // ----------------- Get all items -----------------
@@ -51,10 +56,11 @@ namespace Rujta.Api.Controllers
         {
             dto.PharmacyID = GetPharmacyIdFromClaims();
             await _inventoryService.AddAsync(dto);
+
             await _logService.AddLogAsync(
-    User.Identity.Name,
-    $"Added inventory item '{dto.MedicineName}' (ID={dto.Id}) to Pharmacy {dto.PharmacyID}"
-);
+                GetCurrentUser(),
+                $"Added inventory item '{dto.MedicineName}' (ID={dto.Id}) to Pharmacy {dto.PharmacyID}"
+            );
 
             return CreatedAtRoute("GetInventoryItemById", new { id = dto.Id }, dto);
         }
@@ -67,10 +73,11 @@ namespace Rujta.Api.Controllers
             try
             {
                 await _inventoryService.UpdateAsync(id, dto);
+
                 await _logService.AddLogAsync(
-    User.Identity.Name,
-    $"Updated inventory item (ID={id}) in Pharmacy {dto.PharmacyID}"
-);
+                    GetCurrentUser(),
+                    $"Updated inventory item (ID={id}) in Pharmacy {dto.PharmacyID}"
+                );
 
                 return NoContent();
             }
@@ -90,10 +97,11 @@ namespace Rujta.Api.Controllers
                 return NotFound();
 
             await _inventoryService.DeleteAsync(id);
+
             await _logService.AddLogAsync(
-    User.Identity.Name,
-    $"Deleted inventory item (ID={id}) from Pharmacy {pharmacyId}"
-);
+                GetCurrentUser(),
+                $"Deleted inventory item (ID={id}) from Pharmacy {pharmacyId}"
+            );
 
             return NoContent();
         }
@@ -103,7 +111,8 @@ namespace Rujta.Api.Controllers
         {
             var claim = User.FindFirst("PharmacyID");
             if (claim == null)
-                throw new System.Exception("PharmacyID claim missing in JWT.");
+                throw new InvalidOperationException("PharmacyID claim missing in JWT.");
+
             return int.Parse(claim.Value);
         }
     }

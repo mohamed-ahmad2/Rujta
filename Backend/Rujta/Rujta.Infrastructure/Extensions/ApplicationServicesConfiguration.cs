@@ -29,6 +29,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IPharmacyRepository, PharmacyRepo>();
             services.AddScoped<PharmacyDistanceService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<ILogService, LogService>();
 
 
             services.AddScoped<PharmacyDistanceService>();
