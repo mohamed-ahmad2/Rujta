@@ -441,9 +441,7 @@ namespace Rujta.Infrastructure.Identity.Services
             string body = $"<p>Hello {user.FullName},</p>" +
                           $"<p>Your OTP to reset your password is: <strong>{otp}</strong></p>" +
                           $"<p>This OTP will expire in 5 minutes.</p>";
-
-            var emailService = new EmailService(_configuration);
-            await emailService.SendEmailAsync(email, subject, body);
+            await _emailService.SendEmailAsync(email, subject, body);
 
             return new ForgotPasswordResponseDto
             {

@@ -136,13 +136,11 @@ namespace Rujta.API.Controllers
             }
         }
         [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto dto)
         {
             try
             {
                 var result = await _authService.ForgotPasswordAsync(dto.Email);
-
-                // You will send email later. For now return the link for testing.
                 return Ok(result);
             }
             catch (Exception ex)
@@ -150,6 +148,7 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
 
     }
 }
