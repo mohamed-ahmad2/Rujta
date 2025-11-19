@@ -9,6 +9,7 @@
 	<ItemGroup>
 		<PackageReference Include="F23.StringSimilarity" Version="7.0.0" />
 		<PackageReference Include="FluentValidation" Version="12.1.0" />
+		<PackageReference Include="Google.Apis.Auth" Version="1.72.0" />
 		<PackageReference Include="Itinero" Version="1.5.1" />
 		<PackageReference Include="Itinero.IO.Osm" Version="1.5.1" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.22" />

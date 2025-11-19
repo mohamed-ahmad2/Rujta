@@ -1,7 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Google.Apis.Auth;
+using Microsoft.AspNetCore.Http;
+using Rujta.Application.Interfaces.InterfaceServices;
+using Rujta.Application.Services;
 using Rujta.Domain.Common;
 using Rujta.Infrastructure.Helperrs;
 using Rujta.Infrastructure.Identity.Helpers;
+
 
 namespace Rujta.Infrastructure.Identity.Services
 {
@@ -15,6 +19,7 @@ namespace Rujta.Infrastructure.Identity.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly TokenHelper _tokenHelper;
         private readonly IConfiguration _configuration;
+        private readonly IEmailService _emailService;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
@@ -24,7 +29,8 @@ namespace Rujta.Infrastructure.Identity.Services
             ILogger<AuthService> logger,
             IHttpContextAccessor httpContextAccessor,
             TokenHelper tokenHelper,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IEmailService emailService)
         {
             _unitOfWork = unitOfWork;
             _userManager = userManager;
@@ -34,6 +40,7 @@ namespace Rujta.Infrastructure.Identity.Services
             _httpContextAccessor = httpContextAccessor;
             _tokenHelper = tokenHelper;
             _configuration = configuration;
+            _emailService = emailService;
         }
 
         public async Task<bool> CheckPasswordAsync(string email, string password, CancellationToken cancellationToken = default)
@@ -315,5 +322,135 @@ namespace Rujta.Infrastructure.Identity.Services
 
             context.Response.Cookies.Append("refresh_token", refreshToken, cookieOptions);
         }
+        public async Task<TokenDto> SocialLoginAsync(SocialLoginDto dto)
+        {
+            ApplicationUser user = null;
+
+            // ********************************
+            // 🔶 GOOGLE LOGIN
+            // ********************************
+            if (!string.IsNullOrEmpty(dto.IdToken))
+            {
+                var payload = await GoogleJsonWebSignature.ValidateAsync(dto.IdToken);
+
+                user = await _userManager.FindByEmailAsync(payload.Email);
+                if (user == null)
+                {
+                    user = new ApplicationUser
+                    {
+                        UserName = payload.Email,
+                        Email = payload.Email,
+                        FullName = payload.Name
+                    };
+
+                    await _userManager.CreateAsync(user);
+                    await _userManager.AddToRoleAsync(user, "User");
+                }
+            }
+            // ********************************
+            // 🔶 FACEBOOK LOGIN
+            // ********************************
+            else if (!string.IsNullOrEmpty(dto.AccessToken))
+            {
+                using var client = new HttpClient();
+                var fbResponse = await client.GetStringAsync(
+                    $"https://graph.facebook.com/me?fields=email,name&access_token={dto.AccessToken}"
+                );
+
+                var fbData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(fbResponse);
+
+                user = await _userManager.FindByEmailAsync(fbData["email"]);
+                if (user == null)
+                {
+                    user = new ApplicationUser
+                    {
+                        UserName = fbData["email"],
+                        Email = fbData["email"],
+                        FullName = fbData["name"]
+                    };
+
+                    await _userManager.CreateAsync(user);
+                    await _userManager.AddToRoleAsync(user, "User");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException("No token provided.");
+            }
+
+            // ********************************
+            // 🔶 Generate token pair using your existing logic
+            // ********************************
+            var dtoUser = _mapper.Map<ApplicationUserDto>(user);
+            string deviceId = Guid.NewGuid().ToString();
+
+            var tokens = await _tokenHelper.GenerateTokenPairAsync(dtoUser, deviceId);
+
+            return tokens;
+        }
+        public async Task ResetPasswordAsync(ResetPasswordDto dto)
+        {
+            var user = await _userManager.FindByEmailAsync(dto.Email);
+
+            if (user == null)
+                throw new InvalidOperationException("Invalid OTP or email.");
+
+            if (user.PasswordResetToken != dto.Otp ||
+                user.PasswordResetTokenExpiry < DateTime.UtcNow)
+            {
+                throw new InvalidOperationException("OTP is invalid or expired.");
+            }
+
+            // Remove old password
+            var remove = await _userManager.RemovePasswordAsync(user);
+            if (!remove.Succeeded)
+                throw new InvalidOperationException("Failed to remove old password.");
+
+            // Add new password
+            var add = await _userManager.AddPasswordAsync(user, dto.NewPassword);
+            if (!add.Succeeded)
+                throw new InvalidOperationException("Failed to set new password.");
+
+            // Clear OTP
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiry = null;
+
+            await _userManager.UpdateAsync(user);
+        }
+
+        public async Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+
+            // Security: always return same message
+            if (user == null)
+                return new ForgotPasswordResponseDto
+                {
+                    Message = "If the email exists, an OTP has been sent."
+                };
+
+            // Generate 6-digit OTP
+            var otp = new Random().Next(100000, 999999).ToString();
+
+            user.PasswordResetToken = otp;
+            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(5); // 5 min expiration
+            await _userManager.UpdateAsync(user);
+
+            // Send OTP email
+            string subject = "Your OTP for Password Reset";
+            string body = $"<p>Hello {user.FullName},</p>" +
+                          $"<p>Your OTP to reset your password is: <strong>{otp}</strong></p>" +
+                          $"<p>This OTP will expire in 5 minutes.</p>";
+
+            var emailService = new EmailService(_configuration);
+            await emailService.SendEmailAsync(email, subject, body);
+
+            return new ForgotPasswordResponseDto
+            {
+                Message = "OTP sent to your email."
+            };
+        }
+
+
     }
 }
