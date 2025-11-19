@@ -20,31 +20,39 @@ namespace Rujta.Application.Services
             _configuration = configuration;
         }
 
-        public async Task SendEmailAsync(string toEmail, string subject, string body)
+      public async Task SendEmailAsync(string toEmail, string subject, string body)
+{
+    try
+    {
+        var settings = _configuration.GetSection("EmailSettings");
+        string smtpHost = settings["SmtpHost"];
+        int smtpPort = int.Parse(settings["SmtpPort"]);
+        string senderEmail = settings["SenderEmail"];
+        string senderName = settings["SenderName"];
+        string password = settings["SenderPassword"];
+
+        using var client = new SmtpClient(smtpHost, smtpPort)
         {
-            var settings = _configuration.GetSection("EmailSettings");
-            string smtpHost = settings["SmtpHost"];
-            int smtpPort = int.Parse(settings["SmtpPort"]);
-            string senderEmail = settings["SenderEmail"];
-            string senderName = settings["SenderName"];
-            string password = settings["SenderPassword"];
+            Credentials = new NetworkCredential(senderEmail, password),
+            EnableSsl = true,
+            UseDefaultCredentials = false
+        };
 
-            using var client = new SmtpClient(smtpHost, smtpPort)
-            {
-                Credentials = new NetworkCredential(senderEmail, password),
-                EnableSsl = true
-            };
+        var mailMessage = new MailMessage
+        {
+            From = new MailAddress(senderEmail, senderName),
+            Subject = subject,
+            Body = body,
+            IsBodyHtml = true
+        };
+        mailMessage.To.Add(toEmail);
 
-            var mailMessage = new MailMessage
-            {
-                From = new MailAddress(senderEmail, senderName),
-                Subject = subject,
-                Body = body,
-                IsBodyHtml = true
-            };
-            mailMessage.To.Add(toEmail);
-
-            await client.SendMailAsync(mailMessage);
-        }
+        await client.SendMailAsync(mailMessage);
     }
+    catch (Exception ex)
+    {
+        throw new Exception("Email sending failed: " + ex.Message);
+    }
+}
+
 }
