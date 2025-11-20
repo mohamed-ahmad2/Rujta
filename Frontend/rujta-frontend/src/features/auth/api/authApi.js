@@ -1,48 +1,31 @@
-// src/api/authApi.js
+// src/features/auth/api/authApi.js
 import { apiClient } from "../../../shared/api/apiClient";
 
-// Login
 export const login = async ({ email, password }) => {
+  const res = await apiClient.post("/auth/login", { email, password });
+  return res.data;
+};
+
+export const registerUser = async (dto) => {
+  const res = await apiClient.post("/auth/register", dto);
+  return res.data;
+};
+
+export const logout = async () => {
   try {
-    const res = await apiClient.post("/auth/login", { email, password });
-    return res.data; // { accessToken, refreshToken, ... }
-  } catch (error) {
-    throw error;
+    await apiClient.post("/auth/logout");
+  } catch (err) {
+    console.error("Logout failed", err);
+    throw err;
   }
 };
 
-// Register
-export const registerUser = async ({ name, email, phone, location, createPassword, confirmPassword }) => {
-  try {
-    const res = await apiClient.post("/auth/register", {
-      name,
-      email,
-      phone,
-      location,
-      createPassword,
-      confirmPassword,
-    });
-    return res.data; // { userId, tokens }
-  } catch (error) {
-    throw error;
-  }
-};
 
-// Refresh Token
-export const refreshToken = async (refreshToken) => {
+export const getCurrentUser = async () => {
   try {
-    const res = await apiClient.post("/auth/refresh-token", { refreshToken });
-    return res.data; // { accessToken, refreshToken, ... }
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Logout
-export const logout = async (refreshToken) => {
-  try {
-    await apiClient.post("/auth/logout", { refreshToken });
-  } catch (error) {
-    throw error;
+    const res = await apiClient.get("/auth/me");
+    return res.data;
+  } catch {
+    return null;
   }
 };

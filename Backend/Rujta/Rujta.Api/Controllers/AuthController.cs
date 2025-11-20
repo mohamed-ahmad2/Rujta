@@ -65,11 +65,17 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("refresh-token")]
-        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto dto)
+        public async Task<IActionResult> RefreshToken()
         {
             try
             {
-                var tokens = await _authService.RefreshAccessTokenAsync(dto.RefreshToken);
+                var refreshToken = Request.Cookies["refresh_token"];
+                if (refreshToken == null)
+                {
+                    await _logService.AddLogAsync("UnknownUser", "refreshToken not exist in cookies");
+                    return BadRequest(new { message = "refreshToken not exist in cookies" });
+                }
+                var tokens = await _authService.RefreshAccessTokenAsync(refreshToken);
 
                 await _logService.AddLogAsync("UnknownUser", "Refresh token used");
 
@@ -84,7 +90,7 @@ namespace Rujta.API.Controllers
 
         [Authorize]
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromBody] RefreshTokenDto dto)
+        public async Task<IActionResult> Logout()
         {
             try
             {
@@ -95,11 +101,20 @@ namespace Rujta.API.Controllers
                 if (!Guid.TryParse(userIdClaim, out var userId))
                     return BadRequest("Invalid user ID in token.");
 
-                await _authService.LogoutAsync(userId, dto.RefreshToken);
+                var refreshToken = Request.Cookies["refresh_token"];
+                if (!string.IsNullOrEmpty(refreshToken))
+                {
+                    await _authService.LogoutAsync(userId, refreshToken);
+                }
+                else
+                {
+                    await _authService.LogoutAsync(userId);
+                }
 
                 await _logService.AddLogAsync(userId.ToString(), "User logged out");
 
                 Response.Cookies.Delete("jwt");
+                Response.Cookies.Delete("refresh_token");
 
                 return NoContent();
             }
@@ -109,5 +124,17 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [Authorize]
+        [HttpGet("me")]
+        [ProducesResponseType(typeof(MeResponse), 200)]
+        public IActionResult Me()
+        {
+            var email = User.Identity?.Name ?? string.Empty;
+            var role = User.Claims.FirstOrDefault(c => c.Type == "role")?.Value ?? string.Empty;
+
+            return Ok(new MeResponse(email, role));
+        }
     }
+    public record MeResponse(string Email, string Role);
 }

@@ -15,25 +15,52 @@ namespace Rujta.Infrastructure.Identity.Helpers
             _configuration = configuration;
         }
 
-        public async Task<TokenDto> GenerateTokenPairAsync(ApplicationUserDto userDto, string deviceId)
+        public async Task<TokenDto> GenerateTokenPairAsync(ApplicationUserDto userDto, string deviceId, bool loginOrRegister, RefreshToken? storedRefreshToken = null)
         {
-            await RevokeOldRefreshTokensAsync(userDto.Id);
-
-            var refreshToken = await _tokenService.GenerateRefreshTokenAsync(userDto, deviceId);
-            var (accessToken, accessTokenJti, accessTokenExpiration) = await _tokenService.GenerateAccessTokenFromRefreshTokenAsync(refreshToken, userDto, deviceId);
-
-            var refreshTokenExpiration = DateTime.UtcNow.AddDays(
-                double.TryParse(_configuration["JWT:RefreshTokenExpirationDays"], out var days) ? days : 30
-            );
-
-            return new TokenDto
+            if (loginOrRegister)
             {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken,
-                RefreshTokenExpiration = refreshTokenExpiration,
-                AccessTokenExpiration = accessTokenExpiration,
-                AccessTokenJti = accessTokenJti
-            };
+                var refreshToken = await _tokenService.GenerateRefreshTokenAsync(userDto, deviceId);
+                var accessToken = await _tokenService.GenerateAccessTokenAsync(userDto, deviceId);
+
+
+                var refreshTokenExpiration = DateTime.UtcNow.AddDays(
+                    double.TryParse(_configuration["JWT:RefreshTokenExpirationDays"], out var days) ? days : 30
+                );
+                var accessTokenExpiration = DateTime.UtcNow.AddMinutes(
+                        double.TryParse(_configuration["JWT:AccessTokenExpirationMinutes"], out var aMins) ? aMins : 10
+                    );
+
+                return new TokenDto
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken,
+                    RefreshTokenExpiration = refreshTokenExpiration,
+                    AccessTokenExpiration = accessTokenExpiration,
+                };
+            }
+            else
+            {
+                if (storedRefreshToken == null)
+                    throw new ArgumentNullException(nameof(storedRefreshToken), "Refresh token data required.");
+
+                var (accessToken, accessTokenJti, accessTokenExpiration) = await _tokenService.GenerateAccessTokenFromRefreshTokenAsync(storedRefreshToken.Token, userDto, deviceId);
+
+
+                var refreshTokenExpiration = DateTime.UtcNow.AddDays(
+                    double.TryParse(_configuration["JWT:RefreshTokenExpirationDays"], out var days) ? days : 30
+                );
+
+                var newRefreshToken = await _tokenService.GenerateRefreshTokenAsync(userDto, deviceId);
+
+                return new TokenDto
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = newRefreshToken,
+                    RefreshTokenExpiration = refreshTokenExpiration,
+                    AccessTokenExpiration = accessTokenExpiration,
+                    AccessTokenJti = accessTokenJti
+                };
+            }
         }
 
 

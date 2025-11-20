@@ -1,3 +1,4 @@
+// src/features/auth/pages/AuthPage.jsx
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import jwt_decode from "jwt-decode";
@@ -5,8 +6,10 @@ import { useAuth } from "../hooks/useAuth";
 import LoginForm from "../components/LoginForm";
 import { RegisterForm } from "../components/RegisterForm";
 import AuthRightPanel from "../components/AuthRightPanel";
+import { useNavigate } from "react-router-dom";
 
 export const AuthPage = () => {
+  const navigate = useNavigate();
   const { handleLogin, handleRegister } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
@@ -19,9 +22,9 @@ export const AuthPage = () => {
   const [loading, setLoading] = useState(false);
 
   const redirectByRole = (role) => {
-    if (role === "Admin") window.location.href = "/admin/dashboard";
-    else if (role === "User") window.location.href = "/user/";
-    else window.location.href = "/";
+    if (role === "Admin") navigate("/admin/dashboard");
+    else if (role === "User") navigate("/user/");
+    else navigate("/");
   };
 
   const onLogin = async (e) => {
@@ -33,7 +36,7 @@ export const AuthPage = () => {
       const tokens = await handleLogin(email, password);
 
       const decoded = jwt_decode(tokens.accessToken);
-      const role = decoded.role;
+      const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || "User";
 
       redirectByRole(role);
     } catch (err) {
@@ -66,7 +69,7 @@ export const AuthPage = () => {
 
       const tokens = data.tokens;
       const decoded = jwt_decode(tokens.accessToken);
-      const role = decoded.role;
+      const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || "User";
 
       redirectByRole(role);
     } catch (err) {
