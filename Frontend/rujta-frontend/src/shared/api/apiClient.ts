@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const apiClient = axios.create({
   baseURL: "/api",
-  withCredentials: true, // يرسل cookies تلقائيًا
+  withCredentials: true,
 });
 
 apiClient.interceptors.response.use(
@@ -14,9 +14,7 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // اعمل طلب refresh token
         await axios.post("/api/auth/refresh-token", null, { withCredentials: true });
-        // بعد ما ينجح، حاول الطلب الأصلي تاني
         return apiClient(originalRequest);
       } catch (refreshError) {
         console.error("Refresh token failed", refreshError);
@@ -28,3 +26,5 @@ apiClient.interceptors.response.use(
     return Promise.reject(customError);
   }
 );
+
+export default apiClient;

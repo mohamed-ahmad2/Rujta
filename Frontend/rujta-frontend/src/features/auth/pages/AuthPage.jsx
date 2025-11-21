@@ -1,7 +1,6 @@
 // src/features/auth/pages/AuthPage.jsx
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import jwt_decode from "jwt-decode";
 import { useAuth } from "../hooks/useAuth";
 import LoginForm from "../components/LoginForm";
 import { RegisterForm } from "../components/RegisterForm";
@@ -33,14 +32,14 @@ export const AuthPage = () => {
     setError("");
 
     try {
-      const tokens = await handleLogin(email, password);
-
-      const decoded = jwt_decode(tokens.accessToken);
-      const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || "User";
-
+      const userData = await handleLogin(email, password);
+      const role = userData.role || "User";
       redirectByRole(role);
     } catch (err) {
-      setError(err.message || "Login failed");
+      const message =
+        (err && err.message) ||
+        (typeof err === "string" ? err : "Login failed");
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -58,7 +57,7 @@ export const AuthPage = () => {
     }
 
     try {
-      const data = await handleRegister({
+      const userData = await handleRegister({
         name,
         email,
         phone,
@@ -67,13 +66,14 @@ export const AuthPage = () => {
         confirmPassword,
       });
 
-      const tokens = data.tokens;
-      const decoded = jwt_decode(tokens.accessToken);
-      const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || "User";
+      const role = userData.role || "User";
 
       redirectByRole(role);
     } catch (err) {
-      setError(err.message || "Registration failed");
+      const message =
+        (err && err.message) ||
+        (typeof err === "string" ? err : "Registration failed");
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -120,6 +120,7 @@ export const AuthPage = () => {
               <AnimatePresence mode="wait">
                 {!isSignUp ? (
                   <LoginForm
+                    key={"login"}
                     email={email}
                     setEmail={setEmail}
                     password={password}
@@ -131,6 +132,7 @@ export const AuthPage = () => {
                   />
                 ) : (
                   <RegisterForm
+                    key={"register"}
                     name={name}
                     setName={setName}
                     email={email}

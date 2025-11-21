@@ -36,6 +36,12 @@ namespace Rujta.Infrastructure.Identity.Services
             _configuration = configuration;
         }
 
+        public async Task<ApplicationUserDto?> GetUserByEmailAsync(string email)
+        {
+            return await _unitOfWork.Users.GetByEmailAsync(email);
+        }
+
+
         public async Task<bool> CheckPasswordAsync(string email, string password, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByEmailAsync(email);
@@ -209,7 +215,7 @@ namespace Rujta.Infrastructure.Identity.Services
             }
 
             bool loginOrRegister = false;
-            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId, loginOrRegister, storedToken);
+            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId, loginOrRegister, refreshToken);
 
             SetRefreshTokenCookie(tokens.RefreshToken);
             SetJwtCookie(tokens.AccessToken);
@@ -293,7 +299,6 @@ namespace Rujta.Infrastructure.Identity.Services
                 Secure = true,
                 SameSite = SameSiteMode.None,
                 Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
-                Domain = "localhost"
             };
 
             context.Response.Cookies.Append("jwt", accessToken, cookieOptions);
@@ -319,7 +324,6 @@ namespace Rujta.Infrastructure.Identity.Services
                 Secure = true,
                 SameSite = SameSiteMode.None, 
                 Expires = DateTime.UtcNow.AddDays(expirationDays),
-                Domain = "localhost"
             };
 
             context.Response.Cookies.Append("refresh_token", refreshToken, cookieOptions);

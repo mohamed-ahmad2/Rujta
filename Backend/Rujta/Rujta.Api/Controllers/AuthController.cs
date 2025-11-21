@@ -32,11 +32,17 @@ namespace Rujta.API.Controllers
                     return Unauthorized();
                 }
 
-                var tokens = await _authService.GenerateTokensAsync(dto.Email);
+                await _authService.GenerateTokensAsync(dto.Email);
+                var user = await _authService.GetUserByEmailAsync(dto.Email);
+                var role = user?.Role ?? "User";
 
                 await _logService.AddLogAsync(dto.Email, "User logged in successfully");
 
-                return Ok(tokens);
+                return Ok(new
+                {
+                    Email = dto.Email,
+                    Role = role,
+                });
             }
             catch (InvalidOperationException ex)
             {
@@ -55,7 +61,7 @@ namespace Rujta.API.Controllers
 
                 await _logService.AddLogAsync(dto.Email, "New user registered");
 
-                return CreatedAtAction(nameof(Login), new { email = dto.Email }, new { UserId = userId, tokens });
+                return CreatedAtAction(nameof(Login), new { email = dto.Email }, new { UserId = userId});
             }
             catch (InvalidOperationException ex)
             {
@@ -130,9 +136,17 @@ namespace Rujta.API.Controllers
         [ProducesResponseType(typeof(MeResponse), 200)]
         public IActionResult Me()
         {
-            var email = User.Identity?.Name ?? string.Empty;
-            var role = User.Claims.FirstOrDefault(c => c.Type == "role")?.Value ?? string.Empty;
+            var email = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)?.Value
+            ?? string.Empty;
 
+            var roles = User.Claims
+                            .Where(c => c.Type == ClaimTypes.Role)
+                            .Select(c => c.Value)
+                            .ToList();
+
+            var role = roles.FirstOrDefault() ?? string.Empty;
+
+            
             return Ok(new MeResponse(email, role));
         }
     }

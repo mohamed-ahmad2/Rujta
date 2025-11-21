@@ -15,7 +15,7 @@ namespace Rujta.Infrastructure.Identity.Helpers
             _configuration = configuration;
         }
 
-        public async Task<TokenDto> GenerateTokenPairAsync(ApplicationUserDto userDto, string deviceId, bool loginOrRegister, RefreshToken? storedRefreshToken = null)
+        public async Task<TokenDto> GenerateTokenPairAsync(ApplicationUserDto userDto, string deviceId, bool loginOrRegister, string? rawRefreshToken = null)
         {
             if (loginOrRegister)
             {
@@ -40,11 +40,12 @@ namespace Rujta.Infrastructure.Identity.Helpers
             }
             else
             {
-                if (storedRefreshToken == null)
-                    throw new ArgumentNullException(nameof(storedRefreshToken), "Refresh token data required.");
+                if (string.IsNullOrWhiteSpace(rawRefreshToken))
+                    throw new ArgumentException("Refresh token data required.", nameof(rawRefreshToken));
 
-                var (accessToken, accessTokenJti, accessTokenExpiration) = await _tokenService.GenerateAccessTokenFromRefreshTokenAsync(storedRefreshToken.Token, userDto, deviceId);
+                var (accessToken, accessTokenJti, accessTokenExpiration) = await _tokenService.GenerateAccessTokenFromRefreshTokenAsync(rawRefreshToken, userDto, deviceId);
 
+                await RevokeOldRefreshTokensExceptAsync(userDto.Id, rawRefreshToken);
 
                 var refreshTokenExpiration = DateTime.UtcNow.AddDays(
                     double.TryParse(_configuration["JWT:RefreshTokenExpirationDays"], out var days) ? days : 30
@@ -74,5 +75,18 @@ namespace Rujta.Infrastructure.Identity.Helpers
             }
             await _unitOfWork.SaveAsync();
         }
+
+        public async Task RevokeOldRefreshTokensExceptAsync(Guid userId, string exceptToken)
+        {
+            var tokens = await _unitOfWork.RefreshTokens.GetAllValidTokensByUserIdAsync(userId);
+            foreach (var token in tokens)
+            {
+                if (token.Token == exceptToken) continue;
+                token.Revoked = true;
+                token.RevokedAt = DateTime.UtcNow;
+            }
+            await _unitOfWork.SaveAsync();
+        }
+
     }
 }

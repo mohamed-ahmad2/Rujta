@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { login, registerUser, logout, getCurrentUser } from "../api/authApi";
 import jwt_decode from "jwt-decode";
-import { apiClient } from "../../../shared/api/apiClient";
+import apiClient from "../../../shared/api/apiClient";
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -14,8 +14,8 @@ export const useAuth = () => {
         const userData = await getCurrentUser();
         if (userData) {
           setUser({
-            email: userData.Email,
-            role: userData.Role,
+            email: userData.email,
+            role: userData.role,
           });
         }
       } catch {
@@ -30,46 +30,37 @@ export const useAuth = () => {
   const handleLogin = async (email, password) => {
     const response = await login({ email, password });
 
-    if (response.accessToken) {
-      const decoded = jwt_decode(response.accessToken);
-      const role =
-        decoded[
-          "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
-        ] || "User";
-      setUser({
-        email: decoded.email,
-        role,
-      });
-      setTokenExp(decoded.exp * 1000);
-    }
+    setUser({
+      email: response.email,
+      role: response.role,
+    });
 
     return response;
   };
 
   const handleRegister = async (dto) => {
-    const response = await registerUser(dto);
-    const accessToken = response.tokens?.accessToken;
+    await registerUser(dto);
+    const loginResponse = await login({
+      email: dto.email,
+      password: dto.password,
+    });
 
-    if (accessToken) {
-      const decoded = jwt_decode(accessToken);
-      const role =
-        decoded[
-          "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
-        ] || "User";
-      setUser({
-        email: decoded.email,
-        role,
-      });
-      setTokenExp(decoded.exp * 1000);
-    }
+    setUser({
+      email: loginResponse.email,
+      role: loginResponse.role,
+    });
 
-    return response;
+    return loginResponse;
   };
 
   const handleLogout = async () => {
-    await logout();
-    setUser(null);
-    setTokenExp(null);
+    try {
+      await logout();
+      setUser(null);
+      setTokenExp(null);
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
   };
 
   const refreshToken = async () => {
@@ -77,12 +68,14 @@ export const useAuth = () => {
       const response = await apiClient.post("/auth/refresh-token", null, {
         withCredentials: true,
       });
+
       if (response.data.accessToken) {
         const decoded = jwt_decode(response.data.accessToken);
         setTokenExp(decoded.exp * 1000);
       }
     } catch (err) {
       console.error("Proactive refresh failed", err);
+      handleLogout();
     }
   };
 
@@ -91,7 +84,9 @@ export const useAuth = () => {
 
     const interval = setInterval(() => {
       const now = Date.now();
-      if (tokenExp - now < 5 * 60 * 1000) refreshToken();
+      if (tokenExp - now < 3 * 60 * 1000) {
+        refreshToken();
+      }
     }, 60 * 1000);
 
     return () => clearInterval(interval);

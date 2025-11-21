@@ -1,5 +1,5 @@
 // src/features/auth/api/authApi.js
-import { apiClient } from "../../../shared/api/apiClient";
+import apiClient from "../../../shared/api/apiClient";
 
 export const login = async ({ email, password }) => {
   const res = await apiClient.post("/auth/login", { email, password });
@@ -19,7 +19,6 @@ export const logout = async () => {
     throw err;
   }
 };
-
 
 export const getCurrentUser = async () => {
   try {
