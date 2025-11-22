@@ -1,62 +1,30 @@
 import React, { useState, useEffect } from "react";
-import HeroImg1 from "../../../assets/change/HeroImg1.png";
-import HeroImg2 from "../../../assets/change/HeroImg2.png";
-import HeroImg3 from "../../../assets/change/HeroImg3.png"; // Lek Moisturizer
-import HeroImg4 from "../../../assets/change/HeroImg4.png";
-import HeroImg5 from "../../../assets/change/HeroImg5.png"; // Hyaluronic Acid
-
-const heroSlides = [
-  {
-    id: 1,
-    img: HeroImg1,
-    title: "Your Prescription for Affordable Health Solutions!",
-    description:
-      "Elevate your health journey with exclusive discounts and unparalleled convenience.",
-    btnText: "Shop Now",
-  },
-  {
-    id: 2,
-    img: HeroImg2,
-    title: "Trusted Medicines, Delivered to Your Door",
-    description:
-      "Discover reliable healthcare products with fast delivery and great prices.",
-    btnText: "Explore Now",
-  },
-  {
-    id: 3,
-    img: HeroImg3,
-    title: "Lek Moisturizer — Deep Hydration for Your Skin",
-    description:
-      "Nourish and protect your skin with Lek Moisturizer. Keeps your face soft, fresh, and radiant all day long.",
-    btnText: "Shop Lek Moisturizer",
-  },
-  {
-    id: 4,
-    img: HeroImg4,
-    title: "Your Health, Our Priority",
-    description:
-      "Providing the best pharmacy essentials to keep your family safe and healthy.",
-    btnText: "View Products",
-  },
-  {
-    id: 5,
-    img: HeroImg5,
-    title: "Hyaluronic Acid — The Secret to Glowing Skin",
-    description:
-      "Revitalize your skin with intense hydration and youthful glow using our pure Hyaluronic Acid serum.",
-    btnText: "Get Hyaluronic Acid",
-  },
-];
+import HeroImg3 from "../../../assets/pro/m1.png";
+import useMedicines from "../../medicines/hook/useMedicines";
 
 const Hero = () => {
+  const { medicines, fetchAll, loading, error } = useMedicines();
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  const heroSlides = (medicines || []).slice(0, 5);
+
+  useEffect(() => {
     const interval = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % heroSlides.length);
+      setCurrent((prev) =>
+        heroSlides.length ? (prev + 1) % heroSlides.length : 0
+      );
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [heroSlides.length]);
+
+  if (loading)
+    return <p className="text-center text-white">Loading products...</p>;
+  if (error) return <p className="text-center text-red-500">{error}</p>;
+  if (!heroSlides.length) return null;
 
   const slide = heroSlides[current];
 
@@ -74,7 +42,7 @@ const Hero = () => {
         {/* Text Section */}
         <div className="text-center md:text-left space-y-6">
           <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight">
-            {slide.title}
+            {slide.name}
           </h1>
           <p className="text-gray-100 max-w-md mx-auto md:mx-0">
             {slide.description}
@@ -83,16 +51,17 @@ const Hero = () => {
             className="bg-yellow-400 text-green-900 font-semibold py-3 px-8 rounded-full shadow-md 
                        hover:bg-yellow-300 transition-all duration-300"
           >
-            {slide.btnText}
+            {`Buy for ${slide.price} EGP`}
           </button>
         </div>
 
         {/* Image Section */}
         <div className="flex justify-center md:justify-end relative transition-transform duration-700">
           <img
-            src={slide.img}
-            alt={slide.title}
+            src={slide.imageUrl || HeroImg3}
+            alt={slide.name}
             className="w-[420px] md:w-[520px] lg:w-[600px] drop-shadow-2xl object-contain"
+            onError={(e) => (e.currentTarget.src = HeroImg3)}
           />
         </div>
       </div>

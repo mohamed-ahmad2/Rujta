@@ -57,11 +57,14 @@ namespace Rujta.API.Controllers
             try
             {
                 var userId = await _authService.CreateUserAsync(dto, UserRole.User);
-                var tokens = await _authService.GenerateTokensAsync(dto.Email);
+                await _authService.GenerateTokensAsync(dto.Email);
+                var user = await _authService.GetUserByEmailAsync(dto.Email);
+                var role = user?.Role ?? "User";
+
 
                 await _logService.AddLogAsync(dto.Email, "New user registered");
 
-                return CreatedAtAction(nameof(Login), new { email = dto.Email }, new { UserId = userId});
+                return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email });
             }
             catch (InvalidOperationException ex)
             {

@@ -1,61 +1,33 @@
-import React from "react";
-import img1 from "../../../assets/pro/m1.png";
-import img2 from "../../../assets/pro/m2.png";
-import img3 from "../../../assets/pro/m3.png";
-import img4 from "../../../assets/pro/m4.png";
-import img5 from "../../../assets/pro/m5.png";
-import img6 from "../../../assets/pro/m6.png";
+import React, { useEffect } from "react";
 import { FaStar } from "react-icons/fa";
-
-const ProductsData = [
-  {
-    id: 1,
-    img: img1,
-    title: "Paracetamol",
-    description: "Pain relief and fever reducer",
-    price: "15 EGP",
-  },
-  {
-    id: 2,
-    img: img2,
-    title: "Amoxicillin",
-    description: "Antibiotic for bacterial infections",
-    price: "95 EGP",
-  },
-  {
-    id: 3,
-    img: img3,
-    title: "Vitamin D3",
-    description: "Boosts immune system and energy",
-    price: "170 EGP",
-  },
-  {
-    id: 4,
-    img: img4,
-    title: "dexatobrin eye drops",
-    description: "Boosts immune system and energy",
-    price: "39 EGP",
-  },
-   {
-    id: 5,
-    img: img5,
-    title: "Librax Capsule",
-    description: " chlordiazepoxide and clidinium",
-    price: "39 EGP",
-  },
-   {
-    id: 6,
-    img: img6,
-    title: "Vacation Cleanser",
-    description: " Vacation Facial Cleansing Hydro Gel",
-    price: "235 EGP",
-  },
-];
+import imge1 from "../../../assets/pro/m1.png"; // fallback image
+import useMedicines from "../../medicines/hook/useMedicines";
 
 const Products = ({ cart, setCart }) => {
+  const { medicines, fetchAll, loading, error } = useMedicines();
+
+  // Fetch medicines when component mounts
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
   const handleAddToCart = (product) => {
-    setCart((prevCart) => [...prevCart, product]);
+    setCart((prevCart) => {
+      const existingItem = prevCart.find((item) => item.id === product.id);
+      if (existingItem) {
+        return prevCart.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      } else {
+        return [...prevCart, { ...product, quantity: 1 }];
+      }
+    });
   };
+
+  if (loading) return <p className="text-center">Loading medicines...</p>;
+  if (error) return <p className="text-center text-red-500">{error}</p>;
 
   return (
     <div className="bg-white py-20">
@@ -73,7 +45,7 @@ const Products = ({ cart, setCart }) => {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-12 place-items-center">
-          {ProductsData.map((data) => (
+          {(medicines || []).map((data) => (
             <div
               key={data.id}
               className="bg-white rounded-3xl shadow-md hover:shadow-xl 
@@ -82,27 +54,26 @@ const Products = ({ cart, setCart }) => {
               {/* Image Section */}
               <div className="bg-[#E8F3E8] flex justify-center items-center h-[200px] overflow-hidden">
                 <img
-                  src={data.img}
-                  alt={data.title}
+                  src={data.imageUrl || imge1}
+                  alt={data.name}
                   className="h-[160px] object-contain transition-transform duration-300 hover:scale-110"
+                  onError={(e) => (e.currentTarget.src = imge1)}
                 />
               </div>
 
               {/* Details Section */}
               <div className="p-5 text-center">
-               {/* <div className="flex justify-center mb-2 text-yellow-400">
+                {/* <div className="flex justify-center mb-2 text-yellow-400">
                   {[...Array(5)].map((_, i) => (
                     <FaStar key={i} />
                   ))}
                 </div> */}
 
                 <h2 className="text-xl font-semibold mb-1 text-gray-800">
-                  {data.title}
+                  {data.name}
                 </h2>
 
-                <p className="text-gray-500 text-sm mb-3">
-                  {data.description}
-                </p>
+                <p className="text-gray-500 text-sm mb-3">{data.description}</p>
 
                 <p className="text-secondary font-bold mb-4">{data.price}</p>
 

@@ -67,12 +67,26 @@ export const AuthPage = () => {
       });
 
       const role = userData.role || "User";
-
       redirectByRole(role);
     } catch (err) {
+      // Log detailed error info
+      console.error("Registration error:", err);
+
+      if (err.response) {
+        console.error("Response data:", err.response.data);
+        console.error("Response status:", err.response.status);
+        console.error("Response headers:", err.response.headers);
+      } else if (err.request) {
+        console.error("No response received:", err.request);
+      } else {
+        console.error("Error message:", err.message);
+      }
+
       const message =
+        (err.response && err.response.data?.message) ||
         (err && err.message) ||
         (typeof err === "string" ? err : "Registration failed");
+
       setError(message);
     } finally {
       setLoading(false);

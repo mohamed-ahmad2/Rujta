@@ -39,18 +39,28 @@ export const useAuth = () => {
   };
 
   const handleRegister = async (dto) => {
-    await registerUser(dto);
-    const loginResponse = await login({
-      email: dto.email,
-      password: dto.password,
-    });
+    try {
+      await registerUser(dto);
 
-    setUser({
-      email: loginResponse.email,
-      role: loginResponse.role,
-    });
+      const loginResponse = await login({
+        email: dto.email,
+        password: dto.createPassword,
+      });
 
-    return loginResponse;
+      const user = {
+        email: loginResponse?.email ?? dto.email,
+        role: loginResponse?.role ?? "User",
+      };
+
+      setUser(user);
+      return user; 
+    } catch (error) {
+      console.error(
+        "Registration or login failed:",
+        error.response?.data || error.message
+      );
+      throw error;
+    }
   };
 
   const handleLogout = async () => {
