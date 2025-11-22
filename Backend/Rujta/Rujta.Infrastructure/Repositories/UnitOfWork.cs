@@ -20,6 +20,7 @@ namespace Rujta.Infrastructure.Repositories
         private INotificationRepository? _notifications;
         private IInventoryRepository? _inventoryItems;
         private ILogRepository? _logs;
+        private IStaffManagementRepository? _staffs;
 
         public UnitOfWork(AppDbContext context, IServiceProvider serviceProvider)
         {
@@ -38,6 +39,7 @@ namespace Rujta.Infrastructure.Repositories
         public INotificationRepository Notifications => _notifications ??= new NotificationRepository(_context);
         public IInventoryRepository InventoryItems => _inventoryItems ??= new InventoryRepository(_context);
         public ILogRepository Logs => _logs ??= new LogRepository(_context);
+        public IStaffManagementRepository Staffs => _staffs ??= new StaffManagementRepository(_context);
 
         // Save changes
         public async Task<int> SaveAsync(CancellationToken cancellationToken = default)
