@@ -1,103 +1,28 @@
-import React from "react";
+import React, { useEffect } from "react";
 import imge1 from "../../../assets/hero/img1.png";
-import imge2 from "../../../assets/hero/img2.png";
-import imge3 from "../../../assets/hero/img3.png";
-import imge4 from "../../../assets/hero/img4.png";
-import imge5 from "../../../assets/hero/img5.png";
-import imge6 from "../../../assets/hero/img6.png";
-import imge7 from "../../../assets/hero/img7.png";
-import imge8 from "../../../assets/hero/img8.png";
-
 import { FaStar } from "react-icons/fa";
-
-const ProductsData = [
-  {
-    id: 1,
-    img: imge1,
-    title: "Astaxanthin",
-    description: "Powerful antioxidant supplement",
-    price: "90 EGP",
-    rating: 5.0,
-    aosDelay: "0",
-  },
-  {
-    id: 2,
-    img: imge2,
-    title: "Fenofibrat",
-    description: "Antibiotic for bacterial infections",
-    price: "105 EGP",
-    rating: 4.5,
-    aosDelay: "200",
-  },
-  {
-    id: 3,
-    img: imge3,
-    title: "Brufen",
-    description: "Pain relief and anti-inflammatory",
-    price: "44 EGP",
-    rating: 4.7,
-    aosDelay: "400",
-  },
-  {
-    id: 4,
-    img: imge4,
-    title: "Antinal",
-    description: "Intestinal anti-infection medication",
-    price: "30 EGP",
-    rating: 5.0,
-    aosDelay: "600",
-  },
-  {
-    id: 5,
-    img: imge5,
-    title: "Omeprazole",
-    description: "Intestinal anti-infection medication",
-    price: "30 EGP",
-    rating: 4.0,
-    aosDelay: "600",
-  },
-  {
-    id: 6,
-    img: imge6,
-    title: "Omega 3",
-    description: "Supports heart and brain health",
-    price: "230 EGP",
-    rating: 4.0,
-    aosDelay: "600",
-  },
-  {
-    id: 7,
-    img: imge7,
-    title: "Bronchicum",
-    description: "Natural cough syrup",
-    price: "70 EGP",
-    rating: 4.0,
-    aosDelay: "600",
-  },
-  {
-    id: 8,
-    img: imge8,
-    title: "Starville Cream",
-    description: "Whitening and skin care cream",
-    price: "120 EGP",
-    rating: 4.0,
-    aosDelay: "600",
-  },
-];
+import useMedicine from "../../medicines/hook/useMedicines";
 
 const Products = ({ cart, setCart }) => {
+  const { medicines, fetchAll, loading, error } = useMedicine();
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  if (loading) return <p className="text-center">Loading medicines...</p>;
+  if (error) return <p className="text-center text-red-500">{error}</p>;
+
   const handleAddToCart = (product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
-        // 🟢 If already in cart, increase quantity
         return prevCart.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       } else {
-        // 🆕 Add new item with quantity 1
         return [...prevCart, { ...product, quantity: 1 }];
       }
     });
@@ -119,21 +44,25 @@ const Products = ({ cart, setCart }) => {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 justify-items-center">
-          {ProductsData.map((data) => (
+          {medicines.map((data) => (
             <div
               key={data.id}
               data-aos="fade-up"
               data-aos-delay={data.aosDelay}
               className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-500 
-                         border border-gray-100 w-[270px] overflow-hidden group"
+                        border border-gray-100 w-[270px] overflow-hidden group"
             >
               {/* Product Image */}
               <div className="relative bg-[#E8F3E8] flex justify-center items-center h-[200px] overflow-hidden">
                 <img
-                  src={data.img}
-                  alt={data.title}
+                  src={data.imageUrl || imge1}
+                  alt={data.name}
                   className="w-[150px] object-contain group-hover:scale-110 duration-300"
+                  onError={(e) => {
+                    e.currentTarget.src = imge1;
+                  }}
                 />
+
                 <span className="absolute top-3 left-3 bg-secondary text-white text-xs px-3 py-1 rounded-full">
                   Bestseller
                 </span>
@@ -148,12 +77,12 @@ const Products = ({ cart, setCart }) => {
                 </div>
 
                 <h3 className="text-lg font-bold text-secondary group-hover:text-[#2b472b] transition-colors">
-                  {data.title}
+                  {data.name}
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">{data.description}</p>
 
                 <p className="text-lg font-semibold text-secondary mt-3">
-                  {data.price}
+                  {data.price + " EGP"}
                 </p>
 
                 <button
@@ -171,12 +100,15 @@ const Products = ({ cart, setCart }) => {
 
         {/* Cart Section */}
         <div className="mt-20 text-center">
-          <h2 className="text-xl font-bold mb-4 text-secondary">🛒 Your Cart</h2>
+          <h2 className="text-xl font-bold mb-4 text-secondary">
+            🛒 Your Cart
+          </h2>
           {cart.length > 0 ? (
             <ul className="inline-block text-left text-gray-700 space-y-1">
               {cart.map((item) => (
                 <li key={item.id} className="border-b pb-1">
-                  {item.title} <span className="text-gray-500">× {item.quantity}</span>
+                  {item.name}{" "}
+                  <span className="text-gray-500">× {item.quantity}</span>
                 </li>
               ))}
             </ul>

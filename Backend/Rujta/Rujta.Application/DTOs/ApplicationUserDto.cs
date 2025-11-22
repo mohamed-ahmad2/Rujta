@@ -14,6 +14,6 @@ namespace Rujta.Application.DTOs
         public string Email { get; set; } = string.Empty;
         public string Location { get; set; } = string.Empty;
         public string? DeviceId { get; set; }
-        public IList<string>? Roles { get; set; } = new List<string>();
+        public string Role { get; set; } = string.Empty;
     }
 }
