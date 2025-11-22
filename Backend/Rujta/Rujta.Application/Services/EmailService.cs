@@ -30,13 +30,18 @@ namespace Rujta.Application.Services
                 string senderEmail = settings["SenderEmail"];
                 string senderName = settings["SenderName"];
                 string password = settings["SenderPassword"];
+                System.Net.ServicePointManager.SecurityProtocol =
+    SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+
 
                 using var client = new SmtpClient(smtpHost, smtpPort)
                 {
-                    Credentials = new NetworkCredential(senderEmail, password),
                     EnableSsl = true,
-                    UseDefaultCredentials = false
+                    DeliveryMethod = SmtpDeliveryMethod.Network,
+                    UseDefaultCredentials = false,
+                    Credentials = new NetworkCredential(senderEmail, password)
                 };
+
 
                 var mailMessage = new MailMessage
                 {
@@ -51,8 +56,10 @@ namespace Rujta.Application.Services
             }
             catch (Exception ex)
             {
+                Console.WriteLine("SMTP ERROR: " + ex.ToString());
                 throw new Exception("Email sending failed: " + ex.Message);
             }
+
         }
 
     }
