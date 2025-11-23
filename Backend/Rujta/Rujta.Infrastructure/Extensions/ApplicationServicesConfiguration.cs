@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Rujta.Application.Services;
+using Rujta.Infrastructure.BackgroundJobs;
 using Rujta.Infrastructure.Helperrs;
 using Rujta.Infrastructure.Identity.Helpers;
 using Rujta.Infrastructure.Identity.Services;
@@ -29,7 +30,9 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IPharmacyRepository, PharmacyRepo>();
             services.AddScoped<PharmacyDistanceService>();
             services.AddScoped<IAuthService, AuthService>();
-
+            services.AddScoped<ILogService, LogService>();
+            services.AddHostedService<RefreshTokenCleanupService>();
+            
 
             services.AddScoped<PharmacyDistanceService>();
 

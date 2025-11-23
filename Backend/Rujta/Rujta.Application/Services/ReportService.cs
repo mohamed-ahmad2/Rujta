@@ -13,11 +13,11 @@ namespace Rujta.Application.Services
 {
     public class ReportService : IReportService
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IUnitOfWork _unitOfWork;
 
         public ReportService(IUnitOfWork uow)
         {
-            _uow = uow;
+            _unitOfWork = uow;
         }
 
         public async Task<PharmacyReportDto> GetPharmacyReportAsync(
@@ -25,7 +25,7 @@ namespace Rujta.Application.Services
             CancellationToken cancellationToken = default)
         {
             // 1️⃣ جلب الصيدلية المرتبطة بالـ Admin
-            var pharmacy = (await _uow.Pharmacies.FindAsync(p => p.AdminId == adminId, cancellationToken))
+            var pharmacy = (await _unitOfWork.Pharmacies.FindAsync(p => p.AdminId == adminId, cancellationToken))
                            .FirstOrDefault();
 
             if (pharmacy == null)
@@ -42,7 +42,7 @@ namespace Rujta.Application.Services
             };
 
             // 3️⃣ جلب الطلبات ضمن الفترة المحددة
-            var orders = (await _uow.Orders.FindAsync(
+            var orders = (await _unitOfWork.Orders.FindAsync(
                 o => o.PharmacyID == pharmacy.Id &&
                      o.OrderDate >= filter.From && o.OrderDate <= filter.To,
                 cancellationToken))
@@ -67,7 +67,7 @@ namespace Rujta.Application.Services
             };
 
             // 5️⃣ جلب عناصر المخزون
-            var inventoryItems = (await _uow.InventoryItems.FindAsync(
+            var inventoryItems = (await _unitOfWork.InventoryItems.FindAsync(
                 i => i.PharmacyID == pharmacy.Id,
                 cancellationToken)).ToList();
 

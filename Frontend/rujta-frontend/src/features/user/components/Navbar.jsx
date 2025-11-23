@@ -22,11 +22,11 @@ const Navbar = ({ cart, onCartClick }) => {
                 type="text"
                 placeholder="Search medicines..."
                 className="w-full rounded-full border border-gray-300 px-4 py-2 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-secondary transition-all duration-300"
+                          focus:outline-none focus:ring-2 focus:ring-secondary transition-all duration-300"
               />
               <IoMdSearch
                 className="text-gray-500 group-hover:text-secondary absolute 
-                           top-1/2 -translate-y-1/2 right-3 text-lg"
+                          top-1/2 -translate-y-1/2 right-3 text-lg"
               />
             </div>
           </div>
@@ -37,7 +37,7 @@ const Navbar = ({ cart, onCartClick }) => {
             {cart.length > 0 && (
               <span
                 className="absolute -top-2 -right-2 bg-red-500 text-white text-xs 
-                           font-bold rounded-full h-5 w-5 flex items-center justify-center"
+                          font-bold rounded-full h-5 w-5 flex items-center justify-center"
               >
                 {cart.length}
               </span>

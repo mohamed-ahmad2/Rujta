@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces.InterfaceServices;
 using System;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -23,7 +24,7 @@ namespace Rujta.API.Controllers
         [HttpGet("PharmacyReport")]
         public async Task<IActionResult> GetPharmacyReport()
         {
-            var adminIdClaim = User.FindFirst("id")?.Value;
+            var adminIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
             if (adminIdClaim == null) return Forbid();
 
             var adminId = Guid.Parse(adminIdClaim);

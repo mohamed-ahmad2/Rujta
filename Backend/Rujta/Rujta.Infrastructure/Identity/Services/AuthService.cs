@@ -36,6 +36,12 @@ namespace Rujta.Infrastructure.Identity.Services
             _configuration = configuration;
         }
 
+        public async Task<ApplicationUserDto?> GetUserByEmailAsync(string email)
+        {
+            return await _unitOfWork.Users.GetByEmailAsync(email);
+        }
+
+
         public async Task<bool> CheckPasswordAsync(string email, string password, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByEmailAsync(email);
@@ -162,17 +168,26 @@ namespace Rujta.Infrastructure.Identity.Services
                 }
             }
 
-            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId);
+            bool loginOrRegister = true;
+            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId, loginOrRegister);
 
-            
+
+            SetRefreshTokenCookie(tokens.RefreshToken);
             SetJwtCookie(tokens.AccessToken);
 
             return tokens;
         }
 
 
-        public async Task<TokenDto> RefreshAccessTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
+        public async Task<TokenDto> RefreshAccessTokenAsync(string? refreshToken, CancellationToken cancellationToken = default)
         {
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null)
+                throw new InvalidOperationException("HttpContext is null");
+
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                refreshToken = context.Request.Cookies["refresh_token"];
+
             if (string.IsNullOrWhiteSpace(refreshToken))
             {
                 _logger.LogWarning("RefreshAccessTokenAsync: Refresh token is null or empty");
@@ -199,8 +214,8 @@ namespace Rujta.Infrastructure.Identity.Services
                 throw new InvalidOperationException("DeviceId is required for generating new tokens.");
             }
 
-            
-            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId);
+            bool loginOrRegister = false;
+            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId, loginOrRegister, refreshToken);
 
             SetRefreshTokenCookie(tokens.RefreshToken);
             SetJwtCookie(tokens.AccessToken);
@@ -265,7 +280,6 @@ namespace Rujta.Infrastructure.Identity.Services
             else
             {
                 await _tokenHelper.RevokeOldRefreshTokensAsync(userId);
-
                 _logger.LogInformation(
                     "Logout executed for user {UserId} from IP {IP} for all devices",
                     userId, ipAddress
@@ -285,7 +299,6 @@ namespace Rujta.Infrastructure.Identity.Services
                 Secure = true,
                 SameSite = SameSiteMode.None,
                 Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
-                Domain = "localhost"
             };
 
             context.Response.Cookies.Append("jwt", accessToken, cookieOptions);
@@ -310,7 +323,7 @@ namespace Rujta.Infrastructure.Identity.Services
                 HttpOnly = true, 
                 Secure = true,
                 SameSite = SameSiteMode.None, 
-                Expires = DateTime.UtcNow.AddDays(expirationDays)
+                Expires = DateTime.UtcNow.AddDays(expirationDays),
             };
 
             context.Response.Cookies.Append("refresh_token", refreshToken, cookieOptions);

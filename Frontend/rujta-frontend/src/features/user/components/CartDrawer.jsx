@@ -23,10 +23,6 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     );
   };
 
-  // ❌ Remove item
-  const handleRemove = (id) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== id));
-  };
 
   // 💰 Total price
   const total = cart.reduce(

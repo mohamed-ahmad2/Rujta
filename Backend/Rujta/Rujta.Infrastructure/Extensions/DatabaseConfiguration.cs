@@ -21,7 +21,7 @@ namespace Rujta.Infrastructure.Extensions
 
             connectionString = connectionString.Replace("{DB_PASSWORD}", dbPassword);
 
-            Console.WriteLine("Current ConnectionString (without password shown): Server=..., Database=...");
+            Console.WriteLine(connectionString);
 
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString)
