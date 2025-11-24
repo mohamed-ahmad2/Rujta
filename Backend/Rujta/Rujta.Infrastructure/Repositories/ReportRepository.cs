@@ -119,18 +119,19 @@ namespace Rujta.Infrastructure.Repositories
         // TOP PRODUCTS
         // ============================================
         public async Task<IEnumerable<TopProductDto>> GetTopProductsAsync(
-            int pharmacyId,
-            int topN,
-            DateTime from,
-            DateTime to,
-            CancellationToken cancellationToken = default)
+    int pharmacyId,
+    int topN,
+    DateTime from,
+    DateTime to,
+    CancellationToken cancellationToken = default)
         {
             return await _context.OrderItems
                 .Where(oi =>
                     oi.Order.PharmacyID == pharmacyId &&
                     oi.Order.OrderDate >= from &&
-                    oi.Order.OrderDate <= to)
-                .GroupBy(oi => new { oi.MedicineID, oi.Medicine.Name })
+                    oi.Order.OrderDate <= to &&
+                    oi.Medicine != null)
+                .GroupBy(oi => new { oi.MedicineID, oi.Medicine!.Name })
                 .Select(g => new TopProductDto
                 {
                     MedicineId = g.Key.MedicineID,
@@ -152,12 +153,12 @@ namespace Rujta.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return await _context.InventoryItems
-                .Where(i => i.PharmacyID == pharmacyId && i.Quantity <= threshold)
+                .Where(i => i.PharmacyID == pharmacyId && i.Quantity <= threshold && i.Medicine != null)
                 .Include(i => i.Medicine)
                 .Select(i => new LowStockItemDto
                 {
                     MedicineId = i.MedicineID,
-                    MedicineName = i.Medicine.Name,
+                    MedicineName = i.Medicine!.Name,
                     CurrentStock = i.Quantity,
                     ReorderLevel = threshold
                 })
@@ -174,13 +175,13 @@ namespace Rujta.Infrastructure.Repositories
             var today = DateTime.UtcNow.Date;
 
             return await _context.InventoryItems
-                .Where(i => i.PharmacyID == pharmacyId && i.ExpiryDate < today)
+                .Where(i => i.PharmacyID == pharmacyId && i.ExpiryDate < today && i.Medicine != null)
                 .Include(i => i.Medicine)
                 .Select(i => new ExpiredItemDto
                 {
                     InventoryItemId = i.Id,
                     MedicineId = i.MedicineID,
-                    MedicineName = i.Medicine.Name,
+                    MedicineName = i.Medicine!.Name,
                     ExpiryDate = i.ExpiryDate,
                     Quantity = i.Quantity
                 })
