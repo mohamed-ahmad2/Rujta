@@ -17,6 +17,9 @@ namespace Rujta.API
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            builder.Services.AddAutoMapper(typeof(StaffProfile).Assembly);
+
+
             // Database
             builder.Services.AddCustomDatabase(builder.Configuration);
 

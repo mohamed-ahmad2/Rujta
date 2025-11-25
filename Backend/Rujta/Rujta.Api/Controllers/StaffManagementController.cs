@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces.InterfaceServices;
+using System;
+using System.Threading.Tasks;
 
 namespace Rujta.API.Controllers
 {
@@ -12,19 +14,20 @@ namespace Rujta.API.Controllers
     {
         private readonly IStaffManagementService _service;
 
+
         public StaffManagementController(IStaffManagementService service)
         {
             _service = service;
         }
 
-        [HttpGet("GetAllStaff")]
+        [HttpGet]
         public async Task<IActionResult> GetAllStaff()
         {
             var staffs = await _service.GetAllAsync();
             return Ok(staffs);
         }
 
-        [HttpGet("GetStaffById/{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetStaffById(int id)
         {
             var staff = await _service.GetByIdAsync(id);
@@ -32,31 +35,30 @@ namespace Rujta.API.Controllers
             return Ok(staff);
         }
 
-        [HttpPost("AddStaff")]
-        public async Task<IActionResult> AddStaff([FromBody] StaffDto staffDto)
+        [HttpPost]
+        public async Task<IActionResult> AddStaff([FromBody] StaffDto dto)
         {
-            await _service.AddAsync(staffDto);
-            return Ok(staffDto);
+            await _service.AddAsync(dto);
+            return Ok(dto);
         }
 
-        [HttpPut("UpdateStaff/{id}")]
-        public async Task<IActionResult> UpdateStaff(int id, [FromBody] StaffDto staffDto)
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> UpdateStaff(int id, [FromBody] StaffDto dto)
         {
-            await _service.UpdateAsync(id, staffDto);
+            await _service.UpdateAsync(id, dto);
             return NoContent();
         }
 
-        [HttpDelete("DeleteStaff/{id}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteStaff(int id)
         {
             await _service.DeleteAsync(id);
             return NoContent();
         }
-
         [HttpGet("GetStaffByManager/{managerId}")]
         public async Task<IActionResult> GetStaffByManager(Guid managerId)
         {
-            var staffs = await _service.GetStaffByManagerAsync(managerId);
+            var staffs = await (_service as dynamic).GetStaffByManagerAsync(managerId);
             return Ok(staffs);
         }
     }
