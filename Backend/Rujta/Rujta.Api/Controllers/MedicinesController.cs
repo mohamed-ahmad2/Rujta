@@ -33,6 +33,7 @@ namespace Rujta.API.Controllers
             return Ok(medicine);
         }
 
+        [Authorize(Roles = "Admin,PharmacyAdmin")]
         [HttpPost]
         public async Task<ActionResult> Add([FromBody] MedicineDto dto)
         {
@@ -42,6 +43,7 @@ namespace Rujta.API.Controllers
             return Ok();
         }
 
+        [Authorize(Roles = "Admin,PharmacyAdmin")]
         [HttpPut("{id}")]
         public async Task<ActionResult> Update(int id, [FromBody] MedicineDto dto)
         {
@@ -51,6 +53,7 @@ namespace Rujta.API.Controllers
             return NoContent();
         }
 
+        [Authorize(Roles = "Admin,PharmacyAdmin")]
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(int id)
         {
@@ -60,7 +63,6 @@ namespace Rujta.API.Controllers
             return NoContent();
         }
 
-        [AllowAnonymous]
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<MedicineDto>>> Search([FromQuery] string query)
         {

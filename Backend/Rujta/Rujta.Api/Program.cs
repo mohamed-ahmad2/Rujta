@@ -12,6 +12,8 @@ namespace Rujta.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Logging.AddConsole();
+
             // Add services Swagger
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
@@ -46,6 +48,7 @@ namespace Rujta.API
 
             if (app.Environment.IsDevelopment())
             {
+                app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Rujta.Application.Services;
+using Rujta.Infrastructure.BackgroundJobs;
 using Rujta.Infrastructure.Helperrs;
 using Rujta.Infrastructure.Identity.Helpers;
 using Rujta.Infrastructure.Identity.Services;

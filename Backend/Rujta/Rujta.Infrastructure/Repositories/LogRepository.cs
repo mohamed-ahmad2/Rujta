@@ -8,12 +8,8 @@ namespace Rujta.Infrastructure.Repositories
 {
     public class LogRepository : GenericRepository<Log>, ILogRepository
     {
-        private readonly AppDbContext _context;
-
         public LogRepository(AppDbContext context) : base(context)
-        {
-            _context = context;
-        }
+        {}
 
         public IQueryable<Log> Query()
         {

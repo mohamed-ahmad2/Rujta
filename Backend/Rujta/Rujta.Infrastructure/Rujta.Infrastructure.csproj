@@ -33,10 +33,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Certificates\" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Update="Certificates\jwt-cert.pfx">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
