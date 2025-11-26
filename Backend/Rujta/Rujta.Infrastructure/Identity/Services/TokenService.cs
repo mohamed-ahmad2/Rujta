@@ -1,8 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Identity.Helpers;
-
-namespace Rujta.Infrastructure.Identity.Services
+﻿namespace Rujta.Infrastructure.Identity.Services
 {
     public class TokenService : ITokenService
     {
@@ -39,23 +35,23 @@ namespace Rujta.Infrastructure.Identity.Services
                 var certPath = Path.Combine(AppContext.BaseDirectory, "Certificates", "jwt-cert.pfx");
                 var certPassword =
                     Environment.GetEnvironmentVariable("JWT__CertPassword")
-                    ?? throw new InvalidOperationException("JWT certificate password not found in environment variables.");
+                    ?? throw new InvalidOperationException(TokenMessages.JwtCertificatePasswordNotFound);
 
 
                 if (!File.Exists(certPath))
-                    throw new FileNotFoundException($"Certificate file not found at path: {certPath}");
+                    throw new FileNotFoundException(string.Format(TokenMessages.JwtCertificateFileNotFound, certPath));
 
                 var cert = new X509Certificate2(certPath, certPassword, X509KeyStorageFlags.EphemeralKeySet);
 
                 _privateKey = new RsaSecurityKey(cert.GetRSAPrivateKey());
                 _publicKey = new RsaSecurityKey(cert.GetRSAPublicKey());
 
-                _logger.LogInformation("JWT certificate loaded successfully");
+                _logger.LogInformation(LogConstants.JWTCertificateLoadedSuccessfully);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to load JWT certificate");
-                throw new InvalidOperationException("Cannot initialize TokenService without JWT certificate", ex);
+                _logger.LogError(ex, LogConstants.FailedToLoadJWTCertificate);
+                throw new InvalidOperationException(TokenMessages.CannotInitTokenServiceWithoutJWTCertificate, ex);
             }
         }
 
@@ -82,7 +78,7 @@ namespace Rujta.Infrastructure.Identity.Services
             var jwtSection = _configuration.GetSection("JWT");
             var issuer = jwtSection["Issuer"];
             var audience = jwtSection["Audience"];
-            var accessTokenMinutes = double.TryParse(jwtSection["AccessTokenExpirationMinutes"], out var mins) ? mins : 10;
+            var accessTokenMinutes = double.TryParse(jwtSection[TokenKeys.AccessTokenExpirationMinutes], out var mins) ? mins : 10;
 
             var creds = new SigningCredentials(_privateKey, SecurityAlgorithms.RsaSha256);
 
@@ -106,7 +102,7 @@ namespace Rujta.Infrastructure.Identity.Services
                 throw new ArgumentNullException(nameof(userDto));
 
             if (string.IsNullOrEmpty(deviceId))
-                throw new SecurityTokenException("Missing device identifier.");
+                throw new SecurityTokenException(TokenMessages.DeviceIdRequired);
 
 
             ApplicationUser user = _mapper.Map<ApplicationUser>(userDto);
@@ -117,7 +113,7 @@ namespace Rujta.Infrastructure.Identity.Services
             var hashedToken = Convert.ToBase64String(sha256.ComputeHash(Encoding.UTF8.GetBytes(rawToken)));
 
             var jwtSection = _configuration.GetSection("JWT");
-            var refreshDays = double.TryParse(jwtSection["RefreshTokenExpirationDays"], out var days) ? days : 30;
+            var refreshDays = double.TryParse(jwtSection[TokenKeys.RefreshTokenExpirationDays], out var days) ? days : 30;
             
             var refreshToken = new RefreshToken
             {
@@ -179,23 +175,23 @@ namespace Rujta.Infrastructure.Identity.Services
         public async Task<(string Token, string Jti, DateTime Expiration)> GenerateAccessTokenFromRefreshTokenAsync(string rawRefreshToken, ApplicationUserDto userDto, string deviceId)
         {
             if (string.IsNullOrWhiteSpace(rawRefreshToken))
-                throw new ArgumentException("Invalid refresh token", nameof(rawRefreshToken));
+                throw new ArgumentException(TokenMessages.InvalidRefreshToken, nameof(rawRefreshToken));
             
 
             if (string.IsNullOrEmpty(deviceId))
-                throw new SecurityTokenException("Missing device identifier");
+                throw new SecurityTokenException(TokenMessages.DeviceIdRequired);
 
             var verifiedToken = await VerifyRefreshTokenAsync(userDto, rawRefreshToken);
             if (verifiedToken == null)
             {
                 _logger.LogWarning("GenerateAccessTokenFromRefreshTokenAsync: Refresh token verification failed for user {UserId}", userDto.Id);
-                throw new SecurityTokenException("Invalid or expired refresh token.");
+                throw new SecurityTokenException(TokenMessages.InvalidRefreshToken);
             }
 
             if (!string.Equals(verifiedToken.DeviceInfo, deviceId, StringComparison.Ordinal))
             {
                 _logger.LogWarning("Refresh token used from unknown device for user {UserId}", userDto.Id);
-                throw new SecurityTokenException("Refresh token used from unknown device");
+                throw new SecurityTokenException(TokenMessages.RefreshTokenUsedFromUnknownDevice);
             }
 
             var jwtId = Guid.NewGuid().ToString();
@@ -209,7 +205,7 @@ namespace Rujta.Infrastructure.Identity.Services
             _logger.LogInformation("Access token generated from refresh token for user {UserId}", userDto.Id);
 
             var jwtSection = _configuration.GetSection("JWT");
-            var accessTokenMinutes = double.TryParse(jwtSection["AccessTokenExpirationMinutes"], out var mins) ? mins : 10;
+            var accessTokenMinutes = double.TryParse(jwtSection[TokenKeys.AccessTokenExpirationMinutes], out var mins) ? mins : 10;
             var expiration = DateTime.UtcNow.AddMinutes(accessTokenMinutes);
 
             return (accessToken, jwtId, expiration);

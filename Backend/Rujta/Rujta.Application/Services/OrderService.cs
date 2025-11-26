@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Rujta.Application.Constants;
 using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices;
@@ -34,14 +35,14 @@ namespace Rujta.Application.Services
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
             if (order == null)
-                return (false, "Order not found.");
+                return (false, OrderMessages.OrderNotFound);
 
             if (!CanChangeStatus(order.Status, OrderStatus.Accepted))
-                return (false, "Invalid state transition.");
+                return (false, OrderMessages.InvalidStateTransition);
 
             order.Status = OrderStatus.Accepted;
             await _unitOfWork.SaveAsync(cancellationToken);
-            return (true, "Order accepted.");
+            return (true, OrderMessages.OrderAccepted);
 
         }
 
@@ -49,14 +50,14 @@ namespace Rujta.Application.Services
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
             if (order == null)
-                return (false, "Order not found.");
+                return (false, OrderMessages.OrderNotFound);
 
             if (!CanChangeStatus(order.Status, OrderStatus.CancelledByUser))
-                return (false, "Invalid state transition.");
+                return (false, OrderMessages.InvalidStateTransition);
 
             order.Status = OrderStatus.CancelledByUser;
             await _unitOfWork.SaveAsync(cancellationToken);
-            return (true, "Order Cancel By User");
+            return (true, OrderMessages.OrderCancelByUser);
 
         }
 
@@ -64,55 +65,55 @@ namespace Rujta.Application.Services
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
             if (order == null)
-                return (false, "Order not found.");
+                return (false, OrderMessages.OrderNotFound);
 
             if (!CanChangeStatus(order.Status, OrderStatus.CancelledByPharmacy))
-                return (false, "Invalid state transition.");
+                return (false, OrderMessages.InvalidStateTransition);
             order.Status = OrderStatus.CancelledByPharmacy;
             await _unitOfWork.SaveAsync(cancellationToken);
-            return (true, "Order Cancel By Pharmacy");
+            return (true, OrderMessages.OrderCancelByPharmacy);
 
         }
 
         public async Task<(bool success, string message)> ProcessOrderAsync(int id, CancellationToken cancellationToken = default)
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(id);
-            if (order == null) return (false, "Order not found.");
+            if (order == null) return (false, OrderMessages.OrderNotFound);
 
             if (!CanChangeStatus(order.Status, OrderStatus.Processing))
-                return (false, "Invalid state transition.");
+                return (false, OrderMessages.InvalidStateTransition);
 
             order.Status = OrderStatus.Processing;
             await _unitOfWork.SaveAsync(cancellationToken);
-            return (true, "Order procces now.");
+            return (true, OrderMessages.OrderProcessNow);
 
         }
 
         public async Task<(bool success, string message)> OutForDeliveryAsync(int id, CancellationToken cancellationToken = default)
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(id);
-            if (order == null) return (false, "Order not found.");
+            if (order == null) return (false, OrderMessages.OrderNotFound);
 
             if (!CanChangeStatus(order.Status, OrderStatus.OutForDelivery))
-                return (false, "Invalid state transition.");
+                return (false, OrderMessages.InvalidStateTransition);
 
             order.Status = OrderStatus.OutForDelivery;
             await _unitOfWork.SaveAsync(cancellationToken);
-            return (true, "Order out for delivery now.");
+            return (true, OrderMessages.OrderOutForDelivery);
 
         }
 
         public async Task<(bool success, string message)> MarkAsDeliveredAsync(int id, CancellationToken cancellationToken = default)
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(id);
-            if (order == null) return (false, "Order not found.");
+            if (order == null) return (false, OrderMessages.OrderNotFound);
 
             if (!CanChangeStatus(order.Status, OrderStatus.Delivered))
-                return (false, "Invalid state transition.");
+                return (false, OrderMessages.InvalidStateTransition);
 
             order.Status = OrderStatus.Delivered;
             await _unitOfWork.SaveAsync(cancellationToken);
-            return (true, "Order mark as delivered now.");
+            return (true, OrderMessages.OrderMarkAsDelivered);
 
         }
 

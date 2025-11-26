@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Rujta.Application.DTOs;
+using Rujta.Infrastructure.Constants;
 
 namespace Rujta.API.Controllers
 {
@@ -75,7 +76,7 @@ namespace Rujta.API.Controllers
 
         private string GetUser()
         {
-            return User.Identity?.Name ?? "UnknownUser";
+            return User.Identity?.Name ?? AuthMessages.UnknownUser;
         }
 
     }

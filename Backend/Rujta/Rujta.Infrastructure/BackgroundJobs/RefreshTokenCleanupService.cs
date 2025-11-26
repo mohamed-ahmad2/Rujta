@@ -43,9 +43,6 @@ namespace Rujta.Infrastructure.BackgroundJobs
                     _logger.LogError(ex, "Error cleaning up refresh tokens");
                 }
 
-                // NOSONAR
-                //await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
-
                 var localTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"));
                 var nextRunTime = localTime.Date.AddDays(1).AddHours(3);
                 var delay = nextRunTime - localTime;

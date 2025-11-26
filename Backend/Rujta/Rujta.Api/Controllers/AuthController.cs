@@ -1,7 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
+using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
 
@@ -28,7 +25,7 @@ namespace Rujta.API.Controllers
                 var passwordValid = await _authService.CheckPasswordAsync(dto.Email, dto.Password);
                 if (!passwordValid)
                 {
-                    await _logService.AddLogAsync(dto.Email, "Failed login attempt");
+                    await _logService.AddLogAsync(dto.Email, LogConstants.FailedLogin);
                     return Unauthorized();
                 }
 
@@ -36,7 +33,7 @@ namespace Rujta.API.Controllers
                 var user = await _authService.GetUserByEmailAsync(dto.Email);
                 var role = user?.Role ?? "User";
 
-                await _logService.AddLogAsync(dto.Email, "User logged in successfully");
+                await _logService.AddLogAsync(dto.Email, LogConstants.UserLoggedIn);
 
                 return Ok(new
                 {
@@ -62,7 +59,7 @@ namespace Rujta.API.Controllers
                 var role = user?.Role ?? "User";
 
 
-                await _logService.AddLogAsync(dto.Email, "New user registered");
+                await _logService.AddLogAsync(dto.Email, LogConstants.NewUserRegistered);
 
                 return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email });
             }
@@ -78,21 +75,21 @@ namespace Rujta.API.Controllers
         {
             try
             {
-                var refreshToken = Request.Cookies["refresh_token"];
+                var refreshToken = Request.Cookies[CookieKeys.RefreshToken];
                 if (refreshToken == null)
                 {
-                    await _logService.AddLogAsync("UnknownUser", "refreshToken not exist in cookies");
-                    return BadRequest(new { message = "refreshToken not exist in cookies" });
+                    await _logService.AddLogAsync(LogConstants.UnknownUser, LogConstants.RefreshTokenNotExist);
+                    return BadRequest(new { message = AuthMessages.RefreshTokenNotExist });
                 }
                 var tokens = await _authService.RefreshAccessTokenAsync(refreshToken);
 
-                await _logService.AddLogAsync("UnknownUser", "Refresh token used");
+                await _logService.AddLogAsync(LogConstants.UnknownUser, LogConstants.RefreshTokenUsed);
 
                 return Ok(tokens);
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync("UnknownUser", $"Refresh token error: {ex.Message}");
+                await _logService.AddLogAsync(LogConstants.UnknownUser, $"Refresh token error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -105,12 +102,12 @@ namespace Rujta.API.Controllers
             {
                 var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
                 if (userIdClaim == null)
-                    return Unauthorized("User not found in token.");
+                    return Unauthorized(AuthMessages.UserNotFoundInToken);
 
                 if (!Guid.TryParse(userIdClaim, out var userId))
-                    return BadRequest("Invalid user ID in token.");
+                    return BadRequest(AuthMessages.InvalidUserIdInToken);
 
-                var refreshToken = Request.Cookies["refresh_token"];
+                var refreshToken = Request.Cookies[CookieKeys.RefreshToken];
                 if (!string.IsNullOrEmpty(refreshToken))
                 {
                     await _authService.LogoutAsync(userId, refreshToken);
@@ -120,16 +117,16 @@ namespace Rujta.API.Controllers
                     await _authService.LogoutAsync(userId);
                 }
 
-                await _logService.AddLogAsync(userId.ToString(), "User logged out");
+                await _logService.AddLogAsync(userId.ToString(), LogConstants.LogoutMessage);
 
-                Response.Cookies.Delete("jwt");
-                Response.Cookies.Delete("refresh_token");
+                Response.Cookies.Delete(CookieKeys.AccessToken);
+                Response.Cookies.Delete(CookieKeys.RefreshToken);
 
                 return NoContent();
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(User?.Identity?.Name ?? "UnknownUser", $"Logout error: {ex.Message}");
+                await _logService.AddLogAsync(User?.Identity?.Name ?? LogConstants.UnknownUser, $"Logout error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }

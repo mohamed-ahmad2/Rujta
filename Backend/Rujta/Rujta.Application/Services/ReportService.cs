@@ -1,13 +1,8 @@
 ﻿using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
 using Rujta.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+
 
 namespace Rujta.Application.Services
 {
@@ -24,14 +19,14 @@ namespace Rujta.Application.Services
             Guid adminId,
             CancellationToken cancellationToken = default)
         {
-            // 1️⃣ جلب الصيدلية المرتبطة بالـ Admin
+            
             var pharmacy = (await _unitOfWork.Pharmacies.FindAsync(p => p.AdminId == adminId, cancellationToken))
                            .FirstOrDefault();
 
             if (pharmacy == null)
                 throw new KeyNotFoundException("Pharmacy not found for this admin.");
 
-            // 2️⃣ بناء filter داخليًا
+            
             var filter = new ReportFilterDto
             {
                 PharmacyId = pharmacy.Id,
@@ -41,14 +36,14 @@ namespace Rujta.Application.Services
                 LowStockThreshold = 10
             };
 
-            // 3️⃣ جلب الطلبات ضمن الفترة المحددة
+            
             var orders = (await _unitOfWork.Orders.FindAsync(
                 o => o.PharmacyID == pharmacy.Id &&
                      o.OrderDate >= filter.From && o.OrderDate <= filter.To,
                 cancellationToken))
                 .ToList();
 
-            // 4️⃣ حساب إجمالي المبيعات وعدد الطلبات
+            
             var totalSales = orders.Sum(o => o.TotalPrice);
             var totalOrders = orders.Count;
 
@@ -66,7 +61,7 @@ namespace Rujta.Application.Services
                 AverageOrderValue = avgOrderValue
             };
 
-            // 5️⃣ جلب عناصر المخزون
+            
             var inventoryItems = (await _unitOfWork.InventoryItems.FindAsync(
                 i => i.PharmacyID == pharmacy.Id,
                 cancellationToken)).ToList();
@@ -78,7 +73,7 @@ namespace Rujta.Application.Services
                 OutOfStockCount = inventoryItems.Count(i => i.Quantity == 0)
             };
 
-            // 6️⃣ TopProducts
+            
             var topProducts = orders
                 .SelectMany(o => o.OrderItems)
                 .GroupBy(oi => oi.MedicineID)
@@ -93,32 +88,31 @@ namespace Rujta.Application.Services
                 .Take(filter.TopNProducts)
                 .ToList();
 
-            // 7️⃣ LowStockItems
+            
             var lowStockItemDtos = inventoryItems
                 .Where(i => i.Quantity <= filter.LowStockThreshold)
                 .Select(i => new LowStockItemDto
                 {
                     MedicineId = i.MedicineID,
-                    MedicineName = i.Medicine.Name,
+                    MedicineName = i.Medicine?.Name ?? "Unknown Medicine",
                     CurrentStock = i.Quantity,
                     ReorderLevel = filter.LowStockThreshold
                 })
                 .ToList();
 
-            // 8️⃣ ExpiredItems
+
             var expiredItems = inventoryItems
                 .Where(i => i.ExpiryDate < DateTime.UtcNow)
                 .Select(i => new ExpiredItemDto
                 {
                     InventoryItemId = i.Id,
                     MedicineId = i.MedicineID,
-                    MedicineName = i.Medicine.Name,
+                    MedicineName = i.Medicine?.Name ?? "Unknown Medicine",
                     ExpiryDate = i.ExpiryDate,
                     Quantity = i.Quantity
                 })
                 .ToList();
 
-            // 9️⃣ DailySales chart
             var dailySales = orders
                 .GroupBy(o => o.OrderDate.Date)
                 .Select(g => new DailySalesDto
@@ -130,12 +124,10 @@ namespace Rujta.Application.Services
                 .OrderBy(x => x.DateLabel)
                 .ToList();
 
-            // 🔟 Alerts
             var alerts = new List<string>();
             if (lowStockItemDtos.Any()) alerts.Add("Some items are low in stock!");
             if (expiredItems.Any()) alerts.Add("Some items are expired!");
 
-            // 1️⃣1️⃣ إنشاء التقرير النهائي
             var report = new PharmacyReportDto
             {
                 PharmacyId = pharmacy.Id,

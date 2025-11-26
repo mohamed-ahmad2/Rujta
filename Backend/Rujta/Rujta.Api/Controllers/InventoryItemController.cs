@@ -1,10 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using Rujta.Infrastructure.Constants;
 
 namespace Rujta.Api.Controllers
 {
@@ -26,10 +20,10 @@ namespace Rujta.Api.Controllers
         {
             return User.Identity?.Name
                    ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                   ?? "UnknownUser";
+                   ?? AuthMessages.UnknownUser;
         }
 
-        // ----------------- Get all items -----------------
+ 
         [HttpGet(Name = "GetAllInventoryItems")]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetAll()
         {
@@ -38,7 +32,7 @@ namespace Rujta.Api.Controllers
             return Ok(items);
         }
 
-        // ----------------- Get single item -----------------
+
         [HttpGet("{id}", Name = "GetInventoryItemById")]
         public async Task<ActionResult<InventoryItemDto>> GetById(int id)
         {
@@ -50,7 +44,6 @@ namespace Rujta.Api.Controllers
             return Ok(item);
         }
 
-        // ----------------- Add new item -----------------
         [HttpPost(Name = "AddInventoryItem")]
         public async Task<ActionResult> Add([FromBody] InventoryItemDto dto)
         {
@@ -65,7 +58,6 @@ namespace Rujta.Api.Controllers
             return CreatedAtRoute("GetInventoryItemById", new { id = dto.Id }, dto);
         }
 
-        // ----------------- Update item -----------------
         [HttpPut("{id}", Name = "UpdateInventoryItem")]
         public async Task<ActionResult> Update(int id, [FromBody] InventoryItemDto dto)
         {
@@ -87,7 +79,6 @@ namespace Rujta.Api.Controllers
             }
         }
 
-        // ----------------- Delete item -----------------
         [HttpDelete("{id}", Name = "DeleteInventoryItem")]
         public async Task<ActionResult> Delete(int id)
         {
@@ -106,7 +97,6 @@ namespace Rujta.Api.Controllers
             return NoContent();
         }
 
-        // ----------------- Helper: Get PharmacyID from JWT claims -----------------
         private int GetPharmacyIdFromClaims()
         {
             var claim = User.FindFirst("PharmacyID");

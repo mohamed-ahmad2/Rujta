@@ -1,11 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Security.Claims;
+﻿using Rujta.Application.Constants;
+using Rujta.Infrastructure.Constants;
 
 namespace Rujta.Api.Controllers
 {
@@ -23,7 +17,7 @@ namespace Rujta.Api.Controllers
             _logService = logService;
         }
 
-        private string GetUser() => User.Identity?.Name ?? "UnknownUser";
+        private string GetUser() => User.Identity?.Name ?? LogConstants.UnknownUser;
 
         // Create a new order
         [HttpPost]
@@ -59,7 +53,7 @@ namespace Rujta.Api.Controllers
             var order = await _orderService.GetByIdAsync(id, cancellationToken);
 
             if (order == null)
-                return NotFound(new { message = "Order not found." });
+                return NotFound(new { message = OrderMessages.OrderNotFound });
 
             await _logService.AddLogAsync(GetUser(), $"Fetched order ID={id}");
             return Ok(order);
@@ -72,7 +66,7 @@ namespace Rujta.Api.Controllers
             var existingOrder = await _orderService.GetByIdAsync(id, cancellationToken);
 
             if (existingOrder == null)
-                return NotFound(new { message = "Order not found." });
+                return NotFound(new { message = OrderMessages.OrderNotFound });
 
             await _orderService.UpdateAsync(id, dto, cancellationToken);
             await _logService.AddLogAsync(GetUser(), $"Updated order ID={id}");
@@ -87,7 +81,7 @@ namespace Rujta.Api.Controllers
             var existingOrder = await _orderService.GetByIdAsync(id, cancellationToken);
 
             if (existingOrder == null)
-                return NotFound(new { message = "Order not found." });
+                return NotFound(new { message = OrderMessages.OrderNotFound });
 
             await _orderService.DeleteAsync(id, cancellationToken);
             await _logService.AddLogAsync(GetUser(), $"Deleted order ID={id}");
@@ -190,7 +184,7 @@ namespace Rujta.Api.Controllers
             var order = await _orderService.GetOrderDetailsAsync(id, cancellationToken);
 
             if (order == null)
-                return NotFound(new { message = "Order not found." });
+                return NotFound(new { message = OrderMessages.OrderNotFound });
 
             await _logService.AddLogAsync(GetUser(), $"Fetched order details ID={id}");
 
