@@ -1,5 +1,4 @@
-﻿global using System.Globalization;
-global using System.Text;
+﻿global using System.Text;
 
 global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.Configuration;
@@ -21,3 +20,12 @@ global using Rujta.Application.Interfaces.InterfaceRepositories;
 global using Rujta.Domain.Entities;
 global using Rujta.Infrastructure.Constants;
 global using Rujta.Infrastructure.Data;
+
+global using Microsoft.Extensions.DependencyInjection;
+global using Rujta.Application.Services;
+global using Rujta.Infrastructure.BackgroundJobs;
+global using Rujta.Infrastructure.Helperrs;
+global using Rujta.Infrastructure.Identity.Helpers;
+global using Rujta.Infrastructure.Identity.Services;
+global using Rujta.Infrastructure.Repositories;
+global using Rujta.Infrastructure.Services;

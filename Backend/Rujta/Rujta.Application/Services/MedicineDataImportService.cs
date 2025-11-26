@@ -1,7 +1,9 @@
-﻿using Rujta.Application.Interfaces;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Rujta.Application.Constants;
+using Rujta.Application.Interfaces;
 using Rujta.Domain.Entities;
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
 
 namespace Rujta.Application.Services
 {
@@ -10,12 +12,14 @@ namespace Rujta.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly HttpClient _httpClient;
         private readonly ILogger<MedicineDataImportService> _logger;
+        private readonly IConfiguration _configuration;
 
-        public MedicineDataImportService(IUnitOfWork unitOfWork, HttpClient httpClient, ILogger<MedicineDataImportService> logger)
+        public MedicineDataImportService(IUnitOfWork unitOfWork, HttpClient httpClient, ILogger<MedicineDataImportService> logger, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _httpClient = httpClient;
             _logger = logger;
+            _configuration = configuration;
         }
 
         public async Task ImportMedicinesAsync(int limit = 10)
@@ -53,7 +57,9 @@ namespace Rujta.Application.Services
                                  ? dose[0].GetString()
                                  : null;
 
-                    var imageUrl = "https://via.placeholder.com/150?text=Medicine";
+                    var imageUrl = _configuration[$"MedicineSettings:{MedicineKeys.PlaceholderImageUrl}"]
+                                        ?? "/images/medicines/default.png";
+
                     var savedImageUrl = await DownloadAndSaveImageAsync(imageUrl, $"{Guid.NewGuid()}.png")
                                         ?? "/images/medicines/default.png";
 

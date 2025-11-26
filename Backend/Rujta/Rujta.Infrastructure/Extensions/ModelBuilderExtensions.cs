@@ -7,7 +7,7 @@ namespace Rujta.Infrastructure.Extensions
     {
         public static void ApplyIdentityMapping(this ModelBuilder builder)
         {
-            // Discriminator mapping for Person hierarchy
+            
             var discriminatorMapping = new Dictionary<Type, string>
             {
                 { typeof(User), "User" },
@@ -25,7 +25,7 @@ namespace Rujta.Infrastructure.Extensions
                 discriminatorBuilder.HasValue(kvp.Key, kvp.Value);
             }
 
-            // Rename Identity tables
+            
             var identityTables = new Dictionary<Type, string>
             {
                 { typeof(ApplicationUser), "AspNetUsers" },
