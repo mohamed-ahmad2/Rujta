@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Rujta.Application.MappingProfiles;
 using Rujta.Domain.Hubs;
 using Rujta.Infrastructure.Extensions;
 
