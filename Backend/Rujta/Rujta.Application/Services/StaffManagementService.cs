@@ -3,9 +3,7 @@ using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Domain.Entities;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+
 
 namespace Rujta.Infrastructure.Services
 {

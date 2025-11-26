@@ -24,7 +24,11 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ILogService, LogService>();
             services.AddHostedService<RefreshTokenCleanupService>();
-            
+            services.AddScoped<ISearchMedicineService, SearchMedicineService>();
+            services.AddScoped<IPharmacySearchService, PharmacySearchService>();
+            services.AddScoped<IPharmacyCartService, PharmacyCartService>();
+
+
             services.AddScoped<PharmacyDistanceService>();
 
             // HttpClient services

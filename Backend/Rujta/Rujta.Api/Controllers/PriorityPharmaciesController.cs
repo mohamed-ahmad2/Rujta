@@ -1,16 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Application.Interfaces.InterfaceServices;
-using System;
+﻿using Rujta.Infrastructure.Constants;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using System.Threading.Tasks;
+
 
 namespace Rujta.API.Controllers
 {
-    [Authorize] // User must be logged in
+    [Authorize] 
     [ApiController]
     [Route("api/[controller]")]
     public class PriorityPharmaciesController : ControllerBase
@@ -26,32 +20,29 @@ namespace Rujta.API.Controllers
 
         [HttpPost("top-k")]
         [ProducesResponseType(typeof(object), 200)]
-        public async Task<IActionResult> GetTopPharmaciesForCart(
-    [FromBody] ItemDto order,
-    [FromQuery] int topK = 5)
+        public async Task<IActionResult> GetTopPharmaciesForCart([FromBody] ItemDto order, [FromQuery] int topK = 5)
         {
-            // Step 1: Get logged-in user ID from JWT
             var userIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-            if (userIdClaim == null) return Unauthorized();
+            if (userIdClaim == null) return Unauthorized(ApiMessages.UnauthorizedAccess);
 
             var userId = Guid.Parse(userIdClaim);
 
-            // Step 2: Get user profile
+            
             var user = await _userRepository.GetProfileAsync(userId);
-            if (user == null) return NotFound("User not found.");
+            if (user == null) return NotFound(ApiMessages.UserNotFound);
 
-            // Step 2b: Ensure user has location
+            
             if (user.Latitude == null || user.Longitude == null)
-                return BadRequest("User location is not set.");
+                return BadRequest(ApiMessages.UserLocationNotSet);
 
-            // Step 3: Get top-K nearest pharmacies sorted by available items
+            
             var pharmacies = await _cartService.GetTopPharmaciesForCartAsync(
                 order,
-                user.Latitude.Value,   // safely convert from double? to double
+                user.Latitude.Value,  
                 user.Longitude.Value,
                 topK);
 
-            // Step 4: Prepare result for frontend
+           
             var result = pharmacies.Select(p => new
             {
                 id = p.Id,

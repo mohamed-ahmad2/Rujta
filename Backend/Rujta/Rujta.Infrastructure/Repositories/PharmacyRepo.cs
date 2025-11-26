@@ -16,9 +16,5 @@
                 .Select(i => i.Quantity)
                 .FirstOrDefaultAsync();
         }
-
-
-
-
     }
 }
