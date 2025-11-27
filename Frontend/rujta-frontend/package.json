@@ -10,9 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.12.2",
     "aos": "^2.3.4",
+    "axios": "^1.13.2",
     "framer-motion": "^12.23.24",
-    "jwt-decode": "^4.0.0",
+    "jwt-decode": "^3.1.2",
     "lucide-react": "^0.552.0",
     "prop-types": "^15.8.1",
     "react": "^19.1.1",
@@ -27,7 +29,9 @@
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.4",
     "autoprefixer": "^10.4.21",
-    "eslint": "^9.36.0",
+    "eslint": "^9.39.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",

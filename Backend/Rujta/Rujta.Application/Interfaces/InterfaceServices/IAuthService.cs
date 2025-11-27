@@ -15,7 +15,7 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task ResetPasswordAsync(ResetPasswordDto dto);
         Task<TokenDto> SocialLoginAsync(SocialLoginDto dto);
         Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email);
-
-
+       
+       
     }
 }

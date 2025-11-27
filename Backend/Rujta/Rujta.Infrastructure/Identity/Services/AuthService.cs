@@ -5,6 +5,7 @@ using Rujta.Application.Services;
 using Rujta.Domain.Common;
 using Rujta.Infrastructure.Helperrs;
 using Rujta.Infrastructure.Identity.Helpers;
+using System.Security.Cryptography;
 
 
 namespace Rujta.Infrastructure.Identity.Services
@@ -326,9 +327,9 @@ namespace Rujta.Infrastructure.Identity.Services
         {
             ApplicationUser user = null;
 
-            // ********************************
-            // 🔶 GOOGLE LOGIN
-            // ********************************
+            // ================================
+            // GOOGLE LOGIN
+            // ================================
             if (!string.IsNullOrEmpty(dto.IdToken))
             {
                 var payload = await GoogleJsonWebSignature.ValidateAsync(dto.IdToken);
@@ -347,26 +348,39 @@ namespace Rujta.Infrastructure.Identity.Services
                     await _userManager.AddToRoleAsync(user, "User");
                 }
             }
-            // ********************************
-            // 🔶 FACEBOOK LOGIN
-            // ********************************
+
+            // ================================
+            // FACEBOOK LOGIN
+            // ================================
             else if (!string.IsNullOrEmpty(dto.AccessToken))
             {
                 using var client = new HttpClient();
                 var fbResponse = await client.GetStringAsync(
-                    $"https://graph.facebook.com/me?fields=email,name&access_token={dto.AccessToken}"
+                    $"https://graph.facebook.com/me?fields=id,email,name&access_token={dto.AccessToken}"
                 );
 
                 var fbData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(fbResponse);
 
-                user = await _userManager.FindByEmailAsync(fbData["email"]);
+               
+                fbData.TryGetValue("email", out string email);
+                fbData.TryGetValue("name", out string name);
+                fbData.TryGetValue("id", out string fbId);
+
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    // fallback: create virtual email for login
+                    email = $"{fbId}@facebook.local";
+                }
+
+                user = await _userManager.FindByEmailAsync(email);
+
                 if (user == null)
                 {
                     user = new ApplicationUser
                     {
-                        UserName = fbData["email"],
-                        Email = fbData["email"],
-                        FullName = fbData["name"]
+                        UserName = email,
+                        Email = email,
+                        FullName = name ?? "Facebook User"
                     };
 
                     await _userManager.CreateAsync(user);
@@ -378,9 +392,9 @@ namespace Rujta.Infrastructure.Identity.Services
                 throw new InvalidOperationException("No token provided.");
             }
 
-            // ********************************
-            // 🔶 Generate token pair using your existing logic
-            // ********************************
+            // ================================
+            // GENERATE TOKEN PAIR (existing logic)
+            // ================================
             var dtoUser = _mapper.Map<ApplicationUserDto>(user);
             string deviceId = Guid.NewGuid().ToString();
 
@@ -388,6 +402,7 @@ namespace Rujta.Infrastructure.Identity.Services
 
             return tokens;
         }
+
         public async Task ResetPasswordAsync(ResetPasswordDto dto)
         {
             var user = await _userManager.FindByEmailAsync(dto.Email);
@@ -395,21 +410,16 @@ namespace Rujta.Infrastructure.Identity.Services
             if (user == null)
                 throw new InvalidOperationException("Invalid OTP or email.");
 
+            // Validate OTP
             if (user.PasswordResetToken != dto.Otp ||
                 user.PasswordResetTokenExpiry < DateTime.UtcNow)
             {
                 throw new InvalidOperationException("OTP is invalid or expired.");
             }
 
-            // Remove old password
-            var remove = await _userManager.RemovePasswordAsync(user);
-            if (!remove.Succeeded)
-                throw new InvalidOperationException("Failed to remove old password.");
-
-            // Add new password
-            var add = await _userManager.AddPasswordAsync(user, dto.NewPassword);
-            if (!add.Succeeded)
-                throw new InvalidOperationException("Failed to set new password.");
+            // Reset password using PasswordHasher
+            var hashedPassword = _userManager.PasswordHasher.HashPassword(user, dto.NewPassword);
+            user.PasswordHash = hashedPassword;
 
             // Clear OTP
             user.PasswordResetToken = null;
@@ -418,22 +428,26 @@ namespace Rujta.Infrastructure.Identity.Services
             await _userManager.UpdateAsync(user);
         }
 
+
         public async Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
 
-            // Security: always return same message
             if (user == null)
+            {
+                // Security: don't reveal whether the email exists
                 return new ForgotPasswordResponseDto
                 {
+                    Success = false,
                     Message = "If the email exists, an OTP has been sent."
                 };
+            }
 
             // Generate 6-digit OTP
-            var otp = new Random().Next(100000, 999999).ToString();
+            var otp = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
 
             user.PasswordResetToken = otp;
-            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(5); // 5 min expiration
+            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(5);
             await _userManager.UpdateAsync(user);
 
             // Send OTP email
@@ -445,9 +459,11 @@ namespace Rujta.Infrastructure.Identity.Services
 
             return new ForgotPasswordResponseDto
             {
+                Success = true,
                 Message = "OTP sent to your email."
             };
         }
+
 
 
     }

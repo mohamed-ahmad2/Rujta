@@ -122,6 +122,7 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
         [HttpPost("social-login")]
         public async Task<IActionResult> SocialLogin([FromBody] SocialLoginDto dto)
         {
@@ -148,7 +149,5 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-
-
     }
 }

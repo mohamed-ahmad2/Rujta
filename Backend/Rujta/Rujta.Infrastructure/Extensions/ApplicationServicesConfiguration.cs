@@ -32,6 +32,8 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<ILogService, LogService>();
 
+        
+            
 
             services.AddScoped<PharmacyDistanceService>();
 

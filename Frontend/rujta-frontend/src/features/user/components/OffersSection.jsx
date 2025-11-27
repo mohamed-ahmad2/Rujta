@@ -1,6 +1,6 @@
 import React from "react";
-import doctorImg from "../../../assets/change/HeroImg1.png"; // صورة الدكتور عندك
-import vitaminImg from "../../../assets/pro/m3.png"; // صورة الدواء أو المنتج
+import doctorImg from "../../../assets/change/HeroImg1.png";
+import vitaminImg from "../../../assets/pro/m3.png";
 
 const OffersSection = () => {
   return (
