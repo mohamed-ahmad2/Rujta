@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace Rujta.Infrastructure.Repositories
 {
@@ -11,20 +12,17 @@ namespace Rujta.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default)
-        {
-            return await _context.Set<T>().ToListAsync(cancellationToken);
-        }
+        public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default)=>
+            await _context.Set<T>().ToListAsync(cancellationToken);
+        
 
-        public async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
-        {
-            return await _context.Set<T>().FindAsync(new object[] { id }, cancellationToken);
-        }
+        public async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)=>
+            await _context.Set<T>().FindAsync(new object[] { id }, cancellationToken);
+        
 
-        public async Task AddAsync(T entity, CancellationToken cancellationToken = default)
-        {
+        public async Task AddAsync(T entity, CancellationToken cancellationToken = default)=>
             await _context.Set<T>().AddAsync(entity, cancellationToken);
-        }
+        
 
         public Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
         {
@@ -37,9 +35,11 @@ namespace Rujta.Infrastructure.Repositories
             _context.Set<T>().Remove(entity);
             return Task.CompletedTask;
         }
-        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
-        {
-            return await _context.Set<T>().Where(predicate).ToListAsync(cancellationToken);
-        }
+        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)=>
+             await _context.Set<T>()
+                .Where(predicate)
+                .ToListAsync(cancellationToken);
+        
+
     }
 }
