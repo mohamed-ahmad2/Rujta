@@ -12,8 +12,7 @@ namespace Rujta.Infrastructure.Identity.Services
 {
     public class AuthService : IAuthService
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly IdentityServices _identityServices;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ILogger<AuthService> _logger;
@@ -23,8 +22,7 @@ namespace Rujta.Infrastructure.Identity.Services
         private readonly IEmailService _emailService;
 
         public AuthService(
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
+            IdentityServices identityServices,
             IMapper mapper,
             IUnitOfWork unitOfWork,
             ILogger<AuthService> logger,
@@ -33,9 +31,8 @@ namespace Rujta.Infrastructure.Identity.Services
             IConfiguration configuration,
             IEmailService emailService)
         {
+            _identityServices = identityServices;
             _unitOfWork = unitOfWork;
-            _userManager = userManager;
-            _signInManager = signInManager;
             _mapper = mapper;
             _logger = logger;
             _httpContextAccessor = httpContextAccessor;
@@ -44,16 +41,23 @@ namespace Rujta.Infrastructure.Identity.Services
             _emailService = emailService;
         }
 
+
+        public async Task<ApplicationUserDto?> GetUserByEmailAsync(string email)
+        {
+            return await _unitOfWork.Users.GetByEmailAsync(email);
+        }
+
+
         public async Task<bool> CheckPasswordAsync(string email, string password, CancellationToken cancellationToken = default)
         {
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _identityServices.UserManager.FindByEmailAsync(email);
             if (user == null)
             {
                 _logger.LogWarning("CheckPasswordAsync: User not found for email {Email}", email);
                 return false;
             }
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
+            var result = await _identityServices.SignInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
 
             _logger.LogInformation("CheckPasswordAsync: Password check for user {UserId} {Result}", user.Id, result.Succeeded);
 
@@ -81,24 +85,24 @@ namespace Rujta.Infrastructure.Identity.Services
                     person = _mapper.Map<Manager>(dto);
                     break;
                 default:
-                    throw new InvalidOperationException("Unknown role");
+                    throw new InvalidOperationException(AuthMessages.UnknownRole);
             }
 
-            await _unitOfWork.People.AddAsync(person); 
+            await _unitOfWork.People.AddAsync(person);
             await _unitOfWork.SaveAsync();
 
-            
+
             var user = _mapper.Map<ApplicationUser>(dto);
             user.DomainPersonId = person.Id;
 
-            var result = await _userManager.CreateAsync(user, dto.CreatePassword);
+            var result = await _identityServices.UserManager.CreateAsync(user, dto.CreatePassword);
             if (!result.Succeeded)
             {
                 _logger.LogError("Failed to create user {Email}", dto.Email);
                 throw new InvalidOperationException(string.Join(", ", result.Errors.Select(e => e.Description)));
             }
 
-            await _userManager.AddToRoleAsync(user, role.ToString());
+            await _identityServices.UserManager.AddToRoleAsync(user, role.ToString());
 
             _logger.LogInformation("CreateUserAsync: Created user {UserId} with role {Role}", user.Id, role);
 
@@ -109,7 +113,7 @@ namespace Rujta.Infrastructure.Identity.Services
 
         public async Task<bool> IsEmailExistsAsync(string email, CancellationToken cancellationToken = default)
         {
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _identityServices.UserManager.FindByEmailAsync(email);
             var exists = user != null;
 
             _logger.LogInformation("IsEmailExistsAsync: Email {Email} exists = {Exists}", email, exists);
@@ -120,11 +124,11 @@ namespace Rujta.Infrastructure.Identity.Services
 
         public async Task<TokenDto> GenerateTokensAsync(string email, CancellationToken cancellationToken = default)
         {
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _identityServices.UserManager.FindByEmailAsync(email);
             if (user == null)
             {
                 _logger.LogWarning("GenerateTokensAsync: User not found for email {Email}", email);
-                throw new InvalidOperationException("User not found");
+                throw new InvalidOperationException(AuthMessages.UserNotFound);
             }
 
             ApplicationUserDto userDto = _mapper.Map<ApplicationUserDto>(user);
@@ -133,17 +137,17 @@ namespace Rujta.Infrastructure.Identity.Services
             var cookies = context.Request.Cookies;
             string? deviceId;
 
-            if (!cookies.TryGetValue("device_id", out deviceId))
+            if (!cookies.TryGetValue(CookieKeys.DeviceId, out deviceId))
             {
                 deviceId = Guid.NewGuid().ToString();
 
-                context.Response.Cookies.Append("device_id", deviceId, new CookieOptions
+                context.Response.Cookies.Append(CookieKeys.DeviceId, deviceId, new CookieOptions
                 {
                     HttpOnly = true,
                     Secure = true,
                     SameSite = SameSiteMode.None,
                     Expires = DateTime.UtcNow.AddYears(1),
-                    Domain = "localhost" 
+                    Domain = "localhost"
                 });
 
                 var device = new Device
@@ -170,33 +174,42 @@ namespace Rujta.Infrastructure.Identity.Services
                 }
             }
 
-            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId);
+            bool loginOrRegister = true;
+            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId, loginOrRegister);
 
-            
+
+            SetRefreshTokenCookie(tokens.RefreshToken);
             SetJwtCookie(tokens.AccessToken);
 
             return tokens;
         }
 
 
-        public async Task<TokenDto> RefreshAccessTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
+        public async Task<TokenDto> RefreshAccessTokenAsync(string? refreshToken, CancellationToken cancellationToken = default)
         {
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null)
+                throw new InvalidOperationException(AuthMessages.HttpContextIsNull);
+
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                refreshToken = context.Request.Cookies[CookieKeys.RefreshToken];
+
             if (string.IsNullOrWhiteSpace(refreshToken))
             {
                 _logger.LogWarning("RefreshAccessTokenAsync: Refresh token is null or empty");
-                throw new InvalidOperationException("Refresh token is required.");
+                throw new InvalidOperationException(AuthMessages.RefreshTokenRequired);
             }
 
             var storedToken = await RefreshTokenHelper.GetValidRefreshTokenAsync(_unitOfWork.RefreshTokens, refreshToken);
             if (storedToken == null)
             {
                 _logger.LogWarning("RefreshAccessTokenAsync: Invalid or expired refresh token");
-                throw new InvalidOperationException("Invalid or expired refresh token.");
+                throw new InvalidOperationException(AuthMessages.InvalidOrExpiredRefreshToken);
             }
 
-            var user = await _userManager.FindByIdAsync(storedToken.UserId.ToString());
+            var user = await _identityServices.UserManager.FindByIdAsync(storedToken.UserId.ToString());
             if (user == null)
-                throw new InvalidOperationException("User not found");
+                throw new InvalidOperationException(AuthMessages.UserNotFound);
 
             ApplicationUserDto userDto = _mapper.Map<ApplicationUserDto>(user);
 
@@ -204,11 +217,11 @@ namespace Rujta.Infrastructure.Identity.Services
             if (string.IsNullOrEmpty(deviceId))
             {
                 _logger.LogWarning("RefreshAccessTokenAsync: DeviceId missing in refresh token");
-                throw new InvalidOperationException("DeviceId is required for generating new tokens.");
+                throw new InvalidOperationException(AuthMessages.DeviceIdRequired);
             }
 
-            
-            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId);
+            bool loginOrRegister = false;
+            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId, loginOrRegister, refreshToken);
 
             SetRefreshTokenCookie(tokens.RefreshToken);
             SetJwtCookie(tokens.AccessToken);
@@ -235,7 +248,7 @@ namespace Rujta.Infrastructure.Identity.Services
         {
             var context = _httpContextAccessor?.HttpContext;
             var ipAddress = context?.Connection?.RemoteIpAddress?.MapToIPv4().ToString();
-            var deviceId = context?.Request.Cookies["device_id"];
+            var deviceId = context?.Request.Cookies[CookieKeys.DeviceId];
 
             if (!string.IsNullOrEmpty(refreshToken))
             {
@@ -256,7 +269,7 @@ namespace Rujta.Infrastructure.Identity.Services
             }
             else if (!string.IsNullOrEmpty(deviceId))
             {
-                
+
                 var tokens = await _unitOfWork.RefreshTokens.GetAllByDeviceIdAsync(userId, deviceId);
                 foreach (var token in tokens)
                 {
@@ -273,7 +286,6 @@ namespace Rujta.Infrastructure.Identity.Services
             else
             {
                 await _tokenHelper.RevokeOldRefreshTokensAsync(userId);
-
                 _logger.LogInformation(
                     "Logout executed for user {UserId} from IP {IP} for all devices",
                     userId, ipAddress
@@ -286,17 +298,19 @@ namespace Rujta.Infrastructure.Identity.Services
         {
             var context = _httpContextAccessor.HttpContext;
             if (context == null || string.IsNullOrEmpty(accessToken)) return;
-            var expirationMinutes = int.Parse(_configuration["JWT:AccessTokenExpirationMinutes"] ?? "10");
+            var expirationMinutes = int.Parse(
+                _configuration[$"JWT:{TokenKeys.AccessTokenExpirationMinutes}"] ?? "10"
+            );
+
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
                 Expires = DateTime.UtcNow.AddMinutes(expirationMinutes),
-                Domain = "localhost"
             };
 
-            context.Response.Cookies.Append("jwt", accessToken, cookieOptions);
+            context.Response.Cookies.Append(CookieKeys.AccessToken, accessToken, cookieOptions);
         }
 
         private void SetRefreshTokenCookie(string? refreshToken)
@@ -306,7 +320,7 @@ namespace Rujta.Infrastructure.Identity.Services
 
 
             int expirationDays = 30;
-            var configValue = _configuration["JWT:RefreshTokenExpirationDays"];
+            var configValue = _configuration[$"JWT:{TokenKeys.RefreshTokenExpirationDays}"] ?? "30";
             if (!string.IsNullOrEmpty(configValue) && int.TryParse(configValue, out int days))
             {
                 expirationDays = days;
@@ -315,13 +329,13 @@ namespace Rujta.Infrastructure.Identity.Services
 
             var cookieOptions = new CookieOptions
             {
-                HttpOnly = true, 
+                HttpOnly = true,
                 Secure = true,
-                SameSite = SameSiteMode.None, 
-                Expires = DateTime.UtcNow.AddDays(expirationDays)
+                SameSite = SameSiteMode.None,
+                Expires = DateTime.UtcNow.AddDays(expirationDays),
             };
 
-            context.Response.Cookies.Append("refresh_token", refreshToken, cookieOptions);
+            context.Response.Cookies.Append(CookieKeys.RefreshToken, refreshToken, cookieOptions);
         }
         public async Task<TokenDto> SocialLoginAsync(SocialLoginDto dto)
         {

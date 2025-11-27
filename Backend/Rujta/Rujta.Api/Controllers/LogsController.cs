@@ -9,7 +9,7 @@ namespace Rujta.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // ممكن تحط Roles = "Admin,Pharmacist" حسب احتياجك
+    [Authorize]
     public class LogsController : ControllerBase
     {
         private readonly ILogService _logService;

@@ -1,10 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using Rujta.Infrastructure.Constants;
 
 namespace Rujta.Api.Controllers
 {
@@ -14,17 +8,22 @@ namespace Rujta.Api.Controllers
     public class InventoryItemController : ControllerBase
     {
         private readonly IInventoryItemService _inventoryService;
-        ILogService _logService;
+        private readonly ILogService _logService;
 
-        public InventoryItemController(IInventoryItemService inventoryService , ILogService logService)
+        public InventoryItemController(IInventoryItemService inventoryService, ILogService logService)
         {
             _inventoryService = inventoryService;
             _logService = logService;
-
-
         }
 
-        // ----------------- Get all items -----------------
+        private string GetCurrentUser()
+        {
+            return User.Identity?.Name
+                   ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                   ?? AuthMessages.UnknownUser;
+        }
+
+ 
         [HttpGet(Name = "GetAllInventoryItems")]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetAll()
         {
@@ -33,7 +32,7 @@ namespace Rujta.Api.Controllers
             return Ok(items);
         }
 
-        // ----------------- Get single item -----------------
+
         [HttpGet("{id}", Name = "GetInventoryItemById")]
         public async Task<ActionResult<InventoryItemDto>> GetById(int id)
         {
@@ -45,21 +44,20 @@ namespace Rujta.Api.Controllers
             return Ok(item);
         }
 
-        // ----------------- Add new item -----------------
         [HttpPost(Name = "AddInventoryItem")]
         public async Task<ActionResult> Add([FromBody] InventoryItemDto dto)
         {
             dto.PharmacyID = GetPharmacyIdFromClaims();
             await _inventoryService.AddAsync(dto);
+
             await _logService.AddLogAsync(
-    User.Identity.Name,
-    $"Added inventory item '{dto.MedicineName}' (ID={dto.Id}) to Pharmacy {dto.PharmacyID}"
-);
+                GetCurrentUser(),
+                $"Added inventory item '{dto.MedicineName}' (ID={dto.Id}) to Pharmacy {dto.PharmacyID}"
+            );
 
             return CreatedAtRoute("GetInventoryItemById", new { id = dto.Id }, dto);
         }
 
-        // ----------------- Update item -----------------
         [HttpPut("{id}", Name = "UpdateInventoryItem")]
         public async Task<ActionResult> Update(int id, [FromBody] InventoryItemDto dto)
         {
@@ -67,10 +65,11 @@ namespace Rujta.Api.Controllers
             try
             {
                 await _inventoryService.UpdateAsync(id, dto);
+
                 await _logService.AddLogAsync(
-    User.Identity.Name,
-    $"Updated inventory item (ID={id}) in Pharmacy {dto.PharmacyID}"
-);
+                    GetCurrentUser(),
+                    $"Updated inventory item (ID={id}) in Pharmacy {dto.PharmacyID}"
+                );
 
                 return NoContent();
             }
@@ -80,7 +79,6 @@ namespace Rujta.Api.Controllers
             }
         }
 
-        // ----------------- Delete item -----------------
         [HttpDelete("{id}", Name = "DeleteInventoryItem")]
         public async Task<ActionResult> Delete(int id)
         {
@@ -90,20 +88,21 @@ namespace Rujta.Api.Controllers
                 return NotFound();
 
             await _inventoryService.DeleteAsync(id);
+
             await _logService.AddLogAsync(
-    User.Identity.Name,
-    $"Deleted inventory item (ID={id}) from Pharmacy {pharmacyId}"
-);
+                GetCurrentUser(),
+                $"Deleted inventory item (ID={id}) from Pharmacy {pharmacyId}"
+            );
 
             return NoContent();
         }
 
-        // ----------------- Helper: Get PharmacyID from JWT claims -----------------
         private int GetPharmacyIdFromClaims()
         {
             var claim = User.FindFirst("PharmacyID");
             if (claim == null)
-                throw new System.Exception("PharmacyID claim missing in JWT.");
+                throw new InvalidOperationException("PharmacyID claim missing in JWT.");
+
             return int.Parse(claim.Value);
         }
     }

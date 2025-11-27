@@ -5,9 +5,13 @@ namespace Rujta.Infrastructure.Repositories
     public class UserRepository : GenericRepository<User>, IUserRepository
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IMapper _mapper;
 
-        public UserRepository(AppDbContext context, UserManager<ApplicationUser> userManager)
-            : base(context) => _userManager = userManager;
+        public UserRepository(AppDbContext context, UserManager<ApplicationUser> userManager, IMapper mapper) : base(context)
+        {
+            _userManager = userManager;
+            _mapper = mapper;
+        }
 
         public async Task<UserProfileDto?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default)
         {
@@ -71,6 +75,22 @@ namespace Rujta.Infrastructure.Repositories
 
             var result = await _userManager.UpdateAsync(appUser);
             return result.Succeeded;
+        }
+
+        public async Task<ApplicationUserDto?> GetByEmailAsync(string email)
+        {
+            var user =  await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user == null)
+                return null;
+
+            var userDto = _mapper.Map<ApplicationUserDto>(user);
+
+            var roles = await _userManager.GetRolesAsync(user);
+            userDto.Role = roles.FirstOrDefault() ?? "User";
+
+            return userDto;
         }
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Rujta.Application.MappingProfiles;
 using Rujta.Domain.Hubs;
 using Rujta.Infrastructure.Extensions;
 using Rujta.Infrastructure.Identity.Services;
@@ -12,10 +13,15 @@ namespace Rujta.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Logging.AddConsole();
+
             // Add services Swagger
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+
+            builder.Services.AddAutoMapper(typeof(StaffProfile).Assembly);
+
 
             // Database
             builder.Services.AddCustomDatabase(builder.Configuration);
@@ -46,6 +52,7 @@ namespace Rujta.API
 
             if (app.Environment.IsDevelopment())
             {
+                app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }

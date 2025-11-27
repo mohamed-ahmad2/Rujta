@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Rujta.Infrastructure.Identity.Requirements;
+﻿using Rujta.Infrastructure.Identity.Requirements;
 
 
 namespace Rujta.Infrastructure.Extensions

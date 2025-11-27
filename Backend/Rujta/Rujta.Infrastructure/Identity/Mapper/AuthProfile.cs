@@ -14,7 +14,7 @@
                 .ForMember(dest => dest.Id, opt => opt.Ignore());
 
             CreateMap<ApplicationUser, ApplicationUserDto>()
-                .ForMember(dest => dest.Roles, opt => opt.Ignore())
+                .ForMember(dest => dest.Role, opt => opt.Ignore())
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
                 .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
                 .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location))
