@@ -23,6 +23,8 @@ import ResetPasswordPage from "../features/auth/pages/ResetPasswordPage";
 
 import AuthPage from "../features/auth/pages/AuthPage";
 
+import AuthPage from "../features/auth/pages/AuthPage";
+
 const DashboardLayout = () => (
   <div className="flex min-h-screen bg-gray-50">
     <Sidebar />
