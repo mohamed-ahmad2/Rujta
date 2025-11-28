@@ -3,7 +3,7 @@ import { IoMdClose } from "react-icons/io";
 import { FaPlus, FaMinus } from "react-icons/fa";
 
 const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
-  // ➕ Increase quantity
+  // Increase quantity
   const handleIncrease = (id) => {
     setCart((prevCart) =>
       prevCart.map((item) =>
@@ -12,7 +12,7 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     );
   };
 
-  // ➖ Decrease quantity
+  //  Decrease quantity
   const handleDecrease = (id) => {
     setCart((prevCart) =>
       prevCart
@@ -24,7 +24,7 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
   };
 
 
-  // 💰 Total price
+  // Total price
   const total = cart.reduce(
     (sum, item) => sum + parseFloat(item.price) * item.quantity,
     0

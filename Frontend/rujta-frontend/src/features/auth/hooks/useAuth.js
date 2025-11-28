@@ -8,6 +8,7 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [tokenExp, setTokenExp] = useState(null);
 
+  // Load current user on mount
   useEffect(() => {
     const loadUser = async () => {
       try {

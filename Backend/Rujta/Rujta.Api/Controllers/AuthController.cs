@@ -131,24 +131,66 @@ namespace Rujta.API.Controllers
             }
         }
 
-        [Authorize]
-        [HttpGet("me")]
-        [ProducesResponseType(typeof(MeResponse), 200)]
-        public IActionResult Me()
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
-            var email = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)?.Value
-            ?? string.Empty;
-
-            var roles = User.Claims
-                            .Where(c => c.Type == ClaimTypes.Role)
-                            .Select(c => c.Value)
-                            .ToList();
-
-            var role = roles.FirstOrDefault() ?? string.Empty;
-
-            
-            return Ok(new MeResponse(email, role));
+            try
+            {
+                await _authService.ResetPasswordAsync(dto);
+                return Ok("Password reset successful.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
+
+        [HttpPost("social-login")]
+        public async Task<IActionResult> SocialLogin([FromBody] SocialLoginDto dto)
+        {
+            try
+            {
+                var tokens = await _authService.SocialLoginAsync(dto);
+                return Ok(tokens);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto dto)
+        {
+            try
+            {
+                var result = await _authService.ForgotPasswordAsync(dto.Email);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+            [Authorize]
+            [HttpGet("me")]
+            [ProducesResponseType(typeof(MeResponse), 200)]
+            public IActionResult Me()
+            {
+                var email = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)?.Value
+                ?? string.Empty;
+
+                var roles = User.Claims
+                                .Where(c => c.Type == ClaimTypes.Role)
+                                .Select(c => c.Value)
+                                .ToList();
+
+                var role = roles.FirstOrDefault() ?? string.Empty;
+
+
+                return Ok(new MeResponse(email, role));
+            }
+        
+        public record MeResponse(string Email, string Role);
     }
-    public record MeResponse(string Email, string Role);
 }

@@ -22,12 +22,18 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<PharmacyDistanceService>();
             services.AddScoped<IdentityServices>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<ILogService, LogService>();
+
             services.AddScoped<ILogService, LogService>();
             services.AddHostedService<RefreshTokenCleanupService>();
             services.AddScoped<ISearchMedicineService, SearchMedicineService>();
             services.AddScoped<IPharmacySearchService, PharmacySearchService>();
             services.AddScoped<IPharmacyCartService, PharmacyCartService>();
 
+
+        
+            
 
             services.AddScoped<PharmacyDistanceService>();
 

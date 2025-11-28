@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
+//using Rujta.ApplicationMapping;
 using Rujta.Application.MappingProfiles;
 using Rujta.Domain.Hubs;
 using Rujta.Infrastructure.Extensions;
+using Rujta.Infrastructure.Identity.Services;
+using Rujta.Infrastructure.Services;
 
 namespace Rujta.API
 {
@@ -41,7 +44,9 @@ namespace Rujta.API
 
             // Application Services
             builder.Services.AddApplicationServices(builder.Configuration);
-
+            builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<ILogService, LogService>();
             var app = builder.Build();
 
 
