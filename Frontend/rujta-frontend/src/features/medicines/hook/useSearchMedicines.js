@@ -5,10 +5,11 @@ export const useSearchMedicines = (query, top = 10) => {
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [selected, setSelected] = useState(false);
 
     useEffect(() => {
-        if (!query) {
-            setResults([]);
+        if (!query || selected) {
+            if (!selected) setResults([]);
             return;
         }
 
@@ -26,7 +27,15 @@ export const useSearchMedicines = (query, top = 10) => {
         };
 
         fetchResults();
-    }, [query, top]);
+    }, [query, top, selected]);
 
-    return { results, loading, error };
+    const chooseResult = (medicine) => {
+        setResults([]);
+        setSelected(true);
+        return medicine;
+    };
+
+    const resetSelected = () => setSelected(false);
+
+    return { results, loading, error, setResults, selected, chooseResult, resetSelected };
 };
