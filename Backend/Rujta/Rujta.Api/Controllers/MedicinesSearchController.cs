@@ -2,9 +2,8 @@
 
 namespace Rujta.API.Controllers
 {
-    [Authorize]
     [ApiController]
-    [Route("api/[controller]/search")]
+    [Route("api/medicines/search")]
     public class MedicinesSearchController : ControllerBase
     {
         private readonly ISearchMedicineService _searchMedicineService;
