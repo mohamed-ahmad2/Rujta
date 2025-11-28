@@ -1,0 +1,11 @@
+site_name: MyProject Docs
+site_description: Documentation for my .NET 8 + React project
+site_author: Mohamed Ahmad
+docs_dir: '.'
+site_dir: '../site'
+nav:
+  - Home: index.md
+  - Getting Started: getting_started.md
+  - API Reference: api_reference.md
+theme:
+  name: material

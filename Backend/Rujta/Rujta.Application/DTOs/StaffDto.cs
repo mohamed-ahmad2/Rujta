@@ -4,21 +4,20 @@ namespace Rujta.Application.DTOs
 {
     public class StaffDto
     {
-        public Guid Id { get; set; }  // inherited from Pharmacist
+        // Use nullable types so we can tell "not provided" (null) vs "provided as value"
+        public int? Id { get; set; }                // used for update/delete; null for Add
 
-        public string FullName { get; set; } = string.Empty; // inherited from Pharmacist
-        public string Email { get; set; } = string.Empty; // inherited from Pharmacist
-        public string PhoneNumber { get; set; } = string.Empty; // inherited from Pharmacist
+        // inherited from Pharmacist (make nullable so Add/Update can be partial)
+        public string? FullName { get; set; }
+        public string? Email { get; set; }
+        public string? Phone { get; set; }
 
-        public string Position { get; set; } = string.Empty;
-        public DateTime HireDate { get; set; }
-        public decimal Salary { get; set; }
+        // Staff-specific
+        public string? Position { get; set; }
+        public DateTime? HireDate { get; set; }     // if null on Add -> set DateTime.UtcNow or require
+        public decimal? Salary { get; set; }
 
         public Guid? ManagerID { get; set; }
         public int? PharmacyID { get; set; }
-
-        // Optional: include names for easier display in UI
-        public string? ManagerName { get; set; }
-        public string? PharmacyName { get; set; }
     }
 }

@@ -1,6 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.DependencyInjection;
-
 
 namespace Rujta.Infrastructure.Extensions
 {
@@ -9,13 +7,11 @@ namespace Rujta.Infrastructure.Extensions
         public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
         {
             var jwtSection = configuration.GetSection("JWT");
-
             var certPath = Path.Combine(AppContext.BaseDirectory, "Certificates", "jwt-cert.pfx");
             var certPassword = Environment.GetEnvironmentVariable("JWT__CertPassword");
 
             if (string.IsNullOrWhiteSpace(certPassword))
                 throw new InvalidOperationException("JWT certificate password not found in environment variables.");
-
 
             var certificate = new X509Certificate2(certPath, certPassword);
             var rsa = certificate.GetRSAPublicKey();
@@ -42,9 +38,24 @@ namespace Rujta.Infrastructure.Extensions
                     IssuerSigningKey = publicKey,
                     ClockSkew = TimeSpan.FromSeconds(30)
                 };
+
+
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = ctx =>
+                    {
+                        if (ctx.Request.Cookies.ContainsKey("jwt"))
+                        {
+                            ctx.Token = ctx.Request.Cookies["jwt"];
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
             return services;
         }
     }
+
 }

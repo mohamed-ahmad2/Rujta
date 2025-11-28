@@ -17,5 +17,6 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email);
        
        
+        Task<ApplicationUserDto?> GetUserByEmailAsync(string email);
     }
 }

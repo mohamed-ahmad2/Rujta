@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.DTOs.UserProfile;
+﻿using Rujta.Application.DTOs.UserProfile;
+using Rujta.Infrastructure.Constants;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Rujta.API.Controllers
 {
@@ -19,15 +19,14 @@ namespace Rujta.API.Controllers
         [HttpGet("me")]
         public async Task<IActionResult> GetProfile()
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null)
-                return Unauthorized();
+            var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
 
-            var userId = Guid.Parse(userIdClaim);
             var profile = await _userProfileService.GetProfileAsync(userId);
 
             if (profile == null)
-                return NotFound("User not found.");
+                return NotFound(UserProfileMessages.UserNotFound);
 
             return Ok(profile);
         }
@@ -35,17 +34,16 @@ namespace Rujta.API.Controllers
         [HttpPut("update")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileDto dto)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null)
-                return Unauthorized();
+            var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
 
-            var userId = Guid.Parse(userIdClaim);
             var result = await _userProfileService.UpdateProfileAsync(userId, dto);
 
             if (!result)
-                return BadRequest("Failed to update profile.");
+                return BadRequest(UserProfileMessages.UpdateFailed);
 
-            return Ok("Profile updated successfully.");
+            return Ok(UserProfileMessages.UpdateSuccess);
         }
     }
 }

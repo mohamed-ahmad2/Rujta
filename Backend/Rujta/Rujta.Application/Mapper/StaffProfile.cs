@@ -2,16 +2,20 @@
 using Rujta.Application.DTOs;
 using Rujta.Domain.Entities;
 
-namespace Rujta.Application.Mapping
+namespace Rujta.Application.MappingProfiles
 {
     public class StaffProfile : Profile
     {
         public StaffProfile()
         {
+            // Map DTO to entity, only if source property is not null
+            CreateMap<StaffDto, Staff>()
+                .ForAllMembers(opts =>
+                    opts.Condition((src, dest, srcMember) => srcMember != null));
+
+            // Map entity to DTO
             CreateMap<Staff, StaffDto>()
-                .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager != null ? src.Manager.Name : null))
-                .ForMember(dest => dest.PharmacyName, opt => opt.MapFrom(src => src.Pharmacy != null ? src.Pharmacy.Name : null))
-                .ReverseMap(); // to allow mapping back from DTO to Entity
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id));
         }
     }
 }
