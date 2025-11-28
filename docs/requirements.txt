@@ -1,1 +1,2 @@
-# Empty or add Python packages if needed
+mkdocs
+mkdocs-material
