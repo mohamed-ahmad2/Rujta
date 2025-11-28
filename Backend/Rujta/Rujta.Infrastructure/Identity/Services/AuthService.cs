@@ -330,40 +330,7 @@ namespace Rujta.Infrastructure.Identity.Services
 
 
 
-        public async Task<TokenDto> SocialLoginAsync(SocialLoginDto dto)
-        {
-            ApplicationUser user = null;
-
-            if (!string.IsNullOrEmpty(dto.IdToken))
-            {
-                // 1. VERIFY TOKEN USING FIREBASE
-                var decoded = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(dto.IdToken);
-                var email = decoded.Claims["email"].ToString();
-                var name = decoded.Claims.ContainsKey("name") ? decoded.Claims["name"].ToString() : email;
-
-                // 2. CHECK IF USER EXISTS
-                user = await _userManager.FindByEmailAsync(email);
-                if (user == null)
-                {
-                    user = new ApplicationUser
-                    {
-                        UserName = email,
-                        Email = email,
-                        FullName = name
-                    };
-
-                    await _userManager.CreateAsync(user);
-                    await _userManager.AddToRoleAsync(user, "User");
-                }
-            }
-
-            // 3. GENERATE TOKENS (existing)
-            var dtoUser = _mapper.Map<ApplicationUserDto>(user);
-            string deviceId = Guid.NewGuid().ToString();
-
-            var tokens = await _tokenHelper.GenerateTokenPairAsync(dtoUser, deviceId);
-            return tokens;
-        }
+       
 
 
         public async Task ResetPasswordAsync(ResetPasswordDto dto)
@@ -408,7 +375,7 @@ namespace Rujta.Infrastructure.Identity.Services
                 };
 
             // Generate 6-digit OTP
-            var otp = new Random().Next(100000, 999999).ToString();
+            var otp = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
 
             user.PasswordResetToken = otp;
             user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(5); // 5 min expiration
@@ -427,7 +394,9 @@ namespace Rujta.Infrastructure.Identity.Services
             };
         }
 
-
-
+        public Task<TokenDto> SocialLoginAsync(SocialLoginDto dto)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
