@@ -375,7 +375,7 @@ namespace Rujta.Infrastructure.Identity.Services
                 };
 
             // Generate 6-digit OTP
-            var otp = new Random().Next(100000, 999999).ToString();
+         var otp = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
 
             user.PasswordResetToken = otp;
             user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(5); // 5 min expiration
