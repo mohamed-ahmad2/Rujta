@@ -43,10 +43,6 @@ const resetPassword = async ({ email, otp, newPassword }) => {
   return response.data;
 };
 
-export const socialLogin = async ({ idToken, accessToken }) => {
-  const res = await apiClient.post("/auth/social-login", {
-    idToken,
-    accessToken,
-  });
-  return res.data;
-};
+
+
+

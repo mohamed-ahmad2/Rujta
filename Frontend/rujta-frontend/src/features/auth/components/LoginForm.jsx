@@ -2,36 +2,28 @@ import { motion } from "framer-motion";
 import { Mail, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { useSocialAuth } from "../hooks/useSocialAuth";
-
-const LoginForm = ({ email, setEmail, password, setPassword, onLogin, error, loading, toggleForm }) => {
+import { auth, provider } from "../../../../firebase";
+import { signInWithPopup } from "firebase/auth";
+import { FcGoogle } from "react-icons/fc";
+import { useGoogleAuth } from "../hooks/useGoogleAuth";
+const LoginForm = ({ email, setEmail, password, setPassword, onLogin, error, loading }) => {
   const navigate = useNavigate();
   const { forgotPassword } = useAuth();
-
-  const { loginWithGoogle, loginWithFacebook } = useSocialAuth(
-   "193719164778-c28lcnosq5fbla477idghnvs5nc565er.apps.googleusercontent.com",
-    "YOUR_FACEBOOK_APP_ID"
-  );
+const { googleFirebaseLogin } = useGoogleAuth();
 
   const handleForgotPassword = async () => {
-  if (!email) return alert("Please enter your email first");
-
-  try {
-    const res = await forgotPassword(email);
-
-    // Check if OTP was sent
-    if (res.message === "OTP sent to your email.") {
-     
-      navigate(`/reset-password?email=${encodeURIComponent(email)}`);
-    } else {
-      // Could be "If the email exists, an OTP has been sent."
-      alert(res.message);
-      // Don't navigate
+    if (!email) return alert("Please enter your email first");
+    try {
+      const res = await forgotPassword(email);
+      if (res.message === "OTP sent to your email.") {
+        navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+      } else {
+        alert(res.message);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Something went wrong.");
     }
-  } catch (err) {
-    alert(err.response?.data?.message || "Something went wrong.");
-  }
-};
+  };
 
   return (
     <motion.div className="w-full max-w-md">
@@ -96,25 +88,17 @@ const LoginForm = ({ email, setEmail, password, setPassword, onLogin, error, loa
       </form>
 
       {/* Social Login Buttons */}
-      <div className="flex flex-col space-y-3 mt-4">
-        <button
-          type="button"
-          onClick={loginWithGoogle}
-          className="flex items-center justify-center gap-3 w-full py-3 rounded-xl shadow-md bg-white border border-gray-200"
-        >
-          <img src="https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2013_Google.png" className="w-6 h-6" />
-          <span className="text-gray-700 font-medium">Continue with Google</span>
-        </button>
+   <div className="flex flex-col space-y-3 mt-4">
+ <button
+  type="button"
+  onClick={googleFirebaseLogin}
+  className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl shadow-md bg-white border border-gray-200 hover:shadow-lg transition-shadow duration-200"
+>
+  <FcGoogle className="w-6 h-6" />
+  <span className="text-gray-700 font-medium">Continue with Google</span>
+</button>
+</div>
 
-        <button
-          type="button"
-          onClick={loginWithFacebook}
-          className="flex items-center justify-center gap-3 w-full py-3 rounded-xl shadow-md bg-blue-600 hover:bg-blue-700"
-        >
-          <img src="https://upload.wikimedia.org/wikipedia/commons/1/1b/Facebook_icon.svg" className="w-6 h-6" />
-          <span className="text-white font-medium">Continue with Facebook</span>
-        </button>
-      </div>
     </motion.div>
   );
 };

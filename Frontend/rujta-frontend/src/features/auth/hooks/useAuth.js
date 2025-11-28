@@ -97,11 +97,8 @@ const handleSocialLogin = async (dto) => {
     const response = await apiClient.post("/auth/social-login", dto);
     const decoded = jwt_decode(response.accessToken);
     setUser({ email: decoded.email, role: decoded.role });
-    setTokenExp(decoded.exp * 1000);
-    return response;
   } catch (error) {
-    console.error("Social login failed:", error.response?.data || error.message);
-    throw error;
+    console.error("Social login failed:", error);
   }
 };
 

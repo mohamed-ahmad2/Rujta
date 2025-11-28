@@ -1,11 +1,14 @@
-﻿using Google.Apis.Auth;
+﻿using FirebaseAdmin.Auth;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Application.Services;
 using Rujta.Domain.Common;
 using Rujta.Infrastructure.Helperrs;
 using Rujta.Infrastructure.Identity.Helpers;
 using System.Security.Cryptography;
+
 
 
 namespace Rujta.Infrastructure.Identity.Services
@@ -323,85 +326,45 @@ namespace Rujta.Infrastructure.Identity.Services
 
             context.Response.Cookies.Append("refresh_token", refreshToken, cookieOptions);
         }
+
+
+
+
         public async Task<TokenDto> SocialLoginAsync(SocialLoginDto dto)
         {
             ApplicationUser user = null;
 
-            // ================================
-            // GOOGLE LOGIN
-            // ================================
             if (!string.IsNullOrEmpty(dto.IdToken))
             {
-                var payload = await GoogleJsonWebSignature.ValidateAsync(dto.IdToken);
+                // 1. VERIFY TOKEN USING FIREBASE
+                var decoded = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(dto.IdToken);
+                var email = decoded.Claims["email"].ToString();
+                var name = decoded.Claims.ContainsKey("name") ? decoded.Claims["name"].ToString() : email;
 
-                user = await _userManager.FindByEmailAsync(payload.Email);
-                if (user == null)
-                {
-                    user = new ApplicationUser
-                    {
-                        UserName = payload.Email,
-                        Email = payload.Email,
-                        FullName = payload.Name
-                    };
-
-                    await _userManager.CreateAsync(user);
-                    await _userManager.AddToRoleAsync(user, "User");
-                }
-            }
-
-            // ================================
-            // FACEBOOK LOGIN
-            // ================================
-            else if (!string.IsNullOrEmpty(dto.AccessToken))
-            {
-                using var client = new HttpClient();
-                var fbResponse = await client.GetStringAsync(
-                    $"https://graph.facebook.com/me?fields=id,email,name&access_token={dto.AccessToken}"
-                );
-
-                var fbData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(fbResponse);
-
-               
-                fbData.TryGetValue("email", out string email);
-                fbData.TryGetValue("name", out string name);
-                fbData.TryGetValue("id", out string fbId);
-
-                if (string.IsNullOrWhiteSpace(email))
-                {
-                    // fallback: create virtual email for login
-                    email = $"{fbId}@facebook.local";
-                }
-
+                // 2. CHECK IF USER EXISTS
                 user = await _userManager.FindByEmailAsync(email);
-
                 if (user == null)
                 {
                     user = new ApplicationUser
                     {
                         UserName = email,
                         Email = email,
-                        FullName = name ?? "Facebook User"
+                        FullName = name
                     };
 
                     await _userManager.CreateAsync(user);
                     await _userManager.AddToRoleAsync(user, "User");
                 }
             }
-            else
-            {
-                throw new InvalidOperationException("No token provided.");
-            }
 
-            // ================================
-            // GENERATE TOKEN PAIR (existing logic)
-            // ================================
+            // 3. GENERATE TOKENS (existing)
             var dtoUser = _mapper.Map<ApplicationUserDto>(user);
             string deviceId = Guid.NewGuid().ToString();
 
             var tokens = await _tokenHelper.GenerateTokenPairAsync(dtoUser, deviceId);
-
             return tokens;
         }
+
 
         public async Task ResetPasswordAsync(ResetPasswordDto dto)
         {
@@ -429,25 +392,26 @@ namespace Rujta.Infrastructure.Identity.Services
         }
 
 
+
+      
+
+
         public async Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
 
+            // Security: always return same message
             if (user == null)
-            {
-                // Security: don't reveal whether the email exists
                 return new ForgotPasswordResponseDto
                 {
-                    Success = false,
                     Message = "If the email exists, an OTP has been sent."
                 };
-            }
 
             // Generate 6-digit OTP
-            var otp = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
+            var otp = new Random().Next(100000, 999999).ToString();
 
             user.PasswordResetToken = otp;
-            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(5);
+            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(5); // 5 min expiration
             await _userManager.UpdateAsync(user);
 
             // Send OTP email
@@ -459,7 +423,6 @@ namespace Rujta.Infrastructure.Identity.Services
 
             return new ForgotPasswordResponseDto
             {
-                Success = true,
                 Message = "OTP sent to your email."
             };
         }
