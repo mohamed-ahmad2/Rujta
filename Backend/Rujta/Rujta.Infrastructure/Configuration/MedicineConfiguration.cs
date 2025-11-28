@@ -30,9 +30,12 @@ namespace Rujta.Infrastructure.Configuration
             builder.Property(m => m.ExpiryDate)
                    .IsRequired();
 
-            
+            builder.Property(m => m.ImageUrl)
+                   .HasMaxLength(500) 
+                   .HasColumnType("NVARCHAR(500)")
+                   .IsRequired(false);
 
-            
+
             builder.HasMany(m => m.InventoryItems)
                    .WithOne(i => i.Medicine)
                    .HasForeignKey(i => i.MedicineID)

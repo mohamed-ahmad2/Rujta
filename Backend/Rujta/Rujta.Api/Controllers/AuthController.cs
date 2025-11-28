@@ -1,7 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
+using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
 
@@ -28,15 +25,21 @@ namespace Rujta.API.Controllers
                 var passwordValid = await _authService.CheckPasswordAsync(dto.Email, dto.Password);
                 if (!passwordValid)
                 {
-                    await _logService.AddLogAsync(dto.Email, "Failed login attempt");
+                    await _logService.AddLogAsync(dto.Email, LogConstants.FailedLogin);
                     return Unauthorized();
                 }
 
-                var tokens = await _authService.GenerateTokensAsync(dto.Email);
+                await _authService.GenerateTokensAsync(dto.Email);
+                var user = await _authService.GetUserByEmailAsync(dto.Email);
+                var role = user?.Role ?? "User";
 
-                await _logService.AddLogAsync(dto.Email, "User logged in successfully");
+                await _logService.AddLogAsync(dto.Email, LogConstants.UserLoggedIn);
 
-                return Ok(tokens);
+                return Ok(new
+                {
+                    Email = dto.Email,
+                    Role = role,
+                });
             }
             catch (InvalidOperationException ex)
             {
@@ -51,11 +54,14 @@ namespace Rujta.API.Controllers
             try
             {
                 var userId = await _authService.CreateUserAsync(dto, UserRole.User);
-                var tokens = await _authService.GenerateTokensAsync(dto.Email);
+                await _authService.GenerateTokensAsync(dto.Email);
+                var user = await _authService.GetUserByEmailAsync(dto.Email);
+                var role = user?.Role ?? "User";
 
-                await _logService.AddLogAsync(dto.Email, "New user registered");
 
-                return CreatedAtAction(nameof(Login), new { email = dto.Email }, new { UserId = userId, tokens });
+                await _logService.AddLogAsync(dto.Email, LogConstants.NewUserRegistered);
+
+                return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email });
             }
             catch (InvalidOperationException ex)
             {
@@ -65,47 +71,62 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("refresh-token")]
-        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto dto)
+        public async Task<IActionResult> RefreshToken()
         {
             try
             {
-                var tokens = await _authService.RefreshAccessTokenAsync(dto.RefreshToken);
+                var refreshToken = Request.Cookies[CookieKeys.RefreshToken];
+                if (refreshToken == null)
+                {
+                    await _logService.AddLogAsync(LogConstants.UnknownUser, LogConstants.RefreshTokenNotExist);
+                    return BadRequest(new { message = AuthMessages.RefreshTokenNotExist });
+                }
+                var tokens = await _authService.RefreshAccessTokenAsync(refreshToken);
 
-                await _logService.AddLogAsync("UnknownUser", "Refresh token used");
+                await _logService.AddLogAsync(LogConstants.UnknownUser, LogConstants.RefreshTokenUsed);
 
                 return Ok(tokens);
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync("UnknownUser", $"Refresh token error: {ex.Message}");
+                await _logService.AddLogAsync(LogConstants.UnknownUser, $"Refresh token error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
 
         [Authorize]
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromBody] RefreshTokenDto dto)
+        public async Task<IActionResult> Logout()
         {
             try
             {
                 var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
                 if (userIdClaim == null)
-                    return Unauthorized("User not found in token.");
+                    return Unauthorized(AuthMessages.UserNotFoundInToken);
 
                 if (!Guid.TryParse(userIdClaim, out var userId))
-                    return BadRequest("Invalid user ID in token.");
+                    return BadRequest(AuthMessages.InvalidUserIdInToken);
 
-                await _authService.LogoutAsync(userId, dto.RefreshToken);
+                var refreshToken = Request.Cookies[CookieKeys.RefreshToken];
+                if (!string.IsNullOrEmpty(refreshToken))
+                {
+                    await _authService.LogoutAsync(userId, refreshToken);
+                }
+                else
+                {
+                    await _authService.LogoutAsync(userId);
+                }
 
-                await _logService.AddLogAsync(userId.ToString(), "User logged out");
+                await _logService.AddLogAsync(userId.ToString(), LogConstants.LogoutMessage);
 
-                Response.Cookies.Delete("jwt");
+                Response.Cookies.Delete(CookieKeys.AccessToken);
+                Response.Cookies.Delete(CookieKeys.RefreshToken);
 
                 return NoContent();
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(User?.Identity?.Name ?? "UnknownUser", $"Logout error: {ex.Message}");
+                await _logService.AddLogAsync(User?.Identity?.Name ?? LogConstants.UnknownUser, $"Logout error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -130,7 +151,7 @@ namespace Rujta.API.Controllers
             {
                 var tokens = await _authService.SocialLoginAsync(dto);
                 return Ok(tokens);
-            }
+            }https://github.com/mohamed-ahmad2/Rujta/pull/64/conflict?name=Backend%252FRujta%252FRujta.Api%252Fappsettings.json&ancestor_oid=265f45ac26570146a60c12213a40a7aaf057fe16&base_oid=8cd0c860cff8be01eb2e1bc63aae466885a76e62&head_oid=58641bd914169634ec8a5ceb8de3e51eb2001898
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -150,4 +171,5 @@ namespace Rujta.API.Controllers
             }
         }
     }
+    public record MeResponse(string Email, string Role);
 }

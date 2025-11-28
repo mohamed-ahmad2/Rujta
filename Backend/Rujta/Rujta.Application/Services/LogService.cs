@@ -2,11 +2,6 @@
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Services
 {

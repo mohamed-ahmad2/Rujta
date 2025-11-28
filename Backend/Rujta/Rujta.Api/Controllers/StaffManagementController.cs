@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces.InterfaceServices;
+using System;
+using System.Threading.Tasks;
 
 namespace Rujta.API.Controllers
 {
@@ -17,6 +19,7 @@ namespace Rujta.API.Controllers
             _service = service;
         }
 
+        // GET: api/StaffManagement/GetAllStaff
         [HttpGet("GetAllStaff")]
         public async Task<IActionResult> GetAllStaff()
         {
@@ -24,7 +27,8 @@ namespace Rujta.API.Controllers
             return Ok(staffs);
         }
 
-        [HttpGet("GetStaffById/{id}")]
+        // GET: api/StaffManagement/GetStaffById/{id}
+        [HttpGet("GetStaffById/{id:int}")]
         public async Task<IActionResult> GetStaffById(int id)
         {
             var staff = await _service.GetByIdAsync(id);
@@ -32,27 +36,31 @@ namespace Rujta.API.Controllers
             return Ok(staff);
         }
 
+        // POST: api/StaffManagement/AddStaff
         [HttpPost("AddStaff")]
-        public async Task<IActionResult> AddStaff([FromBody] StaffDto staffDto)
+        public async Task<IActionResult> AddStaff([FromBody] StaffDto dto)
         {
-            await _service.AddAsync(staffDto);
-            return Ok(staffDto);
+            await _service.AddAsync(dto);
+            return Ok(dto);
         }
 
-        [HttpPut("UpdateStaff/{id}")]
-        public async Task<IActionResult> UpdateStaff(int id, [FromBody] StaffDto staffDto)
+        // PUT: api/StaffManagement/UpdateStaff/{id}
+        [HttpPut("UpdateStaff/{id:int}")]
+        public async Task<IActionResult> UpdateStaff(int id, [FromBody] StaffDto dto)
         {
-            await _service.UpdateAsync(id, staffDto);
+            await _service.UpdateAsync(id, dto);
             return NoContent();
         }
 
-        [HttpDelete("DeleteStaff/{id}")]
+        // DELETE: api/StaffManagement/DeleteStaff/{id}
+        [HttpDelete("DeleteStaff/{id:int}")]
         public async Task<IActionResult> DeleteStaff(int id)
         {
             await _service.DeleteAsync(id);
             return NoContent();
         }
 
+        // GET: api/StaffManagement/GetStaffByManager/{managerId}
         [HttpGet("GetStaffByManager/{managerId}")]
         public async Task<IActionResult> GetStaffByManager(Guid managerId)
         {
