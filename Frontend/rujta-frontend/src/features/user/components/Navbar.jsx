@@ -43,12 +43,14 @@ const Navbar = ({ cart, onCartClick }) => {
                     <li
                       key={med.id}
                       className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                      onClick={() => setQuery(med.name)}
                     >
                       {med.name}
                     </li>
                   ))}
                 </ul>
               )}
+
 
               {loading && (
                 <div className="absolute top-full left-0 right-0 bg-white px-4 py-2 border border-gray-300 mt-1 text-sm">
