@@ -11,13 +11,11 @@ namespace Rujta.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        private readonly JaroWinkler _jaro;
 
         public MedicineService(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
-            _jaro = new JaroWinkler();
         }
 
        
@@ -63,21 +61,7 @@ namespace Rujta.Application.Services
             await _unitOfWork.SaveAsync(cancellationToken);
         }
 
-        public async Task<IEnumerable<MedicineDto>> SearchAsync(string query, int top = 10, CancellationToken cancellationToken = default)
-        {
-            if (string.IsNullOrWhiteSpace(query))
-                return Enumerable.Empty<MedicineDto>();
-
-            var allMedicines = await _unitOfWork.Medicines.GetAllAsync(cancellationToken);
-
-            var filtered = allMedicines
-                .Where(m => m.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(m => _jaro.Similarity(m.Name, query))
-                .Take(top)
-                .ToList();
-
-            return _mapper.Map<IEnumerable<MedicineDto>>(filtered);
-        }
+        
 
     }
 }

@@ -1,13 +1,16 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
+import ProtectedRoute from "../shared/components/ProtectedRoute";
+
 import NavbarLanding from "../features/landing/components/Navbarlanding";
 import HeroLanding from "../features/landing/pages/Herolanding";
+
 import NavbarUser from "../features/user/components/Navbar";
 import HeroUser from "../features/user/pages/Hero";
 import ProductsUser from "../features/user/components/Products";
 import FooterUser from "../features/user/components/Footer";
 import CartDrawerUser from "../features/user/components/CartDrawer";
-import AuthPage from "../features/auth/pages/AuthPage";
+
 import Sidebar from "../features/dashboard/components/Sidebar";
 import Home from "../features/dashboard/pages/Home";
 import Add from "../features/dashboard/pages/add";
@@ -17,6 +20,8 @@ import Settings from "../features/dashboard/pages/Settings";
 import Log from "../features/dashboard/pages/Log";
 import Report from "../features/dashboard/pages/Report";
 import ResetPasswordPage from "../features/auth/pages/ResetPasswordPage";
+
+import AuthPage from "../features/auth/pages/AuthPage";
 
 const DashboardLayout = () => (
   <div className="flex min-h-screen bg-gray-50">
@@ -38,6 +43,7 @@ const DashboardLayout = () => (
 
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Routes>
+    {/* Landing Page */}
     <Route
       path="/"
       element={
@@ -60,20 +66,24 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
     <Route
       path="/user"
       element={
-        <div className="overflow-x-hidden bg-page min-h-screen">
-          <NavbarUser cart={cart} onCartClick={() => setIsCartOpen(true)} />
-          <HeroUser />
-          <ProductsUser cart={cart} setCart={setCart} />
-          <FooterUser />
-          <CartDrawerUser
-            cart={cart}
-            setCart={setCart}
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-          />
-        </div>
+        <ProtectedRoute>
+          <div className="overflow-x-hidden bg-page min-h-screen">
+            <NavbarUser cart={cart} onCartClick={() => setIsCartOpen(true)} />
+            <HeroUser />
+            <ProductsUser cart={cart} setCart={setCart} />
+            <FooterUser />
+            <CartDrawerUser
+              cart={cart}
+              setCart={setCart}
+              isOpen={isCartOpen}
+              onClose={() => setIsCartOpen(false)}
+            />
+          </div>
+        </ProtectedRoute>
       }
     />
+
+    {/* Auth Page */}
     <Route
       path="/auth"
       element={
@@ -82,7 +92,16 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         </div>
       }
     />
-    <Route path="/dashboard/*" element={<DashboardLayout />} />
+
+    {/* Protected Admin Dashboard */}
+    <Route
+      path="/dashboard/*"
+      element={
+        <ProtectedRoute role="Admin">
+          <DashboardLayout />
+        </ProtectedRoute>
+      }
+    />
   </Routes>
 );
 

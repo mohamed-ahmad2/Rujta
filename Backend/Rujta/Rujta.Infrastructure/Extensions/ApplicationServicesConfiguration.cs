@@ -1,12 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Rujta.Application.Services;
-using Rujta.Infrastructure.Helperrs;
-using Rujta.Infrastructure.Identity.Helpers;
-using Rujta.Infrastructure.Identity.Services;
-using Rujta.Infrastructure.Repositories;
-using Rujta.Infrastructure.Services;
-
-
+﻿
 namespace Rujta.Infrastructure.Extensions
 {
     public static class ApplicationServicesConfiguration
@@ -28,6 +20,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IPharmacyRepository, PharmacyRepo>();
             services.AddScoped<PharmacyDistanceService>();
+            services.AddScoped<IdentityServices>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<ILogService, LogService>();
