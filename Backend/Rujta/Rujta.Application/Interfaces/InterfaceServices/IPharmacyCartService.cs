@@ -7,6 +7,6 @@ namespace Rujta.Application.Interfaces.InterfaceServices
 {
     public interface IPharmacyCartService
     {
-        Task<List<Pharmacy>> GetTopPharmaciesForCartAsync(ItemDto order, double userLat, double userLng, int topK);
+        Task<List<PharmacyMatchResultDto>> GetTopPharmaciesForCartAsync(ItemDto order, double userLat, double userLng, int topK);
     }
 }
