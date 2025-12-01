@@ -8,10 +8,12 @@ namespace Rujta.Infrastructure.Identity
         public Guid DomainPersonId { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string Location { get; set; } = string.Empty;
-        
+        public string? PasswordResetToken { get; set; }
+        public DateTime? PasswordResetTokenExpiry { get; set; }
 
         public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         [ForeignKey("DomainPersonId")]
-        public required virtual Person DomainPerson { get; set; }
+        public  virtual Person DomainPerson { get; set; }
+       
     }
 }
