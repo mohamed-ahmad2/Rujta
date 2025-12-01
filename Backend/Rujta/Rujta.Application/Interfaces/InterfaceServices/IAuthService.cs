@@ -13,5 +13,12 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task<TokenDto> RefreshAccessTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
         Task LogoutAsync(Guid userId, string? refreshToken = null);
         Task<ApplicationUserDto?> GetUserByEmailAsync(string email);
+        Task ResetPasswordAsync(ResetPasswordDto dto);
+        Task<TokenDto> SocialLoginAsync(SocialLoginDto dto);
+        Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email);
+
+
+       
+
     }
 }

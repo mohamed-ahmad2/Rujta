@@ -27,7 +27,10 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<ISearchMedicineService, SearchMedicineService>();
             services.AddScoped<IPharmacySearchService, PharmacySearchService>();
             services.AddScoped<IPharmacyCartService, PharmacyCartService>();
-
+             services.AddScoped<ISearchMedicineService, SearchMedicineService>();
+            services.AddScoped<IPharmacySearchService, PharmacySearchService>();
+            services.AddScoped<IPharmacyCartService, PharmacyCartService>();
+            services.AddScoped<IEmailService, EmailService>();
 
             services.AddScoped<PharmacyDistanceService>();
 
