@@ -70,6 +70,39 @@ namespace Rujta.API.Controllers
             }
         }
 
+        [HttpPost("register/admin")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> RegisterByAdmin([FromBody] RegisterDto dto)
+        {
+            try
+            {
+                var roleToAssign = dto.Role ?? UserRole.User;
+
+                if (!Enum.IsDefined(typeof(UserRole), roleToAssign))
+                    return BadRequest(new { message = "Invalid role specified." });
+
+                if (User.IsInRole("Manager") && roleToAssign == UserRole.Admin)
+                    return Forbid("Manager cannot create Admin users.");
+
+                var userId = await _authService.CreateUserAsync(dto, roleToAssign);
+                await _authService.GenerateTokensAsync(dto.Email);
+
+                var user = await _authService.GetUserByEmailAsync(dto.Email);
+                var role = user?.Role ?? roleToAssign.ToString();
+
+                await _logService.AddLogAsync(dto.Email, LogConstants.NewUserRegistered);
+
+                return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email });
+            }
+            catch (InvalidOperationException ex)
+            {
+                await _logService.AddLogAsync(dto.Email, $"Registration error: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+
+
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken()
         {
