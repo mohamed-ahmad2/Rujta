@@ -19,6 +19,7 @@ import Orders from "../features/dashboard/pages/Orders";
 import Settings from "../features/dashboard/pages/Settings";
 import Log from "../features/dashboard/pages/Log";
 import Report from "../features/dashboard/pages/Report";
+import ResetPasswordPage from "../features/auth/pages/ResetPasswordPage";
 
 import AuthPage from "../features/auth/pages/AuthPage";
 
@@ -38,6 +39,7 @@ const DashboardLayout = () => (
     </div>
   </div>
 );
+<Route path="/reset-password" element={<ResetPasswordPage />} />
 
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Routes>
@@ -51,6 +53,14 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         </div>
       }
     />
+<Route
+  path="/reset-password"
+  element={
+    <div className="flex items-center justify-center h-screen bg-gray-100">
+      <ResetPasswordPage />
+    </div>
+  }
+/>
 
     {/* Protected User Page */}
     <Route

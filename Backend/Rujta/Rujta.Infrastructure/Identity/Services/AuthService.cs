@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Domain.Common;
 
 namespace Rujta.Infrastructure.Identity.Services
@@ -12,6 +13,7 @@ namespace Rujta.Infrastructure.Identity.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly TokenHelper _tokenHelper;
         private readonly IConfiguration _configuration;
+        private readonly IEmailService _emailService;
 
         public AuthService(
             IdentityServices identityServices,
@@ -20,7 +22,8 @@ namespace Rujta.Infrastructure.Identity.Services
             ILogger<AuthService> logger,
             IHttpContextAccessor httpContextAccessor,
             TokenHelper tokenHelper,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IEmailService emailService)
         {
             _identityServices = identityServices;
             _unitOfWork = unitOfWork;
@@ -29,6 +32,7 @@ namespace Rujta.Infrastructure.Identity.Services
             _httpContextAccessor = httpContextAccessor;
             _tokenHelper = tokenHelper;
             _configuration = configuration;
+            _emailService = emailService;
         }
 
 
@@ -326,6 +330,71 @@ namespace Rujta.Infrastructure.Identity.Services
             };
 
             context.Response.Cookies.Append(CookieKeys.RefreshToken, refreshToken, cookieOptions);
+        }
+
+
+        public async Task ResetPasswordAsync(ResetPasswordDto dto)
+        {
+            var user = await _identityServices.UserManager.FindByEmailAsync(dto.Email);
+
+            if (user == null)
+                throw new InvalidOperationException("Invalid OTP or email.");
+
+            if (user.PasswordResetToken != dto.Otp ||
+                user.PasswordResetTokenExpiry < DateTime.UtcNow)
+            {
+                throw new InvalidOperationException("OTP is invalid or expired.");
+            }
+
+            var hashedPassword = _identityServices.UserManager.PasswordHasher.HashPassword(user, dto.NewPassword);
+            user.PasswordHash = hashedPassword;
+
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiry = null;
+
+            await _identityServices.UserManager.UpdateAsync(user);
+        }
+
+
+
+
+
+
+
+        public async Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email)
+        {
+            var user = await _identityServices.UserManager.FindByEmailAsync(email);
+
+            if (user == null)
+                return new ForgotPasswordResponseDto
+                {
+                    Message = "If the email exists, an OTP has been sent."
+                };
+
+            var otp = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
+
+            user.PasswordResetToken = otp;
+            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(5);
+
+            await _identityServices.UserManager.UpdateAsync(user);
+
+            string subject = "Your OTP for Password Reset";
+            string body = $"<p>Hello {user.FullName},</p>" +
+                          $"<p>Your OTP to reset your password is: <strong>{otp}</strong></p>" +
+            $"<p>This OTP will expire in 5 minutes.</p>";
+
+            await _emailService.SendEmailAsync(email, subject, body);
+
+            return new ForgotPasswordResponseDto
+            {
+                Message = "OTP sent to your email."
+            };
+        }
+
+
+        public Task<TokenDto> SocialLoginAsync(SocialLoginDto dto)
+        {
+            throw new NotImplementedException();
         }
     }
 }
