@@ -30,8 +30,8 @@ namespace Rujta.Infrastructure.Identity.Services
             IHttpContextAccessor httpContextAccessor,
             TokenHelper tokenHelper,
             IConfiguration configuration,
-            IEmailService emailService,
-            IUserRepository userRepository)
+            IEmailService emailService
+            )
         {
             _identityServices = identityServices;
             _unitOfWork = unitOfWork;
@@ -41,7 +41,6 @@ namespace Rujta.Infrastructure.Identity.Services
             _tokenHelper = tokenHelper;
             _configuration = configuration;
             _emailService = emailService;
-            _userRepository = userRepository;
         }
 
         // -----------------------------
@@ -339,7 +338,7 @@ namespace Rujta.Infrastructure.Identity.Services
         // -----------------------------
         // Helpers
         // -----------------------------
-        private string GenerateSecurePassword()
+        static private string GenerateSecurePassword()
         {
             const string upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             const string lower = "abcdefghijklmnopqrstuvwxyz";
