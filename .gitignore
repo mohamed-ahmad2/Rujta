@@ -103,5 +103,5 @@ dist-ssr
 *.sw?
 
 # Firebase service account
-Backend/Rujta/Rujta.Api/Firebase/Service-account.json
+Backend/Rujta/Rujta.Api/Firebase/
 
