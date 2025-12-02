@@ -163,19 +163,19 @@ namespace Rujta.API.Controllers
             }
         }
 
-        [HttpPost("social-login")]
-        public async Task<IActionResult> SocialLogin([FromBody] SocialLoginDto dto)
-        {
-            try
-            {
-                var tokens = await _authService.SocialLoginAsync(dto);
-                return Ok(tokens);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
+        //[HttpPost("social-login")]
+        //public async Task<IActionResult> SocialLogin([FromBody] SocialLoginDto dto)
+        //{
+        //    try
+        //    {
+        //        var tokens = await _authService.SocialLoginAsync(dto);
+        //        return Ok(tokens);
+        //    }
+        //    catch (InvalidOperationException ex)
+        //    {
+        //        return BadRequest(new { message = ex.Message });
+        //    }
+        //}
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto dto)
         {
@@ -189,6 +189,23 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [HttpPost("google-login")]
+        public async Task<IActionResult> GoogleLogin([FromBody] SocialLoginDto dto)
+        {
+            try
+            {
+                var tokens = await _authService.LoginWithGoogle(dto.IdToken);
+                return Ok(tokens);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+      
+
+
 
     }
 
