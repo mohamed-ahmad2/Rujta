@@ -179,9 +179,22 @@ namespace Rujta.API.Controllers
 
             var role = roles.FirstOrDefault() ?? string.Empty;
 
-            
+
             return Ok(new MeResponse(email, role));
         }
+
+        [HttpGet("email")]
+        [ProducesResponseType(typeof(EmailResponse), StatusCodes.Status200OK)]
+        public IActionResult GetUserEmail()
+        {
+            var email = JwtRegisteredClaimNames.Email;
+               
+            if (string.IsNullOrEmpty(email))
+                return Ok(new EmailResponse(string.Empty));
+
+            return Ok(new EmailResponse(email));
+        }
+
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
@@ -226,4 +239,5 @@ namespace Rujta.API.Controllers
     }
 
     public record MeResponse(string Email, string Role);
+    public record EmailResponse(string Email);
 }
