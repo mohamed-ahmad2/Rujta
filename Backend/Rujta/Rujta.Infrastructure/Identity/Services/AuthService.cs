@@ -315,8 +315,9 @@ namespace Rujta.Infrastructure.Identity.Services
 
             string name = decodedToken.Claims.TryGetValue("name", out var nameObj) ? nameObj?.ToString() : email.Split('@')[0];
 
-            var user = await _userRepository.GetByEmailAsync(email);
-            if (user == null)
+            // Check if the user exists using your existing method
+            var existingUser = await _unitOfWork.Users.GetByEmailAsync(email);
+            if (existingUser == null)
             {
                 string securePassword = GenerateSecurePassword();
                 var registerDto = new RegisterDto
@@ -325,16 +326,15 @@ namespace Rujta.Infrastructure.Identity.Services
                     Name = name,
                     CreatePassword = securePassword
                 };
-
                 await CreateUserAsync(registerDto, UserRole.User);
-                user = await _userRepository.GetByEmailAsync(email);
-
                 _logger.LogInformation("New user created via Google login: {Email}", email);
             }
 
             _logger.LogInformation("User {Email} logged in with Google.", email);
             return await GenerateTokensAsync(email);
         }
+
+
 
         // -----------------------------
         // Helpers
@@ -345,7 +345,6 @@ namespace Rujta.Infrastructure.Identity.Services
             const string lower = "abcdefghijklmnopqrstuvwxyz";
             const string digits = "0123456789";
             const string symbols = "!@#$%^&*()-_=+";
-
             char[] password = new char[12];
             using var rng = RandomNumberGenerator.Create();
 
@@ -371,7 +370,8 @@ namespace Rujta.Infrastructure.Identity.Services
             return new string(password);
         }
 
-        private int GetRandomIndex(int max, RandomNumberGenerator rng)
+        // Make this static
+        private static int GetRandomIndex(int max, RandomNumberGenerator rng)
         {
             byte[] bytes = new byte[4];
             rng.GetBytes(bytes);
