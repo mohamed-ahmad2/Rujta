@@ -1,9 +1,6 @@
 ﻿using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Rujta.Application.Services
@@ -17,7 +14,8 @@ namespace Rujta.Application.Services
             _pharmacySearchService = pharmacySearchService;
         }
 
-        public async Task<List<Pharmacy>> GetTopPharmaciesForCartAsync(ItemDto order, double userLat, double userLng, int topK)=>
-            await _pharmacySearchService.GetRankedPharmaciesAsync(order, userLat, userLng, topK);
+        public async Task<List<PharmacyMatchResultDto>> GetTopPharmaciesForCartAsync(
+            ItemDto order, double userLat, double userLng, int topK)
+            => await _pharmacySearchService.GetRankedPharmaciesAsync(order, userLat, userLng, topK);
     }
 }
