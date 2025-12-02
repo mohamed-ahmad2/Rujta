@@ -1,5 +1,4 @@
 ﻿using FirebaseAdmin.Auth;
-using Google.Apis.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Rujta.Application.DTOs;
@@ -50,15 +49,21 @@ namespace Rujta.Infrastructure.Identity.Services
         // -----------------------------
         public async Task<ApplicationUserDto?> GetUserByEmailAsync(string email)
         {
+            _logger.LogInformation("Fetching user by email: {Email}", email);
             return await _unitOfWork.Users.GetByEmailAsync(email);
         }
 
         public async Task<bool> CheckPasswordAsync(string email, string password, CancellationToken cancellationToken = default)
         {
             var user = await _identityServices.UserManager.FindByEmailAsync(email);
-            if (user == null) return false;
+            if (user == null)
+            {
+                _logger.LogWarning("Password check failed: user not found ({Email})", email);
+                return false;
+            }
 
             var result = await _identityServices.SignInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
+            _logger.LogInformation("Password check for {Email}: {Result}", email, result.Succeeded ? "Succeeded" : "Failed");
             return result.Succeeded;
         }
 
@@ -81,25 +86,34 @@ namespace Rujta.Infrastructure.Identity.Services
 
             var result = await _identityServices.UserManager.CreateAsync(user, dto.CreatePassword);
             if (!result.Succeeded)
-                throw new InvalidOperationException(string.Join(", ", result.Errors.Select(e => e.Description)));
+            {
+                string errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                _logger.LogError("User creation failed for {Email}: {Errors}", dto.Email, errors);
+                throw new InvalidOperationException(errors);
+            }
 
             await _identityServices.UserManager.AddToRoleAsync(user, role.ToString());
+            _logger.LogInformation("User created successfully: {Email}, Role: {Role}", dto.Email, role);
             return user.Id;
         }
 
         public async Task<bool> IsEmailExistsAsync(string email, CancellationToken cancellationToken = default)
         {
-            var user = await _identityServices.UserManager.FindByEmailAsync(email);
-            return user != null;
+            var exists = await _identityServices.UserManager.FindByEmailAsync(email) != null;
+            _logger.LogInformation("Email check for {Email}: {Exists}", email, exists);
+            return exists;
         }
 
         public async Task<TokenDto> GenerateTokensAsync(string email, CancellationToken cancellationToken = default)
         {
             var user = await _identityServices.UserManager.FindByEmailAsync(email);
-            if (user == null) throw new InvalidOperationException(AuthMessages.UserNotFound);
+            if (user == null)
+            {
+                _logger.LogWarning("Token generation failed: user not found ({Email})", email);
+                throw new InvalidOperationException(AuthMessages.UserNotFound);
+            }
 
             ApplicationUserDto userDto = _mapper.Map<ApplicationUserDto>(user);
-
             var context = _httpContextAccessor.HttpContext!;
             string? deviceId = context.Request.Cookies.TryGetValue(CookieKeys.DeviceId, out var id) ? id : null;
 
@@ -124,8 +138,9 @@ namespace Rujta.Infrastructure.Identity.Services
 
                 await _unitOfWork.Devices.AddAsync(device);
                 await _unitOfWork.SaveAsync();
-
                 userDto.DeviceId = deviceId;
+
+                _logger.LogInformation("New device registered: {DeviceId} for user {Email}", deviceId, email);
             }
 
             bool loginOrRegister = true;
@@ -134,6 +149,7 @@ namespace Rujta.Infrastructure.Identity.Services
             SetRefreshTokenCookie(tokens.RefreshToken);
             SetJwtCookie(tokens.AccessToken);
 
+            _logger.LogInformation("Tokens generated for user {Email}", email);
             return tokens;
         }
 
@@ -143,22 +159,33 @@ namespace Rujta.Infrastructure.Identity.Services
             refreshToken ??= context.Request.Cookies[CookieKeys.RefreshToken];
 
             if (string.IsNullOrEmpty(refreshToken))
+            {
+                _logger.LogWarning("Refresh token required but missing.");
                 throw new InvalidOperationException(AuthMessages.RefreshTokenRequired);
+            }
 
             var storedToken = await RefreshTokenHelper.GetValidRefreshTokenAsync(_unitOfWork.RefreshTokens, refreshToken);
-            if (storedToken == null) throw new InvalidOperationException(AuthMessages.InvalidOrExpiredRefreshToken);
+            if (storedToken == null)
+            {
+                _logger.LogWarning("Invalid or expired refresh token.");
+                throw new InvalidOperationException(AuthMessages.InvalidOrExpiredRefreshToken);
+            }
 
             var user = await _identityServices.UserManager.FindByIdAsync(storedToken.UserId.ToString());
-            if (user == null) throw new InvalidOperationException(AuthMessages.UserNotFound);
+            if (user == null)
+            {
+                _logger.LogWarning("User not found during token refresh. UserId: {UserId}", storedToken.UserId);
+                throw new InvalidOperationException(AuthMessages.UserNotFound);
+            }
 
             ApplicationUserDto userDto = _mapper.Map<ApplicationUserDto>(user);
-
             bool loginOrRegister = false;
             var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, storedToken.DeviceInfo, loginOrRegister, refreshToken);
 
             SetRefreshTokenCookie(tokens.RefreshToken);
             SetJwtCookie(tokens.AccessToken);
 
+            _logger.LogInformation("Access token refreshed for user {Email}", user.Email);
             return tokens;
         }
 
@@ -175,6 +202,7 @@ namespace Rujta.Infrastructure.Identity.Services
                     token.Revoked = true;
                     token.RevokedAt = DateTime.UtcNow;
                     await _unitOfWork.SaveAsync();
+                    _logger.LogInformation("User {UserId} logged out using refresh token.", userId);
                 }
             }
             else if (!string.IsNullOrEmpty(deviceId))
@@ -186,32 +214,29 @@ namespace Rujta.Infrastructure.Identity.Services
                     token.RevokedAt = DateTime.UtcNow;
                 }
                 await _unitOfWork.SaveAsync();
+                _logger.LogInformation("User {UserId} logged out on device {DeviceId}.", userId, deviceId);
             }
             else
             {
                 await _tokenHelper.RevokeOldRefreshTokensAsync(userId);
+                _logger.LogInformation("User {UserId} logged out from all devices.", userId);
             }
         }
 
-        public async Task ResetPasswordAsync(ResetPasswordDto dto)
-        {
-            var user = await _identityServices.UserManager.FindByEmailAsync(dto.Email);
-            if (user == null) throw new InvalidOperationException("Invalid OTP or email.");
-
-            if (user.PasswordResetToken != dto.Otp || user.PasswordResetTokenExpiry < DateTime.UtcNow)
-                throw new InvalidOperationException("OTP is invalid or expired.");
-
-            user.PasswordHash = _identityServices.UserManager.PasswordHasher.HashPassword(user, dto.NewPassword);
-            user.PasswordResetToken = null;
-            user.PasswordResetTokenExpiry = null;
-
-            await _identityServices.UserManager.UpdateAsync(user);
-        }
-
+        // -----------------------------
+        // Forgot password
+        // -----------------------------
         public async Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email)
         {
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ArgumentNullException(nameof(email));
+
             var user = await _identityServices.UserManager.FindByEmailAsync(email);
-            if (user == null) return new ForgotPasswordResponseDto { Message = "If the email exists, an OTP has been sent." };
+            if (user == null)
+            {
+                _logger.LogInformation("Forgot password requested for non-existent email: {Email}", email);
+                return new ForgotPasswordResponseDto { Message = "If the email exists, an OTP has been sent." };
+            }
 
             string otp = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
             user.PasswordResetToken = otp;
@@ -222,42 +247,78 @@ namespace Rujta.Infrastructure.Identity.Services
             string body = $"<p>Hello {user.FullName},</p><p>Your OTP is: <strong>{otp}</strong></p><p>Expires in 5 minutes.</p>";
             await _emailService.SendEmailAsync(email, subject, body);
 
+            _logger.LogInformation("Forgot password OTP sent to email: {Email}", email);
             return new ForgotPasswordResponseDto { Message = "OTP sent to your email." };
+        }
+
+        // -----------------------------
+        // Reset password
+        // -----------------------------
+        public async Task ResetPasswordAsync(ResetPasswordDto dto)
+        {
+            if (dto == null) throw new ArgumentNullException(nameof(dto));
+
+            var user = await _identityServices.UserManager.FindByEmailAsync(dto.Email);
+            if (user == null)
+            {
+                _logger.LogWarning("Reset password failed: user not found ({Email})", dto.Email);
+                throw new InvalidOperationException("Invalid OTP or email.");
+            }
+
+            if (user.PasswordResetToken != dto.Otp || user.PasswordResetTokenExpiry < DateTime.UtcNow)
+            {
+                _logger.LogWarning("Reset password failed: invalid or expired OTP for {Email}", dto.Email);
+                throw new InvalidOperationException("OTP is invalid or expired.");
+            }
+
+            user.PasswordHash = _identityServices.UserManager.PasswordHasher.HashPassword(user, dto.NewPassword);
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiry = null;
+
+            await _identityServices.UserManager.UpdateAsync(user);
+            _logger.LogInformation("Password reset successfully for {Email}", dto.Email);
         }
 
         // -----------------------------
         // Firebase Google Login
         // -----------------------------
-
-
         public async Task<TokenDto> LoginWithGoogle(string idToken)
         {
             if (string.IsNullOrWhiteSpace(idToken))
-                throw new Exception("ID token is required.");
+            {
+                _logger.LogWarning("Google login failed: ID token is missing.");
+                throw new ArgumentNullException(nameof(idToken), "ID token is required.");
+            }
 
             FirebaseToken decodedToken;
             try
             {
-                // Verify Firebase ID token
                 decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(idToken);
+            }
+            catch (FirebaseAuthException ex)
+            {
+                _logger.LogError(ex, "Invalid Firebase ID token.");
+                throw new InvalidOperationException("Invalid Firebase ID token.", ex);
             }
             catch (Exception ex)
             {
-                throw new Exception("Invalid Firebase ID token.", ex);
+                _logger.LogError(ex, "Error verifying Firebase ID token.");
+                throw new InvalidOperationException("An error occurred while verifying the Firebase ID token.", ex);
             }
 
-            // Extract user info
-            string email = decodedToken.Claims["email"]?.ToString()
-                           ?? throw new Exception("Email not found in token");
-            string name = decodedToken.Claims["name"]?.ToString() ?? email.Split('@')[0];
+            string email = decodedToken.Claims.TryGetValue("email", out var emailObj) ? emailObj?.ToString() : null;
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                _logger.LogError("Email not found in Firebase token.");
+                throw new InvalidOperationException("Email not found in token.");
+            }
 
-            // Check if user exists in your database
+            string name = decodedToken.Claims.TryGetValue("name", out var nameObj) ? nameObj?.ToString() : email.Split('@')[0];
+
             var user = await _userRepository.GetByEmailAsync(email);
             if (user == null)
             {
-                // Generate a secure password that satisfies ASP.NET Identity policies
                 string securePassword = GenerateSecurePassword();
-
                 var registerDto = new RegisterDto
                 {
                     Email = email,
@@ -265,72 +326,58 @@ namespace Rujta.Infrastructure.Identity.Services
                     CreatePassword = securePassword
                 };
 
-                // Create user in database
                 await CreateUserAsync(registerDto, UserRole.User);
-
-                // Retrieve newly created user
                 user = await _userRepository.GetByEmailAsync(email);
+
+                _logger.LogInformation("New user created via Google login: {Email}", email);
             }
 
-            // Generate JWT tokens for your app
+            _logger.LogInformation("User {Email} logged in with Google.", email);
             return await GenerateTokensAsync(email);
         }
 
-        // ------------------------------
-        // Helper method to generate a secure password
-        // ------------------------------
+        // -----------------------------
+        // Helpers
+        // -----------------------------
         private string GenerateSecurePassword()
         {
-            // Example: ensures at least 1 uppercase, 1 lowercase, 1 digit, 1 symbol, length >= 12
             const string upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             const string lower = "abcdefghijklmnopqrstuvwxyz";
             const string digits = "0123456789";
             const string symbols = "!@#$%^&*()-_=+";
 
-            string password = "";
-            var rand = new Random();
+            char[] password = new char[12];
+            using var rng = RandomNumberGenerator.Create();
 
-            password += upper[rand.Next(upper.Length)];
-            password += lower[rand.Next(lower.Length)];
-            password += digits[rand.Next(digits.Length)];
-            password += symbols[rand.Next(symbols.Length)];
+            // Ensure one of each type
+            password[0] = upper[GetRandomIndex(upper.Length, rng)];
+            password[1] = lower[GetRandomIndex(lower.Length, rng)];
+            password[2] = digits[GetRandomIndex(digits.Length, rng)];
+            password[3] = symbols[GetRandomIndex(symbols.Length, rng)];
 
-            // Fill the rest with random chars to reach length 12
             string allChars = upper + lower + digits + symbols;
-            for (int i = password.Length; i < 12; i++)
+            for (int i = 4; i < password.Length; i++)
             {
-                password += allChars[rand.Next(allChars.Length)];
+                password[i] = allChars[GetRandomIndex(allChars.Length, rng)];
             }
 
-            return password;
+            // Shuffle
+            for (int i = password.Length - 1; i > 0; i--)
+            {
+                int j = GetRandomIndex(i + 1, rng);
+                (password[i], password[j]) = (password[j], password[i]);
+            }
+
+            return new string(password);
         }
 
+        private int GetRandomIndex(int max, RandomNumberGenerator rng)
+        {
+            byte[] bytes = new byte[4];
+            rng.GetBytes(bytes);
+            return (int)(BitConverter.ToUInt32(bytes, 0) % max);
+        }
 
-
-
-
-
-
-
-        //public async Task<TokenDto> SocialLoginAsync(SocialLoginDto dto)
-        //    {
-        //        if (dto == null)
-        //            throw new ArgumentNullException(nameof(dto));
-
-        //        if (!string.IsNullOrEmpty(dto.IdToken))
-        //        {
-        //            // Handle Google login
-        //            return await LoginWithGoogle(dto.IdToken);
-        //        }
-
-        //        // If you want to add other social providers (Facebook, Apple, etc.), handle them here
-        //        throw new InvalidOperationException("Unsupported social login provider or missing IdToken.");
-        //    }
-
-
-        // -----------------------------
-        // Helpers
-        // -----------------------------
         private void SetJwtCookie(string accessToken)
         {
             var context = _httpContextAccessor.HttpContext;
