@@ -12,8 +12,8 @@ using Rujta.Infrastructure.Data;
 namespace Rujta.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251130182110_Initial")]
-    partial class Initial
+    [Migration("20251201132721_addDatabaseGoogle")]
+    partial class addDatabaseGoogle
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

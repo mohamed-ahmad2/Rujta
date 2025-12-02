@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Rujta.Infrastructure.Identity;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -15,5 +16,8 @@ namespace Rujta.Application.DTOs
         public string Location { get; set; } = string.Empty;
         public string CreatePassword { get; set; } = string.Empty;
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        public UserRole? Role { get; set; }
+
     }
 }

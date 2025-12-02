@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { IoMdSearch } from "react-icons/io";
 import { FaCartShopping } from "react-icons/fa6";
 import { useSearchMedicines } from "../../medicines/hook/useSearchMedicines";
+import { useNavigate } from "react-router-dom";
 
 const Navbar = ({ cart, onCartClick }) => {
   const [query, setQuery] = useState("");
+const navigate = useNavigate();
 
   const {
     results: searchResults,
@@ -51,7 +53,11 @@ const Navbar = ({ cart, onCartClick }) => {
                     <li
                       key={med.id}
                       className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => setQuery(chooseResult(med.name))}
+                    onClick={() => {
+                   chooseResult(med.name);
+                navigate(`/medicines/${med.id}`);
+                          }}
+
                     >
                       {med.name}
                     </li>

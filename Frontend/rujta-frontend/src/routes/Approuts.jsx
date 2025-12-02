@@ -20,7 +20,7 @@ import Settings from "../features/dashboard/pages/Settings";
 import Log from "../features/dashboard/pages/Log";
 import Report from "../features/dashboard/pages/Report";
 import ResetPasswordPage from "../features/auth/pages/ResetPasswordPage";
-
+import MedicineDetails from "../features/medicines/pages/MedicineDetails";
 import AuthPage from "../features/auth/pages/AuthPage";
 
 const DashboardLayout = () => (
@@ -82,6 +82,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         </ProtectedRoute>
       }
     />
+<Route path="/medicines/:id" element={<MedicineDetails />} />
 
     {/* Auth Page */}
     <Route
@@ -92,6 +93,25 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         </div>
       }
     />
+<Route
+  path="/medicine/:id"
+  element={
+    <ProtectedRoute>
+      <div className="overflow-x-hidden bg-page min-h-screen">
+        <NavbarUser cart={cart} onCartClick={() => setIsCartOpen(true)} />
+
+        <MedicineDetails cart={cart} setCart={setCart} />
+
+        <CartDrawerUser
+          cart={cart}
+          setCart={setCart}
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+        />
+      </div>
+    </ProtectedRoute>
+  }
+/>
 
     {/* Protected Admin Dashboard */}
     <Route

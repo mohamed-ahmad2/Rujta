@@ -2,9 +2,11 @@ import React, { useEffect } from "react";
 import imge1 from "../../../assets/hero/img1.png";
 import { FaStar } from "react-icons/fa";
 import useMedicine from "../../medicines/hook/useMedicines";
+import { useNavigate } from "react-router-dom";
 
 const Products = ({ cart, setCart }) => {
   const { medicines, fetchAll, loading, error } = useMedicine();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchAll();
@@ -55,11 +57,14 @@ const Products = ({ cart, setCart }) => {
               {/* Product Image */}
               <div className="relative bg-[#E8F3E8] flex justify-center items-center h-[200px] overflow-hidden">
                 <img
+
                   src={data.imageUrl || imge1}
+                  onClick={() => navigate(`/medicine/${data.id}`)}
                   alt={data.name}
                   className="w-[150px] object-contain group-hover:scale-110 duration-300"
                   onError={(e) => {
                     e.currentTarget.src = imge1;
+                    
                   }}
                 />
 
@@ -98,24 +103,7 @@ const Products = ({ cart, setCart }) => {
           ))}
         </div>
 
-        {/* Cart Section */}
-        <div className="mt-20 text-center">
-          <h2 className="text-xl font-bold mb-4 text-secondary">
-            🛒 Your Cart
-          </h2>
-          {cart.length > 0 ? (
-            <ul className="inline-block text-left text-gray-700 space-y-1">
-              {cart.map((item) => (
-                <li key={item.id} className="border-b pb-1">
-                  {item.name}{" "}
-                  <span className="text-gray-500">× {item.quantity}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500">No items in cart yet.</p>
-          )}
-        </div>
+     
       </div>
     </div>
   );
