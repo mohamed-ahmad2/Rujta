@@ -16,6 +16,11 @@ namespace Rujta.Domain.Entities
         public double Latitude { get; set; }
         public double Longitude { get; set; }
 
+        public string? GoogleId { get; set; }      // store the 'sub' from Google token
+        public string? PictureUrl { get; set; }   // optional, store user's Google profile picture
+        public DateTime? LastLogin { get; set; }  // track last login time
+
+
 
 
         public ICollection<Prescription>? Prescriptions { get; set; }
