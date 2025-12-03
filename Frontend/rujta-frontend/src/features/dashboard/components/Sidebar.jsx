@@ -1,127 +1,177 @@
-import React, { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import React, { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import logo from "../../../assets/Logo.png";
+import { RiLogoutCircleLine } from "react-icons/ri";
 
-// icons
-import { MdInventory, MdMenuOpen } from "react-icons/md";
+// Icons
 import { IoHomeOutline } from "react-icons/io5";
-import { IoIosArrowDown } from "react-icons/io";
-
+import { MdInventory, MdMenuOpen } from "react-icons/md";
 import { TbMenuOrder, TbReportSearch } from "react-icons/tb";
 import { IoLogoBuffer } from "react-icons/io";
 import { CiSettings } from "react-icons/ci";
-import { FaUserCircle } from "react-icons/fa";
-
-const menuItems = [
-  { icons: <IoHomeOutline size={30} />, label: 'Home', path: '/dashboard/home' },
-  {
-    icons: <MdInventory size={30} />,
-    label: 'Products',
-    path: '/dashboard/products',
-    subItems: [
-      { label: 'Add Product', path: '/dashboard/add' },
-      { label: 'View Products', path: '/dashboard/view' }
-    ]
-  },
-  { icons: <TbMenuOrder size={30} />, label: 'Orders', path: '/dashboard/orders' },
-  { icons: <TbReportSearch size={30} />, label: 'Report', path: '/dashboard/report' },
-  { icons: <IoLogoBuffer size={30} />, label: 'Log', path: '/dashboard/log' },
-  { icons: <CiSettings size={30} />, label: 'Settings', path: '/dashboard/settings' },
-];
-
+import { IoIosArrowDown } from "react-icons/io";
 
 export default function Sidebar() {
   const [open, setOpen] = useState(true);
-  const [expanded, setExpanded] = useState(null); // which dropdown is open
+  const [expanded, setExpanded] = useState(null);
   const location = useLocation();
 
   const toggleExpand = (path) => {
     setExpanded(expanded === path ? null : path);
   };
 
+  const menuItems = [
+    {
+      label: "Overview",
+      icon: <IoHomeOutline size={22} />,
+      path: "/dashboard/home",
+    },
+    {
+      label: "Products",
+      icon: <MdInventory size={22} />,
+      path: "/dashboard/products",
+
+    },
+    {
+      label: "Orders",
+      icon: <TbMenuOrder size={22} />,
+      path: "/dashboard/orders",
+    },
+    {
+      label: "Sales",
+      icon: <TbReportSearch size={22} />,
+      path: "/dashboard/sales",
+    },
+    {
+      label: "Customers",
+      icon: <IoLogoBuffer size={22} />,
+      path: "/dashboard/customers",
+    },
+    {
+      label: "Settings",
+      icon: <CiSettings size={22} />,
+      path: "/dashboard/settings",
+    },
+  ];
+
   return (
-    <nav className={`shadow-md h-screen p-2 flex flex-col duration-500 bg-black text-white ${open ? 'w-60' : 'w-16'}`}>
+    <aside
+      className={`h-screen bg-secondary text-white transition-all duration-300 
+      ${open ? "w-64" : "w-20"} relative overflow-hidden`}
+    >
       {/* Header */}
-      <div className='px-3 py-2 h-20 flex justify-between items-center'>
-        <img src={logo} alt="Logo" className={`${open ? 'w-10' : 'w-0'} rounded-md`} />
-        <MdMenuOpen
-          size={34}
-          className={`duration-500 cursor-pointer ${!open && 'rotate-180'}`}
-          onClick={() => setOpen(!open)}
-        />
+      <div className="px-3 py-2 h-20 flex justify-between items-center border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <img
+            src={logo}
+            alt="Logo"
+            className={`${open ? "w-10" : "w-0"} rounded-md transition-all duration-500`}
+          />
+          {open && <h1 className="text-xl font-bold tracking-wide">Rujta</h1>}
+        </div>
+
+         <MdMenuOpen
+            size={34}
+            className={`duration-500 cursor-pointer ${!open && 'rotate-180'}`}
+            onClick={() => setOpen(!open)}
+          />
       </div>
 
       {/* Menu */}
-      <ul className='flex-1'>
+      <ul className="p-4 space-y-1">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path;
 
           if (item.subItems) {
             return (
-              <li key={item.path}>
+              <li key={item.label}>
                 <button
-                  className={`px-3 py-2 my-2 rounded-md duration-300 cursor-pointer flex justify-between items-center w-full
-                    ${expanded === item.path ? 'bg-[#96C66C] text-black' : 'hover:bg-[#96C66C] hover:text-black'}`}
                   onClick={() => toggleExpand(item.path)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleExpand(item.path); }}
-                  aria-expanded={expanded === item.path}
+                  className={`flex items-center justify-between w-full p-3 rounded-xl
+                  transition-all duration-300 group
+                  ${
+                    expanded === item.path
+                      ? "bg-white text-black shadow"
+                      : "hover:bg-white/20"
+                  }
+                  ${!open && "justify-center"}
+                `}
                 >
-                  <div className='flex items-center gap-2'>
-                    {item.icons}
-                    <p className={`${!open && 'w-0 translate-x-24'} duration-500 overflow-hidden`}>
-                      {item.label}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    {item.icon}
+                    {open && <span className="font-medium">{item.label}</span>}
                   </div>
-                  {open && <IoIosArrowDown className={`duration-300 ${expanded === item.path ? 'rotate-180' : ''}`} />}
+
+                  {open && (
+                    <IoIosArrowDown
+                      className={`transition-transform duration-300 ${
+                        expanded === item.path ? "rotate-180" : ""
+                      }`}
+                    />
+                  )}
                 </button>
 
                 {/* Submenu */}
-                {expanded === item.path && (
-                  <ul className={`ml-10 mt-1 overflow-hidden transition-all duration-300 ${open ? 'block' : 'hidden'}`}>
+                <div
+                  className={`transition-all duration-300 overflow-hidden ${
+                    expanded === item.path && open ? "max-h-40" : "max-h-0"
+                  }`}
+                >
+                  <ul className="ml-10 mt-1 space-y-1">
                     {item.subItems.map((sub) => (
                       <Link to={sub.path} key={sub.path}>
                         <li
-                          className={`px-2 py-1 rounded-md my-1 text-sm cursor-pointer duration-200 
-                            ${location.pathname === sub.path
-                              ? 'bg-[#96C66C] text-black'
-                              : 'hover:bg-[#96C66C] hover:text-black'
-                            }`}
+                          className={`p-2 rounded-md text-sm transition-all duration-300 
+                          ${
+                            location.pathname === sub.path
+                              ? "bg-white text-black shadow"
+                              : "hover:bg-white/20"
+                          }`}
                         >
                           {sub.label}
                         </li>
                       </Link>
                     ))}
                   </ul>
-                )}
+                </div>
               </li>
             );
           }
 
-          // Normal item (no submenu)
+          // Normal Items
           return (
-            <Link to={item.path} key={item.path}>
-              <li
-                className={`px-3 py-2 my-2 rounded-md duration-300 cursor-pointer flex gap-2 items-center relative group
-                ${isActive ? 'bg-[#96C66C] text-black' : 'hover:bg-[#96C66C] hover:text-black'}`}
+            <li key={item.label}>
+              <Link
+                to={item.path}
+                className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300
+                  ${
+                    isActive
+                      ? "bg-white text-black shadow-md"
+                      : "hover:bg-white/20"
+                  }
+                  ${!open && "justify-center"}
+                `}
               >
-                <div>{item.icons}</div>
-                <p className={`${!open && 'w-0 translate-x-24'} duration-500 overflow-hidden`}>
-                  {item.label}
-                </p>
-              </li>
-            </Link>
+                {item.icon}
+                {open && <span className="font-medium">{item.label}</span>}
+              </Link>
+            </li>
           );
         })}
       </ul>
 
-      {/* Footer */}
-      <div className='flex items-center gap-2 px-3 py-2'>
-        <FaUserCircle size={30} />
-        <div className={`leading-5 ${!open && 'w-0 translate-x-24'} duration-500 overflow-hidden`}>
-          <p>Loki</p>
-          <span className='text-xs'>Loki</span>
-        </div>
+      {/* Logout */}
+      <div className="absolute bottom-5 left-0 w-full px-4">
+        <Link
+          to="/logout"
+          className={`flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 transition-all
+          ${!open && "justify-center"}
+        `}
+        >
+          <RiLogoutCircleLine size={22} />
+          {open && <span className="font-medium">Logout</span>}
+        </Link>
       </div>
-    </nav>
-  )
+    </aside>
+  );
 }

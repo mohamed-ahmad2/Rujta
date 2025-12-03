@@ -79,7 +79,7 @@ const Products = ({ cart, setCart }) => {
 
                 <button
                   onClick={() => handleAddToCart(data)}
-                  className="bg-gradient-to-r from-secondary to-[#6AA76A] 
+                  className="bg-gradient-to-r from-secondary to-[#9DC873] 
                              hover:scale-105 transition-transform duration-500 
                              text-white text-sm font-medium py-2 px-4 rounded-md w-full"
                 >

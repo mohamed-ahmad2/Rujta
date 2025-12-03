@@ -50,10 +50,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Maps\" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <None Update="Maps\egypt-251026.osm.pbf">
 	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
 	  </None>
