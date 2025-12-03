@@ -1,4 +1,5 @@
 ﻿using Rujta.Application.DTOs;
+using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Identity;
 
 
@@ -14,11 +15,14 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task LogoutAsync(Guid userId, string? refreshToken = null);
         Task<ApplicationUserDto?> GetUserByEmailAsync(string email);
         Task ResetPasswordAsync(ResetPasswordDto dto);
-        Task<TokenDto> SocialLoginAsync(SocialLoginDto dto);
         Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email);
+        Task<TokenDto> LoginWithGoogle(string idToken);
 
 
-       
+
+
+
+
 
     }
 }

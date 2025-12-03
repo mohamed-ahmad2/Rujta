@@ -22,59 +22,86 @@ namespace Rujta.Application.Services
             _logger = logger;
         }
 
-        public async Task<List<Pharmacy>> GetRankedPharmaciesAsync(ItemDto order, double userLat, double userLng, int topK)
+        public async Task<List<PharmacyMatchResultDto>> GetRankedPharmaciesAsync(
+    ItemDto order,
+    double userLat,
+    double userLng,
+    int topK)
         {
             _logger.LogInformation("Starting GetRankedPharmaciesAsync for user at ({Lat}, {Lng}) with topK={TopK}", userLat, userLng, topK);
 
             if (order == null || order.Items == null || !order.Items.Any())
             {
                 _logger.LogWarning("Order is empty or null");
-                return new List<Pharmacy>();
+                return new List<PharmacyMatchResultDto>();
             }
 
-            List<Pharmacy> nearestPharmacies;
+            List<(Pharmacy pharmacy, double distance)> nearestPharmacyResults;
             try
             {
-                var nearestPharmacyResults = await _distanceService.GetNearestPharmaciesRouted(userLat, userLng, "car", topK);
-                nearestPharmacies = nearestPharmacyResults.Select(r => r.pharmacy).ToList();
-                _logger.LogInformation("Found {Count} nearest pharmacies", nearestPharmacies.Count);
+                var rawNearest = await _distanceService.GetNearestPharmaciesRouted(userLat, userLng, "car", topK);
+
+                nearestPharmacyResults = rawNearest
+                    .Select(r => (r.pharmacy, r.distanceMeters))
+                    .ToList();
+
+                _logger.LogInformation("Found {Count} nearest pharmacies", nearestPharmacyResults.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting nearest pharmacies from DistanceService for location ({Lat}, {Lng})", userLat, userLng);
-                return new List<Pharmacy>();
+                _logger.LogError(ex, "Error getting nearest pharmacies from DistanceService");
+                return new List<PharmacyMatchResultDto>();
             }
 
-            var pharmacyCoverage = new Dictionary<Pharmacy, int>();
+            int totalRequested = order.Items.Count;
+            var result = new List<PharmacyMatchResultDto>();
 
-            foreach (var pharmacy in nearestPharmacies)
+            foreach (var entry in nearestPharmacyResults)
             {
-                int availableCount = 0;
+                var pharmacy = entry.pharmacy;
+                var distance = entry.distance;
+                int matched = 0;
+
                 foreach (var item in order.Items)
                 {
                     try
                     {
                         int stock = await _pharmacyRepo.GetMedicineStockAsync(pharmacy.Id, item.MedicineId);
                         if (stock >= item.Quantity)
-                            availableCount++;
+                            matched++;
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to get stock for PharmacyId={PharmacyId}, MedicineId={MedicineId}", pharmacy.Id, item.MedicineId);
+                        _logger.LogWarning(ex, "Failed stock query PharmacyId={PharmacyId}, MedicineId={MedicineId}", pharmacy.Id, item.MedicineId);
                     }
                 }
-                pharmacyCoverage[pharmacy] = availableCount;
-                _logger.LogDebug("Pharmacy {PharmacyName} covers {Count} items", pharmacy.Name, availableCount);
+
+                result.Add(new PharmacyMatchResultDto
+                {
+                    PharmacyId = pharmacy.Id,
+                    Name = pharmacy.Name,
+                    Latitude = pharmacy.Latitude,
+                    Longitude = pharmacy.Longitude,
+                    ContactNumber = pharmacy.ContactNumber,
+                    MatchedDrugs = matched,
+                    TotalRequestedDrugs = totalRequested,
+                    DistanceKm = distance,
+                    MatchPercentage = Math.Round(((double)matched / totalRequested) * 100, 1),
+                });
+
+                _logger.LogDebug("Pharmacy {PharmacyName}: matched {Matched}/{TotalRequested}", pharmacy.Name, matched, totalRequested);
             }
 
-            var sortedPharmacies = pharmacyCoverage
-                .OrderByDescending(p => p.Value)
-                .Select(p => p.Key)
+            var finalResults = result
+                .OrderByDescending(r => r.MatchedDrugs)
+                .ThenBy(r => r.DistanceKm)
+                .Take(topK)
                 .ToList();
 
-            _logger.LogInformation("Returning {Count} sorted pharmacies", sortedPharmacies.Count);
-
-            return sortedPharmacies;
+            _logger.LogInformation("Returning ranked pharmacy results: {Count}", finalResults.Count);
+            return finalResults;
         }
+
+
     }
 }

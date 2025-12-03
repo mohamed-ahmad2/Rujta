@@ -35,24 +35,15 @@ namespace Rujta.API.Controllers
             if (user.Latitude == null || user.Longitude == null)
                 return BadRequest(ApiMessages.UserLocationNotSet);
 
-            
+
             var pharmacies = await _cartService.GetTopPharmaciesForCartAsync(
-                order,
-                user.Latitude.Value,  
-                user.Longitude.Value,
-                topK);
+    order,
+    user.Latitude.Value,
+    user.Longitude.Value,
+    topK);
 
-           
-            var result = pharmacies.Select(p => new
-            {
-                id = p.Id,
-                name = p.Name,
-                latitude = p.Latitude,
-                longitude = p.Longitude,
-                contactNumber = p.ContactNumber
-            });
+            return Ok(pharmacies);
 
-            return Ok(result);
         }
 
     }

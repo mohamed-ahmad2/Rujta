@@ -25,6 +25,13 @@
             CreateMap<ApplicationUserDto, ApplicationUser>()
                 .ForMember(dest => dest.RefreshTokens, opt => opt.Ignore())
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email));
+
+            CreateMap<RegisterDto, Pharmacist>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+                .ForMember(dest => dest.Qualification, opt => opt.Ignore()) 
+                .ForMember(dest => dest.ExperienceYears, opt => opt.Ignore())
+                .ForMember(dest => dest.WorkStartTime, opt => opt.Ignore())
+                .ForMember(dest => dest.WorkEndTime, opt => opt.Ignore());
         }
     }
 }
