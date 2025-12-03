@@ -21,10 +21,12 @@ export const AuthPage = () => {
   const [loading, setLoading] = useState(false);
 
   const redirectByRole = (role) => {
-    if (role === "Admin") navigate("/admin/dashboard");
-    else if (role === "User") navigate("/user/");
-    else navigate("/");
-  };
+  if (role === "Admin") navigate("/admin/dashboard");
+
+  else if (role === "Pharmacist") navigate("/dashboard/");
+  else if (role === "User") navigate("/user/");
+  else navigate("/");
+};
 
   const onLogin = async (e) => {
     e.preventDefault();
