@@ -179,9 +179,22 @@ namespace Rujta.API.Controllers
 
             var role = roles.FirstOrDefault() ?? string.Empty;
 
-            
+
             return Ok(new MeResponse(email, role));
         }
+
+        [HttpGet("email")]
+        [ProducesResponseType(typeof(EmailResponse), StatusCodes.Status200OK)]
+        public IActionResult GetUserEmail()
+        {
+            var email = JwtRegisteredClaimNames.Email;
+               
+            if (string.IsNullOrEmpty(email))
+                return Ok(new EmailResponse(string.Empty));
+
+            return Ok(new EmailResponse(email));
+        }
+
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
@@ -196,19 +209,6 @@ namespace Rujta.API.Controllers
             }
         }
 
-        [HttpPost("social-login")]
-        public async Task<IActionResult> SocialLogin([FromBody] SocialLoginDto dto)
-        {
-            try
-            {
-                var tokens = await _authService.SocialLoginAsync(dto);
-                return Ok(tokens);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto dto)
         {
@@ -222,8 +222,26 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [HttpPost("google-login")]
+        public async Task<IActionResult> GoogleLogin([FromBody] SocialLoginDto dto)
+        {
+            try
+            {
+                var tokens = await _authService.LoginWithGoogle(dto.IdToken);
+                return Ok(tokens);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+      
+
+
 
     }
 
     public record MeResponse(string Email, string Role);
+    public record EmailResponse(string Email);
 }
