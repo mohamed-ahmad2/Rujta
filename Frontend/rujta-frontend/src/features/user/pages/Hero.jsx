@@ -31,7 +31,7 @@ const Hero = () => {
   return (
     <section
       className="relative overflow-hidden min-h-[550px] sm:min-h-[650px] flex justify-center items-center transition-all duration-700"
-      style={{ backgroundColor: "#3C623C" }}
+      style={{ backgroundColor: "#9DC873" }}
     >
       {/* Decorative Blurs */}
       <div className="absolute -top-20 -right-20 w-[500px] h-[500px] bg-white/10 rounded-full blur-3xl -z-10"></div>
@@ -48,8 +48,8 @@ const Hero = () => {
             {slide.description}
           </p>
           <button
-            className="bg-yellow-400 text-green-900 font-semibold py-3 px-8 rounded-full shadow-md 
-                       hover:bg-yellow-300 transition-all duration-300"
+            className="bg-white text-secondary font-semibold py-3 px-8 rounded-full shadow-md 
+                       hover:bg-white transition-all duration-300"
           >
             {`Buy for ${slide.price} EGP`}
           </button>
@@ -72,7 +72,7 @@ const Hero = () => {
           <div
             key={index}
             className={`w-3 h-3 rounded-full cursor-pointer transition-all duration-300 ${
-              index === current ? "bg-yellow-400" : "bg-white/40"
+              index === current ? "bg-white" : "bg-white/20"
             }`}
             onClick={() => setCurrent(index)}
           ></div>
