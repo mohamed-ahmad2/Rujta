@@ -12,6 +12,9 @@ import HeroUser from "../features/user/pages/Hero";
 
 import Profile from "../features/user/pages/Profile";
 
+import Checkout from "../features/user/pages/Checkout";
+
+
 import ProductsUser from "../features/user/components/Products";
 import FooterUser from "../features/user/components/Footer";
 import CartDrawerUser from "../features/user/components/CartDrawer";
@@ -108,6 +111,18 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
       <div className="overflow-x-hidden bg-page min-h-screen">
         <NavbarUser cart={cart} onCartClick={() => setIsCartOpen(true)} />
         <Profile />   {/* صفحة البروفايل */}
+        <FooterUser />
+      </div>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/user/checkout"
+  element={
+    <ProtectedRoute>
+      <div className="overflow-x-hidden bg-page min-h-screen">
+        <NavbarUser cart={cart} onCartClick={() => setIsCartOpen(true)} />
+        <Checkout />
         <FooterUser />
       </div>
     </ProtectedRoute>
