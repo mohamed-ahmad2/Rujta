@@ -35,12 +35,6 @@ namespace Rujta.Infrastructure.Configuration
 
             builder.Property(a => a.IsDefault)
                    .HasDefaultValue(true);
-
-          
-            //builder.HasOne(a => a.User)
-            //       .WithOne(u => u.Address)  
-            //       .HasForeignKey<Address>(a => a.UserId)
-            //       .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
