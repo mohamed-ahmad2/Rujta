@@ -36,21 +36,9 @@ namespace Rujta.Infrastructure.Extensions
                     ValidateIssuerSigningKey = true,
 
                     IssuerSigningKey = publicKey,
-                    ClockSkew = TimeSpan.FromSeconds(30)
-                };
-
-
-
-                options.Events = new JwtBearerEvents
-                {
-                    OnMessageReceived = ctx =>
-                    {
-                        if (ctx.Request.Cookies.ContainsKey("jwt"))
-                        {
-                            ctx.Token = ctx.Request.Cookies["jwt"];
-                        }
-                        return Task.CompletedTask;
-                    }
+                    ClockSkew = TimeSpan.FromSeconds(30),
+                    NameClaimType = JwtRegisteredClaimNames.Sub,
+                    RoleClaimType = ClaimTypes.Role
                 };
             });
 

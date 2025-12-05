@@ -10,7 +10,7 @@ namespace Rujta.Infrastructure.Identity
         public string Location { get; set; } = string.Empty;
         public string? PasswordResetToken { get; set; }
         public DateTime? PasswordResetTokenExpiry { get; set; }
-
+        
         public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         [ForeignKey("DomainPersonId")]
         public  virtual Person DomainPerson { get; set; }
