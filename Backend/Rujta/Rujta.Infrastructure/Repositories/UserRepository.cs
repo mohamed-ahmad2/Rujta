@@ -32,6 +32,8 @@ namespace Rujta.Infrastructure.Repositories
                 Email = appUser.Email,
                 PhoneNumber = appUser.PhoneNumber,
                 ProfileImageUrl = user.ProfileImageUrl,
+                Latitude = user.Latitude,
+                Longitude = user.Longitude,
                 Address = address is null ? null : new AddressDto
                 {
                     Street = address.Street,

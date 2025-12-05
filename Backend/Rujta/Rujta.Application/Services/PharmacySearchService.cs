@@ -28,12 +28,30 @@ namespace Rujta.Application.Services
     double userLng,
     int topK)
         {
-            _logger.LogInformation("Starting GetRankedPharmaciesAsync for user at ({Lat}, {Lng}) with topK={TopK}", userLat, userLng, topK);
+            _logger.LogInformation("=== Start GetRankedPharmaciesAsync ===");
+            _logger.LogInformation("User location: Lat={Lat}, Lng={Lng}, topK={TopK}", userLat, userLng, topK);
 
-            if (order == null || order.Items == null || !order.Items.Any())
+            if (order == null)
             {
-                _logger.LogWarning("Order is empty or null");
+                _logger.LogWarning("Order is null");
                 return new List<PharmacyMatchResultDto>();
+            }
+
+            if (order.Items == null || !order.Items.Any())
+            {
+                _logger.LogWarning("Order items are null or empty");
+                return new List<PharmacyMatchResultDto>();
+            }
+
+            _logger.LogInformation("Total requested items: {Count}", order.Items.Count);
+            for (int i = 0; i < order.Items.Count; i++)
+            {
+                var item = order.Items[i];
+                _logger.LogInformation("Order item {Index}: MedicineId={MedicineId}, Quantity={Quantity}", i, item.MedicineId, item.Quantity);
+                if (item.MedicineId == 0)
+                {
+                    _logger.LogError("MedicineId is 0 for item index {Index}. Check frontend / DTO mapping!", i);
+                }
             }
 
             List<(Pharmacy pharmacy, double distance)> nearestPharmacyResults;
@@ -53,8 +71,8 @@ namespace Rujta.Application.Services
                 return new List<PharmacyMatchResultDto>();
             }
 
-            int totalRequested = order.Items.Count;
             var result = new List<PharmacyMatchResultDto>();
+            int totalRequested = order.Items.Count;
 
             foreach (var entry in nearestPharmacyResults)
             {
@@ -62,19 +80,43 @@ namespace Rujta.Application.Services
                 var distance = entry.distance;
                 int matched = 0;
 
+                _logger.LogInformation("=== Processing PharmacyId={PharmacyId}, Name={PharmacyName}, Distance={Distance}m ===", pharmacy.Id, pharmacy.Name, distance);
+
                 foreach (var item in order.Items)
                 {
                     try
                     {
+                        _logger.LogInformation("Checking stock for MedicineId={MedicineId}, Quantity={Quantity}", item.MedicineId, item.Quantity);
+
                         int stock = await _pharmacyRepo.GetMedicineStockAsync(pharmacy.Id, item.MedicineId);
+                        _logger.LogInformation("Stock for MedicineId={MedicineId} in PharmacyId={PharmacyId}: {Stock}", item.MedicineId, pharmacy.Id, stock);
+
                         if (stock >= item.Quantity)
+                        {
                             matched++;
+                            _logger.LogInformation("MedicineId={MedicineId} available. Matched count now {Matched}", item.MedicineId, matched);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("MedicineId={MedicineId} not enough stock. Needed {Needed}, Available {Available}", item.MedicineId, item.Quantity, stock);
+                            if (stock == 0)
+                            {
+                                _logger.LogWarning("MedicineId={MedicineId} stock is zero in PharmacyId={PharmacyId}. Possibly missing in InventoryItems table", item.MedicineId, pharmacy.Id);
+                            }
+                        }
+
+                        if (item.MedicineId == 0)
+                        {
+                            _logger.LogError("MedicineId=0 detected for PharmacyId={PharmacyId}. Check database or DTO mapping!", pharmacy.Id);
+                        }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed stock query PharmacyId={PharmacyId}, MedicineId={MedicineId}", pharmacy.Id, item.MedicineId);
+                        _logger.LogError(ex, "Failed stock query PharmacyId={PharmacyId}, MedicineId={MedicineId}", pharmacy.Id, item.MedicineId);
                     }
                 }
+
+                _logger.LogInformation("PharmacyId={PharmacyId} matched {Matched}/{TotalRequested} items", pharmacy.Id, matched, totalRequested);
 
                 result.Add(new PharmacyMatchResultDto
                 {
@@ -86,10 +128,8 @@ namespace Rujta.Application.Services
                     MatchedDrugs = matched,
                     TotalRequestedDrugs = totalRequested,
                     DistanceKm = distance,
-                    MatchPercentage = Math.Round(((double)matched / totalRequested) * 100, 1),
+                    MatchPercentage = totalRequested > 0 ? Math.Round(((double)matched / totalRequested) * 100, 1) : 0,
                 });
-
-                _logger.LogDebug("Pharmacy {PharmacyName}: matched {Matched}/{TotalRequested}", pharmacy.Name, matched, totalRequested);
             }
 
             var finalResults = result
@@ -98,10 +138,14 @@ namespace Rujta.Application.Services
                 .Take(topK)
                 .ToList();
 
-            _logger.LogInformation("Returning ranked pharmacy results: {Count}", finalResults.Count);
+            _logger.LogInformation("=== Returning {Count} ranked pharmacy results ===", finalResults.Count);
+            foreach (var r in finalResults)
+            {
+                _logger.LogInformation("PharmacyId={PharmacyId}, Name={Name}, Matched={Matched}/{TotalRequested}, MatchPercentage={Percentage}%, Distance={DistanceKm}km",
+                    r.PharmacyId, r.Name, r.MatchedDrugs, r.TotalRequestedDrugs, r.MatchPercentage, r.DistanceKm);
+            }
+
             return finalResults;
         }
-
-
     }
 }
