@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import imge1 from "../../../assets/hero/img1.png";
 import { FaStar } from "react-icons/fa";
 import useMedicine from "../../medicines/hook/useMedicines";
+import { useNavigate } from "react-router-dom";
 
 const Products = ({ cart, setCart }) => {
   const { medicines, fetchAll, loading, error } = useMedicine();
+  const navigate = useNavigate();
 
-  const [expanded, setExpanded] = useState({}); // لحفظ حالة Show More لكل منتج
+  const [expanded, setExpanded] = useState({});
 
   useEffect(() => {
     fetchAll();
@@ -38,6 +40,7 @@ const Products = ({ cart, setCart }) => {
     <div className="bg-white py-20">
       <div className="container mx-auto px-4">
 
+        {/* Header */}
         <div className="text-center mb-14">
           <h2 className="text-4xl font-extrabold text-secondary mb-3">
             Top Rated Medicines
@@ -56,15 +59,16 @@ const Products = ({ cart, setCart }) => {
             return (
               <div
                 key={data.id}
-                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 w-[270px] overflow-hidden group"
+                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-500 
+                        border border-gray-100 w-[270px] overflow-hidden group"
               >
-
                 {/* Image */}
                 <div className="relative bg-[#E8F3E8] flex justify-center items-center h-[200px] overflow-hidden">
                   <img
                     src={data.imageUrl || imge1}
                     alt={data.name}
-                    className="w-[150px] object-contain group-hover:scale-110 duration-300"
+                    onClick={() => navigate(`/medicine/${data.id}`)}
+                    className="w-[150px] object-contain group-hover:scale-110 duration-300 cursor-pointer"
                     onError={(e) => (e.currentTarget.src = imge1)}
                   />
                   <span className="absolute top-3 left-3 bg-secondary text-white text-xs px-3 py-1 rounded-full">
@@ -74,6 +78,7 @@ const Products = ({ cart, setCart }) => {
 
                 {/* Info */}
                 <div className="p-5 text-center">
+                  {/* Stars */}
                   <div className="flex justify-center mb-2 text-yellow-400">
                     {[...Array(5)].map((_, i) => (
                       <FaStar key={i} />
@@ -84,7 +89,7 @@ const Products = ({ cart, setCart }) => {
                     {data.name}
                   </h3>
 
-                  {/* Description + Show More / Less */}
+                  {/* Description */}
                   <p className="text-sm text-gray-500 mt-1">
                     {expanded[data.id]
                       ? desc
@@ -102,10 +107,12 @@ const Products = ({ cart, setCart }) => {
                     </button>
                   )}
 
+                  {/* Price */}
                   <p className="text-lg font-semibold text-secondary mt-3">
                     {data.price + " EGP"}
                   </p>
 
+                  {/* Add to Cart */}
                   <button
                     onClick={() => handleAddToCart(data)}
                     className="mt-4 bg-gradient-to-r from-secondary to-[#9DC873] 
@@ -115,6 +122,7 @@ const Products = ({ cart, setCart }) => {
                     Add to Cart
                   </button>
                 </div>
+
               </div>
             );
           })}

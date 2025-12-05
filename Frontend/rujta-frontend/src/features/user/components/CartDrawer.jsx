@@ -60,7 +60,7 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
               {/* Item info */}
               <div>
                 <p className="font-semibold text-gray-800 dark:text-white">
-                  {item.title} ×{item.quantity}
+                  {item.name} ×{item.quantity}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-300">
                   {(parseFloat(item.price) * item.quantity).toFixed(2)} EGP

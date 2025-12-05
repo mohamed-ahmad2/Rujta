@@ -1,4 +1,4 @@
-// src/hooks/useGoogleAuth.js
+
 import { auth } from "../../../../firebase";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
