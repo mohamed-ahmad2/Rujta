@@ -12,7 +12,7 @@ using Rujta.Infrastructure.Data;
 namespace Rujta.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251205124036_addDatabase")]
+    [Migration("20251205155840_addDatabase")]
     partial class addDatabase
     {
         /// <inheritdoc />
@@ -518,6 +518,12 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.Property<int?>("PrescriptionID")
                         .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");

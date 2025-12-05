@@ -5,9 +5,11 @@ import { LuLogOut } from "react-icons/lu";
 import { CgProfile } from "react-icons/cg";
 import { useSearchMedicines } from "../../medicines/hook/useSearchMedicines";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/hooks/useAuth";
 
 const Navbar = ({ cart, onCartClick }) => {
   const [query, setQuery] = useState("");
+  const { handleLogout } = useAuth();
   const navigate = useNavigate();
 
   const {
@@ -17,10 +19,11 @@ const Navbar = ({ cart, onCartClick }) => {
     resetSelected,
   } = useSearchMedicines(query, 10);
 
-  const handleLogout = () => {
-    localStorage.removeItem("userToken");
-    navigate("/auth");
-  };
+  const logoutAndRedirect = async () => {
+  await handleLogout();
+  navigate("/auth");
+};
+
 
   return (
     <div className="shadow-md bg-white text-gray-800 relative z-40">
@@ -29,7 +32,7 @@ const Navbar = ({ cart, onCartClick }) => {
 
           {/* Logo */}
           <a
-            href="#"
+            href="/user/"
             className="font-extrabold text-2xl text-secondary sm:text-3xl flex gap-2"
           >
             Rujta
@@ -104,7 +107,7 @@ const Navbar = ({ cart, onCartClick }) => {
             {/* Logout */}
             <LuLogOut
               className="text-2xl text-gray-600 cursor-pointer hover:text-red-600 transition"
-              onClick={handleLogout}
+              onClick={logoutAndRedirect}
             />
 
           </div>
