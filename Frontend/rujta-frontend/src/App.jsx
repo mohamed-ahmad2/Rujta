@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import AppRoutes from "./routes/Approuts";
 import { useAuth } from "./features/auth/hooks/useAuth";
 import { useLocation } from "react-router-dom";
@@ -10,36 +10,32 @@ const App = () => {
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const location = useLocation();
-  const prevUserRef = useRef(null);
 
-  // Load cart when user changes
+  // Helper: cart key based on profile email
+  const getCartKey = () => user ? `cart_${user.profile?.email || user.email}` : null;
+
+  // Load cart on user login
   useEffect(() => {
     if (loading) return;
-
     if (!user) {
       setCart([]);
       return;
     }
 
-    const prevUser = prevUserRef.current;
-    const currentKey = `cart_${user.email}`;
+    const key = getCartKey();
+    console.log("Loading cart for key:", key);
 
-    if (prevUser && prevUser.email !== user.email) {
-      const prevKey = `cart_${prevUser.email}`;
-      localStorage.setItem(prevKey, JSON.stringify(cart));
-    }
-
-    const savedCart = localStorage.getItem(currentKey);
+    const savedCart = localStorage.getItem(key);
     setCart(savedCart ? JSON.parse(savedCart) : []);
-
-    prevUserRef.current = user;
   }, [user, loading]);
 
-  // Save cart when updated
+  // Save cart whenever it updates
   useEffect(() => {
     if (loading || !user) return;
-    const currentKey = `cart_${user.email}`;
-    localStorage.setItem(currentKey, JSON.stringify(cart));
+
+    const key = getCartKey();
+    console.log("Saving cart for key:", key, cart);
+    localStorage.setItem(key, JSON.stringify(cart));
   }, [cart, user, loading]);
 
   // Pages where cart button should not appear
