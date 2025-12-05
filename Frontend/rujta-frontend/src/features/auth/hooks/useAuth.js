@@ -37,7 +37,10 @@ export const useAuth = () => {
   const handleLogin = async (email, password) => {
     const response = await login({ email, password });
     setUser({ email: response.email, role: response.role });
-    updateTokenExp(response.accessToken);
+    if (response.accessToken) {
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.accessToken}`;
+      updateTokenExp(response.accessToken);
+    }
     return response;
   };
 
@@ -51,7 +54,11 @@ export const useAuth = () => {
         role: loginResponse?.role ?? "User",
       };
       setUser(loggedUser);
-      updateTokenExp(loginResponse.accessToken);
+
+      if (loginResponse.accessToken) {
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${loginResponse.accessToken}`;
+        updateTokenExp(loginResponse.accessToken);
+      }
       return loggedUser;
     } catch (error) {
       console.error("Registration or login failed:", error.response?.data || error.message);
@@ -65,6 +72,7 @@ export const useAuth = () => {
       await logout();
       setUser(null);
       setTokenExp(null);
+      delete apiClient.defaults.headers.common['Authorization'];
     } catch (err) {
       console.error("Logout failed", err);
     }
@@ -78,7 +86,11 @@ export const useAuth = () => {
       if (response) {
         const { accessToken, email, role } = response;
         setUser({ email, role });
-        updateTokenExp(accessToken);
+        if (accessToken) {
+          apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+          updateTokenExp(accessToken);
+        }
+
       }
       return response;
     } catch (error) {
@@ -99,8 +111,10 @@ export const useAuth = () => {
     try {
       const response = await apiClient.post("/auth/refresh-token", null, { withCredentials: true });
       if (response.data?.accessToken) {
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.accessToken}`;
         updateTokenExp(response.data.accessToken);
       }
+
     } catch (err) {
       console.error("Proactive refresh failed", err);
       handleLogout();

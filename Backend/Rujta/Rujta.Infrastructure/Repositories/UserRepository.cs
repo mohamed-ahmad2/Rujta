@@ -17,7 +17,8 @@ namespace Rujta.Infrastructure.Repositories
         {
             var appUser = await _userManager.Users
                 .Include(u => u.DomainPerson)
-                .FirstOrDefaultAsync(u => u.DomainPersonId == userId, cancellationToken);
+                .ThenInclude(p => p.Address)
+                .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (appUser?.DomainPerson is not User user)
                 return null;
@@ -33,13 +34,10 @@ namespace Rujta.Infrastructure.Repositories
                 ProfileImageUrl = user.ProfileImageUrl,
                 Address = address is null ? null : new AddressDto
                 {
-                    FullName = address.FullName,
-                    MobileNumber = address.MobileNumber,
                     Street = address.Street,
                     BuildingNo = address.BuildingNo,
                     City = address.City,
                     Governorate = address.Governorate,
-                    Instructions = address.Instructions
                 }
             };
         }
@@ -48,12 +46,14 @@ namespace Rujta.Infrastructure.Repositories
         {
             var appUser = await _userManager.Users
                 .Include(u => u.DomainPerson)
-                .FirstOrDefaultAsync(u => u.DomainPersonId == userId, cancellationToken);
+                .ThenInclude(p => p.Address)
+                .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (appUser?.DomainPerson is not User user)
                 return false;
 
             user.Name = dto.Name ?? user.Name;
+            appUser.FullName = dto.Name ?? appUser.FullName;
 
             if (dto.Address != null)
             {
@@ -61,13 +61,10 @@ namespace Rujta.Infrastructure.Repositories
                     user.Address = new Address { UserId = user.Id };
 
                 var address = user.Address;
-                address.FullName = dto.Address.FullName ?? address.FullName;
-                address.MobileNumber = dto.Address.MobileNumber ?? address.MobileNumber;
                 address.Street = dto.Address.Street ?? address.Street;
                 address.BuildingNo = dto.Address.BuildingNo ?? address.BuildingNo;
                 address.City = dto.Address.City ?? address.City;
                 address.Governorate = dto.Address.Governorate ?? address.Governorate;
-                address.Instructions = dto.Address.Instructions ?? address.Instructions;
             }
 
             user.ProfileImageUrl = dto.ProfileImageUrl ?? user.ProfileImageUrl;

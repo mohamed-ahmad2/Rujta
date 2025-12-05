@@ -1,20 +1,42 @@
-import React, { useState } from "react";
+//rujta-frontend\src\features\user\pages\Profile.jsx
+import React, { useState, useEffect } from "react";
 import { IoMdSearch } from "react-icons/io";
 import { FaBell, FaUserCircle } from "react-icons/fa";
 import { HiOutlineMail } from "react-icons/hi";
 import { FiTrash2 } from "react-icons/fi";
+import { useUserProfile } from "../../userProfile/hook/useUserProfile";
 
 export default function Profile() {
+  const { profile, loading, error, updateProfile } = useUserProfile();
   const [isEditing, setIsEditing] = useState(false);
+
   const [formData, setFormData] = useState({
-    fullName: "Alexa Rawles",
-    nickName: "",
-    gender: "",
-    country: "",
-    language: "",
-    timeZone: "",
-    emailList: ["alexarawles@gmail.com"],
+    fullName: "",
+    address: {
+      street: "",
+      buildingNo: "",
+      city: "",
+      governorate: ""
+    },
+    emailList: [],
+    phoneNumber: "",
   });
+
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        fullName: profile.name || "",
+        address: {
+          street: profile.address?.street || "",
+          buildingNo: profile.address?.buildingNo || "",
+          city: profile.address?.city || "",
+          governorate: profile.address?.governorate || "",
+        },
+        emailList: profile.email ? [profile.email] : [],
+        phoneNumber: profile.phoneNumber || "",
+      });
+    }
+  }, [profile]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -37,12 +59,28 @@ export default function Profile() {
     }));
   };
 
+  const handleSave = async () => {
+  const dto = {
+    Name: formData.fullName,
+    PhoneNumber: formData.phoneNumber,
+    Address: { ...formData.address },
+    ProfileImageUrl: null
+  };
+
+  const result = await updateProfile(dto);
+  if (result) {
+    setIsEditing(false);
+  }
+};
+
+
+
+
+  if (loading) return <p className="p-10 text-center">Loading...</p>;
+  if (error) return <p className="p-10 text-center text-red-500">{error}</p>;
+
   return (
     <section className="min-h-screen bg-[#F3F4F6]">
-
-     
-    
-
       {/* Profile Card */}
       <div className="mx-10 mt-8 bg-gradient-to-r from-secondary to-[#e8e0c9] p-6 rounded-xl">
         <div className="bg-white p-6 rounded-xl shadow-md">
@@ -55,16 +93,17 @@ export default function Profile() {
               <div>
                 <h3 className="text-lg font-semibold">{formData.fullName}</h3>
                 <p className="text-sm text-gray-500">
-                  {formData.emailList[0] || ""}
+                  {formData.emailList?.[0] || ""}
                 </p>
               </div>
             </div>
 
             <button
-              onClick={() => setIsEditing(!isEditing)}
-              className={`px-5 py-2 rounded-lg font-semibold text-white shadow-md ${
-                isEditing ? "bg-red-400" : "bg-secondary"
-              }`}
+              onClick={() => {
+                if (isEditing) handleSave();
+                setIsEditing(!isEditing);
+              }}
+              className={`px-5 py-2 rounded-lg font-semibold text-white shadow-md ${isEditing ? "bg-red-400" : "bg-secondary"}`}
             >
               {isEditing ? "Save" : "Edit"}
             </button>
@@ -80,72 +119,86 @@ export default function Profile() {
             <label className="text-sm text-gray-600">Full Name</label>
             <input
               type="text"
-              value={formData.fullName}
+              value={formData.fullName || ""}
               disabled={!isEditing}
               onChange={(e) => handleChange("fullName", e.target.value)}
               className="w-full border rounded-lg px-3 py-2 mt-1 disabled:bg-gray-100"
             />
           </div>
 
-          {/* Nick Name */}
+          {/* Phone Number */}
           <div>
-            <label className="text-sm text-gray-600">Nick Name</label>
+            <label className="text-sm text-gray-600">Phone Number</label>
             <input
               type="text"
-              value={formData.nickName}
+              value={formData.phoneNumber || ""}
               disabled={!isEditing}
-              onChange={(e) => handleChange("nickName", e.target.value)}
+              onChange={(e) => handleChange("phoneNumber", e.target.value)}
               className="w-full border rounded-lg px-3 py-2 mt-1 disabled:bg-gray-100"
             />
           </div>
 
-          {/* Gender */}
+          {/* Address Fields */}
           <div>
-            <label className="text-sm text-gray-600">Gender</label>
-            <select
-              value={formData.gender}
-              disabled={!isEditing}
-              onChange={(e) => handleChange("gender", e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 mt-1 disabled:bg-gray-100"
-            >
-              <option value="">Select</option>
-              <option>Female</option>
-              <option>Male</option>
-            </select>
-          </div>
-
-          {/* Country */}
-          <div>
-            <label className="text-sm text-gray-600">Country</label>
+            <label className="text-sm text-gray-600">Street</label>
             <input
               type="text"
-              value={formData.country}
+              value={formData.address.street || ""}
               disabled={!isEditing}
-              onChange={(e) => handleChange("country", e.target.value)}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  address: { ...prev.address, street: e.target.value },
+                }))
+              }
               className="w-full border rounded-lg px-3 py-2 mt-1 disabled:bg-gray-100"
             />
           </div>
 
-          {/* Language */}
           <div>
-            <label className="text-sm text-gray-600">Language</label>
+            <label className="text-sm text-gray-600">Building No</label>
             <input
               type="text"
-              value={formData.language}
+              value={formData.address.buildingNo || ""}
               disabled={!isEditing}
-              onChange={(e) => handleChange("language", e.target.value)}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  address: { ...prev.address, buildingNo: e.target.value },
+                }))
+              }
               className="w-full border rounded-lg px-3 py-2 mt-1 disabled:bg-gray-100"
             />
           </div>
 
-          {/* Time Zone */}
           <div>
-            <label className="text-sm text-gray-600">Time Zone</label>
+            <label className="text-sm text-gray-600">City</label>
             <input
               type="text"
-              value={formData.timeZone}
+              value={formData.address.city || ""}
               disabled={!isEditing}
-              onChange={(e) => handleChange("timeZone", e.target.value)}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  address: { ...prev.address, city: e.target.value },
+                }))
+              }
+              className="w-full border rounded-lg px-3 py-2 mt-1 disabled:bg-gray-100"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-600">Governorate</label>
+            <input
+              type="text"
+              value={formData.address.governorate || ""}
+              disabled={!isEditing}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  address: { ...prev.address, governorate: e.target.value },
+                }))
+              }
               className="w-full border rounded-lg px-3 py-2 mt-1 disabled:bg-gray-100"
             />
           </div>
@@ -155,7 +208,7 @@ export default function Profile() {
         <div className="mt-8">
           <p className="font-semibold mb-2 text-gray-700">My Email Address</p>
 
-          {formData.emailList.map((email, i) => (
+          {(formData.emailList ?? []).map((email, i) => (
             <div
               key={i}
               className="flex justify-between items-center bg-gray-50 border rounded-lg p-3 mb-2"

@@ -146,24 +146,24 @@ namespace Rujta.Infrastructure.Identity.Services
             var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId, loginOrRegister);
 
             SetRefreshTokenCookie(tokens.RefreshToken);
-            SetJwtCookie(tokens.AccessToken);
+            //SetJwtCookie(tokens.AccessToken);
 
             _logger.LogInformation("Tokens generated for user {Email}", email);
             return tokens;
         }
 
-        public async Task<TokenDto> RefreshAccessTokenAsync(string? refreshToken, CancellationToken cancellationToken = default)
+        public async Task<TokenDto> RefreshAccessTokenAsync(string? providedRefreshToken, CancellationToken cancellationToken = default)
         {
             var context = _httpContextAccessor.HttpContext!;
-            refreshToken ??= context.Request.Cookies[CookieKeys.RefreshToken];
+            providedRefreshToken ??= context.Request.Cookies[CookieKeys.RefreshToken];
 
-            if (string.IsNullOrEmpty(refreshToken))
+            if (string.IsNullOrEmpty(providedRefreshToken))
             {
                 _logger.LogWarning("Refresh token required but missing.");
                 throw new InvalidOperationException(AuthMessages.RefreshTokenRequired);
             }
 
-            var storedToken = await RefreshTokenHelper.GetValidRefreshTokenAsync(_unitOfWork.RefreshTokens, refreshToken);
+            var storedToken = await RefreshTokenHelper.GetValidRefreshTokenAsync(_unitOfWork.RefreshTokens, providedRefreshToken);
             if (storedToken == null)
             {
                 _logger.LogWarning("Invalid or expired refresh token.");
@@ -179,10 +179,10 @@ namespace Rujta.Infrastructure.Identity.Services
 
             ApplicationUserDto userDto = _mapper.Map<ApplicationUserDto>(user);
             bool loginOrRegister = false;
-            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, storedToken.DeviceInfo, loginOrRegister, refreshToken);
+            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, storedToken.DeviceInfo, loginOrRegister, providedRefreshToken);
 
             SetRefreshTokenCookie(tokens.RefreshToken);
-            SetJwtCookie(tokens.AccessToken);
+            //SetJwtCookie(tokens.AccessToken);
 
             _logger.LogInformation("Access token refreshed for user {Email}", user.Email);
             return tokens;
@@ -377,20 +377,20 @@ namespace Rujta.Infrastructure.Identity.Services
             return (int)(BitConverter.ToUInt32(bytes, 0) % max);
         }
 
-        private void SetJwtCookie(string accessToken)
-        {
-            var context = _httpContextAccessor.HttpContext;
-            if (context == null || string.IsNullOrEmpty(accessToken)) return;
+        //private void SetJwtCookie(string accessToken)
+        //{
+        //    var context = _httpContextAccessor.HttpContext;
+        //    if (context == null || string.IsNullOrEmpty(accessToken)) return;
 
-            int expirationMinutes = int.Parse(_configuration[$"JWT:{TokenKeys.AccessTokenExpirationMinutes}"] ?? "10");
-            context.Response.Cookies.Append(CookieKeys.AccessToken, accessToken, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None,
-                Expires = DateTime.UtcNow.AddMinutes(expirationMinutes)
-            });
-        }
+        //    int expirationMinutes = int.Parse(_configuration[$"JWT:{TokenKeys.AccessTokenExpirationMinutes}"] ?? "10");
+        //    context.Response.Cookies.Append(CookieKeys.AccessToken, accessToken, new CookieOptions
+        //    {
+        //        HttpOnly = true,
+        //        Secure = true,
+        //        SameSite = SameSiteMode.None,
+        //        Expires = DateTime.UtcNow.AddMinutes(expirationMinutes)
+        //    });
+        //}
 
         private void SetRefreshTokenCookie(string? refreshToken)
         {
