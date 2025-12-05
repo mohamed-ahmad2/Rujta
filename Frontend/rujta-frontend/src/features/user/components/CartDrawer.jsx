@@ -1,8 +1,11 @@
 import React from "react";
 import { IoMdClose } from "react-icons/io";
 import { FaPlus, FaMinus } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
+  const navigate = useNavigate();
+
   // Increase quantity
   const handleIncrease = (id) => {
     setCart((prevCart) =>
@@ -12,7 +15,7 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     );
   };
 
-  //  Decrease quantity
+  // Decrease quantity
   const handleDecrease = (id) => {
     setCart((prevCart) =>
       prevCart
@@ -23,12 +26,17 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     );
   };
 
-
   // Total price
   const total = cart.reduce(
     (sum, item) => sum + parseFloat(item.price) * item.quantity,
     0
   );
+
+  // Handle Checkout
+  const handleCheckout = () => {
+    onClose();              // يغلق الـ Drawer
+    navigate("/user/Checkout"); // روّحي للصفحة اللي تبينها
+  };
 
   return (
     <div
@@ -57,7 +65,6 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
               key={item.id}
               className="flex justify-between items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200"
             >
-              {/* Item info */}
               <div>
                 <p className="font-semibold text-gray-800 dark:text-white">
                   {item.name} ×{item.quantity}
@@ -67,7 +74,6 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
                 </p>
               </div>
 
-              {/* Quantity controls */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleDecrease(item.id)}
@@ -90,7 +96,7 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
         )}
       </div>
 
-      {/* Footer — stays visible */}
+      {/* Footer */}
       {cart.length > 0 && (
         <div className="border-t border-gray-200 dark:border-gray-700 p-5 bg-white dark:bg-gray-900 sticky bottom-0">
           <div className="flex justify-between items-center mb-3">
@@ -101,10 +107,10 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
               {total.toFixed(2)} EGP
             </span>
           </div>
+
           <button
-            className="w-full bg-gradient-to-r from-primary to-secondary 
-                       text-white py-2.5 rounded-md font-semibold 
-                       hover:opacity-90 transition-all duration-300"
+            onClick={handleCheckout}
+            className="w-full bg-gradient-to-r from-secondary to-secondary text-white py-2.5 rounded-md font-semibold hover:opacity-90 transition-all duration-300"
           >
             Checkout
           </button>
