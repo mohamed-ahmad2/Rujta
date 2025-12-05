@@ -182,7 +182,6 @@ namespace Rujta.Infrastructure.Identity.Services
             var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, storedToken.DeviceInfo, loginOrRegister, providedRefreshToken);
 
             SetRefreshTokenCookie(tokens.RefreshToken);
-            //SetJwtCookie(tokens.AccessToken);
 
             _logger.LogInformation("Access token refreshed for user {Email}", user.Email);
             return tokens;
@@ -369,7 +368,6 @@ namespace Rujta.Infrastructure.Identity.Services
             return new string(password);
         }
 
-        // Make this static
         private static int GetRandomIndex(int max, RandomNumberGenerator rng)
         {
             byte[] bytes = new byte[4];
@@ -377,20 +375,6 @@ namespace Rujta.Infrastructure.Identity.Services
             return (int)(BitConverter.ToUInt32(bytes, 0) % max);
         }
 
-        //private void SetJwtCookie(string accessToken)
-        //{
-        //    var context = _httpContextAccessor.HttpContext;
-        //    if (context == null || string.IsNullOrEmpty(accessToken)) return;
-
-        //    int expirationMinutes = int.Parse(_configuration[$"JWT:{TokenKeys.AccessTokenExpirationMinutes}"] ?? "10");
-        //    context.Response.Cookies.Append(CookieKeys.AccessToken, accessToken, new CookieOptions
-        //    {
-        //        HttpOnly = true,
-        //        Secure = true,
-        //        SameSite = SameSiteMode.None,
-        //        Expires = DateTime.UtcNow.AddMinutes(expirationMinutes)
-        //    });
-        //}
 
         private void SetRefreshTokenCookie(string? refreshToken)
         {
