@@ -12,8 +12,8 @@ using Rujta.Infrastructure.Data;
 namespace Rujta.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251201132721_addDatabaseGoogle")]
-    partial class addDatabaseGoogle
+    [Migration("20251205155840_addDatabase")]
+    partial class addDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -162,6 +162,9 @@ namespace Rujta.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("AddressId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
@@ -192,6 +195,8 @@ namespace Rujta.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AddressId");
 
                     b.ToTable("People", (string)null);
 
@@ -260,8 +265,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.ToTable("Address");
                 });
@@ -514,6 +518,12 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.Property<int?>("PrescriptionID")
                         .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -975,9 +985,15 @@ namespace Rujta.Infrastructure.Migrations
                     b.Property<DateTime?>("DateOfBirth")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("GoogleId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<double?>("Height")
                         .HasPrecision(5, 2)
                         .HasColumnType("float(5)");
+
+                    b.Property<DateTime?>("LastLogin")
+                        .HasColumnType("datetime2");
 
                     b.Property<double>("Latitude")
                         .HasColumnType("float");
@@ -988,6 +1004,9 @@ namespace Rujta.Infrastructure.Migrations
                     b.Property<string>("MedicalHistory")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("PictureUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<double?>("Weight")
                         .HasPrecision(5, 2)
@@ -1094,11 +1113,20 @@ namespace Rujta.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Rujta.Domain.Common.Person", b =>
+                {
+                    b.HasOne("Rujta.Domain.Entities.Address", "Address")
+                        .WithMany()
+                        .HasForeignKey("AddressId");
+
+                    b.Navigation("Address");
+                });
+
             modelBuilder.Entity("Rujta.Domain.Entities.Address", b =>
                 {
                     b.HasOne("Rujta.Domain.Entities.User", "User")
-                        .WithOne("Address")
-                        .HasForeignKey("Rujta.Domain.Entities.Address", "UserId")
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1366,9 +1394,6 @@ namespace Rujta.Infrastructure.Migrations
 
             modelBuilder.Entity("Rujta.Domain.Entities.User", b =>
                 {
-                    b.Navigation("Address")
-                        .IsRequired();
-
                     b.Navigation("Orders");
 
                     b.Navigation("Prescriptions");

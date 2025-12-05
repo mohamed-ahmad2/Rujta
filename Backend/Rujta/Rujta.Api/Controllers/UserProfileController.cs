@@ -19,9 +19,24 @@ namespace Rujta.API.Controllers
         [HttpGet("me")]
         public async Task<IActionResult> GetProfile()
         {
-            var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-            if (!Guid.TryParse(userIdClaim, out var userId))
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var email = User.FindFirstValue(ClaimTypes.Email);
+
+            Console.WriteLine(userIdClaim);
+            Console.WriteLine(email);
+
+            if (string.IsNullOrEmpty(userIdClaim))
+            {
+                Console.WriteLine("empty");
+                Console.WriteLine(userIdClaim);
                 return Unauthorized(ApiMessages.UnauthorizedAccess);
+            }
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                Console.WriteLine("parse");
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
+            }
 
             var profile = await _userProfileService.GetProfileAsync(userId);
 
@@ -34,7 +49,7 @@ namespace Rujta.API.Controllers
         [HttpPut("update")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileDto dto)
         {
-            var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdClaim, out var userId))
                 return Unauthorized(ApiMessages.UnauthorizedAccess);
 

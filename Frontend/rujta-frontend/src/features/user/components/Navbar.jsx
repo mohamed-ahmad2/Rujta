@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { IoMdSearch } from "react-icons/io";
 import { FaCartShopping } from "react-icons/fa6";
-import { useSearchMedicines } from "../../medicines/hook/useSearchMedicines";
 import { LuLogOut } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
 import { CgProfile } from "react-icons/cg";
+import { useSearchMedicines } from "../../medicines/hook/useSearchMedicines";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/hooks/useAuth";
 
 const Navbar = ({ cart, onCartClick }) => {
   const [query, setQuery] = useState("");
+  const { handleLogout } = useAuth();
   const navigate = useNavigate();
 
   const {
@@ -17,27 +19,27 @@ const Navbar = ({ cart, onCartClick }) => {
     resetSelected,
   } = useSearchMedicines(query, 10);
 
-  const handleLogout = () => {
-    localStorage.removeItem("userToken"); 
-    navigate("/auth"); 
-  };
+  const logoutAndRedirect = async () => {
+  await handleLogout();
+  navigate("/auth");
+};
+
 
   return (
     <div className="shadow-md bg-white text-gray-800 relative z-40">
       <div className="py-3">
         <div className="container mx-auto px-6 flex justify-between items-center">
-          
+
           {/* Logo */}
           <a
-            href="#"
+            href="/user/"
             className="font-extrabold text-2xl text-secondary sm:text-3xl flex gap-2"
           >
             Rujta
           </a>
 
           {/* Search Bar */}
-          <div className="absolute left-1/2 transform -translate-x-1/2 w-[220px] sm:w-[320px] md:w-[800px]
-">
+          <div className="absolute left-1/2 transform -translate-x-1/2 w-[220px] sm:w-[320px] md:w-[800px]">
             <div className="relative group">
               <input
                 type="text"
@@ -61,7 +63,10 @@ const Navbar = ({ cart, onCartClick }) => {
                     <li
                       key={med.id}
                       className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => setQuery(chooseResult(med.name))}
+                      onClick={() => {
+                        chooseResult(med.name);
+                        navigate(`/medicines/${med.id}`);
+                      }}
                     >
                       {med.name}
                     </li>
@@ -77,9 +82,9 @@ const Navbar = ({ cart, onCartClick }) => {
             </div>
           </div>
 
-          {/* Right Section: Cart + Profile + Logout */}
+          {/* Right Section */}
           <div className="flex items-center gap-6">
-            
+
             {/* Cart */}
             <div className="relative cursor-pointer" onClick={onCartClick}>
               <FaCartShopping className="text-2xl text-secondary" />
@@ -99,13 +104,14 @@ const Navbar = ({ cart, onCartClick }) => {
               onClick={() => navigate("/user/profile")}
             />
 
-            {/* Logout Button */}
+            {/* Logout */}
             <LuLogOut
               className="text-2xl text-gray-600 cursor-pointer hover:text-red-600 transition"
-              onClick={handleLogout}
+              onClick={logoutAndRedirect}
             />
 
           </div>
+
         </div>
       </div>
     </div>

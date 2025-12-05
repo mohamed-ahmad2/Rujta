@@ -1,5 +1,6 @@
 ﻿using Rujta.Application.Constants;
 using Rujta.Infrastructure.Constants;
+using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Api.Controllers
 {
@@ -10,32 +11,52 @@ namespace Rujta.Api.Controllers
     {
         private readonly IOrderService _orderService;
         private readonly ILogService _logService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public OrdersController(IOrderService orderService, ILogService logService)
+        public OrdersController(IOrderService orderService, ILogService logService, UserManager<ApplicationUser> userManager)
         {
             _orderService = orderService;
             _logService = logService;
+            _userManager = userManager;
         }
 
         private string GetUser() => User.Identity?.Name ?? LogConstants.UnknownUser;
 
         // Create a new order
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] OrderDto orderDto, CancellationToken cancellationToken)
+        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto createOrderDto)
         {
-            var userIdClaim = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
-            if (userIdClaim == null) return Unauthorized("User not found in token.");
+            try
+            {
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null)
+                    return Unauthorized(ApiMessages.UnauthorizedAccess);
 
-            if (!Guid.TryParse(userIdClaim, out var userId))
-                return BadRequest("Invalid user ID in token.");
+                var userGuid = Guid.Parse(userIdClaim);
 
-            orderDto.UserID = userId;
+                var appUser = await _userManager.FindByIdAsync(userGuid.ToString());
+                if (appUser == null)
+                    return Unauthorized(ApiMessages.UnauthorizedAccess);
 
-            var newOrder = await _orderService.CreateOrderAsync(orderDto, cancellationToken);
-            await _logService.AddLogAsync(GetUser(), $"Created order ID={newOrder.Id}");
+                var order = await _orderService.CreateOrderAsync(createOrderDto, appUser.DomainPersonId);
 
-            return CreatedAtAction(nameof(GetById), new { Id = newOrder.Id }, newOrder);
+                await _logService.AddLogAsync(GetUser(), $"Order {order.Id} created successfully for UserId {appUser.DomainPersonId}");
+                
+                return Ok(order);
+            }
+            catch (InvalidOperationException ex)
+            {
+                await _logService.AddLogAsync(GetUser(), "Invalid operation while creating order.");
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                await _logService.AddLogAsync(GetUser(), "Unexpected error while creating order.");
+                return StatusCode(500, new { message = "An unexpected error occurred." });
+            }
         }
+
+
 
         // Get all orders
         [HttpGet]

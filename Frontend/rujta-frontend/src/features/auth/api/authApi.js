@@ -29,12 +29,12 @@ export const getCurrentUser = async () => {
   }
 };
 
-const forgotPassword = async (email) => {
+export const forgotPassword = async (email) => {
   const response = await apiClient.post("/auth/forgot-password", { email });
   return response.data;
 };
 
-const resetPassword = async ({ email, otp, newPassword }) => {
+export const resetPassword = async ({ email, otp, newPassword }) => {
   const response = await apiClient.post("/auth/reset-password", {
     email,
     otp,
@@ -43,6 +43,13 @@ const resetPassword = async ({ email, otp, newPassword }) => {
   return response.data;
 };
 
-
+export const socialLogin = async ({ IdToken }) => {
+  const response = await apiClient.post(
+    "/auth/google-login",
+    { IdToken }, // ✅ correct casing
+    { withCredentials: true }
+  );
+  return response.data;
+};
 
 

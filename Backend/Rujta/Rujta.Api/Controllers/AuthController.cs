@@ -1,3 +1,4 @@
+using Newtonsoft.Json.Linq;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
@@ -29,7 +30,7 @@ namespace Rujta.API.Controllers
                     return Unauthorized();
                 }
 
-                await _authService.GenerateTokensAsync(dto.Email);
+                var token = await _authService.GenerateTokensAsync(dto.Email);
                 var user = await _authService.GetUserByEmailAsync(dto.Email);
                 var role = user?.Role ?? "User";
 
@@ -39,6 +40,7 @@ namespace Rujta.API.Controllers
                 {
                     Email = dto.Email,
                     Role = role,
+                    AccessToken = token.AccessToken
                 });
             }
             catch (InvalidOperationException ex)
@@ -54,14 +56,14 @@ namespace Rujta.API.Controllers
             try
             {
                 var userId = await _authService.CreateUserAsync(dto, UserRole.User);
-                await _authService.GenerateTokensAsync(dto.Email);
+                var token = await _authService.GenerateTokensAsync(dto.Email);
                 var user = await _authService.GetUserByEmailAsync(dto.Email);
                 var role = user?.Role ?? "User";
 
 
                 await _logService.AddLogAsync(dto.Email, LogConstants.NewUserRegistered);
 
-                return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email });
+                return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email, AccessToken = token.AccessToken });
             }
             catch (InvalidOperationException ex)
             {
@@ -69,6 +71,39 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpPost("register/admin")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> RegisterByAdmin([FromBody] RegisterDto dto)
+        {
+            try
+            {
+                var roleToAssign = dto.Role ?? UserRole.User;
+
+                if (!Enum.IsDefined(typeof(UserRole), roleToAssign))
+                    return BadRequest(new { message = "Invalid role specified." });
+
+                if (User.IsInRole("Manager") && roleToAssign == UserRole.Admin)
+                    return Forbid("Manager cannot create Admin users.");
+
+                var userId = await _authService.CreateUserAsync(dto, roleToAssign);
+                var token = await _authService.GenerateTokensAsync(dto.Email);
+
+                var user = await _authService.GetUserByEmailAsync(dto.Email);
+                var role = user?.Role ?? roleToAssign.ToString();
+
+                await _logService.AddLogAsync(dto.Email, LogConstants.NewUserRegistered);
+
+                return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email, AccessToken = token.AccessToken });
+            }
+            catch (InvalidOperationException ex)
+            {
+                await _logService.AddLogAsync(dto.Email, $"Registration error: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+
 
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken()
@@ -85,7 +120,7 @@ namespace Rujta.API.Controllers
 
                 await _logService.AddLogAsync(LogConstants.UnknownUser, LogConstants.RefreshTokenUsed);
 
-                return Ok(tokens);
+                return Ok(new { AccessToken = tokens.AccessToken });
             }
             catch (InvalidOperationException ex)
             {
@@ -136,8 +171,8 @@ namespace Rujta.API.Controllers
         [ProducesResponseType(typeof(MeResponse), 200)]
         public IActionResult Me()
         {
-            var email = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)?.Value
-            ?? string.Empty;
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
+
 
             var roles = User.Claims
                             .Where(c => c.Type == ClaimTypes.Role)
@@ -146,9 +181,22 @@ namespace Rujta.API.Controllers
 
             var role = roles.FirstOrDefault() ?? string.Empty;
 
-            
+
             return Ok(new MeResponse(email, role));
         }
+
+        [HttpGet("email")]
+        [ProducesResponseType(typeof(EmailResponse), StatusCodes.Status200OK)]
+        public IActionResult GetUserEmail()
+        {
+            var email = JwtRegisteredClaimNames.Email;
+               
+            if (string.IsNullOrEmpty(email))
+                return Ok(new EmailResponse(string.Empty));
+
+            return Ok(new EmailResponse(email));
+        }
+
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
@@ -163,19 +211,6 @@ namespace Rujta.API.Controllers
             }
         }
 
-        [HttpPost("social-login")]
-        public async Task<IActionResult> SocialLogin([FromBody] SocialLoginDto dto)
-        {
-            try
-            {
-                var tokens = await _authService.SocialLoginAsync(dto);
-                return Ok(tokens);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto dto)
         {
@@ -189,8 +224,26 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [HttpPost("google-login")]
+        public async Task<IActionResult> GoogleLogin([FromBody] SocialLoginDto dto)
+        {
+            try
+            {
+                var tokens = await _authService.LoginWithGoogle(dto.IdToken);
+                return Ok(tokens);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+      
+
+
 
     }
 
     public record MeResponse(string Email, string Role);
+    public record EmailResponse(string Email);
 }

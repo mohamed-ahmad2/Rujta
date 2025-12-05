@@ -1,28 +1,43 @@
-// src/hooks/useGoogleAuth.js
-import { auth, provider } from "../../../../firebase";
-import { signInWithPopup } from "firebase/auth";
+
+import { auth } from "../../../../firebase";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 export const useGoogleAuth = () => {
-  const { handleSocialLogin } = useAuth(); // send ID token to backend
+  const { handleGoogleLogin } = useAuth();
+  const navigate = useNavigate();
 
   const googleFirebaseLogin = async () => {
     try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" }); // ← يتيح اختيار حساب آخر
+
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Get Firebase ID token
-      const idToken = await user.getIdToken();
+      if (!user) throw new Error("No user returned from Firebase");
 
-      // Log ID token in console
-      console.log("Firebase ID Token:", idToken); // ✅ logs token
+      const IdToken = await user.getIdToken(true);
+      console.log("Firebase ID Token:", IdToken);
 
-      // Send ID token to your backend
-      await handleSocialLogin({ idToken });
+      const backendTokens = await handleGoogleLogin(IdToken);
+      if (!backendTokens) throw new Error("Failed to get tokens from backend");
 
-      return user;
+      // إعادة التوجيه بعد تسجيل الدخول بنجاح
+      navigate("/user");
+
+      return {
+        firebaseUser: {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+        },
+        backendTokens,
+      };
     } catch (error) {
-      console.error("Firebase login failed:", error);
+      console.error("Firebase social login failed:", error);
       throw error;
     }
   };

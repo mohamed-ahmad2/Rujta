@@ -28,7 +28,7 @@ import Settings from "../features/dashboard/pages/Settings";
 import Customers from "../features/dashboard/pages/Customers";
 import Sales from "../features/dashboard/pages/Sales";
 import ResetPasswordPage from "../features/auth/pages/ResetPasswordPage";
-
+import MedicineDetails from "../features/medicines/pages/MedicineDetails";
 
 import AuthPage from "../features/auth/pages/AuthPage";
 
@@ -103,6 +103,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         </ProtectedRoute>
       }
     />
+<Route path="/medicines/:id" element={<MedicineDetails />} />
 
     <Route
   path="/user/profile"
@@ -110,7 +111,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
     <ProtectedRoute>
       <div className="overflow-x-hidden bg-page min-h-screen">
         <NavbarUser cart={cart} onCartClick={() => setIsCartOpen(true)} />
-        <Profile />   {/* صفحة البروفايل */}
+        <Profile />
         <FooterUser />
       </div>
     </ProtectedRoute>
@@ -139,6 +140,25 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         </div>
       }
     />
+<Route
+  path="/medicine/:id"
+  element={
+    <ProtectedRoute>
+      <div className="overflow-x-hidden bg-page min-h-screen">
+        <NavbarUser cart={cart} onCartClick={() => setIsCartOpen(true)} />
+
+        <MedicineDetails cart={cart} setCart={setCart} />
+
+        <CartDrawerUser
+          cart={cart}
+          setCart={setCart}
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+        />
+      </div>
+    </ProtectedRoute>
+  }
+/>
 
     {/* Protected Admin Dashboard */}
     <Route

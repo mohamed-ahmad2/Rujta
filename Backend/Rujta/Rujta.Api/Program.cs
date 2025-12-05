@@ -1,4 +1,7 @@
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder.Extensions;
 using Rujta.Application.MappingProfiles;
 using Rujta.Domain.Hubs;
 using Rujta.Infrastructure.Extensions;
@@ -13,17 +16,17 @@ namespace Rujta.API
 
             builder.Logging.AddConsole();
 
-            // Add services Swagger
+            // -------------------------------
+            // Add services
+            // -------------------------------
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             builder.Services.AddAutoMapper(typeof(StaffProfile).Assembly);
 
-
             // Database
             builder.Services.AddCustomDatabase(builder.Configuration);
-
 
             // Identity & Authorization
             builder.Services.AddCustomIdentity();
@@ -42,10 +45,39 @@ namespace Rujta.API
             // Application Services
             builder.Services.AddApplicationServices(builder.Configuration);
 
+            // -------------------------------
+            // Firebase Admin SDK
+            // -------------------------------
+            // Make sure to put the JSON in your project and update the path
+
+            // Firebase Initialization
+            try
+            {
+                var credentialPath = Path.Combine(AppContext.BaseDirectory, "Firebase", "Service-account.json");
+                if (File.Exists(credentialPath))
+                {
+                    FirebaseApp.Create(new AppOptions()
+                    {
+                        Credential = GoogleCredential.FromFile(credentialPath)
+                    });
+                    Console.WriteLine("Firebase initialized successfully!");
+                }
+                else
+                {
+                    Console.WriteLine($"Firebase JSON not found at {credentialPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing Firebase: {ex.Message}");
+            }
+
+
             var app = builder.Build();
 
-
-
+            // -------------------------------
+            // Middleware
+            // -------------------------------
             if (app.Environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -53,7 +85,6 @@ namespace Rujta.API
                 app.UseSwaggerUI();
             }
 
-            // Middleware
             app.UseHttpsRedirection();
 
             app.UseCors("AllowReactApp");
@@ -61,17 +92,21 @@ namespace Rujta.API
             app.UseAuthentication();
             app.UseAuthorization();
 
-
             app.MapControllers();
 
+            // -------------------------------
             // Role seeding
+            // -------------------------------
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
                 await IdentitySeeder.SeedRolesAsync(roleManager);
             }
+
+            // SignalR Hub
             app.MapHub<NotificationHub>("/notificationHub");
+
             await app.RunAsync();
         }
     }

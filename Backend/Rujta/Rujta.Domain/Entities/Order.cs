@@ -1,5 +1,6 @@
 ﻿using Rujta.Domain.Common;
 using Rujta.Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
@@ -24,9 +25,12 @@ namespace Rujta.Domain.Entities
 
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
 
-        public required virtual User User { get; set; }
-        public required virtual Pharmacy Pharmacy { get; set; }
+
+        public  virtual User User { get; set; }
+        public  virtual Pharmacy Pharmacy { get; set; }
         public virtual Prescription? Prescription { get; set; }
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     }
