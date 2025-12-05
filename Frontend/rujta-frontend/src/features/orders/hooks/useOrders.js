@@ -76,19 +76,20 @@ export const useOrders = () => {
     };
 
     const create = async (data) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await createOrder(data);
-            await fetchUserOrders(); // refresh list
-            return res.data;
-        } catch (err) {
-            setError(err.response?.data || err.message);
-            return null;
-        } finally {
-            setLoading(false);
-        }
-    };
+    setLoading(true);
+    setError(null);
+    try {
+        const res = await createOrder(data);
+        await fetchUserOrders();
+        return res.data;
+    } catch (err) {
+        setError(err.response?.data || err.message);
+        return null;
+    } finally {
+        setLoading(false);
+    }
+};
+
 
     const update = async (id, data) => {
         setLoading(true);

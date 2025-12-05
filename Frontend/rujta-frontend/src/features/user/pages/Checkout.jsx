@@ -13,66 +13,96 @@ const Checkout = () => {
 
   // Show location prompt if needed
   useEffect(() => {
-    const errorMessage = typeof error === "string" ? error : error?.message || "";
-    if (errorMessage.includes("User location not set") || errorMessage.includes("location not set")) {
+    const errorMessage =
+      typeof error === "string" ? error : error?.message || "";
+    if (
+      errorMessage.includes("User location not set") ||
+      errorMessage.includes("location not set")
+    ) {
       setShowLocationPrompt(true);
     }
   }, [error]);
 
   useEffect(() => {
-  if (!user) return;
+    if (!user) return;
 
-  const key = `cart_${user.email}`;
-  const stored = JSON.parse(localStorage.getItem(key)) || [];
-  setCart(stored);
+    const key = `cart_${user.email}`;
+    const stored = JSON.parse(localStorage.getItem(key)) || [];
+    setCart(stored);
 
-  if (stored.length > 0) {
-    const dtoItems = cart.map((item) => ({
-  id: item.id,
-  quantity: item.quantity,
-}));
+    if (stored.length > 0) {
+      const dtoItems = cart.map((item) => ({
+        id: item.id,
+        quantity: item.quantity,
+      }));
 
+      console.log("DTO Items being sent to fetchPharmacies:", dtoItems);
+      fetchPharmacies(dtoItems);
+    }
+  }, [user]);
 
-    console.log("DTO Items being sent to fetchPharmacies:", dtoItems);
-    fetchPharmacies(dtoItems);
-  }
-}, [user]);
+  const handleSetLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            await apiClient.put("/users/location", { latitude, longitude });
+            setShowLocationPrompt(false);
 
-const handleSetLocation = () => {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          await apiClient.put("/users/location", { latitude, longitude });
-          setShowLocationPrompt(false);
+            const dtoItems = cart.map((item) => ({
+              medicineId: item.id,
+              quantity: item.quantity,
+            }));
 
-          const dtoItems = cart.map((item) => ({
-            medicineId: item.id,
-            quantity: item.quantity,
-          }));
-
-          // مرر مصفوفة مباشرة
-          fetchPharmacies(dtoItems);
-        } catch (updateErr) {
-          console.error("Failed to update location:", updateErr);
+            fetchPharmacies(dtoItems);
+          } catch (updateErr) {
+            console.error("Failed to update location:", updateErr);
+          }
+        },
+        (geoErr) => {
+          console.error("Geolocation error:", geoErr);
         }
-      },
-      (geoErr) => {
-        console.error("Geolocation error:", geoErr);
-      }
-    );
-  }
-};
-
+      );
+    }
+  };
 
   const handleOrder = async (pharmacyId) => {
-    await create({
-      pharmacyId,
-      medicines: cart,
-    });
+    if (!cart || cart.length === 0) {
+      console.log("Cart is empty!");
+      alert("Cart is empty!");
+      return;
+    }
 
-    alert("Order created successfully!");
+    // تحضير order items بالـ PascalCase عشان Backend
+    const orderItems = cart.map((item) => ({
+      MedicineID: item.id,
+      Quantity: item.quantity,
+    }));
+
+    const orderDto = {
+      PharmacyID: pharmacyId,
+      DeliveryAddress: user?.address || "No address provided",
+      OrderItems: orderItems,
+    };
+
+    console.log("Creating order with DTO:", orderDto);
+
+    try {
+      const result = await create(orderDto);
+      console.log("Create order result:", result);
+
+      if (result) {
+        alert("Order created successfully!");
+        console.log("Order created successfully with ID:", result.id);
+      } else {
+        alert("Failed to create order!");
+        console.error("Order creation returned null or failed.");
+      }
+    } catch (err) {
+      console.error("Error while creating order:", err);
+      alert("Failed to create order! See console for details.");
+    }
   };
 
   const errorMessage = typeof error === "string" ? error : error?.message || "";
@@ -93,7 +123,9 @@ const handleSetLocation = () => {
 
         {/* RIGHT SIDE */}
         <div className="w-1/2 h-full p-8 overflow-y-auto bg-white">
-          <h1 className="text-2xl font-semibold mb-6">Pharmacy search & ranking</h1>
+          <h1 className="text-2xl font-semibold mb-6">
+            Pharmacy search & ranking
+          </h1>
 
           {loading && <p>Loading pharmacies...</p>}
           {errorMessage && <p className="text-red-500 mb-4">{errorMessage}</p>}
@@ -124,12 +156,13 @@ const handleSetLocation = () => {
                       {i + 1}. {p.name}
                     </p>
                     <p className="text-gray-500 text-sm">
-                      Lat: {p.latitude.toFixed(4)}, Lng: {p.longitude.toFixed(4)}, Distance:{" "}
+                      Lat: {p.latitude.toFixed(4)}, Lng:{" "}
+                      {p.longitude.toFixed(4)}, Distance:{" "}
                       {p.distanceKm.toFixed(2)} km
                     </p>
                     <p className="text-sm mt-2">
-                      Matched Drugs: {p.matchedDrugs} / {p.totalRequestedDrugs} (
-                      {p.matchPercentage.toFixed(2)}%)
+                      Matched Drugs: {p.matchedDrugs} / {p.totalRequestedDrugs}{" "}
+                      ({p.matchPercentage.toFixed(2)}%)
                     </p>
                   </div>
 
