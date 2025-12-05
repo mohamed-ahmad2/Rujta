@@ -9,5 +9,9 @@ namespace Rujta.Infrastructure.Repositories
         public PeopleRepository(AppDbContext context) : base(context)
         {
         }
+
+        public async Task<Person?> GetByGuidAsync(Guid guid, CancellationToken cancellationToken = default)=>
+            await _context.People.FirstOrDefaultAsync(p => p.Id == guid, cancellationToken);
+        
     }
 }

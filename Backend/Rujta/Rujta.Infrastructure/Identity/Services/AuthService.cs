@@ -1,12 +1,6 @@
 ﻿using FirebaseAdmin.Auth;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Domain.Common;
-using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Identity;
-using System.Security.Cryptography;
 
 namespace Rujta.Infrastructure.Identity.Services
 {
@@ -152,18 +146,18 @@ namespace Rujta.Infrastructure.Identity.Services
             return tokens;
         }
 
-        public async Task<TokenDto> RefreshAccessTokenAsync(string? providedRefreshToken, CancellationToken cancellationToken = default)
+        public async Task<TokenDto> RefreshAccessTokenAsync(string? refreshToken, CancellationToken cancellationToken = default)
         {
             var context = _httpContextAccessor.HttpContext!;
-            providedRefreshToken ??= context.Request.Cookies[CookieKeys.RefreshToken];
+            refreshToken ??= context.Request.Cookies[CookieKeys.RefreshToken];
 
-            if (string.IsNullOrEmpty(providedRefreshToken))
+            if (string.IsNullOrEmpty(refreshToken))
             {
                 _logger.LogWarning("Refresh token required but missing.");
                 throw new InvalidOperationException(AuthMessages.RefreshTokenRequired);
             }
 
-            var storedToken = await RefreshTokenHelper.GetValidRefreshTokenAsync(_unitOfWork.RefreshTokens, providedRefreshToken);
+            var storedToken = await RefreshTokenHelper.GetValidRefreshTokenAsync(_unitOfWork.RefreshTokens, refreshToken);
             if (storedToken == null)
             {
                 _logger.LogWarning("Invalid or expired refresh token.");
@@ -179,7 +173,7 @@ namespace Rujta.Infrastructure.Identity.Services
 
             ApplicationUserDto userDto = _mapper.Map<ApplicationUserDto>(user);
             bool loginOrRegister = false;
-            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, storedToken.DeviceInfo, loginOrRegister, providedRefreshToken);
+            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, storedToken.DeviceInfo, loginOrRegister, refreshToken);
 
             SetRefreshTokenCookie(tokens.RefreshToken);
 
