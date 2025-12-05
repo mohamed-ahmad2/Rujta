@@ -1,6 +1,6 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
-import Sidebar from "../components/Sidebar"; // عدّل المسار حسب مشروعك
+import Sidebar from "../components/Sidebar"; 
 
 export default function DashboardLayout() {
   return (
