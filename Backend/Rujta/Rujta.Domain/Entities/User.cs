@@ -11,7 +11,6 @@ namespace Rujta.Domain.Entities
         public string? ChronicDiseases { get; set; }
         public double? Weight { get; set; }
         public double? Height { get; set; }
-        public Address Address { get; set; } = null!;
 
         public double Latitude { get; set; }
         public double Longitude { get; set; }

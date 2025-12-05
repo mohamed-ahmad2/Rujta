@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Rujta.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class addDatabaseGoogle : Migration
+    public partial class addDatabase : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -371,6 +371,7 @@ namespace Rujta.Infrastructure.Migrations
                     PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ProfileImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AddressId = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Discriminator = table.Column<string>(type: "nvarchar(13)", maxLength: 13, nullable: false),
@@ -393,11 +394,19 @@ namespace Rujta.Infrastructure.Migrations
                     Weight = table.Column<double>(type: "float(5)", precision: 5, scale: 2, nullable: true),
                     Height = table.Column<double>(type: "float(5)", precision: 5, scale: 2, nullable: true),
                     Latitude = table.Column<double>(type: "float", nullable: true),
-                    Longitude = table.Column<double>(type: "float", nullable: true)
+                    Longitude = table.Column<double>(type: "float", nullable: true),
+                    GoogleId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PictureUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    LastLogin = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_People", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_People_Address_AddressId",
+                        column: x => x.AddressId,
+                        principalTable: "Address",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_People_People_AdminId",
                         column: x => x.AdminId,
@@ -557,8 +566,7 @@ namespace Rujta.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Address_UserId",
                 table: "Address",
-                column: "UserId",
-                unique: true);
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "EmailIndex",
@@ -632,6 +640,11 @@ namespace Rujta.Infrastructure.Migrations
                 name: "IX_Orders_UserID",
                 table: "Orders",
                 column: "UserID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_People_AddressId",
+                table: "People",
+                column: "AddressId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_People_AdminId",
@@ -810,15 +823,16 @@ namespace Rujta.Infrastructure.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
+                name: "FK_Address_People_UserId",
+                table: "Address");
+
+            migrationBuilder.DropForeignKey(
                 name: "FK_Pharmacies_People_AdminId",
                 table: "Pharmacies");
 
             migrationBuilder.DropForeignKey(
                 name: "FK_Pharmacies_People_ManagerId",
                 table: "Pharmacies");
-
-            migrationBuilder.DropTable(
-                name: "Address");
 
             migrationBuilder.DropTable(
                 name: "Devices");
@@ -876,6 +890,9 @@ namespace Rujta.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "People");
+
+            migrationBuilder.DropTable(
+                name: "Address");
 
             migrationBuilder.DropTable(
                 name: "Pharmacies");

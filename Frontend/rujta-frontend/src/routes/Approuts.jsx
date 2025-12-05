@@ -108,7 +108,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
     <ProtectedRoute>
       <div className="overflow-x-hidden bg-page min-h-screen">
         <NavbarUser cart={cart} onCartClick={() => setIsCartOpen(true)} />
-        <Profile />   {/* صفحة البروفايل */}
+        <Profile />
         <FooterUser />
       </div>
     </ProtectedRoute>

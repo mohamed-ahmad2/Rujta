@@ -1,3 +1,4 @@
+using Newtonsoft.Json.Linq;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
@@ -29,7 +30,7 @@ namespace Rujta.API.Controllers
                     return Unauthorized();
                 }
 
-                await _authService.GenerateTokensAsync(dto.Email);
+                var token = await _authService.GenerateTokensAsync(dto.Email);
                 var user = await _authService.GetUserByEmailAsync(dto.Email);
                 var role = user?.Role ?? "User";
 
@@ -39,6 +40,7 @@ namespace Rujta.API.Controllers
                 {
                     Email = dto.Email,
                     Role = role,
+                    AccessToken = token.AccessToken
                 });
             }
             catch (InvalidOperationException ex)
@@ -54,14 +56,14 @@ namespace Rujta.API.Controllers
             try
             {
                 var userId = await _authService.CreateUserAsync(dto, UserRole.User);
-                await _authService.GenerateTokensAsync(dto.Email);
+                var token = await _authService.GenerateTokensAsync(dto.Email);
                 var user = await _authService.GetUserByEmailAsync(dto.Email);
                 var role = user?.Role ?? "User";
 
 
                 await _logService.AddLogAsync(dto.Email, LogConstants.NewUserRegistered);
 
-                return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email });
+                return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email, AccessToken = token.AccessToken });
             }
             catch (InvalidOperationException ex)
             {
@@ -85,14 +87,14 @@ namespace Rujta.API.Controllers
                     return Forbid("Manager cannot create Admin users.");
 
                 var userId = await _authService.CreateUserAsync(dto, roleToAssign);
-                await _authService.GenerateTokensAsync(dto.Email);
+                var token = await _authService.GenerateTokensAsync(dto.Email);
 
                 var user = await _authService.GetUserByEmailAsync(dto.Email);
                 var role = user?.Role ?? roleToAssign.ToString();
 
                 await _logService.AddLogAsync(dto.Email, LogConstants.NewUserRegistered);
 
-                return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email });
+                return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email, AccessToken = token.AccessToken });
             }
             catch (InvalidOperationException ex)
             {
@@ -118,7 +120,7 @@ namespace Rujta.API.Controllers
 
                 await _logService.AddLogAsync(LogConstants.UnknownUser, LogConstants.RefreshTokenUsed);
 
-                return Ok(tokens);
+                return Ok(new { AccessToken = tokens.AccessToken });
             }
             catch (InvalidOperationException ex)
             {
@@ -169,8 +171,8 @@ namespace Rujta.API.Controllers
         [ProducesResponseType(typeof(MeResponse), 200)]
         public IActionResult Me()
         {
-            var email = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email)?.Value
-            ?? string.Empty;
+            var email = User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
+
 
             var roles = User.Claims
                             .Where(c => c.Type == ClaimTypes.Role)

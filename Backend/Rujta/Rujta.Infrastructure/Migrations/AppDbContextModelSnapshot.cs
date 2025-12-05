@@ -159,6 +159,9 @@ namespace Rujta.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("AddressId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
@@ -189,6 +192,8 @@ namespace Rujta.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AddressId");
 
                     b.ToTable("People", (string)null);
 
@@ -257,8 +262,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.ToTable("Address");
                 });
@@ -1100,11 +1104,20 @@ namespace Rujta.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Rujta.Domain.Common.Person", b =>
+                {
+                    b.HasOne("Rujta.Domain.Entities.Address", "Address")
+                        .WithMany()
+                        .HasForeignKey("AddressId");
+
+                    b.Navigation("Address");
+                });
+
             modelBuilder.Entity("Rujta.Domain.Entities.Address", b =>
                 {
                     b.HasOne("Rujta.Domain.Entities.User", "User")
-                        .WithOne("Address")
-                        .HasForeignKey("Rujta.Domain.Entities.Address", "UserId")
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1372,9 +1385,6 @@ namespace Rujta.Infrastructure.Migrations
 
             modelBuilder.Entity("Rujta.Domain.Entities.User", b =>
                 {
-                    b.Navigation("Address")
-                        .IsRequired();
-
                     b.Navigation("Orders");
 
                     b.Navigation("Prescriptions");
