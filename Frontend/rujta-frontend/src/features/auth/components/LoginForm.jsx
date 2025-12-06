@@ -8,22 +8,23 @@ import { FcGoogle } from "react-icons/fc";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 const LoginForm = ({ email, setEmail, password, setPassword, onLogin, error, loading }) => {
   const navigate = useNavigate();
-  const { forgotPassword } = useAuth();
+  const { handleForgotPassword } = useAuth();
+
 const { googleFirebaseLogin } = useGoogleAuth();
 
-  const handleForgotPassword = async () => {
-    if (!email) return alert("Please enter your email first");
-    try {
-      const res = await forgotPassword(email);
-      if (res.message === "OTP sent to your email.") {
-        navigate(`/reset-password?email=${encodeURIComponent(email)}`);
-      } else {
-        alert(res.message);
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || "Something went wrong.");
+ const handleForgotPasswordClick = async () => {
+  if (!email) return alert("Please enter your email first");
+  try {
+    const res = await handleForgotPassword(email);
+    if (res.message === "OTP sent to your email.") {
+      navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+    } else {
+      alert(res.message);
     }
-  };
+  } catch (err) {
+    alert(err.response?.data?.message || "Something went wrong.");
+  }
+};
 
   return (
     <motion.div className="w-full max-w-md">
@@ -67,7 +68,7 @@ const { googleFirebaseLogin } = useGoogleAuth();
         <div className="text-right -mt-3">
           <button
             type="button"
-            onClick={handleForgotPassword}
+            onClick={handleForgotPasswordClick}
             className="text-secondary font-semibold hover:underline"
           >
             Forgot Password?
