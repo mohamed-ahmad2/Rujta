@@ -34,8 +34,8 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
 
   // Handle Checkout
   const handleCheckout = () => {
-    onClose();              // يغلق الـ Drawer
-    navigate("/user/Checkout"); // روّحي للصفحة اللي تبينها
+    onClose();
+    navigate("/user/Checkout");
   };
 
   return (

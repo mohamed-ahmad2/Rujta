@@ -21,14 +21,15 @@ namespace Rujta.Domain.Entities
 
         public decimal TotalPrice { get; set; }
 
-        public string DeliveryAddress { get; set; } = string.Empty;
-
+        [ForeignKey("DeliveryAddress")]
+        public int? DeliveryAddressId { get; set; }
+        
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
         [Timestamp]
         public byte[] RowVersion { get; set; }
 
-
+        public Address? DeliveryAddress { get; set; }
         public  virtual User User { get; set; }
         public  virtual Pharmacy Pharmacy { get; set; }
         public virtual Prescription? Prescription { get; set; }

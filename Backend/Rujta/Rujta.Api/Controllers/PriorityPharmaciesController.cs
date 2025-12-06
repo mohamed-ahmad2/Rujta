@@ -1,5 +1,5 @@
-﻿using Rujta.Infrastructure.Constants;
-using System.IdentityModel.Tokens.Jwt;
+﻿using Rujta.Application.Interfaces;
+using Rujta.Infrastructure.Constants;
 
 
 namespace Rujta.API.Controllers
@@ -10,30 +10,36 @@ namespace Rujta.API.Controllers
     public class PriorityPharmaciesController : ControllerBase
     {
         private readonly IPharmacyCartService _cartService;
-        private readonly IUserRepository _userRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public PriorityPharmaciesController(IPharmacyCartService cartService, IUserRepository userRepository)
+        public PriorityPharmaciesController(IPharmacyCartService cartService, IUnitOfWork unitOfWork)
         {
             _cartService = cartService;
-            _userRepository = userRepository;
+            _unitOfWork = unitOfWork;
         }
 
         [HttpPost("top-k")]
         [ProducesResponseType(typeof(object), 200)]
         public async Task<IActionResult> GetTopPharmaciesForCart([FromBody] ItemDto order, [FromQuery] int topK = 5)
         {
-            var userIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userIdClaim == null) return Unauthorized(ApiMessages.UnauthorizedAccess);
 
             var userId = Guid.Parse(userIdClaim);
 
             
-            var user = await _userRepository.GetProfileAsync(userId);
+            var user = await _unitOfWork.Users.GetProfileAsync(userId);
             if (user == null) return NotFound(ApiMessages.UserNotFound);
 
-            
             if (user.Latitude == null || user.Longitude == null)
                 return BadRequest(ApiMessages.UserLocationNotSet);
+
+            Console.WriteLine("Order content:");
+
+            foreach (var item in order.Items)
+            {
+                Console.WriteLine($"MedicineId: {item.MedicineId}, Quantity: {item.Quantity}");
+            }
 
 
             var pharmacies = await _cartService.GetTopPharmaciesForCartAsync(

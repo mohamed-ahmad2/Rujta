@@ -15,11 +15,6 @@ namespace Rujta.Application.Validation
             RuleFor(x => x.PrescriptionID)
                 .GreaterThan(0).When(x => x.PrescriptionID.HasValue)
                 .WithMessage("Prescription ID must be greater than zero if provided.");
-
-            RuleFor(x => x.DeliveryAddress)
-                .NotEmpty().WithMessage("Delivery address is required.")
-                .MaximumLength(200).WithMessage("Delivery address cannot exceed 200 characters.");
-
             
             RuleFor(x => x.OrderItems)
                 .NotEmpty().WithMessage("Order must contain at least one item.");

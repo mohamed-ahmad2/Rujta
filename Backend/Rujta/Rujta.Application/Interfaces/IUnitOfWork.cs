@@ -16,6 +16,7 @@ namespace Rujta.Application.Interfaces
         IInventoryRepository InventoryItems { get; }
         ILogRepository Logs { get; }
         IStaffRepository Staffs { get; }
+        IAddressRepository Address { get; }
 
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
     }

@@ -46,14 +46,15 @@ namespace Rujta.Api.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(GetUser(), "Invalid operation while creating order.");
+                await _logService.AddLogAsync(GetUser(), $"Invalid operation while creating order: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                await _logService.AddLogAsync(GetUser(), "Unexpected error while creating order.");
-                return StatusCode(500, new { message = "An unexpected error occurred." });
+                await _logService.AddLogAsync(GetUser(), $"Unexpected error while creating order: {ex.Message}");
+                return StatusCode(500, new { message = ex.Message });
             }
+
         }
 
 

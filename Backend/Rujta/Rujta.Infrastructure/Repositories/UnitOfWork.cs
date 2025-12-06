@@ -17,6 +17,7 @@ namespace Rujta.Infrastructure.Repositories
         private IOrderRepository? _orders;
         private IUserRepository? _users;
         private IPeopleRepository? _people;
+        private IAddressRepository? _address;
         private IDeviceRepository? _device;
         private IRefreshTokenRepository? _refreshTokens;
         private INotificationRepository? _notifications;
@@ -35,6 +36,7 @@ namespace Rujta.Infrastructure.Repositories
         public IMedicineRepository Medicines => _medicines ??= new MedicineRepository(_context);
         public IPharmacyRepository Pharmacies => _pharmacies ??= new PharmacyRepo(_context);
         public IOrderRepository Orders => _orders ??= new OrderRepository(_context);
+        public IAddressRepository Address => _address ??= new AddressRepository(_context);
         public IPeopleRepository People => _people ??= new PeopleRepository(_context);
         public IDeviceRepository Devices => _device ??= new DeviceRepository(_context);
         public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(_context);
