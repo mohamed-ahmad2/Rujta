@@ -40,15 +40,41 @@ namespace Rujta.Application.Services
                     throw new InvalidOperationException($"Pharmacy with ID {createOrderDto.PharmacyID} not found.");
 
 
+                Address? deliveryAddressEntity = null;
+
+                if (createOrderDto.DeliveryAddress != null)
+                {
+                    var existingAddresses = await _unitOfWork.Address.FindAsync(
+                        a =>
+                            a.Street == createOrderDto.DeliveryAddress.Street &&
+                            a.BuildingNo == createOrderDto.DeliveryAddress.BuildingNo &&
+                            a.City == createOrderDto.DeliveryAddress.City &&
+                            a.Governorate == createOrderDto.DeliveryAddress.Governorate,
+                        cancellationToken);
+
+                    deliveryAddressEntity = existingAddresses.FirstOrDefault();
+
+                    if (deliveryAddressEntity == null)
+                    {
+                        deliveryAddressEntity = _mapper.Map<Address>(createOrderDto.DeliveryAddress);
+                        deliveryAddressEntity.UserId = userId;
+
+                        await _unitOfWork.Address.AddAsync(deliveryAddressEntity, cancellationToken);
+                        await _unitOfWork.SaveAsync(cancellationToken);
+                    }
+                }
+
+
                 var order = new Order
                 {
                     UserID = userId,
                     PharmacyID = createOrderDto.PharmacyID,
                     OrderDate = DateTime.UtcNow,
                     Status = OrderStatus.Pending,
-                    DeliveryAddress = createOrderDto.DeliveryAddress,
+                    DeliveryAddressId = deliveryAddressEntity?.Id,
                     OrderItems = new List<OrderItem>()
                 };
+
 
                 decimal totalPrice = 0;
 
@@ -89,10 +115,6 @@ namespace Rujta.Application.Services
                 throw;
             }
         }
-
-
-
-
 
         public async Task<(bool success, string message)> AcceptOrderAsync(int id, CancellationToken cancellationToken = default)
         {
@@ -304,7 +326,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get orders for User {UserId}", userId);
-                throw;
+                throw new InvalidOperationException($"An error occurred while fetching orders for User {userId}.", ex);
             }
         }
 
@@ -321,7 +343,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get details for Order {OrderId}", orderId);
-                throw;
+                throw new InvalidOperationException($"An error occurred while fetching details for Order {orderId}.", ex);
             }
         }
 
@@ -338,8 +360,9 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while fetching all orders");
-                throw;
+                throw new InvalidOperationException("An error occurred while fetching all orders.", ex);
             }
+
         }
 
 
@@ -355,8 +378,9 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while fetching Order {OrderId}", id);
-                throw;
+                throw new InvalidOperationException($"An error occurred while fetching Order {id}.", ex);
             }
+
         }
 
 
@@ -375,8 +399,9 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while adding Order");
-                throw;
+                throw new InvalidOperationException("An error occurred while adding an order.", ex);
             }
+
         }
 
 
@@ -402,8 +427,9 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while updating Order {OrderId}", id);
-                throw;
+                throw new InvalidOperationException($"Failed to update order {id}", ex);
             }
+
         }
 
 
@@ -428,8 +454,9 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while deleting Order {OrderId}", id);
-                throw;
+                throw new InvalidOperationException($"An error occurred while deleting Order {id}.", ex);
             }
+
         }
 
 

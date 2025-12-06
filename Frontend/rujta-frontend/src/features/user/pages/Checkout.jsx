@@ -9,7 +9,18 @@ const Checkout = () => {
   const { pharmacies, loading, error, fetchPharmacies } = usePharmacies();
   const { create } = useOrders();
   const { user } = useAuth();
+
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+
+  // FOR ORDER FORM
+  const [showOrderForm, setShowOrderForm] = useState(false);
+  const [selectedPharmacyId, setSelectedPharmacyId] = useState(null);
+  const [addressForm, setAddressForm] = useState({
+    Street: "",
+    BuildingNo: "",
+    City: "",
+    Governorate: "",
+  });
 
   // Show location prompt if needed
   useEffect(() => {
@@ -23,6 +34,7 @@ const Checkout = () => {
     }
   }, [error]);
 
+  // Load cart from localStorage
   useEffect(() => {
     if (!user) return;
 
@@ -31,12 +43,10 @@ const Checkout = () => {
     setCart(stored);
 
     if (stored.length > 0) {
-      const dtoItems = cart.map((item) => ({
+      const dtoItems = stored.map((item) => ({
         id: item.id,
         quantity: item.quantity,
       }));
-
-      console.log("DTO Items being sent to fetchPharmacies:", dtoItems);
       fetchPharmacies(dtoItems);
     }
   }, [user]);
@@ -49,13 +59,6 @@ const Checkout = () => {
           try {
             await apiClient.put("/users/location", { latitude, longitude });
             setShowLocationPrompt(false);
-
-            const dtoItems = cart.map((item) => ({
-              medicineId: item.id,
-              quantity: item.quantity,
-            }));
-
-            fetchPharmacies(dtoItems);
           } catch (updateErr) {
             console.error("Failed to update location:", updateErr);
           }
@@ -67,22 +70,48 @@ const Checkout = () => {
     }
   };
 
-  const handleOrder = async (pharmacyId) => {
+  // فتح فورم الطلب عند الضغط على Order
+  const openOrderForm = (pharmacyId) => {
+    setSelectedPharmacyId(pharmacyId);
+    // لو المستخدم عنده عنوان جاهز، نحط البيانات تلقائيًا
+    if (user?.address) {
+      setAddressForm(user.address);
+    } else {
+      setAddressForm({
+        Street: "",
+        BuildingNo: "",
+        City: "",
+        Governorate: "",
+      });
+    }
+    setShowOrderForm(true);
+  };
+
+  const handleAddressChange = (e) => {
+    const { name, value } = e.target;
+    setAddressForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleUseAccountAddress = () => {
+    if (user?.address) {
+      setAddressForm(user.address);
+    }
+  };
+
+  const handleConfirmOrder = async () => {
     if (!cart || cart.length === 0) {
-      console.log("Cart is empty!");
       alert("Cart is empty!");
       return;
     }
 
-    // تحضير order items بالـ PascalCase عشان Backend
     const orderItems = cart.map((item) => ({
       MedicineID: item.id,
       Quantity: item.quantity,
     }));
 
     const orderDto = {
-      PharmacyID: pharmacyId,
-      DeliveryAddress: user?.address || "No address provided",
+      PharmacyID: selectedPharmacyId,
+      DeliveryAddress: addressForm,
       OrderItems: orderItems,
     };
 
@@ -94,10 +123,9 @@ const Checkout = () => {
 
       if (result) {
         alert("Order created successfully!");
-        console.log("Order created successfully with ID:", result.id);
+        setShowOrderForm(false);
       } else {
         alert("Failed to create order!");
-        console.error("Order creation returned null or failed.");
       }
     } catch (err) {
       console.error("Error while creating order:", err);
@@ -110,7 +138,7 @@ const Checkout = () => {
   return (
     <div className="w-screen h-screen p-6 bg-gray-100 flex justify-center items-center">
       <div className="w-[1150px] h-[700px] bg-white shadow-xl rounded-3xl overflow-hidden flex">
-        {/* LEFT SIDE: Mock Map */}
+        {/* LEFT SIDE */}
         <div className="w-1/2 h-full relative">
           <div
             className="absolute inset-0 bg-cover bg-center brightness-95"
@@ -129,7 +157,6 @@ const Checkout = () => {
 
           {loading && <p>Loading pharmacies...</p>}
           {errorMessage && <p className="text-red-500 mb-4">{errorMessage}</p>}
-
           {showLocationPrompt && (
             <div className="mb-6">
               <p className="text-yellow-600 mb-2">
@@ -156,18 +183,17 @@ const Checkout = () => {
                       {i + 1}. {p.name}
                     </p>
                     <p className="text-gray-500 text-sm">
-                      Lat: {p.latitude.toFixed(4)}, Lng:{" "}
-                      {p.longitude.toFixed(4)}, Distance:{" "}
+                      Lat: {p.latitude.toFixed(4)}, Lng: {p.longitude.toFixed(4)}, Distance:{" "}
                       {p.distanceKm.toFixed(2)} km
                     </p>
                     <p className="text-sm mt-2">
-                      Matched Drugs: {p.matchedDrugs} / {p.totalRequestedDrugs}{" "}
-                      ({p.matchPercentage.toFixed(2)}%)
+                      Matched Drugs: {p.matchedDrugs} / {p.totalRequestedDrugs} (
+                      {p.matchPercentage.toFixed(2)}%)
                     </p>
                   </div>
 
                   <button
-                    onClick={() => handleOrder(p.pharmacyId)}
+                    onClick={() => openOrderForm(p.pharmacyId)}
                     className="bg-secondary text-white px-5 py-2 rounded-xl font-medium"
                   >
                     Order
@@ -176,6 +202,74 @@ const Checkout = () => {
               </div>
             ))}
           </div>
+
+          {/* ORDER FORM MODAL */}
+          {showOrderForm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+              <div className="bg-white p-6 rounded-xl w-[400px]">
+                <h2 className="text-xl font-semibold mb-4">Delivery Address</h2>
+
+                <div className="flex flex-col gap-3">
+                  <input
+                    type="text"
+                    name="Street"
+                    placeholder="Street"
+                    value={addressForm.Street}
+                    onChange={handleAddressChange}
+                    className="border p-2 rounded"
+                  />
+                  <input
+                    type="text"
+                    name="BuildingNo"
+                    placeholder="Building No"
+                    value={addressForm.BuildingNo}
+                    onChange={handleAddressChange}
+                    className="border p-2 rounded"
+                  />
+                  <input
+                    type="text"
+                    name="City"
+                    placeholder="City"
+                    value={addressForm.City}
+                    onChange={handleAddressChange}
+                    className="border p-2 rounded"
+                  />
+                  <input
+                    type="text"
+                    name="Governorate"
+                    placeholder="Governorate"
+                    value={addressForm.Governorate}
+                    onChange={handleAddressChange}
+                    className="border p-2 rounded"
+                  />
+
+                  {user?.address && (
+                    <button
+                      onClick={handleUseAccountAddress}
+                      className="bg-gray-300 text-black px-3 py-2 rounded mt-2"
+                    >
+                      Use my account address
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-3 mt-4">
+                  <button
+                    onClick={() => setShowOrderForm(false)}
+                    className="px-4 py-2 rounded bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmOrder}
+                    className="px-4 py-2 rounded bg-secondary text-white"
+                  >
+                    Confirm Order
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -17,13 +17,13 @@ namespace Rujta.Infrastructure.Repositories
         {
             var appUser = await _userManager.Users
                 .Include(u => u.DomainPerson)
-                .ThenInclude(p => p.Address)
                 .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (appUser?.DomainPerson is not User user)
                 return null;
 
-            var address = user.Address;
+            var userAddress = await _context.Addresses
+                    .FirstOrDefaultAsync(a => a.UserId == user.Id, cancellationToken);
 
             return new UserProfileDto
             {
@@ -34,12 +34,12 @@ namespace Rujta.Infrastructure.Repositories
                 ProfileImageUrl = user.ProfileImageUrl,
                 Latitude = user.Latitude,
                 Longitude = user.Longitude,
-                Address = address is null ? null : new AddressDto
+                Address = userAddress is null ? null : new AddressDto
                 {
-                    Street = address.Street,
-                    BuildingNo = address.BuildingNo,
-                    City = address.City,
-                    Governorate = address.Governorate,
+                    Street = userAddress.Street,
+                    BuildingNo = userAddress.BuildingNo,
+                    City = userAddress.City,
+                    Governorate = userAddress.Governorate,
                 }
             };
         }
@@ -47,9 +47,9 @@ namespace Rujta.Infrastructure.Repositories
         public async Task<bool> UpdateProfileAsync(Guid userId, UpdateUserProfileDto dto, CancellationToken cancellationToken = default)
         {
             var appUser = await _userManager.Users
-                .Include(u => u.DomainPerson)
-                .ThenInclude(p => p.Address)
-                .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+    .Include(u => (u.DomainPerson as User)!.Address)
+    .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
 
             if (appUser?.DomainPerson is not User user)
                 return false;

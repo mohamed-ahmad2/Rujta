@@ -1,7 +1,5 @@
 ﻿using Rujta.Application.Interfaces;
 using Rujta.Infrastructure.Constants;
-using System.IdentityModel.Tokens.Jwt;
-using System.Threading;
 
 
 namespace Rujta.API.Controllers
