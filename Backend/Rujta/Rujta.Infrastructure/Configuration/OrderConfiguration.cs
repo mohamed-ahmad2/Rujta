@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-
 namespace Rujta.Infrastructure.Configuration
 {
     public class OrderConfiguration : IEntityTypeConfiguration<Order>
@@ -12,16 +11,16 @@ namespace Rujta.Infrastructure.Configuration
             builder.Property(o => o.TotalPrice)
                    .HasColumnType("decimal(18,2)");
 
-            builder.Property(o => o.DeliveryAddress)
-                   .HasMaxLength(255)
-                   .IsRequired();
 
-            
+            builder.HasOne(o => o.DeliveryAddress)
+                   .WithMany()
+                   .HasForeignKey(o => o.DeliveryAddressId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
             builder.HasOne(o => o.User)
                    .WithMany(u => u.Orders)
                    .HasForeignKey(o => o.UserID)
                    .OnDelete(DeleteBehavior.Restrict);
-
 
             builder.HasOne(o => o.Pharmacy)
                    .WithMany(p => p.Orders)

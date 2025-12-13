@@ -6,15 +6,6 @@ namespace Rujta.Infrastructure.Configuration
     {
         public void Configure(EntityTypeBuilder<Address> builder)
         {
-            
-            builder.Property(a => a.FullName)
-                   .IsRequired()
-                   .HasMaxLength(100);
-
-            builder.Property(a => a.MobileNumber)
-                   .IsRequired()
-                   .HasMaxLength(20);
-
             builder.Property(a => a.Street)
                    .IsRequired()
                    .HasMaxLength(200);
@@ -29,9 +20,6 @@ namespace Rujta.Infrastructure.Configuration
             builder.Property(a => a.Governorate)
                    .IsRequired()
                    .HasMaxLength(100);
-
-            builder.Property(a => a.Instructions)
-                   .HasMaxLength(300);
 
             builder.Property(a => a.IsDefault)
                    .HasDefaultValue(true);

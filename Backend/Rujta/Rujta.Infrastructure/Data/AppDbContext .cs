@@ -16,6 +16,7 @@ namespace Rujta.Infrastructure.Data
         public DbSet<Person> People { get; set; } = null!;
 
         // Entities
+        public DbSet<Address> Addresses { get; set; } = null!;
         public DbSet<Pharmacy> Pharmacies { get; set; } = null!;
         public DbSet<Medicine> Medicines { get; set; } = null!;
         public DbSet<InventoryItem> InventoryItems { get; set; } = null!;
