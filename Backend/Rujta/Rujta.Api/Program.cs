@@ -56,10 +56,15 @@ namespace Rujta.API
                 var credentialPath = Path.Combine(AppContext.BaseDirectory, "Firebase", "Service-account.json");
                 if (File.Exists(credentialPath))
                 {
+                    var serviceAccountCredential = CredentialFactory
+                        .FromFile<ServiceAccountCredential>(credentialPath)
+                        .ToGoogleCredential();
+
                     FirebaseApp.Create(new AppOptions()
                     {
-                        Credential = GoogleCredential.FromFile(credentialPath)
+                        Credential = serviceAccountCredential
                     });
+
                     Console.WriteLine("Firebase initialized successfully!");
                 }
                 else
@@ -71,7 +76,6 @@ namespace Rujta.API
             {
                 Console.WriteLine($"Error initializing Firebase: {ex.Message}");
             }
-
 
             var app = builder.Build();
 

@@ -140,7 +140,6 @@ namespace Rujta.Infrastructure.Identity.Services
             var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId, loginOrRegister);
 
             SetRefreshTokenCookie(tokens.RefreshToken);
-            //SetJwtCookie(tokens.AccessToken);
 
             _logger.LogInformation("Tokens generated for user {Email}", email);
             return tokens;
@@ -298,15 +297,18 @@ namespace Rujta.Infrastructure.Identity.Services
                 throw new InvalidOperationException("An error occurred while verifying the Firebase ID token.", ex);
             }
 
-            string email = decodedToken.Claims.TryGetValue("email", out var emailObj) ? emailObj?.ToString() : null;
+            string email = decodedToken.Claims.TryGetValue("email", out var emailObj)
+                            ? emailObj?.ToString() ?? throw new InvalidOperationException("Email not found in token.")
+                            : throw new InvalidOperationException("Email not found in token.");
             if (string.IsNullOrWhiteSpace(email))
             {
                 _logger.LogError("Email not found in Firebase token.");
                 throw new InvalidOperationException("Email not found in token.");
             }
 
-            string name = decodedToken.Claims.TryGetValue("name", out var nameObj) ? nameObj?.ToString() : email.Split('@')[0];
-
+            string name = decodedToken.Claims.TryGetValue("name", out var nameObj)
+                            ? nameObj?.ToString() ?? email.Split('@')[0]
+                            : email.Split('@')[0];
             // Check if the user exists using your existing method
             var existingUser = await _unitOfWork.Users.GetByEmailAsync(email);
             if (existingUser == null)
@@ -319,8 +321,12 @@ namespace Rujta.Infrastructure.Identity.Services
                     CreatePassword = securePassword
                 };
                 await CreateUserAsync(registerDto, UserRole.User);
-                _logger.LogInformation("New user created via Google login: {Email}", email);
+
+                existingUser = await _unitOfWork.Users.GetByEmailAsync(email);
+                if (existingUser == null)
+                    throw new InvalidOperationException("Failed to create new user.");
             }
+
 
             _logger.LogInformation("User {Email} logged in with Google.", email);
             return await GenerateTokensAsync(email);
