@@ -73,7 +73,7 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("register/admin")]
-        [Authorize(Roles = "Admin,Manager")]
+        //[Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> RegisterByAdmin([FromBody] RegisterDto dto)
         {
             try

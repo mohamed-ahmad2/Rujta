@@ -12,8 +12,8 @@ using Rujta.Infrastructure.Data;
 namespace Rujta.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251206150052_addAddress")]
-    partial class addAddress
+    [Migration("20251213175522_updateDatabase")]
+    partial class updateDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -241,15 +241,16 @@ namespace Rujta.Infrastructure.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
                     b.HasIndex("UserId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL");
 
-                    b.ToTable("Address");
+                    b.ToTable("Addresses");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Device", b =>
@@ -1127,9 +1128,7 @@ namespace Rujta.Infrastructure.Migrations
                 {
                     b.HasOne("Rujta.Domain.Entities.User", "User")
                         .WithOne("Address")
-                        .HasForeignKey("Rujta.Domain.Entities.Address", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("Rujta.Domain.Entities.Address", "UserId");
 
                     b.Navigation("User");
                 });

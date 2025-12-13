@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Rujta.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class addAddress : Migration
+    public partial class updateDatabase : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -105,12 +105,12 @@ namespace Rujta.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Address",
+                name: "Addresses",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Street = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     BuildingNo = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     City = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
@@ -121,7 +121,7 @@ namespace Rujta.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Address", x => x.Id);
+                    table.PrimaryKey("PK_Addresses", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -359,9 +359,9 @@ namespace Rujta.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_Orders", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Orders_Address_DeliveryAddressId",
+                        name: "FK_Orders_Addresses_DeliveryAddressId",
                         column: x => x.DeliveryAddressId,
-                        principalTable: "Address",
+                        principalTable: "Addresses",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -408,14 +408,14 @@ namespace Rujta.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_People", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_People_Address_AddressId",
+                        name: "FK_People_Addresses_AddressId",
                         column: x => x.AddressId,
-                        principalTable: "Address",
+                        principalTable: "Addresses",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_People_Address_Pharmacist_AddressId",
+                        name: "FK_People_Addresses_Pharmacist_AddressId",
                         column: x => x.Pharmacist_AddressId,
-                        principalTable: "Address",
+                        principalTable: "Addresses",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_People_People_AdminId",
@@ -574,10 +574,11 @@ namespace Rujta.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Address_UserId",
-                table: "Address",
+                name: "IX_Addresses_UserId",
+                table: "Addresses",
                 column: "UserId",
-                unique: true);
+                unique: true,
+                filter: "[UserId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "EmailIndex",
@@ -760,12 +761,11 @@ namespace Rujta.Infrastructure.Migrations
                 column: "RoleId");
 
             migrationBuilder.AddForeignKey(
-                name: "FK_Address_People_UserId",
-                table: "Address",
+                name: "FK_Addresses_People_UserId",
+                table: "Addresses",
                 column: "UserId",
                 principalTable: "People",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                principalColumn: "Id");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_AspNetUsers_People_DomainPersonId",
@@ -844,8 +844,8 @@ namespace Rujta.Infrastructure.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
-                name: "FK_Address_People_UserId",
-                table: "Address");
+                name: "FK_Addresses_People_UserId",
+                table: "Addresses");
 
             migrationBuilder.DropForeignKey(
                 name: "FK_Pharmacies_People_AdminId",
@@ -913,7 +913,7 @@ namespace Rujta.Infrastructure.Migrations
                 name: "People");
 
             migrationBuilder.DropTable(
-                name: "Address");
+                name: "Addresses");
 
             migrationBuilder.DropTable(
                 name: "Pharmacies");
