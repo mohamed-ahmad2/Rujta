@@ -183,6 +183,7 @@ namespace Rujta.Api.Controllers
 
         // Get all orders of logged-in user
         [HttpGet("user")]
+        
         public async Task<IActionResult> GetUserOrders(CancellationToken cancellationToken)
         {
             var domainPersonIdClaim = User.FindFirstValue("domainPersonId");
