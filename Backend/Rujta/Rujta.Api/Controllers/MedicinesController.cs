@@ -10,7 +10,6 @@ namespace Rujta.API.Controllers
         private readonly IMedicineService _medicineService;
         private readonly ILogService _logService;
 
-
         public MedicinesController(IMedicineService medicineService, ILogService logService)
         {
             _medicineService = medicineService;
@@ -20,51 +19,106 @@ namespace Rujta.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<MedicineDto>>> GetAll()
         {
-            return Ok(await _medicineService.GetAllAsync());
+            try
+            {
+                var medicines = await _medicineService.GetAllAsync();
+                return Ok(medicines);
+            }
+            catch (Exception ex)
+            {
+                await _logService.AddLogAsync(GetUser(), $"Error fetching all medicines: {ex.Message}");
+                return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
+            }
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<MedicineDto>> GetById(int id)
         {
-            var medicine = await _medicineService.GetByIdAsync(id);
-            if (medicine == null) return NotFound();
-            return Ok(medicine);
+            try
+            {
+                var medicine = await _medicineService.GetByIdAsync(id);
+                if (medicine == null)
+                    return NotFound($"Medicine with ID={id} not found.");
+
+                return Ok(medicine);
+            }
+            catch (Exception ex)
+            {
+                await _logService.AddLogAsync(GetUser(), $"Error fetching medicine ID={id}: {ex.Message}");
+                return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
+            }
         }
 
         [Authorize(Roles = "Admin,PharmacyAdmin")]
         [HttpPost]
         public async Task<ActionResult> Add([FromBody] MedicineDto dto)
         {
-            await _medicineService.AddAsync(dto);
-            await _logService.AddLogAsync(GetUser(), $"Added new medicine: {dto.Name}");
+            if (dto == null)
+                return BadRequest("Medicine data cannot be null.");
 
-            return Ok();
+            try
+            {
+                await _medicineService.AddAsync(dto);
+                await _logService.AddLogAsync(GetUser(), $"Added new medicine: {dto.Name}");
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                await _logService.AddLogAsync(GetUser(), $"Error adding medicine {dto.Name}: {ex.Message}");
+                return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
+            }
         }
 
         [Authorize(Roles = "Admin,PharmacyAdmin")]
         [HttpPut("{id}")]
         public async Task<ActionResult> Update(int id, [FromBody] MedicineDto dto)
         {
-            await _medicineService.UpdateAsync(id, dto);
-            await _logService.AddLogAsync(GetUser(), $"Updated medicine ID={id}");
+            if (dto == null)
+                return BadRequest("Medicine data cannot be null.");
 
-            return NoContent();
+            try
+            {
+                var existing = await _medicineService.GetByIdAsync(id);
+                if (existing == null)
+                    return NotFound($"Medicine with ID={id} not found.");
+
+                await _medicineService.UpdateAsync(id, dto);
+                await _logService.AddLogAsync(GetUser(), $"Updated medicine ID={id}");
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                await _logService.AddLogAsync(GetUser(), $"Error updating medicine ID={id}: {ex.Message}");
+                return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
+            }
         }
 
         [Authorize(Roles = "Admin,PharmacyAdmin")]
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(int id)
         {
-            await _medicineService.DeleteAsync(id);
-            await _logService.AddLogAsync(GetUser(), $"Deleted medicine ID={id}");
+            try
+            {
+                var existing = await _medicineService.GetByIdAsync(id);
+                if (existing == null)
+                    return NotFound($"Medicine with ID={id} not found.");
 
-            return NoContent();
+                await _medicineService.DeleteAsync(id);
+                await _logService.AddLogAsync(GetUser(), $"Deleted medicine ID={id}");
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                await _logService.AddLogAsync(GetUser(), $"Error deleting medicine ID={id}: {ex.Message}");
+                return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
+            }
         }
 
         private string GetUser()
         {
-            return User.Identity?.Name ?? AuthMessages.UnknownUser;
+            return User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Name)
+                   ?? User.Identity?.Name
+                   ?? AuthMessages.UnknownUser;
         }
-
     }
 }
