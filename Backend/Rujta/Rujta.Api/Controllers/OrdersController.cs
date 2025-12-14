@@ -185,19 +185,29 @@ namespace Rujta.Api.Controllers
 
         // Get all orders of logged-in user
         [HttpGet("user")]
+        
         public async Task<IActionResult> GetUserOrders(CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
-            if (userIdClaim == null) return Unauthorized("User not found in token.");
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
 
-            if (!Guid.TryParse(userIdClaim, out var userId))
-                return BadRequest("Invalid user ID in token.");
+            var identityUser = await _userManager.FindByIdAsync(userIdClaim);
+            if (identityUser == null)
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
 
-            var orders = await _orderService.GetUserOrdersAsync(userId, cancellationToken);
-            await _logService.AddLogAsync(GetUser(), $"Fetched orders for user ID={userId}");
+            var domainPersonId = identityUser.DomainPersonId;
+
+            var orders = await _orderService.GetUserOrdersAsync(domainPersonId, cancellationToken);
+
+            await _logService.AddLogAsync(
+                GetUser(),
+                $"Fetched orders for DomainPersonId={domainPersonId}"
+            );
 
             return Ok(orders);
         }
+
 
         // Get order details
         [HttpGet("{id:int}/details")]
