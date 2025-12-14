@@ -17,6 +17,9 @@ namespace Rujta.Application.DTOs
         public int TotalRequestedDrugs { get; set; }
         public double DistanceKm { get; set; }
         public double MatchPercentage { get; set; }
+        public double EstimatedDurationMinutes { get; set; }
+
+
     }
 
 

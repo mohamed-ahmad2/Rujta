@@ -43,8 +43,13 @@ namespace Rujta.Application.Services
             foreach (var entry in nearestPharmacies)
             {
                 var pharmacyResult = await ProcessPharmacyAsync(entry, order);
-                results.Add(pharmacyResult);
+
+                if (pharmacyResult.MatchedDrugs > 0)
+                {
+                    results.Add(pharmacyResult);
+                }
             }
+
 
             var finalResults = results
                 .OrderByDescending(r => r.MatchedDrugs)
@@ -92,10 +97,9 @@ namespace Rujta.Application.Services
         }
 
 
-        private async Task<List<(Pharmacy pharmacy, double distance)>> GetNearestPharmaciesSafe(
-    double userLat,
-    double userLng,
-    int topK)
+        private async Task<List<(Pharmacy pharmacy, double distance, double durationMinutes)>>
+    GetNearestPharmaciesSafe(double userLat, double userLng, int topK)
+
         {
             try
             {
@@ -103,7 +107,7 @@ namespace Rujta.Application.Services
                     .GetNearestPharmaciesRouted(userLat, userLng, "car", topK);
 
                 var result = rawNearest
-                    .Select(r => (r.pharmacy, r.distanceMeters))
+                    .Select(r => (r.pharmacy, r.distanceMeters, r.durationMinutes))
                     .ToList();
 
                 _logger.LogInformation("Found {Count} nearest pharmacies", result.Count);
@@ -112,17 +116,21 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting nearest pharmacies from DistanceService");
-                return new List<(Pharmacy, double)>();
+                // Return an empty list with the correct tuple type
+                return new List<(Pharmacy pharmacy, double distance, double durationMinutes)>();
             }
         }
 
 
         private async Task<PharmacyMatchResultDto> ProcessPharmacyAsync(
-    (Pharmacy pharmacy, double distance) entry,
+    (Pharmacy pharmacy, double distance, double durationMinutes) entry,
     ItemDto order)
+
         {
             var pharmacy = entry.pharmacy;
             var distance = entry.distance;
+            var duration = entry.durationMinutes;
+
             int matched = 0;
 
             _logger.LogInformation(
@@ -148,10 +156,12 @@ namespace Rujta.Application.Services
                 MatchedDrugs = matched,
                 TotalRequestedDrugs = order.Items.Count,
                 DistanceKm = distance,
+                EstimatedDurationMinutes = Math.Round(duration, 1),
                 MatchPercentage = order.Items.Count > 0
-                    ? Math.Round(((double)matched / order.Items.Count) * 100, 1)
-                    : 0
+        ? Math.Round(((double)matched / order.Items.Count) * 100, 1)
+        : 0
             };
+
         }
 
         private async Task<int> CheckMedicineStockAsync(int pharmacyId, CartItemDto item)
