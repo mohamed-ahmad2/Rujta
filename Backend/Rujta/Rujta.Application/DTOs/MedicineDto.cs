@@ -19,6 +19,8 @@ namespace Rujta.Application.DTOs
 
         public DateTime ExpiryDate { get; set; }
 
+        public string? CompanyName { get; set; }
+
         public string? ActiveIngredient { get; set; }
         public string? ImageUrl { get; set; }
     }

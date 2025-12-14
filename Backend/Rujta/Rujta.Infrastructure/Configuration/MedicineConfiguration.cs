@@ -53,7 +53,11 @@ namespace Rujta.Infrastructure.Configuration
                    .HasForeignKey(o => o.MedicineID)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            
+            builder.HasOne(m => m.Category)
+                   .WithMany(c => c.Medicines)
+                   .HasForeignKey(m => m.CategoryId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
             builder.ToTable("Medicines");
         }
     }
