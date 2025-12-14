@@ -7,5 +7,6 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
     {
         Task<IEnumerable<Order>> GetOrdersByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
         Task<Order?> GetOrderWithItemsAsync(int orderId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Order>> GetAllWithItemsAsync(CancellationToken cancellationToken = default);
     }
 }

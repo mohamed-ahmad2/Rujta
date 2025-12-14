@@ -66,6 +66,7 @@
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+                new Claim("domainPersonId", user.DomainPersonId.ToString()),
                 new Claim(JwtRegisteredClaimNames.Name, user.FullName ?? string.Empty),
                 new Claim(JwtRegisteredClaimNames.Jti, jwtId ?? Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat,

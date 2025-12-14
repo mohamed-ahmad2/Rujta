@@ -28,5 +28,17 @@
                 .Include(o => o.User)
                 .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
         }
+
+        public async Task<IEnumerable<Order>> GetAllWithItemsAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Medicine) 
+                .Include(o => o.Pharmacy)
+                .Include(o => o.User)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync(cancellationToken);
+        }
+
     }
 }

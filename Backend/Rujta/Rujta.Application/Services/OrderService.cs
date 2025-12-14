@@ -354,7 +354,7 @@ namespace Rujta.Application.Services
             {
                 _logger.LogInformation("Fetching all orders");
 
-                var orders = await _unitOfWork.Orders.GetAllAsync(cancellationToken);
+                var orders = await _unitOfWork.Orders.GetAllWithItemsAsync(cancellationToken);
                 return _mapper.Map<IEnumerable<OrderDto>>(orders);
             }
             catch (Exception ex)
@@ -362,7 +362,6 @@ namespace Rujta.Application.Services
                 _logger.LogError(ex, "Error while fetching all orders");
                 throw new InvalidOperationException("An error occurred while fetching all orders.", ex);
             }
-
         }
 
 
