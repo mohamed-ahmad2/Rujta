@@ -7,11 +7,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Remove="Services\NewFolder\**" />
 		<Compile Remove="Validation\DTOs\**" />
-		<EmbeddedResource Remove="Services\NewFolder\**" />
 		<EmbeddedResource Remove="Validation\DTOs\**" />
-		<None Remove="Services\NewFolder\**" />
 		<None Remove="Validation\DTOs\**" />
 	</ItemGroup>
 

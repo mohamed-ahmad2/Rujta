@@ -35,9 +35,12 @@ namespace Rujta.Application.Services
         
         public async Task AddAsync(MedicineDto dto, CancellationToken cancellationToken = default)
         {
+            if (dto == null)
+                return;
+            
             var medicine = _mapper.Map<Medicine>(dto);
             await _unitOfWork.Medicines.AddAsync(medicine, cancellationToken);
-            await _unitOfWork.SaveAsync();
+            await _unitOfWork.SaveAsync(cancellationToken);
         }
 
        
