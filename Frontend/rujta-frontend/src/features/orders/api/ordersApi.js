@@ -1,57 +1,22 @@
-// src/features/orders/api/ordersApi.js
 import apiClient from "../../../shared/api/apiClient";
 
-export const getAllOrders = () => {
-    return apiClient.get("/orders");
-};
+// =================== Admin / All Orders ===================
+export const getAllOrders = () => apiClient.get("/orders");
+export const getOrderById = (id) => apiClient.get(`/orders/${id}`);
+export const getOrderDetails = (id) => apiClient.get(`/orders/${id}/details`);
 
-export const getOrderById = (id) => {
-    return apiClient.get(`/orders/${id}`);
-};
+// =================== User Orders ===================
+export const getUserOrders = () => apiClient.get("/orders/user");
 
-export const getOrderDetails = (id) => {
-    return apiClient.get(`/orders/${id}/details`);
-};
+// =================== CRUD ===================
+export const createOrder = (data) => apiClient.post("/orders", data);
+export const updateOrder = (id, data) => apiClient.put(`/orders/${id}`, data);
+export const deleteOrder = (id) => apiClient.delete(`/orders/${id}`);
 
-export const getUserOrders = () => {
-    return apiClient.get(`/orders/user`);
-};
-
-export const createOrder = (data) => {
-    return apiClient.post("/orders", data);
-};
-export const cancelOrder = (orderId) => {
-  return apiClient.put(`/orders/${orderId}/cancel`);
-};
-export const updateOrder = (id, data) => {
-    return apiClient.put(`/orders/${id}`, data);
-};
-
-export const deleteOrder = (id) => {
-    return apiClient.delete(`/orders/${id}`);
-};
-
-// order status actions
-export const acceptOrder = (id) => {
-    return apiClient.put(`/orders/${id}/accept`);
-};
-
-export const processOrder = (id) => {
-    return apiClient.put(`/orders/${id}/process`);
-};
-
-export const outForDelivery = (id) => {
-    return apiClient.put(`/orders/${id}/out-for-delivery`);
-};
-
-export const markAsDelivered = (id) => {
-    return apiClient.put(`/orders/${id}/delivered`);
-};
-
-export const cancelByUser = (id) => {
-    return apiClient.put(`/orders/${id}/cancel/user`);
-};
-
-export const cancelByPharmacy = (id) => {
-    return apiClient.put(`/orders/${id}/cancel/pharmacy`);
-};
+// =================== Order Status Actions ===================
+export const acceptOrder = (id) => apiClient.put(`/orders/${id}/accept`);
+export const processOrder = (id) => apiClient.put(`/orders/${id}/process`);
+export const outForDelivery = (id) => apiClient.put(`/orders/${id}/out-for-delivery`);
+export const markAsDelivered = (id) => apiClient.put(`/orders/${id}/delivered`);
+export const cancelOrderByUser = (id) => apiClient.put(`/orders/${id}/cancel/user`);
+export const cancelOrderByPharmacy = (id) => apiClient.put(`/orders/${id}/cancel/pharmacy`);

@@ -29,41 +29,46 @@ namespace Rujta.Application.Services
             {
                 _logger.LogInformation("Creating new order for UserId {UserId}", userId);
 
-                var appUser = await _unitOfWork.People.GetByGuidAsync(userId, cancellationToken);
-                if (appUser == null)
-                    throw new InvalidOperationException($"User with ID {userId} not found.");
+                // ================= Validate User =================
+                var appUser = await _unitOfWork.People.GetByGuidAsync(userId, cancellationToken)
+                    ?? throw new InvalidOperationException($"User with ID {userId} not found.");
 
-                
-                var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(createOrderDto.PharmacyID, cancellationToken);
-                if (pharmacy == null)
-                    throw new InvalidOperationException($"Pharmacy with ID {createOrderDto.PharmacyID} not found.");
+                // ================= Validate Pharmacy =================
+                var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(createOrderDto.PharmacyID, cancellationToken)
+                    ?? throw new InvalidOperationException($"Pharmacy with ID {createOrderDto.PharmacyID} not found.");
 
-
+                // ================= Handle Delivery Address =================
                 Address? deliveryAddressEntity = null;
 
                 if (createOrderDto.DeliveryAddress != null)
                 {
-                    var existingAddresses = await _unitOfWork.Address.FindAsync(
-                        a =>
-                            a.Street == createOrderDto.DeliveryAddress.Street &&
-                            a.BuildingNo == createOrderDto.DeliveryAddress.BuildingNo &&
-                            a.City == createOrderDto.DeliveryAddress.City &&
-                            a.Governorate == createOrderDto.DeliveryAddress.Governorate,
-                        cancellationToken);
+                    // Check if the user already has an address
+                    deliveryAddressEntity = (await _unitOfWork.Address.FindAsync(
+                        a => a.UserId == userId,
+                        cancellationToken
+                    )).FirstOrDefault();
 
-                    deliveryAddressEntity = existingAddresses.FirstOrDefault();
-
-                    if (deliveryAddressEntity == null)
+                    if (deliveryAddressEntity != null)
                     {
+                        // Update existing address
+                        deliveryAddressEntity.Street = createOrderDto.DeliveryAddress.Street;
+                        deliveryAddressEntity.BuildingNo = createOrderDto.DeliveryAddress.BuildingNo;
+                        deliveryAddressEntity.City = createOrderDto.DeliveryAddress.City;
+                        deliveryAddressEntity.Governorate = createOrderDto.DeliveryAddress.Governorate;
+                        deliveryAddressEntity.IsDefault = true;
+                        _unitOfWork.Address.UpdateAsync(deliveryAddressEntity);
+                    }
+                    else
+                    {
+                        // Create new address
                         deliveryAddressEntity = _mapper.Map<Address>(createOrderDto.DeliveryAddress);
                         deliveryAddressEntity.UserId = userId;
-
+                        deliveryAddressEntity.IsDefault = true;
                         await _unitOfWork.Address.AddAsync(deliveryAddressEntity, cancellationToken);
-                        await _unitOfWork.SaveAsync(cancellationToken);
                     }
                 }
 
-
+               
                 var order = new Order
                 {
                     UserID = userId,
@@ -74,13 +79,15 @@ namespace Rujta.Application.Services
                     OrderItems = new List<OrderItem>()
                 };
 
-
+                
                 decimal totalPrice = 0;
+                var medicineIds = createOrderDto.OrderItems.Select(i => i.MedicineID).ToList();
+                var medicines = await _unitOfWork.Medicines.FindAsync(m => medicineIds.Contains(m.Id), cancellationToken);
+                var medicineDict = medicines.ToDictionary(m => m.Id);
 
                 foreach (var itemDto in createOrderDto.OrderItems)
                 {
-                    var medicine = await _unitOfWork.Medicines.GetByIdAsync(itemDto.MedicineID, cancellationToken);
-                    if (medicine == null)
+                    if (!medicineDict.TryGetValue(itemDto.MedicineID, out var medicine))
                         throw new InvalidOperationException($"Medicine with ID {itemDto.MedicineID} not found.");
 
                     var orderItem = new OrderItem
@@ -97,15 +104,17 @@ namespace Rujta.Application.Services
 
                 order.TotalPrice = totalPrice;
 
-
+                
                 await _unitOfWork.Orders.AddAsync(order, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
                 _logger.LogInformation("Order {OrderId} created successfully for UserId {userId}", order.Id, userId);
 
+                
                 var orderDto = _mapper.Map<OrderDto>(order);
                 orderDto.UserName = appUser.Name;
                 orderDto.PharmacyName = pharmacy.Name;
+
                 return orderDto;
             }
             catch (Exception ex)
@@ -114,6 +123,8 @@ namespace Rujta.Application.Services
                 throw;
             }
         }
+
+
 
         public async Task<(bool success, string message)> AcceptOrderAsync(int id, CancellationToken cancellationToken = default)
         {

@@ -11,8 +11,8 @@ import {
   processOrder,
   outForDelivery,
   markAsDelivered,
-  cancelByUser,
-  cancelByPharmacy,
+  cancelOrderByUser,
+  cancelOrderByPharmacy,
 } from "../api/ordersApi";
 
 export const useOrders = () => {
@@ -24,24 +24,7 @@ export const useOrders = () => {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  /* ================= User Orders ================= */
-  const fetchUserOrders = useCallback(async () => {
-  setOrdersLoading(true);
-  setError(null);
-  try {
-    const res = await getUserOrders();
-    setOrders(res.data);
-    return res.data; 
-  } catch (err) {
-    setError(err.response?.data || err.message);
-    return []; 
-  } finally {
-    setOrdersLoading(false);
-  }
-}, []);
-
-
-  /* ================= Admin / All Orders ================= */
+  // =================== Fetch All Orders (Admin) ===================
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -55,6 +38,23 @@ export const useOrders = () => {
     }
   }, []);
 
+  // =================== Fetch Orders for Current User ===================
+  const fetchUserOrders = useCallback(async () => {
+    setOrdersLoading(true);
+    setError(null);
+    try {
+      const res = await getUserOrders();
+      setOrders(res.data);
+      return res.data;
+    } catch (err) {
+      setError(err.response?.data || err.message);
+      return [];
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, []);
+
+  // =================== Fetch by ID ===================
   const fetchById = useCallback(async (id) => {
     setLoading(true);
     setError(null);
@@ -68,6 +68,7 @@ export const useOrders = () => {
     }
   }, []);
 
+  // =================== Fetch Order Details ===================
   const fetchDetails = useCallback(async (id) => {
     setLoading(true);
     setError(null);
@@ -81,13 +82,13 @@ export const useOrders = () => {
     }
   }, []);
 
-  /* ================= CRUD ================= */
-  const create = async (data) => {
+  // =================== CRUD ===================
+  const create = async (data, refreshFn = fetchUserOrders) => {
     setLoading(true);
     setError(null);
     try {
       const res = await createOrder(data);
-      await fetchUserOrders();
+      if (refreshFn) await refreshFn();
       return res.data;
     } catch (err) {
       setError(err.response?.data || err.message);
@@ -97,12 +98,12 @@ export const useOrders = () => {
     }
   };
 
-  const update = async (id, data) => {
+  const update = async (id, data, refreshFn = fetchUserOrders) => {
     setLoading(true);
     setError(null);
     try {
       await updateOrder(id, data);
-      await fetchUserOrders();
+      if (refreshFn) await refreshFn();
     } catch (err) {
       setError(err.response?.data || err.message);
     } finally {
@@ -110,12 +111,13 @@ export const useOrders = () => {
     }
   };
 
-  const remove = async (id) => {
+  const remove = async (id, refreshFn = fetchUserOrders) => {
     setLoading(true);
     setError(null);
     try {
       await deleteOrder(id);
-      setOrders((prev) => prev.filter((o) => o.id !== id));
+      if (refreshFn) await refreshFn();
+      else setOrders((prev) => prev.filter((o) => o.id !== id));
     } catch (err) {
       setError(err.response?.data || err.message);
     } finally {
@@ -123,13 +125,13 @@ export const useOrders = () => {
     }
   };
 
-  /* ================= Status Actions ================= */
-  const runAction = async (actionFn, id) => {
+  // =================== Status Actions ===================
+  const runAction = async (actionFn, id, refreshFn = fetchUserOrders) => {
     setLoading(true);
     setError(null);
     try {
       const res = await actionFn(id);
-      await fetchUserOrders();
+      if (refreshFn) await refreshFn();
       return res.data;
     } catch (err) {
       setError(err.response?.data || err.message);
@@ -156,11 +158,11 @@ export const useOrders = () => {
     update,
     remove,
 
-    accept: (id) => runAction(acceptOrder, id),
-    process: (id) => runAction(processOrder, id),
-    outForDelivery: (id) => runAction(outForDelivery, id),
-    deliver: (id) => runAction(markAsDelivered, id),
-    cancelByUser: (id) => runAction(cancelByUser, id),
-    cancelByPharmacy: (id) => runAction(cancelByPharmacy, id),
+    accept: (id, refreshFn) => runAction(acceptOrder, id, refreshFn),
+    process: (id, refreshFn) => runAction(processOrder, id, refreshFn),
+    outForDelivery: (id, refreshFn) => runAction(outForDelivery, id, refreshFn),
+    deliver: (id, refreshFn) => runAction(markAsDelivered, id, refreshFn),
+    cancelByUser: (id, refreshFn) => runAction(cancelOrderByUser, id, refreshFn),
+    cancelByPharmacy: (id, refreshFn) => runAction(cancelOrderByPharmacy, id, refreshFn),
   };
 };
