@@ -12,6 +12,21 @@ namespace Rujta.Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "Categories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Categories", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Logs",
                 columns: table => new
                 {
@@ -26,27 +41,6 @@ namespace Rujta.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Logs", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Medicines",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    Description = table.Column<string>(type: "NVARCHAR(MAX)", nullable: true),
-                    Dosage = table.Column<string>(type: "NVARCHAR(MAX)", nullable: true),
-                    Price = table.Column<decimal>(type: "decimal(10,2)", precision: 10, scale: 2, nullable: false),
-                    ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    ActiveIngredient = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
-                    ImageUrl = table.Column<string>(type: "NVARCHAR(500)", maxLength: 500, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Medicines", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -81,6 +75,35 @@ namespace Rujta.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Roles", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Medicines",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    Description = table.Column<string>(type: "NVARCHAR(MAX)", nullable: true),
+                    Dosage = table.Column<string>(type: "NVARCHAR(MAX)", nullable: true),
+                    Price = table.Column<decimal>(type: "decimal(10,2)", precision: 10, scale: 2, nullable: false),
+                    ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ActiveIngredient = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    ImageUrl = table.Column<string>(type: "NVARCHAR(500)", maxLength: 500, nullable: true),
+                    CompanyName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CategoryId = table.Column<int>(type: "int", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Medicines", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Medicines_Categories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "Categories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -629,6 +652,11 @@ namespace Rujta.Infrastructure.Migrations
                 column: "PrescriptionID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Medicines_CategoryId",
+                table: "Medicines",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_OrderItems_MedicineID",
                 table: "OrderItems",
                 column: "MedicineID");
@@ -908,6 +936,9 @@ namespace Rujta.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Prescriptions");
+
+            migrationBuilder.DropTable(
+                name: "Categories");
 
             migrationBuilder.DropTable(
                 name: "People");

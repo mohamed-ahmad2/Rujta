@@ -6,40 +6,50 @@ namespace Rujta.Infrastructure.Repositories
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
         protected readonly AppDbContext _context;
+        protected readonly DbSet<T> _dbSet;
 
         public GenericRepository(AppDbContext context)
         {
             _context = context;
+            _dbSet = context.Set<T>();
         }
 
-        public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default)=>
-            await _context.Set<T>().ToListAsync(cancellationToken);
-        
+        public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default) =>
+            await _dbSet
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+
 
         public async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)=>
-            await _context.Set<T>().FindAsync(new object[] { id }, cancellationToken);
+            await _dbSet.FindAsync(new object[] { id }, cancellationToken);
         
 
         public async Task AddAsync(T entity, CancellationToken cancellationToken = default)=>
-            await _context.Set<T>().AddAsync(entity, cancellationToken);
+            await _dbSet.AddAsync(entity, cancellationToken);
         
 
         public Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
         {
-            _context.Set<T>().Update(entity);
+            _dbSet.Update(entity);
             return Task.CompletedTask;
         }
 
         public  Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
         {
-            _context.Set<T>().Remove(entity);
+            _dbSet.Remove(entity);
             return Task.CompletedTask;
         }
-        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)=>
-             await _context.Set<T>()
+        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default) =>
+                await _dbSet
+                .AsNoTracking()
                 .Where(predicate)
                 .ToListAsync(cancellationToken);
-        
 
+
+
+        public IQueryable<T> GetQueryable() =>
+            _dbSet.AsNoTracking();
+        
     }
 }

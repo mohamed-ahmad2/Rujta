@@ -18,6 +18,11 @@ namespace Rujta.Domain.Entities
 
         public string? ImageUrl { get; set; }
 
+        public string? CompanyName { get; set; }
+
+        public int? CategoryId { get; set; }
+        public Category? Category { get; set; }
+
         public ICollection<InventoryItem>? InventoryItems { get; set; }
         public ICollection<SellDrugViaPharmacy>? SellDrugViaPharmacies { get; set; }
         public ICollection<OrderItem>? OrderItems { get; set; }

@@ -9,6 +9,7 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
         Task AddAsync(T entity, CancellationToken cancellationToken = default);
         Task UpdateAsync(T entity, CancellationToken cancellationToken = default);
         Task DeleteAsync(T entity, CancellationToken cancellationToken = default);
+        public IQueryable<T> GetQueryable();
         Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
     }
 }

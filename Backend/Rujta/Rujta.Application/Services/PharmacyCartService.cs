@@ -1,7 +1,5 @@
 ﻿using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces.InterfaceServices;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Rujta.Application.Services
 {
