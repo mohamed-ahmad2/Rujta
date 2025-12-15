@@ -6,7 +6,7 @@ import { CgProfile } from "react-icons/cg";
 import { useSearchMedicines } from "../../medicines/hook/useSearchMedicines";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/hooks/useAuth";
-
+import { BsBoxSeam } from "react-icons/bs";
 const Navbar = ({ cart, onCartClick }) => {
   const [query, setQuery] = useState("");
   const { handleLogout } = useAuth();
@@ -97,7 +97,12 @@ const Navbar = ({ cart, onCartClick }) => {
                 </span>
               )}
             </div>
-
+              {/* Orders Icon */}
+                <BsBoxSeam
+                  className="text-2xl text-gray-600 cursor-pointer hover:text-secondary transition"
+                  onClick={() => navigate("/user/orders")}
+                  title="My Orders"
+                /> 
             {/* Profile Icon */}
             <CgProfile
               className="text-3xl text-gray-600 cursor-pointer hover:text-secondary transition"
