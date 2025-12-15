@@ -1,19 +1,15 @@
 import apiClient from "../../../shared/api/apiClient";
 
-// =================== Admin / All Orders ===================
 export const getAllOrders = () => apiClient.get("/orders");
 export const getOrderById = (id) => apiClient.get(`/orders/${id}`);
 export const getOrderDetails = (id) => apiClient.get(`/orders/${id}/details`);
 
-// =================== User Orders ===================
 export const getUserOrders = () => apiClient.get("/orders/user");
 
-// =================== CRUD ===================
 export const createOrder = (data) => apiClient.post("/orders", data);
 export const updateOrder = (id, data) => apiClient.put(`/orders/${id}`, data);
 export const deleteOrder = (id) => apiClient.delete(`/orders/${id}`);
 
-// =================== Order Status Actions ===================
 export const acceptOrder = (id) => apiClient.put(`/orders/${id}/accept`);
 export const processOrder = (id) => apiClient.put(`/orders/${id}/process`);
 export const outForDelivery = (id) => apiClient.put(`/orders/${id}/out-for-delivery`);
