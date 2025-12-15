@@ -250,6 +250,32 @@ namespace Rujta.Infrastructure.Migrations
                     b.ToTable("Addresses");
                 });
 
+            modelBuilder.Entity("Rujta.Domain.Entities.Category", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Categories", (string)null);
+                });
+
             modelBuilder.Entity("Rujta.Domain.Entities.Device", b =>
                 {
                     b.Property<int>("Id")
@@ -392,6 +418,12 @@ namespace Rujta.Infrastructure.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CompanyName")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2");
@@ -423,6 +455,8 @@ namespace Rujta.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
 
                     b.ToTable("Medicines", (string)null);
                 });
@@ -1165,6 +1199,16 @@ namespace Rujta.Infrastructure.Migrations
                     b.Navigation("Prescription");
                 });
 
+            modelBuilder.Entity("Rujta.Domain.Entities.Medicine", b =>
+                {
+                    b.HasOne("Rujta.Domain.Entities.Category", "Category")
+                        .WithMany("Medicines")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("Rujta.Domain.Entities.Order", b =>
                 {
                     b.HasOne("Rujta.Domain.Entities.Address", "DeliveryAddress")
@@ -1361,6 +1405,11 @@ namespace Rujta.Infrastructure.Migrations
                     b.Navigation("Manager");
 
                     b.Navigation("Pharmacy");
+                });
+
+            modelBuilder.Entity("Rujta.Domain.Entities.Category", b =>
+                {
+                    b.Navigation("Medicines");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Medicine", b =>
