@@ -14,6 +14,9 @@ import Profile from "../features/user/pages/Profile";
 
 import Checkout from "../features/user/pages/Checkout";
 
+import Ordersuser from "../features/user/pages/Orders";
+
+
 
 import ProductsUser from "../features/user/components/Products";
 import FooterUser from "../features/user/components/Footer";
@@ -60,6 +63,7 @@ const DashboardLayout = () => (
   </div>
 );
 
+
 <Route path="/reset-password" element={<ResetPasswordPage />} />
 
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
@@ -104,6 +108,23 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
       }
     />
 <Route path="/medicines/:id" element={<MedicineDetails />} />
+<Route
+  path="/user/orders"
+  element={
+    <ProtectedRoute>
+      <div className="overflow-x-hidden bg-page min-h-screen">
+        <NavbarUser
+          cart={cart}
+          onCartClick={() => setIsCartOpen(true)}
+        />
+
+        <Ordersuser />
+
+        <FooterUser />
+      </div>
+    </ProtectedRoute>
+  }
+/>
 
     <Route
   path="/user/profile"

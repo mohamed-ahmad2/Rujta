@@ -20,7 +20,9 @@ export const getUserOrders = () => {
 export const createOrder = (data) => {
     return apiClient.post("/orders", data);
 };
-
+export const cancelOrder = (orderId) => {
+  return apiClient.put(`/orders/${orderId}/cancel`);
+};
 export const updateOrder = (id, data) => {
     return apiClient.put(`/orders/${id}`, data);
 };
