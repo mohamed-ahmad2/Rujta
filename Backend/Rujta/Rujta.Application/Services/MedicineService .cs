@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices;
@@ -15,6 +16,48 @@ namespace Rujta.Application.Services
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+        }
+
+
+        public async Task<IEnumerable<MedicineDto>> GetFilteredAsync(MedicineFilterDto filter, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var query = _unitOfWork.Medicines
+                    .GetQueryable();
+
+                if (filter.CategoryIds != null && filter.CategoryIds.Any())
+                {
+                    query = query.Where(m =>
+                        m.CategoryId.HasValue &&
+                        filter.CategoryIds.Contains(m.CategoryId.Value));
+                }
+
+                if (!string.IsNullOrWhiteSpace(filter.ActiveIngredient))
+                {
+                    query = query.Where(m =>
+                        m.ActiveIngredient != null &&
+                        m.ActiveIngredient.Contains(filter.ActiveIngredient));
+                }
+
+                if (!string.IsNullOrWhiteSpace(filter.CompanyName))
+                {
+                    query = query.Where(m =>
+                        m.CompanyName != null &&
+                        m.CompanyName.Contains(filter.CompanyName));
+                }
+
+                var medicines = await query
+                    .ToListAsync(cancellationToken);
+
+                return _mapper.Map<IEnumerable<MedicineDto>>(medicines);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    "An error occurred while filtering medicines.",
+                    ex);
+            }
         }
 
         public async Task<IEnumerable<MedicineDto>> GetAllAsync(CancellationToken cancellationToken = default)

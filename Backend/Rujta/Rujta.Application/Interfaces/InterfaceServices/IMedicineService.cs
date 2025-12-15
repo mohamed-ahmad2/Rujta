@@ -6,5 +6,6 @@ namespace Rujta.Application.Interfaces.InterfaceServices
 {
     public interface IMedicineService : IGenericService<MedicineDto>
     {
+        Task<IEnumerable<MedicineDto>> GetFilteredAsync(MedicineFilterDto filter, CancellationToken cancellationToken = default);
     }
 }

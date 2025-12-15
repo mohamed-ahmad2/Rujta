@@ -114,6 +114,32 @@ namespace Rujta.API.Controllers
             }
         }
 
+        [HttpGet("filter")]
+        public async Task<ActionResult<IEnumerable<MedicineDto>>> Filter([FromQuery] MedicineFilterDto filter, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var medicines = await _medicineService
+                    .GetFilteredAsync(filter, cancellationToken);
+
+                if (medicines == null || !medicines.Any())
+                    return Ok(Enumerable.Empty<MedicineDto>());
+
+                return Ok(medicines);
+            }
+            catch (Exception ex)
+            {
+                await _logService.AddLogAsync(
+                    GetUser(),
+                    $"Error filtering medicines: {ex.Message}");
+
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "An unexpected error occurred while filtering medicines.");
+            }
+        }
+
+
         private string GetUser()
         {
             return User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Name)
