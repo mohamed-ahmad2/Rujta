@@ -14,7 +14,6 @@ namespace Rujta.Infrastructure.Identity.Services
         private readonly TokenHelper _tokenHelper;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
-        private readonly IUserRepository _userRepository;
 
         public AuthService(
             IdentityServices identityServices,

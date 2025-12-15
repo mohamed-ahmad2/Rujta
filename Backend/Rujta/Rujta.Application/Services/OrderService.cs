@@ -29,20 +29,16 @@ namespace Rujta.Application.Services
             {
                 _logger.LogInformation("Creating new order for UserId {UserId}", userId);
 
-                // ================= Validate User =================
                 var appUser = await _unitOfWork.People.GetByGuidAsync(userId, cancellationToken)
                     ?? throw new InvalidOperationException($"User with ID {userId} not found.");
 
-                // ================= Validate Pharmacy =================
                 var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(createOrderDto.PharmacyID, cancellationToken)
                     ?? throw new InvalidOperationException($"Pharmacy with ID {createOrderDto.PharmacyID} not found.");
 
-                // ================= Handle Delivery Address =================
                 Address? deliveryAddressEntity = null;
 
                 if (createOrderDto.DeliveryAddress != null)
                 {
-                    // Check if the user already has an address
                     deliveryAddressEntity = (await _unitOfWork.Address.FindAsync(
                         a => a.UserId == userId,
                         cancellationToken
@@ -50,17 +46,15 @@ namespace Rujta.Application.Services
 
                     if (deliveryAddressEntity != null)
                     {
-                        // Update existing address
                         deliveryAddressEntity.Street = createOrderDto.DeliveryAddress.Street;
                         deliveryAddressEntity.BuildingNo = createOrderDto.DeliveryAddress.BuildingNo;
                         deliveryAddressEntity.City = createOrderDto.DeliveryAddress.City;
                         deliveryAddressEntity.Governorate = createOrderDto.DeliveryAddress.Governorate;
                         deliveryAddressEntity.IsDefault = true;
-                        _unitOfWork.Address.UpdateAsync(deliveryAddressEntity);
+                        await _unitOfWork.Address.UpdateAsync(deliveryAddressEntity, cancellationToken);
                     }
                     else
                     {
-                        // Create new address
                         deliveryAddressEntity = _mapper.Map<Address>(createOrderDto.DeliveryAddress);
                         deliveryAddressEntity.UserId = userId;
                         deliveryAddressEntity.IsDefault = true;
@@ -108,9 +102,9 @@ namespace Rujta.Application.Services
                 await _unitOfWork.Orders.AddAsync(order, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
-                _logger.LogInformation("Order {OrderId} created successfully for UserId {userId}", order.Id, userId);
+                _logger.LogInformation("Order {OrderId} created successfully for UserId {UserId}",order.Id.ToString(),userId.ToString());
 
-                
+
                 var orderDto = _mapper.Map<OrderDto>(order);
                 orderDto.UserName = appUser.Name;
                 orderDto.PharmacyName = pharmacy.Name;
@@ -119,8 +113,9 @@ namespace Rujta.Application.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while creating order for UserId {userId}", userId);
-                throw;
+                var message = $"Failed to create order for UserId {userId}";
+                _logger.LogError(ex, message);
+                throw new InvalidOperationException(message, ex);
             }
         }
 
