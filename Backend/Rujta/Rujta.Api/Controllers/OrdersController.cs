@@ -58,7 +58,7 @@ namespace Rujta.Api.Controllers
         }
 
         // Get all orders
-        [HttpGet]
+         [HttpGet]
         public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
         {
             var orders = await _orderService.GetAllAsync(cancellationToken);

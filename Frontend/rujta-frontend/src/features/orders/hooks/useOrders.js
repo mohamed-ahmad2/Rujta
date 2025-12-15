@@ -87,7 +87,7 @@ export const useOrders = () => {
     setError(null);
     try {
       const res = await createOrder(data);
-      await fetchUserOrders(); // ✅ مهم
+      await fetchUserOrders();
       return res.data;
     } catch (err) {
       setError(err.response?.data || err.message);
@@ -102,7 +102,7 @@ export const useOrders = () => {
     setError(null);
     try {
       await updateOrder(id, data);
-      await fetchUserOrders(); // ✅ مش fetchAll
+      await fetchUserOrders();
     } catch (err) {
       setError(err.response?.data || err.message);
     } finally {
@@ -129,7 +129,7 @@ export const useOrders = () => {
     setError(null);
     try {
       const res = await actionFn(id);
-      await fetchUserOrders(); // ✅
+      await fetchUserOrders();
       return res.data;
     } catch (err) {
       setError(err.response?.data || err.message);

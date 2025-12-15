@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Rujta.Application.Constants;
 using Rujta.Application.DTOs;
