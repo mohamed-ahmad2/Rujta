@@ -5,6 +5,7 @@ export const getOrderById = (id) => apiClient.get(`/orders/${id}`);
 export const getOrderDetails = (id) => apiClient.get(`/orders/${id}/details`);
 
 export const getUserOrders = () => apiClient.get("/orders/user");
+export const getPharmacyOrders = () => apiClient.get("/orders/pharmacy");
 
 export const createOrder = (data) => apiClient.post("/orders", data);
 export const updateOrder = (id, data) => apiClient.put(`/orders/${id}`, data);

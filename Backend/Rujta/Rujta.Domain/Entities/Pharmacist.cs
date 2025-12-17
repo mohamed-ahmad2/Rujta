@@ -1,18 +1,16 @@
-﻿using Rujta.Domain.Common;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Rujta.Domain.Entities
 {
-    public class Pharmacist : Person
+    public class Pharmacist : Employee
     {
-        public string Qualification { get; set; } = string.Empty;
-        public int ExperienceYears { get; set; }
-        public TimeSpan WorkStartTime { get; set; }
-        public TimeSpan WorkEndTime { get; set; }
+        public string Position { get; set; } = string.Empty;
+        public DateTime HireDate { get; set; }
+        public decimal Salary { get; set; }
 
-        public ICollection<ProcessPrescription>? ProcessPrescriptions { get; set; }
+        [ForeignKey("Manager")]
+        public Guid ManagerId { get; set; }
+        public virtual Manager Manager { get; set; } = null!;
 
-        [NotMapped]
-        public object? ManagerData { get; set; }
     }
 }

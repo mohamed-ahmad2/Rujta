@@ -27,37 +27,34 @@ namespace Rujta.Infrastructure.Configuration
                    .HasForeignKey(p => p.AdminId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasOne(p => p.Manager)
-                   .WithMany()
-                   .HasForeignKey(p => p.ManagerId)
-                   .OnDelete(DeleteBehavior.Restrict);
+           
+
+
 
             builder.HasOne(p => p.ParentPharmacy)
-                   .WithMany()
+                   .WithMany(p => p.Branches)
                    .HasForeignKey(p => p.ParentPharmacyID)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasMany(p => p.Staff)
+            builder.HasMany(p => p.Pharmacists)
                    .WithOne(s => s.Pharmacy)
-                   .HasForeignKey(s => s.PharmacyID)
+                   .HasForeignKey(s => s.PharmacyId)
                    .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasMany(p => p.InventoryItems)
-                    .WithOne(i => i.Pharmacy)
-                    .HasForeignKey(s => s.PharmacyID)
-                    .OnDelete(DeleteBehavior.Restrict);
+                   .WithOne(i => i.Pharmacy)
+                   .HasForeignKey(i => i.PharmacyID)
+                   .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasMany(p => p.Orders)
-                    .WithOne(i => i.Pharmacy)
-                    .HasForeignKey(s => s.PharmacyID)
-                    .OnDelete(DeleteBehavior.Restrict);
+                   .WithOne(o => o.Pharmacy)
+                   .HasForeignKey(o => o.PharmacyID)
+                   .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasMany(p => p.SellDrugViaPharmacies)
-                    .WithOne(i => i.Pharmacy)
-                    .HasForeignKey(s => s.PharmacyID)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-            
+                   .WithOne(s => s.Pharmacy)
+                   .HasForeignKey(s => s.PharmacyID)
+                   .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

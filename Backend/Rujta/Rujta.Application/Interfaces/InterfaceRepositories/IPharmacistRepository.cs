@@ -1,0 +1,10 @@
+﻿using Rujta.Domain.Entities;
+
+namespace Rujta.Application.Interfaces.InterfaceRepositories
+{
+    public interface IPharmacistRepository : IGenericRepository<Pharmacist>
+    {
+        Task<IEnumerable<Pharmacist>> GetPharmacistByManagerAsync(Guid managerId, CancellationToken cancellationToken = default);
+        Task<Pharmacist?> GetByGuidAsync(Guid id, CancellationToken cancellationToken = default);
+    }
+}

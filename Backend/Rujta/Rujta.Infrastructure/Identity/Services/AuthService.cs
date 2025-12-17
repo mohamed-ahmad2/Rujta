@@ -1,6 +1,7 @@
 ﻿using FirebaseAdmin.Auth;
 using Microsoft.AspNetCore.Http;
 using Rujta.Domain.Common;
+using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Identity.Services
 {
@@ -64,9 +65,9 @@ namespace Rujta.Infrastructure.Identity.Services
             Person person = role switch
             {
                 UserRole.User => _mapper.Map<User>(dto),
-                UserRole.Pharmacist => _mapper.Map<Pharmacist>(dto),
-                UserRole.Admin => _mapper.Map<Admin>(dto),
-                UserRole.Manager => _mapper.Map<Manager>(dto),
+                UserRole.Pharmacist => await CreatePharmacist(dto),
+                UserRole.SuperAdmin => _mapper.Map<Admin>(dto),
+                UserRole.PharmacyAdmin => _mapper.Map<Manager>(dto),
                 _ => throw new InvalidOperationException(AuthMessages.UnknownRole)
             };
 
@@ -88,6 +89,33 @@ namespace Rujta.Infrastructure.Identity.Services
             _logger.LogInformation("User created successfully: {Email}, Role: {Role}", dto.Email, role);
             return user.Id;
         }
+
+        private async Task<Pharmacist> CreatePharmacist(RegisterDto dto)
+        {
+            var pharmacistDto = dto as RegisterByAdminDto;
+
+            if (pharmacistDto?.PharmacyId == null)
+                throw new InvalidOperationException("PharmacyId is required for Pharmacist.");
+
+            var pharmacist = _mapper.Map<Pharmacist>(dto);
+            pharmacist.PharmacyId = pharmacistDto.PharmacyId.Value;
+
+
+            var manager = await _unitOfWork.People
+                            .GetQueryable()
+                            .OfType<Manager>()
+                            .FirstOrDefaultAsync(m => m.PharmacyId == pharmacist.PharmacyId);
+
+
+            if (manager == null)
+                throw new InvalidOperationException("No manager found for this pharmacy.");
+
+            pharmacist.ManagerId = manager.Id;
+
+            return pharmacist;
+        }
+
+
 
         public async Task<bool> IsEmailExistsAsync(string email, CancellationToken cancellationToken = default)
         {

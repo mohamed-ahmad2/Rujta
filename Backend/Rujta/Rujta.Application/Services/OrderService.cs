@@ -59,6 +59,7 @@ namespace Rujta.Application.Services
                         deliveryAddressEntity.UserId = userId;
                         deliveryAddressEntity.IsDefault = true;
                         await _unitOfWork.Address.AddAsync(deliveryAddressEntity, cancellationToken);
+                        await _unitOfWork.SaveAsync(cancellationToken);
                     }
                 }
 
@@ -461,6 +462,23 @@ namespace Rujta.Application.Services
                 throw new InvalidOperationException($"An error occurred while deleting Order {id}.", ex);
             }
 
+        }
+
+        public async Task<IEnumerable<OrderDto>> GetPharmacyOrdersAsync(int pharmacyId,CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                _logger.LogInformation("Fetching orders for Pharmacy {PharmacyId}",pharmacyId);
+
+                var orders = await _unitOfWork.Orders.GetOrdersByPharmacyIdAsync(pharmacyId, cancellationToken);
+
+                return _mapper.Map<IEnumerable<OrderDto>>(orders);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,"Failed to fetch orders for Pharmacy {PharmacyId}",pharmacyId);
+                throw new InvalidOperationException($"An error occurred while fetching orders for Pharmacy {pharmacyId}.",ex);
+            }
         }
 
 

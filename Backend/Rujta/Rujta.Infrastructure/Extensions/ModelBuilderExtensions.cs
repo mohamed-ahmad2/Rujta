@@ -11,9 +11,9 @@ namespace Rujta.Infrastructure.Extensions
             var discriminatorMapping = new Dictionary<Type, string>
             {
                 { typeof(User), "User" },
-                { typeof(Pharmacist), "Pharmacist" },
+                { typeof(Employee), "Employee" },
                 { typeof(Manager), "Manager" },
-                { typeof(Staff), "Staff" },
+                { typeof(Pharmacist), "Pharmacist" },
                 { typeof(Admin), "Admin" }
             };
 
@@ -53,7 +53,7 @@ namespace Rujta.Infrastructure.Extensions
                 { typeof(Order), new[] { "TotalPrice" } },
                 { typeof(OrderItem), new[] { "PricePerUnit", "SubTotal" } },
                 { typeof(SellDrugViaPharmacy), new[] { "Price" } },
-                { typeof(Staff), new[] { "Salary" } }
+                { typeof(Pharmacist), new[] { "Salary" } }
             };
 
             foreach (var entity in decimalProperties)

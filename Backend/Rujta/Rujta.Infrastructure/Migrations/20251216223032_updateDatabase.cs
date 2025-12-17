@@ -406,15 +406,15 @@ namespace Rujta.Infrastructure.Migrations
                     ExperienceYears = table.Column<int>(type: "int", nullable: true),
                     WorkStartTime = table.Column<TimeSpan>(type: "time", nullable: true),
                     WorkEndTime = table.Column<TimeSpan>(type: "time", nullable: true),
+                    PharmacyId = table.Column<int>(type: "int", nullable: true),
                     StartDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     EndDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     AdminId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Position = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     HireDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Salary = table.Column<decimal>(type: "decimal(10,2)", precision: 10, scale: 2, nullable: true),
-                    ManagerID = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    PharmacyID = table.Column<int>(type: "int", nullable: true),
-                    Pharmacist_AddressId = table.Column<int>(type: "int", nullable: true),
+                    ManagerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Employee_AddressId = table.Column<int>(type: "int", nullable: true),
                     MedicalHistory = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     Allergies = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
                     DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -436,8 +436,8 @@ namespace Rujta.Infrastructure.Migrations
                         principalTable: "Addresses",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_People_Addresses_Pharmacist_AddressId",
-                        column: x => x.Pharmacist_AddressId,
+                        name: "FK_People_Addresses_Employee_AddressId",
+                        column: x => x.Employee_AddressId,
                         principalTable: "Addresses",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -447,8 +447,8 @@ namespace Rujta.Infrastructure.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_People_People_ManagerID",
-                        column: x => x.ManagerID,
+                        name: "FK_People_People_ManagerId",
+                        column: x => x.ManagerId,
                         principalTable: "People",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -468,7 +468,6 @@ namespace Rujta.Infrastructure.Migrations
                     Longitude = table.Column<double>(type: "float", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     AdminId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    ManagerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ParentPharmacyID = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
@@ -479,12 +478,6 @@ namespace Rujta.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "FK_Pharmacies_People_AdminId",
                         column: x => x.AdminId,
-                        principalTable: "People",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Pharmacies_People_ManagerId",
-                        column: x => x.ManagerId,
                         principalTable: "People",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -697,29 +690,24 @@ namespace Rujta.Infrastructure.Migrations
                 column: "AdminId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_People_ManagerID",
+                name: "IX_People_Employee_AddressId",
                 table: "People",
-                column: "ManagerID");
+                column: "Employee_AddressId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_People_Pharmacist_AddressId",
+                name: "IX_People_ManagerId",
                 table: "People",
-                column: "Pharmacist_AddressId");
+                column: "ManagerId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_People_PharmacyID",
+                name: "IX_People_PharmacyId",
                 table: "People",
-                column: "PharmacyID");
+                column: "PharmacyId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Pharmacies_AdminId",
                 table: "Pharmacies",
                 column: "AdminId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Pharmacies_ManagerId",
-                table: "Pharmacies",
-                column: "ManagerId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Pharmacies_ParentPharmacyID",
@@ -860,9 +848,16 @@ namespace Rujta.Infrastructure.Migrations
                 onDelete: ReferentialAction.SetNull);
 
             migrationBuilder.AddForeignKey(
-                name: "FK_People_Pharmacies_PharmacyID",
+                name: "FK_People_Pharmacies_PharmacyId",
                 table: "People",
-                column: "PharmacyID",
+                column: "PharmacyId",
+                principalTable: "Pharmacies",
+                principalColumn: "Id");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_People_Pharmacies_PharmacyId1",
+                table: "People",
+                column: "PharmacyId",
                 principalTable: "Pharmacies",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
@@ -877,10 +872,6 @@ namespace Rujta.Infrastructure.Migrations
 
             migrationBuilder.DropForeignKey(
                 name: "FK_Pharmacies_People_AdminId",
-                table: "Pharmacies");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_Pharmacies_People_ManagerId",
                 table: "Pharmacies");
 
             migrationBuilder.DropTable(

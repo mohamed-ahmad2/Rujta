@@ -26,12 +26,42 @@
                 .ForMember(dest => dest.RefreshTokens, opt => opt.Ignore())
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email));
 
-            CreateMap<RegisterDto, Pharmacist>()
+            CreateMap<RegisterDto, Employee>()
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
                 .ForMember(dest => dest.Qualification, opt => opt.Ignore()) 
                 .ForMember(dest => dest.ExperienceYears, opt => opt.Ignore())
                 .ForMember(dest => dest.WorkStartTime, opt => opt.Ignore())
                 .ForMember(dest => dest.WorkEndTime, opt => opt.Ignore());
+
+            CreateMap<RegisterByAdminDto, Employee>()
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.Qualification, opt => opt.Ignore())
+            .ForMember(dest => dest.ExperienceYears, opt => opt.Ignore())
+            .ForMember(dest => dest.WorkStartTime, opt => opt.Ignore())
+            .ForMember(dest => dest.WorkEndTime, opt => opt.Ignore())
+            .ForMember(dest => dest.PharmacyId, opt => opt.MapFrom(src => src.PharmacyId));
+
+
+            CreateMap<RegisterByAdminDto, Manager>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+                .ForMember(dest => dest.StartDate, opt => opt.MapFrom(_ => DateTime.UtcNow))
+                .ForMember(dest => dest.EndDate, opt => opt.Ignore())
+                .ForMember(dest => dest.AdminId, opt => opt.Ignore())
+                .ForMember(dest => dest.Pharmacists, opt => opt.Ignore());
+
+
+            CreateMap<RegisterByAdminDto, Pharmacist>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+                .ForMember(dest => dest.Qualification, opt => opt.Ignore())
+                .ForMember(dest => dest.ExperienceYears, opt => opt.Ignore())
+                .ForMember(dest => dest.WorkStartTime, opt => opt.Ignore())
+                .ForMember(dest => dest.WorkEndTime, opt => opt.Ignore())
+                .ForMember(dest => dest.PharmacyId, opt => opt.MapFrom(src => src.PharmacyId))
+                .ForMember(dest => dest.Position, opt => opt.Ignore())
+                .ForMember(dest => dest.HireDate, opt => opt.MapFrom(_ => DateTime.UtcNow))
+                .ForMember(dest => dest.Salary, opt => opt.Ignore()) 
+                .ForMember(dest => dest.ManagerId, opt => opt.Ignore())
+                .ForMember(dest => dest.Manager, opt => opt.Ignore());
         }
     }
 }

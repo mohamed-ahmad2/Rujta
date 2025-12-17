@@ -6,8 +6,7 @@ import { Search, Plus, Filter, Download, Edit } from "lucide-react";
 
 export default function Orders() {
 
-  const { orders, loading, fetchAll } = useOrders();
-
+  const { orders, loading, fetchPharmacy } = useOrders();
 
   const [q, setQ] = useState("");
   const [filterStatus] = useState("All");
@@ -15,8 +14,8 @@ export default function Orders() {
   const perPage = 5;
 
   useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+    fetchPharmacy();
+  }, [fetchPharmacy]);
 
   const filtered = useMemo(() => {
     let list = [...orders];

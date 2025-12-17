@@ -2,9 +2,9 @@
 {
     public enum UserRole
     {
-        Admin,
+        SuperAdmin,
         User,
         Pharmacist,
-        Manager
+        PharmacyAdmin
     }
 }

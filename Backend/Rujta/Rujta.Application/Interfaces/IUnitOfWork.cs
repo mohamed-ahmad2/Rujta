@@ -1,5 +1,4 @@
 ﻿using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Application.Interfaces.InterfaceServices;
 
 namespace Rujta.Application.Interfaces
 {
@@ -15,7 +14,7 @@ namespace Rujta.Application.Interfaces
         INotificationRepository Notifications { get; }
         IInventoryRepository InventoryItems { get; }
         ILogRepository Logs { get; }
-        IStaffRepository Staffs { get; }
+        IPharmacistRepository Pharmacists { get; }
         IAddressRepository Address { get; }
         ICategoryRepository Categories { get; }
 

@@ -1,15 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
-using System;
+﻿using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace Rujta.API.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = nameof(UserRole.SuperAdmin))]
     [ApiController]
     [Route("api/[controller]")]
     public class ReportController : ControllerBase

@@ -23,6 +23,7 @@ namespace Rujta.Api.Controllers
         private string GetUser() => User.Identity?.Name ?? LogConstants.UnknownUser;
 
         // Create a new order
+        [Authorize(Roles = nameof(UserRole.User))]
         [HttpPost]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto createOrderDto)
         {
@@ -58,7 +59,8 @@ namespace Rujta.Api.Controllers
         }
 
         // Get all orders
-         [HttpGet]
+        [Authorize(Roles = nameof(UserRole.SuperAdmin))]
+        [HttpGet]
         public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
         {
             var orders = await _orderService.GetAllAsync(cancellationToken);
@@ -110,6 +112,7 @@ namespace Rujta.Api.Controllers
         }
 
         // Accept order
+        [Authorize(Roles = nameof(UserRole.Pharmacist))]
         [HttpPut("{id:int}/accept")]
         public async Task<IActionResult> Accept(int id, CancellationToken cancellationToken)
         {
@@ -122,6 +125,7 @@ namespace Rujta.Api.Controllers
         }
 
         // Process order
+        [Authorize(Roles = nameof(UserRole.Pharmacist))]
         [HttpPut("{id:int}/process")]
         public async Task<IActionResult> Process(int id, CancellationToken cancellationToken)
         {
@@ -182,8 +186,8 @@ namespace Rujta.Api.Controllers
         }
 
         // Get all orders of logged-in user
+        [Authorize(Roles = nameof(UserRole.User))]
         [HttpGet("user")]
-        
         public async Task<IActionResult> GetUserOrders(CancellationToken cancellationToken)
         {
             var domainPersonIdClaim = User.FindFirstValue("domainPersonId");
@@ -213,6 +217,27 @@ namespace Rujta.Api.Controllers
             await _logService.AddLogAsync(GetUser(), $"Fetched order details ID={id}");
 
             return Ok(order);
+        }
+
+        [Authorize(Roles = nameof(UserRole.Pharmacist))]
+        [HttpGet("pharmacy")]
+        public async Task<IActionResult> GetPharmacyOrders(CancellationToken cancellationToken)
+        {
+            var pharmacyId = GetCurrentPharmacyId();
+
+            var orders = await _orderService.GetPharmacyOrdersAsync(pharmacyId, cancellationToken);
+
+            return Ok(orders);
+        }
+
+        private int GetCurrentPharmacyId()
+        {
+            var claim = User.FindFirstValue("PharmacyId");
+
+            if (string.IsNullOrWhiteSpace(claim) || !int.TryParse(claim, out var pharmacyId))
+                throw new UnauthorizedAccessException("Invalid PharmacyId claim.");
+
+            return pharmacyId;
         }
     }
 }

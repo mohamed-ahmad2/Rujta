@@ -1,4 +1,3 @@
-using Newtonsoft.Json.Linq;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
@@ -73,35 +72,99 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("register/admin")]
-        //[Authorize(Roles = "Admin,Manager")]
-        public async Task<IActionResult> RegisterByAdmin([FromBody] RegisterDto dto)
+        //[Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)}")]
+        public async Task<IActionResult> RegisterByAdmin([FromBody] RegisterByAdminDto dto)
         {
             try
             {
+                if (dto == null)
+                    return BadRequest(new { message = "Invalid request data." });
+
                 var roleToAssign = dto.Role ?? UserRole.User;
 
                 if (!Enum.IsDefined(typeof(UserRole), roleToAssign))
                     return BadRequest(new { message = "Invalid role specified." });
 
-                if (User.IsInRole("Manager") && roleToAssign == UserRole.Admin)
-                    return Forbid("Manager cannot create Admin users.");
+                if (User.IsInRole(nameof(UserRole.PharmacyAdmin)) && roleToAssign != UserRole.Pharmacist)
+                    return Forbid("PharmacyAdmin can only create Pharmacist users.");
+
+
+                var pharmacyIdClaim = User.FindFirst("PharmacyId");
+
+                if (User.IsInRole(nameof(UserRole.PharmacyAdmin)))
+                {
+                    if (pharmacyIdClaim == null)
+                        return Unauthorized("Pharmacy context is missing.");
+
+                    dto.PharmacyId = int.Parse(pharmacyIdClaim.Value);
+                }
+
 
                 var userId = await _authService.CreateUserAsync(dto, roleToAssign);
-                var token = await _authService.GenerateTokensAsync(dto.Email);
 
-                var user = await _authService.GetUserByEmailAsync(dto.Email);
-                var role = user?.Role ?? roleToAssign.ToString();
+                await _logService.AddLogAsync(
+                    dto.Email,
+                    $"New user registered by admin with role {roleToAssign}");
 
-                await _logService.AddLogAsync(dto.Email, LogConstants.NewUserRegistered);
-
-                return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email, AccessToken = token.AccessToken });
+                return Ok(new
+                {
+                    UserId = userId,
+                    Email = dto.Email,
+                    Role = roleToAssign.ToString(),
+                });
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(dto.Email, $"Registration error: {ex.Message}");
+                await _logService.AddLogAsync(
+                    dto.Email ?? LogConstants.UnknownUser,
+                    $"Registration error: {ex.Message}");
+
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+
+        [HttpPost("register-dummy-pharmacyadmin")]
+        public async Task<IActionResult> RegisterDummyPharmacyAdmin(int pharmacyId)
+        {
+            try
+            {
+                // Dummy data for testing
+                var dummyDto = new RegisterByAdminDto
+                {
+                    Email = "pharmacyadmin@gmail.com",
+                    CreatePassword = "Admin@123",
+                    ConfirmPassword = "Admin@123",
+                    Name = "Dummy Pharmacy Admin",
+                    Role = UserRole.PharmacyAdmin,
+                    Location = "EG",
+                    PharmacyId = pharmacyId
+                };
+
+                var userId = await _authService.CreateUserAsync(dummyDto, UserRole.PharmacyAdmin);
+
+                await _logService.AddLogAsync(
+                    dummyDto.Email,
+                    $"Dummy PharmacyAdmin created for testing. UserId: {userId}");
+
+                return Ok(new
+                {
+                    UserId = userId,
+                    Email = dummyDto.Email,
+                    Role = dummyDto.Role.ToString(),
+                    PharmacyId = dummyDto.PharmacyId
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                await _logService.AddLogAsync(
+                      LogConstants.UnknownUser,
+                    $"Dummy PharmacyAdmin creation error: {ex.Message}");
+
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
 
 
 
@@ -237,11 +300,6 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-
-      
-
-
-
     }
 
     public record MeResponse(string Email, string Role);

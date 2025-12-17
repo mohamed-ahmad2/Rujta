@@ -4,7 +4,7 @@ namespace Rujta.Infrastructure.Identity.Helpers
     {
         public static async Task SeedRolesAsync(RoleManager<IdentityRole<Guid>> roleManager)
         {
-            string[] roleNames = { "SuperAdmin", "PharmacyAdmin", "Pharmacist", "User", "Staff" };
+            string[] roleNames = { "SuperAdmin", "PharmacyAdmin", "Pharmacist", "User"};
 
             foreach (var roleName in roleNames)
             {

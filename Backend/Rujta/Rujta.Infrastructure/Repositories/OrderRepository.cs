@@ -42,5 +42,18 @@
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<IEnumerable<Order>> GetOrdersByPharmacyIdAsync(int pharmacyId,CancellationToken cancellationToken = default)
+        {
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Medicine)
+                .Include(o => o.User)
+                .Include(o => o.Pharmacy)
+                .Where(o => o.PharmacyID == pharmacyId)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync(cancellationToken);
+        }
+
+
     }
 }
