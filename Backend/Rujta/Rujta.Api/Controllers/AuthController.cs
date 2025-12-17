@@ -125,14 +125,14 @@ namespace Rujta.API.Controllers
 
 
         [HttpPost("register-dummy-pharmacyadmin")]
-        public async Task<IActionResult> RegisterDummyPharmacyAdmin(int pharmacyId)
+        public async Task<IActionResult> RegisterDummyPharmacyAdmin(int pharmacyId, string email)
         {
             try
             {
                 // Dummy data for testing
                 var dummyDto = new RegisterByAdminDto
                 {
-                    Email = "pharmacyadmin@gmail.com",
+                    Email = email,
                     CreatePassword = "Admin@123",
                     ConfirmPassword = "Admin@123",
                     Name = "Dummy Pharmacy Admin",
