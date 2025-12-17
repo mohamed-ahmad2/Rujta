@@ -115,17 +115,14 @@ namespace Rujta.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(
-                    dto.Email ?? LogConstants.UnknownUser,
-                    $"Registration error: {ex.Message}");
-
+                await _logService.AddLogAsync(dto?.Email ?? LogConstants.UnknownUser,$"Registration error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
 
 
         [HttpPost("register-dummy-pharmacyadmin")]
-        public async Task<IActionResult> RegisterDummyPharmacyAdmin(int pharmacyId, string email)
+        public async Task<IActionResult> RegisterDummyPharmacyAdmin(int pharmacyId, string email, string pass)
         {
             try
             {
@@ -133,8 +130,8 @@ namespace Rujta.API.Controllers
                 var dummyDto = new RegisterByAdminDto
                 {
                     Email = email,
-                    CreatePassword = "Admin@123",
-                    ConfirmPassword = "Admin@123",
+                    CreatePassword = pass,
+                    ConfirmPassword = pass,
                     Name = "Dummy Pharmacy Admin",
                     Role = UserRole.PharmacyAdmin,
                     Location = "EG",
