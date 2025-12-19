@@ -2,6 +2,7 @@ import React from "react";
 import PropTypes from "prop-types";
 import { motion, AnimatePresence } from "framer-motion";
 import { NavbarMenu } from "../../../mockData/data";
+import { Link } from "react-router-dom";
 
 const ResponsiveMenulanding = ({ open, setOpen }) => {
   const handleClick = () => setOpen(false);
@@ -20,9 +21,12 @@ const ResponsiveMenulanding = ({ open, setOpen }) => {
             <ul className="flex flex-col justify-center items-center gap-10">
               {NavbarMenu.map((item) => (
                 <li key={item.id} onClick={handleClick}>
-                  <a href={item.link} className="hover:text-gray-200 duration-200">
+                  <Link
+                    to={item.link}
+                    className="hover:text-gray-200 duration-200"
+                  >
                     {item.title}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>

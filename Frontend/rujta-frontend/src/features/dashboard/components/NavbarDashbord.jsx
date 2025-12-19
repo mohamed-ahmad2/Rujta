@@ -1,88 +1,98 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
-import { FaSearch, FaBell } from "react-icons/fa";
+import { FaBell } from "react-icons/fa";
 import UserImage from "../../../assets/change/HeroImg1.png";
 
 const NavbarDashbord = () => {
   const location = useLocation();
 
-  // ربط كل صفحة بعنوان ووصف خاص بها
-  const titles = {
+  const pages = {
     "/dashboard/home": {
       title: "Overview",
       subtitle: "Your overall performance today",
+      status: "Live",
+      color: "bg-green-100 text-green-700",
     },
     "/dashboard/products": {
-      title: "Product List",
-      subtitle: "Manage and track your pharmacy products",
+      title: "Products",
+      subtitle: "Manage your inventory",
+      status: "Updated",
+      color: "bg-blue-100 text-blue-700",
     },
     "/dashboard/orders": {
       title: "Orders",
-      subtitle: "Review and manage incoming orders",
-    },
-    "/dashboard/sales": {
-      title: "Sales",
-      subtitle: "Track and analyze your daily sales",
+      subtitle: "Incoming & processed orders",
+      status: "New Orders",
+      color: "bg-orange-100 text-orange-700",
     },
     "/dashboard/customers": {
       title: "Customers",
-      subtitle: "Manage your customer relationships",
-    },
-    "/dashboard/payments": {
-      title: "Payments",
-      subtitle: "View all transactions and settlements",
+      subtitle: "Your customer base",
+      status: "Active",
+      color: "bg-purple-100 text-purple-700",
     },
     "/dashboard/settings": {
       title: "Settings",
-      subtitle: "Adjust your dashboard preferences",
-    },
-    "/dashboard/help": {
-      title: "Help & Support",
-      subtitle: "Get assistance whenever you need it",
+      subtitle: "Dashboard preferences",
+      status: "Private",
+      color: "bg-gray-200 text-gray-700",
     },
   };
 
-  // العنوان الحالي حسب الصفحة
-  const current = titles[location.pathname] || {
+  const current = pages[location.pathname] || {
     title: "Dashboard",
-    subtitle: "Welcome to your dashboard",
+    subtitle: "Welcome back",
+    status: "Online",
+    color: "bg-green-100 text-green-700",
   };
 
   return (
-    <div className="w-full bg-white px-6 py-4 flex items-center justify-between shadow-sm">
+    <header className="w-full bg-white px-6 py-4 flex items-center justify-between border-b">
       
-      {/* Left — Title + Subtitle */}
+      {/* Left — Title */}
       <div>
-        <h2 className="text-xl font-semibold">{current.title}</h2>
-        <p className="text-sm text-gray-500">{current.subtitle}</p>
+        <h2 className="text-xl font-semibold text-gray-800">
+          {current.title}
+        </h2>
+        <p className="text-sm text-gray-500">
+          {current.subtitle}
+        </p>
       </div>
 
-      {/* Middle — Search */}
-      <div className="flex items-center bg-gray-100 px-4 py-2 rounded-full w-72">
-        <FaSearch className="text-gray-500" size={14} />
-        <input
-          type="text"
-          placeholder="Search..."
-          className="bg-transparent outline-none ml-2 w-full"
-        />
+      {/* Center — Status Chip */}
+      <div>
+        <span
+          className={`px-4 py-1.5 rounded-full text-sm font-medium ${current.color}`}
+        >
+          {current.status}
+        </span>
       </div>
 
-      {/* Right — User Info */}
-      <div className="flex items-center gap-4">
-        <FaBell size={20} className="text-gray-600 cursor-pointer" />
+      {/* Right — User */}
+      <div className="flex items-center gap-4 transform -translate-x-4">
+        
+        <FaBell className="text-gray-600 cursor-pointer hover:text-secondary transition" />
 
-        <img
-          src={UserImage}
-          alt="user"
-          className="w-10 h-10 rounded-full border"
-        />
+        <div className="h-8 w-px bg-gray-200" />
 
-        <div className="text-right">
-          <h4 className="font-semibold">James Bond</h4>
-          <p className="text-xs text-gray-500">@james.bond</p>
+        <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 px-3 py-2 rounded-lg transition">
+          <img
+            src={UserImage}
+            alt="user"
+            className="w-9 h-9 rounded-full border"
+          />
+          <div className="leading-tight">
+            <h4 className="text-sm font-semibold text-gray-800">
+              James Bond
+            </h4>
+            <p className="text-xs text-gray-500">
+              Pharmacist
+            </p>
+          </div>
         </div>
+
       </div>
-    </div>
+    </header>
   );
 };
 

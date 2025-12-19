@@ -1,6 +1,5 @@
 // src/features/user/pages/Profile.jsx
 import React, { useState, useEffect } from "react";
-import { HiOutlineMail } from "react-icons/hi";
 import { FiTrash2 } from "react-icons/fi";
 import { useUserProfile } from "../../userProfile/hook/useUserProfile";
 
@@ -10,9 +9,10 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
-    address: { street: "", buildingNo: "", city: "", governorate: "" },
-    emailList: [],
     phoneNumber: "",
+    addresses: [
+      { street: "", buildingNo: "", city: "", governorate: "" },
+    ],
   });
 
   /* ================= Profile Init ================= */
@@ -20,14 +20,18 @@ export default function Profile() {
     if (profile) {
       setFormData({
         fullName: profile.name || "",
-        address: {
-          street: profile.address?.street || "",
-          buildingNo: profile.address?.buildingNo || "",
-          city: profile.address?.city || "",
-          governorate: profile.address?.governorate || "",
-        },
-        emailList: profile.email ? [profile.email] : [],
         phoneNumber: profile.phoneNumber || "",
+        addresses:
+          profile.addresses?.length > 0
+            ? profile.addresses
+            : [
+                {
+                  street: profile.address?.street || "",
+                  buildingNo: profile.address?.buildingNo || "",
+                  city: profile.address?.city || "",
+                  governorate: profile.address?.governorate || "",
+                },
+              ],
       });
     }
   }, [profile]);
@@ -37,27 +41,26 @@ export default function Profile() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleAddressChange = (field, value) => {
+  const handleAddressChange = (index, field, value) => {
+    const updated = [...formData.addresses];
+    updated[index][field] = value;
+    setFormData((prev) => ({ ...prev, addresses: updated }));
+  };
+
+  const addAddress = () => {
     setFormData((prev) => ({
       ...prev,
-      address: { ...prev.address, [field]: value },
+      addresses: [
+        ...prev.addresses,
+        { street: "", buildingNo: "", city: "", governorate: "" },
+      ],
     }));
   };
 
-  const handleAddEmail = () => {
-    const newEmail = prompt("Enter new email:");
-    if (newEmail) {
-      setFormData((prev) => ({
-        ...prev,
-        emailList: [...prev.emailList, newEmail],
-      }));
-    }
-  };
-
-  const handleDeleteEmail = (index) => {
+  const removeAddress = (index) => {
     setFormData((prev) => ({
       ...prev,
-      emailList: prev.emailList.filter((_, i) => i !== index),
+      addresses: prev.addresses.filter((_, i) => i !== index),
     }));
   };
 
@@ -65,7 +68,7 @@ export default function Profile() {
     const dto = {
       Name: formData.fullName,
       PhoneNumber: formData.phoneNumber,
-      Address: { ...formData.address },
+      Addresses: formData.addresses,
       ProfileImageUrl: null,
     };
 
@@ -75,7 +78,8 @@ export default function Profile() {
 
   /* ================= States ================= */
   if (loading) return <p className="p-10 text-center">Loading...</p>;
-  if (error) return <p className="p-10 text-center text-red-500">{error}</p>;
+  if (error)
+    return <p className="p-10 text-center text-red-500">{error}</p>;
 
   /* ================= UI ================= */
   return (
@@ -89,9 +93,11 @@ export default function Profile() {
                 {formData.fullName?.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h3 className="text-lg font-semibold">{formData.fullName}</h3>
+                <h3 className="text-lg font-semibold">
+                  {formData.fullName}
+                </h3>
                 <p className="text-sm text-gray-500">
-                  {formData.emailList?.[0] || ""}
+                  {profile?.email}
                 </p>
               </div>
             </div>
@@ -124,69 +130,97 @@ export default function Profile() {
             label="Phone Number"
             value={formData.phoneNumber}
             disabled={!isEditing}
-            onChange={(e) => handleChange("phoneNumber", e.target.value)}
-          />
-          <Input
-            label="Street"
-            value={formData.address.street}
-            disabled={!isEditing}
-            onChange={(e) => handleAddressChange("street", e.target.value)}
-          />
-          <Input
-            label="Building No"
-            value={formData.address.buildingNo}
-            disabled={!isEditing}
-            onChange={(e) => handleAddressChange("buildingNo", e.target.value)}
-          />
-          <Input
-            label="City"
-            value={formData.address.city}
-            disabled={!isEditing}
-            onChange={(e) => handleAddressChange("city", e.target.value)}
-          />
-          <Input
-            label="Governorate"
-            value={formData.address.governorate}
-            disabled={!isEditing}
             onChange={(e) =>
-              handleAddressChange("governorate", e.target.value)
+              handleChange("phoneNumber", e.target.value)
             }
           />
         </div>
 
-        {/* ================= Email List ================= */}
+        {/* ================= Addresses ================= */}
         <div className="mt-8">
-          <p className="font-semibold mb-2 text-gray-700">
-            My Email Address
+          <p className="font-semibold mb-4 text-gray-700">
+            My Addresses
           </p>
 
-          {(formData.emailList ?? []).map((email, i) => (
+          {formData.addresses.map((address, i) => (
             <div
               key={i}
-              className="flex justify-between items-center bg-gray-50 border rounded-lg p-3 mb-2"
+              className="border rounded-xl p-4 mb-6"
             >
-              <div className="flex items-center gap-3">
-                <HiOutlineMail className="text-secondary text-xl" />
-                <span>{email}</span>
+              <div className="flex justify-between items-center mb-4">
+                <p className="font-semibold text-gray-700">
+                  Address #{i + 1}
+                </p>
+
+                {isEditing && formData.addresses.length > 1 && (
+                  <button
+                    onClick={() => removeAddress(i)}
+                    className="text-red-500"
+                  >
+                    <FiTrash2 />
+                  </button>
+                )}
               </div>
 
-              {isEditing && (
-                <button
-                  onClick={() => handleDeleteEmail(i)}
-                  className="text-red-500"
-                >
-                  <FiTrash2 />
-                </button>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Street"
+                  value={address.street}
+                  disabled={!isEditing}
+                  onChange={(e) =>
+                    handleAddressChange(
+                      i,
+                      "street",
+                      e.target.value
+                    )
+                  }
+                />
+                <Input
+                  label="Building No"
+                  value={address.buildingNo}
+                  disabled={!isEditing}
+                  onChange={(e) =>
+                    handleAddressChange(
+                      i,
+                      "buildingNo",
+                      e.target.value
+                    )
+                  }
+                />
+                <Input
+                  label="City"
+                  value={address.city}
+                  disabled={!isEditing}
+                  onChange={(e) =>
+                    handleAddressChange(
+                      i,
+                      "city",
+                      e.target.value
+                    )
+                  }
+                />
+                <Input
+                  label="Governorate"
+                  value={address.governorate}
+                  disabled={!isEditing}
+                  onChange={(e) =>
+                    handleAddressChange(
+                      i,
+                      "governorate",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
             </div>
           ))}
 
           {isEditing && (
             <button
-              onClick={handleAddEmail}
-              className="mt-4 bg-secondary text-white px-4 py-2 rounded-lg"
+              onClick={addAddress}
+              className="bg-secondary text-white px-4 py-2 rounded-lg"
             >
-              + Add Email Address
+              + Add Address
             </button>
           )}
         </div>
