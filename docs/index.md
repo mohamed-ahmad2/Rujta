@@ -11,5 +11,6 @@ This documentation is tailored for developers, contributors, and maintainers see
 ## What's Inside
 
 - **Getting Started**: Step-by-step guide to setting up the project locally, covering the .NET 8 backend, React frontend, and SQL Server database configurations.
+- **Project Structure**: Comprehensive overview of the backend and frontend components, including architecture and directory structures.
 - **API Reference**: Detailed overview of backend endpoints for managing products, orders, users, pharmacies, and more.
 - **Frontend Guide**: In-depth explanation of the React application, including architecture, components, state management, routing, and UI best practices.
