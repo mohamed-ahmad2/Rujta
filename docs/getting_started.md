@@ -1,89 +1,119 @@
-# Getting Started
+# Getting Started with Rujta
 
-This guide will help you set up the **Rujta** project locally and understand the development environments.
+This guide provides step-by-step instructions to set up the **Rujta** project locally, along with an overview of the development environments. It is designed for developers to quickly get started with building, testing, and deploying the application.
 
 ## Prerequisites
 
-Before running the project, make sure you have installed:
+Ensure the following tools and software are installed before proceeding:
 
-- **.NET 8 SDK** – for the backend
-- **Node.js (v18+) and npm** – for the frontend
-- **SQL Server** – as the database
-- **Visual Studio 2022 / VS Code** – recommended IDEs
+- **.NET 8 SDK** – Required for the backend API development.
+- **Node.js (v18+ or later) and npm** – Essential for the frontend React application.
+- **SQL Server** – Used as the primary database engine (local instance recommended for development).
+- **Visual Studio 2022 or VS Code** – Recommended IDEs for .NET and JavaScript development.
 
 ## Project Structure
 
-```text
+The project follows a clean, modular architecture:
+
+```
 Rujta/
-├─ Backend/      # .NET 8 Web API project
-├─ Frontend/     # React application
-└─ docs/         # Project documentation
+├── Backend/      # .NET 8 Web API project (core services and APIs)
+├── Frontend/     # React.js application (user interface)
+└── docs/         # Project documentation (guides, APIs, etc.)
 ```
 
 ## Development Environments
 
-Rujta supports multiple environments to separate configuration and deployment:
+Rujta supports multiple environments to ensure separation between development, testing, and production workflows:
 
 1. **Development**
-   - Used locally by developers
-   - Debugging enabled
-   - Local SQL Server connection
-2. **Staging**
-   - Pre-production environment
-   - Mirrors production settings
-   - Used for testing features before deployment
-3. **Production**
-   - Live environment accessible to users
-   - Optimized for performance and security
+   - Intended for local developer use.
+   - Enables debugging and detailed logging.
+   - Connects to a local SQL Server instance.
 
-> Configuration for each environment is stored in `appsettings.{Environment}.json` in the backend, and `.env.{environment}` files in the frontend.
+2. **Staging**
+   - Pre-production environment for integration testing.
+   - Mirrors production configurations closely.
+   - Used to validate features before release.
+
+3. **Production**
+   - Live environment for end-users.
+   - Optimized for performance, scalability, and security.
+   - Uses production-grade database and hosting.
+
+Configuration files:
+- Backend: `appsettings.{Environment}.json` (e.g., `appsettings.Development.json`).
+- Frontend: `.env.{environment}` (e.g., `.env.development`).
 
 ## Steps to Run Locally
 
-### 1. Setup Backend
+Follow these steps to set up and run the project on your local machine.
+
+### 1. Setup the Backend
+
+Navigate to the backend directory and execute the following commands:
+
 ```bash
 cd Backend/Rujta
-# 1. Restore
+
+# Restore NuGet packages
 dotnet restore Rujta.API
 dotnet restore Rujta.Infrastructure
 dotnet restore Rujta.Application
 dotnet restore Rujta.Domain
 
-# 2. Build
+# Build the projects
 dotnet build Rujta.Domain
 dotnet build Rujta.Application
 dotnet build Rujta.Infrastructure
 dotnet build Rujta.API
 
-# 3. Run
+# Run the API
 dotnet run --project Rujta.API
 ```
-- The backend will run on `https://localhost:7065/swagger/index.html` by default.  
-- Update the **connection string** in `Backend/appsettings.Development.json` to match your SQL Server instance. Note: Instead of running these commands manually, you can also press F5 in Visual Studio to build and run the backend directly.
-	
-### 2. Setup Database
-- Make sure SQL Server is running locally.  
-- Apply migrations if needed:
-Update Database:
-```bash
-dotnet ef database update --project Rujta.Infrastructure --startup-project Rujta.API
-```
-or in PMC:
-```powershell
-Update-Database -Project Rujta.Infrastructure -StartupProject Rujta.API
-```
 
-### 3. Setup Frontend
+- The backend API will start at `https://localhost:7065/swagger/index.html` (Swagger UI for API documentation and testing).
+- Update the connection string in `Backend/appsettings.Development.json` to point to your local SQL Server instance.
+- **Tip**: In Visual Studio, open the solution and press F5 to build and run the backend automatically.
+
+### 2. Setup the Database
+
+Ensure SQL Server is running locally, then apply any necessary database migrations:
+
+- Using .NET CLI:
+  ```bash
+  dotnet ef database update --project Rujta.Infrastructure --startup-project Rujta.API
+  ```
+
+- Using Package Manager Console (PMC) in Visual Studio:
+  ```powershell
+  Update-Database -Project Rujta.Infrastructure -StartupProject Rujta.API
+  ```
+
+This will create or update the database schema based on the Entity Framework migrations.
+
+### 3. Setup the Frontend
+
+Navigate to the frontend directory and run:
+
 ```bash
 cd Frontend
+
+# Install dependencies
 npm install
+
+# Start the development server
 npm run dev
 ```
-- The frontend will run on `https://localhost:5173/` and connect automatically to the backend.
 
-## Optional Tools
+- The frontend will be available at `http://localhost:5173/` (or the port specified in your configuration).
+- It will automatically connect to the running backend API.
 
-- **Postman / Apidog** – for testing APIs  
-- **Git** – version control  
+## Optional Tools and Best Practices
 
-By following these steps, developers can have a fully functional local environment of **Rujta**, ready for development and testing.
+- **API Testing**: Use Postman or Apidog to test and explore the backend endpoints.
+- **Version Control**: Git is recommended for managing code changes and collaboration.
+- **Security**: Always use HTTPS in development and ensure sensitive data (e.g., connection strings) is stored securely.
+- **Troubleshooting**: Check console logs for errors. Common issues include mismatched connection strings or missing dependencies.
+
+By following this guide, you will have a fully operational local instance of **Rujta** ready for development, debugging, and testing. For advanced topics, refer to additional documentation in the `docs/` folder. If you encounter issues, consult the project repository or community forums.
