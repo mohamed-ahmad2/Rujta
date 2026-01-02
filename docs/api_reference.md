@@ -1,210 +1,224 @@
-# Backend API Reference
+# Backend API Reference for Rujta
+
+This document serves as a comprehensive reference for the **Rujta** backend API, built on **ASP.NET Core 8** with a **Clean / Onion Architecture**. It outlines the architecture, dependencies, endpoints, and database management commands to facilitate development, integration, and maintenance.
 
 ## Overview
 
-The backend of **Rujta** is built using **ASP.NET Core 8** and follows **Clean / Onion Architecture**, which ensures:
-
-- Clear separation of concerns
-- Scalability and maintainability
-- Testability
-- Minimal coupling between layers
-- Ease of replacing any layer without affecting the rest of the system
+The backend architecture emphasizes:
+- **Clear Separation of Concerns**: Layers are isolated to promote modularity.
+- **Scalability and Maintainability**: Designed for easy extension and updates.
+- **Testability**: Interfaces and dependency injection enable unit and integration testing.
+- **Minimal Coupling**: Layers depend only inward, following the dependency rule.
+- **Ease of Replacement**: Swap implementations (e.g., databases or services) without system-wide impact.
 
 ### Project Layers
 
-```text
+The solution is structured into four primary projects, adhering to the Onion Architecture:
+
+```
 Rujta
-├── Rujta.Domain          # Core business entities and rules (no dependencies) 
-├── Rujta.Application     # Use cases, DTOs, interfaces, validation, mapping 
-├── Rujta.Infrastructure  # EF Core, Repositories, external services (Firebase, SignalR, Routing) 
-└── Rujta.Api             # Presentation layer: Controllers, Middleware, Swagger, DI setup 
+├── Rujta.Domain          # Core business entities, value objects, and domain logic (no external dependencies)
+├── Rujta.Application     # Use cases, DTOs, interfaces, validators, and mappers
+├── Rujta.Infrastructure  # Data persistence (EF Core repositories), external integrations (e.g., Firebase, SignalR), and concrete implementations
+└── Rujta.API             # Presentation layer: Controllers, middleware, Swagger configuration, and dependency injection setup
 ```
 
-**Dependency Rule:**  
+**Dependency Flow**:  
 `API → Infrastructure → Application → Domain`  
-> Domain layer has no dependencies on any other layer.  
+> **Note**: The Domain layer remains independent, containing pure business rules without references to other layers or external frameworks.
 
 ---
 
-## NuGet Packages Overview
+## NuGet Packages
+
+Packages are categorized by functionality and managed in each project's `.csproj` file. Use `dotnet restore` to install them.
 
 ### Core Architecture & Mapping
-- **AutoMapper**: Object-to-object mapping (Entities ↔ DTOs)  
-- **AutoMapper.Extensions.Microsoft.DependencyInjection**: DI integration
+- **AutoMapper**: Handles entity-to-DTO mapping.
+- **AutoMapper.Extensions.Microsoft.DependencyInjection**: Integrates AutoMapper with DI.
 
 ### Validation
-- **FluentValidation** & **FluentValidation.AspNetCore**: Request model validation  
-- **FluentValidation.DependencyInjectionExtensions**: Register validators via DI  
+- **FluentValidation** & **FluentValidation.AspNetCore**: Validates request models.
+- **FluentValidation.DependencyInjectionExtensions**: Enables DI-based validator registration.
 
 ### Authentication & Security
-- **Microsoft.AspNetCore.Authentication.JwtBearer**: JWT authentication  
-- **Microsoft.AspNetCore.Identity.EntityFrameworkCore**: Identity with EF Core  
-- **Google.Apis.Auth**: Google OAuth validation  
-- **FirebaseAdmin**: Firebase integration (auth, notifications)  
+- **Microsoft.AspNetCore.Authentication.JwtBearer**: Supports JWT-based authentication.
+- **Microsoft.AspNetCore.Identity.EntityFrameworkCore**: Manages user identity with EF Core.
+- **Google.Apis.Auth**: Validates Google OAuth tokens.
+- **FirebaseAdmin**: Integrates Firebase for authentication and notifications.
 
 ### Data Access & ORM
-- **Microsoft.EntityFrameworkCore** & **SqlServer provider**  
-- **Microsoft.EntityFrameworkCore.Design / Tools**: EF Core migrations & CLI tools  
-- **Microsoft.Data.SqlClient**: Low-level SQL Server access  
+- **Microsoft.EntityFrameworkCore** & **Microsoft.EntityFrameworkCore.SqlServer**: Core ORM and SQL Server provider.
+- **Microsoft.EntityFrameworkCore.Design / Tools**: Supports migrations and design-time tools.
+- **Microsoft.Data.SqlClient**: Provides direct SQL Server connectivity.
 
 ### Real-Time Communication
-- **Microsoft.AspNetCore.SignalR** & **SignalR.Core**  
+- **Microsoft.AspNetCore.SignalR** & **Microsoft.AspNetCore.SignalR.Core**: Enables real-time features like live updates.
 
 ### Routing & Mapping
-- **Itinero** & **Itinero.IO.Osm**: Routing & pathfinding  
+- **Itinero** & **Itinero.IO.Osm**: Handles routing and pathfinding using OpenStreetMap data.
 
 ### String Matching
-- **F23.StringSimilarity**: Fuzzy matching & search  
+- **F23.StringSimilarity**: Implements fuzzy string matching for search functionalities.
 
 ### API Documentation
-- **Swashbuckle.AspNetCore**: Swagger/OpenAPI generation  
+- **Swashbuckle.AspNetCore**: Generates Swagger/OpenAPI documentation.
 
 ---
 
 ## API Endpoints
 
+Endpoints are organized by feature area. All routes are prefixed with `/api/`. Authentication is required for most endpoints (JWT Bearer scheme). Use Swagger at `/swagger` for interactive testing.
+
 ### Auth
-| Method | Endpoint | Description |
-|--------|---------|-------------|
-| POST | `/api/Auth/login` | Login user |
-| POST | `/api/Auth/register` | Register user |
-| POST | `/api/Auth/register/admin` | Register admin |
-| POST | `/api/Auth/register-dummy-pharmacyadmin` | Register dummy pharmacy admin |
-| POST | `/api/Auth/refresh-token` | Refresh JWT token |
-| POST | `/api/Auth/logout` | Logout user |
-| GET  | `/api/Auth/me` | Get current user |
-| GET  | `/api/Auth/email` | Check email availability |
-| POST | `/api/Auth/reset-password` | Reset password |
-| POST | `/api/Auth/forgot-password` | Forgot password |
-| POST | `/api/Auth/google-login` | Login with Google OAuth |
+| Method | Endpoint                          | Description                  |
+|--------|-----------------------------------|------------------------------|
+| POST   | `/Auth/login`                     | Authenticates a user.        |
+| POST   | `/Auth/register`                  | Registers a new user.        |
+| POST   | `/Auth/register/admin`            | Registers an admin user.     |
+| POST   | `/Auth/register-dummy-pharmacyadmin` | Registers a dummy pharmacy admin. |
+| POST   | `/Auth/refresh-token`             | Refreshes an expired JWT.    |
+| POST   | `/Auth/logout`                    | Logs out the current user.   |
+| GET    | `/Auth/me`                        | Retrieves current user info. |
+| GET    | `/Auth/email`                     | Checks email availability.   |
+| POST   | `/Auth/reset-password`            | Resets user password.        |
+| POST   | `/Auth/forgot-password`           | Initiates password recovery. |
+| POST   | `/Auth/google-login`              | Logs in via Google OAuth.    |
 
 ### Category
-| Method | Endpoint | Description |
-|--------|---------|-------------|
-| GET    | `/api/Category` | List categories |
-| POST   | `/api/Category` | Create category |
-| GET    | `/api/Category/{id}` | Get category by id |
-| PUT    | `/api/Category/{id}` | Update category |
-| DELETE | `/api/Category/{id}` | Delete category |
+| Method | Endpoint               | Description                  |
+|--------|------------------------|------------------------------|
+| GET    | `/Category`            | Lists all categories.        |
+| POST   | `/Category`            | Creates a new category.      |
+| GET    | `/Category/{id}`       | Retrieves category by ID.    |
+| PUT    | `/Category/{id}`       | Updates category by ID.      |
+| DELETE | `/Category/{id}`       | Deletes category by ID.      |
 
 ### InventoryItem
-| Method | Endpoint | Description |
-|--------|---------|-------------|
-| GET    | `/api/InventoryItem` | List inventory items |
-| POST   | `/api/InventoryItem` | Create inventory item |
-| GET    | `/api/InventoryItem/{id}` | Get item by id |
-| PUT    | `/api/InventoryItem/{id}` | Update item |
-| DELETE | `/api/InventoryItem/{id}` | Delete item |
+| Method | Endpoint                  | Description                     |
+|--------|---------------------------|---------------------------------|
+| GET    | `/InventoryItem`          | Lists all inventory items.      |
+| POST   | `/InventoryItem`          | Creates a new inventory item.   |
+| GET    | `/InventoryItem/{id}`     | Retrieves item by ID.           |
+| PUT    | `/InventoryItem/{id}`     | Updates item by ID.             |
+| DELETE | `/InventoryItem/{id}`     | Deletes item by ID.             |
 
 ### Medicines & MedicineImport
-| Method | Endpoint | Description |
-|--------|---------|-------------|
-| GET    | `/api/Medicines` | List medicines |
-| POST   | `/api/Medicines` | Create medicine |
-| GET    | `/api/Medicines/{id}` | Get medicine by id |
-| PUT    | `/api/Medicines/{id}` | Update medicine |
-| DELETE | `/api/Medicines/{id}` | Delete medicine |
-| GET    | `/api/Medicines/filter` | Filter medicines |
-| GET    | `/api/medicines/search` | Search medicines |
-| POST   | `/api/MedicineImport` | Import medicines |
+| Method | Endpoint                  | Description                     |
+|--------|---------------------------|---------------------------------|
+| GET    | `/Medicines`              | Lists all medicines.            |
+| POST   | `/Medicines`              | Creates a new medicine.         |
+| GET    | `/Medicines/{id}`         | Retrieves medicine by ID.       |
+| PUT    | `/Medicines/{id}`         | Updates medicine by ID.         |
+| DELETE | `/Medicines/{id}`         | Deletes medicine by ID.         |
+| GET    | `/Medicines/filter`       | Filters medicines by criteria.  |
+| GET    | `/medicines/search`       | Searches medicines.             |
+| POST   | `/MedicineImport`         | Imports medicines in bulk.      |
 
 ### Orders
-| Method | Endpoint | Description |
-|--------|---------|-------------|
-| POST   | `/api/Orders` | Create order |
-| GET    | `/api/Orders` | List orders |
-| GET    | `/api/Orders/{id}` | Get order by id |
-| PUT    | `/api/Orders/{id}` | Update order |
-| DELETE | `/api/Orders/{id}` | Delete order |
-| PUT    | `/api/Orders/{id}/accept` | Accept order |
-| PUT    | `/api/Orders/{id}/process` | Process order |
-| PUT    | `/api/Orders/{id}/out-for-delivery` | Out for delivery |
-| PUT    | `/api/Orders/{id}/delivered` | Mark delivered |
-| PUT    | `/api/Orders/{id}/cancel/user` | Cancel by user |
-| PUT    | `/api/Orders/{id}/cancel/pharmacy` | Cancel by pharmacy |
-| GET    | `/api/Orders/user` | List orders by user |
-| GET    | `/api/Orders/{id}/details` | Order details |
-| GET    | `/api/Orders/pharmacy` | Orders for pharmacy |
+| Method | Endpoint                       | Description                     |
+|--------|--------------------------------|---------------------------------|
+| POST   | `/Orders`                      | Creates a new order.            |
+| GET    | `/Orders`                      | Lists all orders.               |
+| GET    | `/Orders/{id}`                 | Retrieves order by ID.          |
+| PUT    | `/Orders/{id}`                 | Updates order by ID.            |
+| DELETE | `/Orders/{id}`                 | Deletes order by ID.            |
+| PUT    | `/Orders/{id}/accept`          | Accepts an order.               |
+| PUT    | `/Orders/{id}/process`         | Processes an order.             |
+| PUT    | `/Orders/{id}/out-for-delivery`| Marks order as out for delivery.|
+| PUT    | `/Orders/{id}/delivered`       | Marks order as delivered.       |
+| PUT    | `/Orders/{id}/cancel/user`     | Cancels order by user.          |
+| PUT    | `/Orders/{id}/cancel/pharmacy` | Cancels order by pharmacy.      |
+| GET    | `/Orders/user`                 | Lists orders for current user.  |
+| GET    | `/Orders/{id}/details`         | Retrieves order details.        |
+| GET    | `/Orders/pharmacy`             | Lists orders for a pharmacy.    |
 
 ### Pharmacies
-| Method | Endpoint | Description |
-|--------|---------|-------------|
-| GET | `/api/Pharmacies/nearest-routed` | Nearest pharmacies (routed) |
+| Method | Endpoint                  | Description                          |
+|--------|---------------------------|--------------------------------------|
+| GET    | `/Pharmacies/nearest-routed` | Finds nearest pharmacies with routing.|
 
 ### PharmacistManagement
-| Method | Endpoint | Description |
-|--------|---------|-------------|
-| GET    | `/api/PharmacistManagement/GetAllPharmacist` | List all pharmacists |
-| GET    | `/api/PharmacistManagement/GetPharmacistById/{id}` | Get pharmacist by id |
-| POST   | `/api/PharmacistManagement/AddStaff` | Add staff |
-| PUT    | `/api/PharmacistManagement/UpdateStaff/{id}` | Update staff |
-| DELETE | `/api/PharmacistManagement/DeleteStaff/{id}` | Delete staff |
-| GET    | `/api/PharmacistManagement/GetPharmacistByManager/{managerId}` | Get pharmacists by manager |
+| Method | Endpoint                                 | Description                          |
+|--------|------------------------------------------|--------------------------------------|
+| GET    | `/PharmacistManagement/GetAllPharmacist` | Lists all pharmacists.               |
+| GET    | `/PharmacistManagement/GetPharmacistById/{id}` | Retrieves pharmacist by ID.    |
+| POST   | `/PharmacistManagement/AddStaff`         | Adds new staff.                      |
+| PUT    | `/PharmacistManagement/UpdateStaff/{id}` | Updates staff by ID.                 |
+| DELETE | `/PharmacistManagement/DeleteStaff/{id}` | Deletes staff by ID.                 |
+| GET    | `/PharmacistManagement/GetPharmacistByManager/{managerId}` | Lists pharmacists by manager. |
 
 ### PriorityPharmacies
-| Method | Endpoint | Description |
-|--------|---------|-------------|
-| POST | `/api/PriorityPharmacies/top-k` | Get top-k priority pharmacies |
+| Method | Endpoint                | Description                          |
+|--------|-------------------------|--------------------------------------|
+| POST   | `/PriorityPharmacies/top-k` | Retrieves top-k priority pharmacies.|
 
 ### Report
-| Method | Endpoint | Description |
-|--------|---------|-------------|
-| GET | `/api/Report/PharmacyReport` | Pharmacy report |
+| Method | Endpoint               | Description                  |
+|--------|------------------------|------------------------------|
+| GET    | `/Report/PharmacyReport` | Generates pharmacy report. |
 
 ### UserProfile
-| Method | Endpoint | Description |
-|--------|---------|-------------|
-| GET | `/api/UserProfile/me` | Current user profile |
-| PUT | `/api/UserProfile/update` | Update user profile |
+| Method | Endpoint              | Description                  |
+|--------|-----------------------|------------------------------|
+| GET    | `/UserProfile/me`     | Retrieves current profile.   |
+| PUT    | `/UserProfile/update` | Updates user profile.        |
 
 ---
 
 ## EF Core & Database Commands
 
-Before executing any EF Core commands, **set the JWT certificate password**:
+**Prerequisite**: Set the JWT certificate password environment variable (required for secure operations):
 
 ```powershell
 setx JWT__CertPassword "Rujta123987"
 ```
 
-Add Migrations:
+> **Note**: Restart your terminal or IDE after setting the variable for it to take effect.
+
+### Add Migration
 ```powershell
 dotnet ef migrations add <MigrationName> --project Rujta.Infrastructure --startup-project Rujta.API
 ```
-## or in PMC:
+Or in Package Manager Console (PMC):
 ```powershell
 Add-Migration <MigrationName> -Project Rujta.Infrastructure -StartupProject Rujta.API
 ```
 
-Update Database :
+### Update Database
 ```powershell
 dotnet ef database update --project Rujta.Infrastructure --startup-project Rujta.API
 ```
-## or in PMC:
+Or in PMC:
 ```powershell
 Update-Database -Project Rujta.Infrastructure -StartupProject Rujta.API
 ```
 
-Remove Migrations :
+### Remove Migration
 ```powershell
 dotnet ef migrations remove --project Rujta.Infrastructure --startup-project Rujta.API
 ```
-## or in PMC:
+Or in PMC:
 ```powershell
 Remove-Migration -Project Rujta.Infrastructure -StartupProject Rujta.API
 ```
 
-Drop Database :
-Caution: Deletes the database completely.
+### Drop Database
+**Caution**: This permanently deletes the database.
 ```powershell
 dotnet ef database drop --project Rujta.Infrastructure --startup-project Rujta.API --force
 ```
 
 ---
 
-## Notes
+## Additional Notes
 
-- All backend packages are managed via **NuGet** and defined in each project’s `.csproj` file.  
-- The architecture enforces **layer separation**, keeping the Domain core independent.  
-- Endpoints follow **REST conventions**, with some real-time features via **SignalR**.  
-- This setup supports **scalable, secure, and maintainable backend development**.
+- **Package Management**: All NuGet packages are defined in `.csproj` files. Run `dotnet restore` in the solution root to resolve dependencies.
+- **Architecture Principles**: Enforces layer isolation; avoid direct dependencies from outer to inner layers.
+- **REST Conventions**: Endpoints use standard HTTP methods. Real-time features are supplemented by SignalR hubs.
+- **Security**: Use HTTPS in production; sensitive data (e.g., JWT secrets) should be stored in environment variables or secrets managers.
+- **Scalability**: The setup supports horizontal scaling, with EF Core optimized for SQL Server.
+- **Troubleshooting**: Check logs for errors. Common issues include invalid connection strings or missing migrations.
+- **Further Reading**: Refer to Swagger docs at runtime or project source for implementation details.
+
+This reference ensures a robust, secure, and efficient backend for **Rujta**. For contributions or issues, consult the project repository.

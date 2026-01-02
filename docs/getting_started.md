@@ -11,6 +11,14 @@ Ensure the following tools and software are installed before proceeding:
 - **SQL Server** – Used as the primary database engine (local instance recommended for development).
 - **Visual Studio 2022 or VS Code** – Recommended IDEs for .NET and JavaScript development.
 
+Additionally, for JWT configuration (used in authentication), set the following environment variable on Windows:
+
+```bash
+setx JWT__CertPassword "Rujta123987"
+```
+
+**Note**: After setting the environment variable, restart your command prompt or IDE for the changes to take effect. This password is used for certificate-based signing in the backend.
+
 ## Project Structure
 
 The project follows a clean, modular architecture:
@@ -113,7 +121,7 @@ npm run dev
 
 - **API Testing**: Use Postman or Apidog to test and explore the backend endpoints.
 - **Version Control**: Git is recommended for managing code changes and collaboration.
-- **Security**: Always use HTTPS in development and ensure sensitive data (e.g., connection strings) is stored securely.
+- **Security**: Always use HTTPS in development and ensure sensitive data (e.g., connection strings and JWT passwords) is stored securely.
 - **Troubleshooting**: Check console logs for errors. Common issues include mismatched connection strings or missing dependencies.
 
 By following this guide, you will have a fully operational local instance of **Rujta** ready for development, debugging, and testing. For advanced topics, refer to additional documentation in the `docs/` folder. If you encounter issues, consult the project repository or community forums.

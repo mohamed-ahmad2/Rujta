@@ -1,16 +1,15 @@
-# Welcome to Rujta Dev Docs
+# Welcome to Rujta Developer Documentation
 
-Rujta is a .NET 8 + React project that allows users to browse and order pharmacy products such as medicines, cotton, and other pharmacy items. Users can add products to their cart, view which pharmacies have them in stock, and place orders.  
+Rujta is a modern web application built with **.NET 8** on the backend and **React** on the frontend. It enables users to browse and order pharmacy products, including medicines, cotton, and other essentials. Key features include adding items to a cart, checking stock availability across pharmacies, and placing orders.
 
-Pharmacies can manage their products and track orders through a dedicated dashboard, where they can see order statuses like Pending, Processing, or Delivered.  
+Pharmacies benefit from a dedicated dashboard to manage inventory, track orders, and monitor statuses such as Pending, Processing, or Delivered.
 
-Future features will include AI-powered prescription reading and other enhancements to improve user experience and pharmacy operations.
+Future enhancements include AI-powered prescription analysis and additional tools to streamline user experiences and pharmacy operations.
 
-This documentation is intended for developers and contributors who want to understand, use, or contribute to the project.
+This documentation is tailored for developers, contributors, and maintainers seeking to understand, deploy, or extend the project.
 
-## What’s inside
+## What's Inside
 
-- **Getting Started**: Instructions to set up the project locally, including backend (.NET 8), frontend (React), and database configuration.
-- **API Reference**: Complete documentation of backend endpoints for products, orders, users, and pharmacies.
-- **Frontend Guide**: Overview of the React app, including components, state management, routing, and UI structure.
-- **Contributing**: Guidelines for contributing to the project, coding conventions, and submitting pull requests.
+- **Getting Started**: Step-by-step guide to setting up the project locally, covering the .NET 8 backend, React frontend, and SQL Server database configurations.
+- **API Reference**: Detailed overview of backend endpoints for managing products, orders, users, pharmacies, and more.
+- **Frontend Guide**: In-depth explanation of the React application, including architecture, components, state management, routing, and UI best practices.
