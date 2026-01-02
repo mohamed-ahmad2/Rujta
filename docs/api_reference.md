@@ -12,11 +12,13 @@ The backend of **Rujta** is built using **ASP.NET Core 8** and follows **Clean /
 
 ### Project Layers
 
+```text
 Rujta
 ├── Rujta.Domain # Core business entities and rules (no dependencies)
 ├── Rujta.Application # Use cases, DTOs, interfaces, validation, mapping
 ├── Rujta.Infrastructure # EF Core, Repositories, external services (Firebase, SignalR, Routing)
 └── Rujta.Api # Presentation layer: Controllers, Middleware, Swagger, DI setup
+```
 
 **Dependency Rule:**  
 `API → Infrastructure → Application → Domain`  

@@ -114,6 +114,7 @@ Each feature contains:
 
 ## Project Structure
 
+```text
 src/
 ├── features/
 │ ├── auth/
@@ -144,6 +145,7 @@ src/
 │ └── components/
 ├── App.jsx
 └── main.jsx
+```
 
 ---
 

@@ -13,9 +13,8 @@
 
     ## Project Structure
 
-    ```
+    ```text
     Rujta/
-    │
     ├─ Backend/      # .NET 8 Web API project
     ├─ Frontend/     # React application
     └─ docs/         # Project documentation
