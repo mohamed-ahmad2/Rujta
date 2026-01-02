@@ -11,21 +11,7 @@ The backend architecture emphasizes:
 - **Minimal Coupling**: Layers depend only inward, following the dependency rule.
 - **Ease of Replacement**: Swap implementations (e.g., databases or services) without system-wide impact.
 
-### Project Layers
-
-The solution is structured into four primary projects, adhering to the Onion Architecture:
-
-```
-Rujta
-├── Rujta.Domain          # Core business entities, value objects, and domain logic (no external dependencies)
-├── Rujta.Application     # Use cases, DTOs, interfaces, validators, and mappers
-├── Rujta.Infrastructure  # Data persistence (EF Core repositories), external integrations (e.g., Firebase, SignalR), and concrete implementations
-└── Rujta.API             # Presentation layer: Controllers, middleware, Swagger configuration, and dependency injection setup
-```
-
-**Dependency Flow**:  
-`API → Infrastructure → Application → Domain`  
-> **Note**: The Domain layer remains independent, containing pure business rules without references to other layers or external frameworks.
+> **Note**: For detailed project structure and layers, refer to the separate "Rujta Project Structure" document.
 
 ---
 

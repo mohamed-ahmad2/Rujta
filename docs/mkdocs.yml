@@ -6,7 +6,9 @@ site_dir: '../site'
 nav:
   - Home: index.md
   - Getting Started: getting_started.md
+  - Rujta Project Structure: rujta_project_structure.md
   - API Reference: api_reference.md
   - Frontend Guide: frontend_guide.md
+  
 theme:
   name: material

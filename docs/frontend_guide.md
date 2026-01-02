@@ -84,45 +84,6 @@ This encapsulation keeps features self-contained and testable.
 
 ---
 
-## Project Structure
-
-The source code is organized as follows:
-
-```
-src/
-├── features/
-│   ├── auth/          # Authentication-related features
-│   │   ├── api/       # API calls for login, registration, etc.
-│   │   ├── hook/      # Hooks for auth state management
-│   │   └── pages/     # Login, register, and auth UI pages
-│   ├── dashboard/     # Dashboard analytics and overviews
-│   │   ├── api/
-│   │   ├── hook/
-│   │   └── pages/
-│   ├── profile/       # User profile management
-│   │   ├── api/
-│   │   ├── hook/
-│   │   └── pages/
-│   ├── user/          # General user functionalities
-│   │   ├── api/
-│   │   ├── hook/
-│   │   └── pages/
-│   └── order/         # Order creation and tracking
-│       ├── api/
-│       ├── hook/
-│       └── pages/
-├── assets/            # Static assets like images and fonts
-├── routes/            # Centralized route definitions
-├── shared/            # Reusable utilities and components
-│   ├── api/           # Shared API client configuration
-│   │   └── apiClient.ts
-│   └── components/    # Common UI components (e.g., buttons, modals)
-├── App.jsx            # Root application component
-└── main.jsx           # Entry point for React rendering
-```
-
----
-
 ## API Client
 
 API interactions are centralized in `shared/api/apiClient.ts`, which:
@@ -161,10 +122,11 @@ This enables seamless local development without configuration changes.
 ## Development Workflow
 
 1. Install dependencies: `npm install`.
-2. Start the frontend: `npm run dev`.
-3. Run backend concurrently if needed (using `concurrently`).
-4. Access the app at `http://localhost:5173`.
-5. Use API proxy for backend calls.
+2. Start the development server: `npm run dev`.
+
+   This command automatically runs both the frontend (using Vite) and the backend (using ASP.NET Core) simultaneously via the `concurrently` package. You do not need to start the backend separately in another terminal or process—it handles everything in one go for a full-stack development experience.
+3. Access the app at `http://localhost:5173`.
+4. Use API proxy for backend calls.
 
 The architecture supports extensibility, such as integrating AI for prescription analysis.
 
