@@ -34,14 +34,15 @@ Rujta supports multiple environments to separate configuration and deployment:
    - Used for testing features before deployment
 3. **Production**
    - Live environment accessible to users
-   - Optimized for performance and secur
+   - Optimized for performance and security
+
 > Configuration for each environment is stored in `appsettings.{Environment}.json` in the backend, and `.env.{environment}` files in the frontend.
 
 ## Steps to Run Locally
 
 ### 1. Setup Backend
 ```bash
-cd Backend\Rujta
+cd Backend/Rujta
 # 1. Restore
 dotnet restore Rujta.API
 dotnet restore Rujta.Infrastructure
@@ -58,23 +59,23 @@ dotnet build Rujta.API
 dotnet run --project Rujta.API
 ```
 - The backend will run on `https://localhost:7065/swagger/index.html` by default.  
-- Update the **connection string** in `backend/appsettings.Development.json` to match your SQL Server instanc- Note: Instead of running these commands manually, you can also press F5 in Visual Studio to build and run the backend directly.
+- Update the **connection string** in `Backend/appsettings.Development.json` to match your SQL Server instance. Note: Instead of running these commands manually, you can also press F5 in Visual Studio to build and run the backend directly.
 	
 ### 2. Setup Database
 - Make sure SQL Server is running locally.  
 - Apply migrations if needed:
-Update Database :
+Update Database:
 ```bash
 dotnet ef database update --project Rujta.Infrastructure --startup-project Rujta.API
 ```
-# or in PMC:
-```bash
+or in PMC:
+```powershell
 Update-Database -Project Rujta.Infrastructure -StartupProject Rujta.API
 ```
 
 ### 3. Setup Frontend
 ```bash
-cd frontend
+cd Frontend
 npm install
 npm run dev
 ```
