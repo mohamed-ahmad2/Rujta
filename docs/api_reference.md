@@ -20,35 +20,42 @@ The backend architecture emphasizes:
 Packages are categorized by functionality and managed in each project's `.csproj` file. Use `dotnet restore` to install them.
 
 ### Core Architecture & Mapping
-- **AutoMapper**: Handles entity-to-DTO mapping.
-- **AutoMapper.Extensions.Microsoft.DependencyInjection**: Integrates AutoMapper with DI.
+- **AutoMapper**: 12.0.1 - Handles entity-to-DTO mapping.
+- **AutoMapper.Extensions.Microsoft.DependencyInjection**: 12.0.1 - Integrates AutoMapper with DI.
+- **Microsoft.Extensions.DependencyInjection.Abstractions**: 8.0.2 - Provides abstractions for dependency injection.
 
 ### Validation
-- **FluentValidation** & **FluentValidation.AspNetCore**: Validates request models.
-- **FluentValidation.DependencyInjectionExtensions**: Enables DI-based validator registration.
+- **FluentValidation**: 12.1.0 - Validates request models.
+- **FluentValidation.AspNetCore**: 11.3.1 - Integrates FluentValidation with ASP.NET Core.
+- **FluentValidation.DependencyInjectionExtensions**: 12.1.0 - Enables DI-based validator registration.
 
 ### Authentication & Security
-- **Microsoft.AspNetCore.Authentication.JwtBearer**: Supports JWT-based authentication.
-- **Microsoft.AspNetCore.Identity.EntityFrameworkCore**: Manages user identity with EF Core.
-- **Google.Apis.Auth**: Validates Google OAuth tokens.
-- **FirebaseAdmin**: Integrates Firebase for authentication and notifications.
+- **Microsoft.AspNetCore.Authentication.JwtBearer**: 8.0.22 - Supports JWT-based authentication.
+- **Microsoft.AspNetCore.Identity.EntityFrameworkCore**: 8.0.22 - Manages user identity with EF Core.
+- **Microsoft.Extensions.Identity.Core**: 8.0.22 - Core identity services.
+- **Google.Apis.Auth**: 1.73.0 - Validates Google OAuth tokens.
+- **FirebaseAdmin**: 3.4.0 - Integrates Firebase for authentication and notifications.
 
 ### Data Access & ORM
-- **Microsoft.EntityFrameworkCore** & **Microsoft.EntityFrameworkCore.SqlServer**: Core ORM and SQL Server provider.
-- **Microsoft.EntityFrameworkCore.Design / Tools**: Supports migrations and design-time tools.
-- **Microsoft.Data.SqlClient**: Provides direct SQL Server connectivity.
+- **Microsoft.EntityFrameworkCore**: 8.0.22 - Core ORM.
+- **Microsoft.EntityFrameworkCore.SqlServer**: 8.0.22 - SQL Server provider for EF Core.
+- **Microsoft.EntityFrameworkCore.Design**: 8.0.22 - Supports migrations and design-time tools.
+- **Microsoft.EntityFrameworkCore.Tools**: 8.0.22 - CLI tools for EF Core.
+- **Microsoft.Data.SqlClient**: 5.1.6 - Provides direct SQL Server connectivity.
 
 ### Real-Time Communication
-- **Microsoft.AspNetCore.SignalR** & **Microsoft.AspNetCore.SignalR.Core**: Enables real-time features like live updates.
+- **Microsoft.AspNetCore.SignalR**: 1.2.0 - Enables real-time features like live updates.
+- **Microsoft.AspNetCore.SignalR.Core**: 1.2.0 - Core SignalR functionality.
 
 ### Routing & Mapping
-- **Itinero** & **Itinero.IO.Osm**: Handles routing and pathfinding using OpenStreetMap data.
+- **Itinero**: 1.5.1 - Handles routing and pathfinding.
+- **Itinero.IO.Osm**: 1.5.1 - Supports OpenStreetMap data integration for routing.
 
 ### String Matching
-- **F23.StringSimilarity**: Implements fuzzy string matching for search functionalities.
+- **F23.StringSimilarity**: 7.0.0 - Implements fuzzy string matching for search functionalities.
 
 ### API Documentation
-- **Swashbuckle.AspNetCore**: Generates Swagger/OpenAPI documentation.
+- **Swashbuckle.AspNetCore**: 8.1.4 - Generates Swagger/OpenAPI documentation.
 
 ---
 
