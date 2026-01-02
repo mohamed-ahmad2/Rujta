@@ -1,208 +1,142 @@
-# Frontend Guide
+# Frontend Guide for Rujta
+
+This guide provides a comprehensive overview of the **Rujta** frontend architecture, technology stack, and development practices. It is designed for developers to understand the structure, setup, and best practices for building and maintaining the user interface.
 
 ## Overview
 
-The frontend of **Rujta** is built using **React** with **Vite** as the build tool.
-It provides a modern, fast, and responsive user interface that communicates with
-the ASP.NET Core backend through RESTful APIs.
+The frontend is developed using **React** with **Vite** as the build tool, delivering a modern, performant, and responsive interface. It integrates seamlessly with the ASP.NET Core backend via RESTful APIs, ensuring efficient data exchange and a smooth user experience.
 
-The frontend is designed to be scalable, maintainable, and aligned with real-world
-production standards.
+The design prioritizes scalability, maintainability, and adherence to production-grade standards, making it suitable for real-world applications.
 
 ---
 
-## Tech Stack
+## Technology Stack
 
-- **React** – UI library for building component-based interfaces
-- **Vite** – Fast development server and build tool
-- **JavaScript (ES6+)**
-- **Axios** – HTTP communication with the backend
+- **React**: Core library for building dynamic, component-based UIs.
+- **Vite**: High-speed development server and bundler for fast builds and hot module replacement.
+- **JavaScript (ES6+)**: Modern syntax for enhanced readability and functionality.
+- **Axios**: Promise-based HTTP client for API interactions with the backend.
 
 ---
 
 ## Key Installed Packages
 
-The frontend relies on several important packages to support core functionality,
-development workflow, and user experience. Below are the most significant ones:
+The frontend leverages a curated set of dependencies to support core features, UI enhancements, and development efficiency. These are managed in `package.json` and installed via `npm install`.
 
 ### Core Libraries
-- **react / react-dom**  
-  The core libraries for building the user interface and rendering components.
-
-- **react-router-dom**  
-  Handles client-side routing and navigation between pages.
+- **react / react-dom**: Foundation for rendering and managing UI components.
+- **react-router-dom**: Enables declarative routing and navigation.
 
 ### HTTP & Authentication
-- **axios**  
-  Used for making HTTP requests to the backend APIs.
-
-- **jwt-decode**  
-  Decodes JWT tokens on the client side to extract user information.
-
-- **@react-oauth/google**  
-  Enables Google OAuth authentication integration.
+- **axios**: Facilitates API requests with robust error handling.
+- **jwt-decode**: Decodes JWT tokens for client-side user data extraction.
+- **@react-oauth/google**: Integrates Google OAuth for secure authentication.
 
 ### UI & Animations
-- **tailwindcss**  
-  Utility-first CSS framework used for styling the application.
-
-- **framer-motion**  
-  Provides animations and transitions for a smoother user experience.
-
-- **lucide-react / react-icons**  
-  Icon libraries used throughout the UI.
-
-- **aos (Animate On Scroll)**  
-  Adds scroll-based animations.
+- **tailwindcss**: Utility-first CSS framework for rapid, customizable styling.
+- **framer-motion**: Adds fluid animations and transitions.
+- **lucide-react / react-icons**: Provides scalable icon sets for UI elements.
+- **aos (Animate On Scroll)**: Implements scroll-triggered animations.
 
 ### Charts & Visualization
-- **recharts**  
-  Used for charts and data visualization, especially in dashboards.
+- **recharts**: Supports interactive charts for data dashboards.
 
 ### Tooling & Development
-- **vite**  
-  Fast development server and build tool.
+- **vite**: Powers the development and build pipeline.
+- **concurrently**: Runs multiple scripts (e.g., frontend and backend) simultaneously.
+- **eslint**: Enforces code linting and style consistency.
 
-- **concurrently**  
-  Allows running the frontend and backend servers together using a single command.
-
-- **eslint**  
-  Ensures code quality and enforces consistent coding standards.
-
----
-
-All dependencies are managed via **npm** and defined in the `package.json` file.
-To install them, simply run:
-
+To install all dependencies:
 ```bash
 npm install
 ```
+
 ---
 
 ## Architecture
 
-The frontend follows a **Feature-Based Architecture**, where the application
-is organized by features (domains) rather than technical file types.
+The frontend adopts a **Feature-Based Architecture**, organizing code by business domains rather than file types. Each feature is modular, containing its own API logic, hooks, and UI components.
 
-Each feature is self-contained and includes its own API logic, hooks, and pages.
-This approach improves scalability, maintainability, and clarity as the project grows.
+This structure promotes:
+- **Modularity**: Features are independent and reusable.
+- **Scalability**: Easy to add new features without impacting existing ones.
+- **Collaboration**: Teams can work on isolated features.
+
+It aligns with the backend's Clean Architecture for end-to-end consistency.
 
 ### Why Feature-Based Architecture?
-
-- Clear separation of concerns per feature
-- Easier maintenance and refactoring
-- Better scalability for large applications
-- Suitable for team collaboration
-- Aligns well with backend Clean Architecture
+- **Separation of Concerns**: Groups related logic together.
+- **Maintainability**: Simplifies refactoring and debugging.
+- **Scalability**: Supports growth in large-scale applications.
+- **Team Efficiency**: Reduces merge conflicts in collaborative environments.
+- **Alignment with Backend**: Mirrors domain-driven design principles.
 
 ---
 
 ## Feature Structure
 
-Each feature contains:
+Each feature directory includes:
+- **api/**: Feature-specific API endpoints and request handlers.
+- **hook/**: Custom React hooks for state, effects, and logic.
+- **pages/**: UI components and views for the feature.
 
-- **api/**  
-  Handles API requests related to the feature
-
-- **hook/**  
-  Custom React hooks for business logic and state management
-
-- **pages/**  
-  UI pages and screens for the feature
-
----
-
-## Project Structure
-
-src/
-├── features/
-│ ├── auth/
-│ │ ├── api/
-│ │ ├── hook/
-│ │ └── pages/
-│ ├── dashboard/
-│ │ ├── api/
-│ │ ├── hook/
-│ │ └── pages/
-│ ├── profile/
-│ │ ├── api/
-│ │ ├── hook/
-│ │ └── pages/
-│ ├── user/
-│ │ ├── api/
-│ │ ├── hook/
-│ │ └── pages/
-│ └── order/
-│ ├── api/
-│ ├── hook/
-│ └── pages/
-├── assets/
-├── routes/
-├── shared/
-│ ├── api/
-│ │ └── apiClient.ts
-│ └── components/
-├── App.jsx
-└── main.jsx
+This encapsulation keeps features self-contained and testable.
 
 ---
 
 ## API Client
 
-All HTTP communication with the backend is centralized in a shared **apiClient**.
+API interactions are centralized in `shared/api/apiClient.ts`, which:
+- Configures base URLs and defaults.
+- Adds JWT authorization headers.
+- Implements request/response interceptors for logging and errors.
+- Ensures uniform error handling.
 
-The `apiClient.ts` file is responsible for:
+Benefits:
+- **Consistency**: Uniform API behavior across features.
+- **Maintainability**: Single point for updates (e.g., auth changes).
+- **Debugging**: Easier to trace network issues.
 
-- Defining the base API configuration
-- Attaching authorization headers (JWT tokens)
-- Managing request and response interceptors
-- Providing consistent error handling across the application
-
-Centralizing API logic ensures:
-
-- No duplicated Axios configuration
-- Easier debugging and maintenance
-- Consistent request behavior across all features
-
-Each feature uses the shared `apiClient` to define its own API functions.
+Features import and extend this client for domain-specific endpoints.
 
 ---
 
 ## API Proxy Configuration
 
-The frontend uses a **Vite proxy** to forward API requests to the backend during development.
+During development, Vite's proxy forwards `/api` requests to the backend, resolving CORS issues and simplifying URLs.
 
 ### Why Use a Proxy?
-
-- Avoids CORS issues during local development
-- Allows using relative API paths such as `/api/...`
-- Keeps frontend code environment-agnostic
-- Matches production behavior more closely
+- **CORS Avoidance**: Prevents cross-origin errors in local setups.
+- **Environment Agnostic**: Uses relative paths, mimicking production.
+- **Simplicity**: No need to hardcode backend URLs.
 
 ### How It Works
+- Frontend: Runs on `http://localhost:5173`.
+- Backend: Runs on `https://localhost:7065`.
+- Proxy Rule: Requests to `/api/*` are redirected to the backend.
 
-- All requests starting with `/api` are proxied to the backend
-- Frontend runs on: `https://localhost:5173`
-- Backend runs on: `https://localhost:7065`
-
-This setup allows seamless communication between frontend and backend without
-hardcoding backend URLs.
+This enables seamless local development without configuration changes.
 
 ---
 
 ## Development Workflow
 
-- Frontend and backend can be run together using a single command
-- Frontend sends API requests through the Vite proxy
-- Backend handles requests securely over HTTPS
-- The architecture supports future scaling and new features, such as
-  AI-powered prescription reading
+1. Install dependencies: `npm install`.
+2. Start the development server: `npm run dev`.
+
+   This command automatically runs both the frontend (using Vite) and the backend (using ASP.NET Core) simultaneously via the `concurrently` package. You do not need to start the backend separately in another terminal or process—it handles everything in one go for a full-stack development experience.
+3. Access the app at `http://localhost:5173`.
+4. Use API proxy for backend calls.
+
+The architecture supports extensibility, such as integrating AI for prescription analysis.
 
 ---
 
 ## Summary
 
-- Feature-Based Architecture improves scalability and maintainability
-- `apiClient` centralizes API communication logic
-- Vite proxy simplifies local development and avoids CORS issues
-- The frontend structure aligns with real-world production standards
+- **Feature-Based Architecture**: Enhances organization and scalability.
+- **Centralized API Client**: Streamlines backend communication.
+- **Vite Proxy**: Facilitates smooth local development.
+- **Production-Ready**: Aligns with industry standards for maintainable code.
+
+For troubleshooting or advanced topics, refer to the project repository or additional docs. If issues arise, check console logs or network tabs for insights.
