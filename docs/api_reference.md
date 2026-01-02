@@ -14,10 +14,10 @@ The backend of **Rujta** is built using **ASP.NET Core 8** and follows **Clean /
 
 ```text
 Rujta
-├── Rujta.Domain # Core business entities and rules (no dependencies)
-├── Rujta.Application # Use cases, DTOs, interfaces, validation, mapping
-├── Rujta.Infrastructure # EF Core, Repositories, external services (Firebase, SignalR, Routing)
-└── Rujta.Api # Presentation layer: Controllers, Middleware, Swagger, DI setup
+├── Rujta.Domain          # Core business entities and rules (no dependencies) 
+├── Rujta.Application     # Use cases, DTOs, interfaces, validation, mapping 
+├── Rujta.Infrastructure  # EF Core, Repositories, external services (Firebase, SignalR, Routing) 
+└── Rujta.Api             # Presentation layer: Controllers, Middleware, Swagger, DI setup 
 ```
 
 **Dependency Rule:**  
@@ -171,7 +171,7 @@ Add Migrations:
 ```powershell
 dotnet ef migrations add <MigrationName> --project Rujta.Infrastructure --startup-project Rujta.API
 ```
-# or in PMC:
+## or in PMC:
 ```powershell
 Add-Migration <MigrationName> -Project Rujta.Infrastructure -StartupProject Rujta.API
 ```
@@ -180,7 +180,7 @@ Update Database :
 ```powershell
 dotnet ef database update --project Rujta.Infrastructure --startup-project Rujta.API
 ```
-# or in PMC:
+## or in PMC:
 ```powershell
 Update-Database -Project Rujta.Infrastructure -StartupProject Rujta.API
 ```
@@ -189,7 +189,7 @@ Remove Migrations :
 ```powershell
 dotnet ef migrations remove --project Rujta.Infrastructure --startup-project Rujta.API
 ```
-# or in PMC:
+## or in PMC:
 ```powershell
 Remove-Migration -Project Rujta.Infrastructure -StartupProject Rujta.API
 ```
