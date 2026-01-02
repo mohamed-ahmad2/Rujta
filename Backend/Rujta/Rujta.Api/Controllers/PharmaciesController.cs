@@ -1,9 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.Services;
-
-namespace Rujta.API.Controllers
+﻿namespace Rujta.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
     public class PharmaciesController : ControllerBase
     {

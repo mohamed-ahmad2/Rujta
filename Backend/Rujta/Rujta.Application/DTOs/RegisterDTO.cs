@@ -1,12 +1,4 @@
-﻿using Rujta.Infrastructure.Identity;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Rujta.Application.DTOs
+﻿namespace Rujta.Application.DTOs
 {
     public class RegisterDto
     {
@@ -16,8 +8,5 @@ namespace Rujta.Application.DTOs
         public string Location { get; set; } = string.Empty;
         public string CreatePassword { get; set; } = string.Empty;
         public string ConfirmPassword { get; set; } = string.Empty;
-
-        public UserRole? Role { get; set; }
-
     }
 }

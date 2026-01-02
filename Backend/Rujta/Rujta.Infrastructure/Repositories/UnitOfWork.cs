@@ -18,7 +18,7 @@ namespace Rujta.Infrastructure.Repositories
         private INotificationRepository? _notifications;
         private IInventoryRepository? _inventoryItems;
         private ILogRepository? _logs;
-        private IStaffRepository? _staffs;
+        private IPharmacistRepository? _pharmacists;
         private ICategoryRepository? _category;
 
 
@@ -42,11 +42,12 @@ namespace Rujta.Infrastructure.Repositories
         public IInventoryRepository InventoryItems => _inventoryItems ??= new InventoryRepository(_context);
         public ILogRepository Logs => _logs ??= new LogRepository(_context);
 
-        public IStaffRepository Staffs => _staffs ??= new StaffRepository(_context);
+        public IPharmacistRepository Pharmacists => _pharmacists ??= new PharmacistRepository(_context);
 
         // Save changes
         public async Task<int> SaveAsync(CancellationToken cancellationToken = default)
             => await _context.SaveChangesAsync(cancellationToken);
+
 
         // Dispose
         protected virtual void Dispose(bool disposing)

@@ -1,15 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = nameof(UserRole.SuperAdmin))]
     public class LogsController : ControllerBase
     {
         private readonly ILogService _logService;

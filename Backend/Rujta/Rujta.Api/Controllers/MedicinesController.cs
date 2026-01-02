@@ -1,4 +1,5 @@
 ﻿using Rujta.Infrastructure.Constants;
+using Rujta.Infrastructure.Identity;
 
 namespace Rujta.API.Controllers
 {
@@ -49,7 +50,7 @@ namespace Rujta.API.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin,PharmacyAdmin")]
+        [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPost]
         public async Task<ActionResult> Add([FromBody] MedicineDto dto)
         {
@@ -69,7 +70,7 @@ namespace Rujta.API.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin,PharmacyAdmin")]
+        [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPut("{id}")]
         public async Task<ActionResult> Update(int id, [FromBody] MedicineDto dto)
         {
@@ -93,7 +94,7 @@ namespace Rujta.API.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin,PharmacyAdmin")]
+        [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(int id)
         {

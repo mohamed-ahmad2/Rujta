@@ -2,14 +2,14 @@
 
 namespace Rujta.Domain.Entities
 {
-    public class Manager : Pharmacist
+    public class Manager : Employee
     {
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
-        [ForeignKey("Admin")]
+
         public Guid? AdminId { get; set; } 
         public Admin? Admin { get; set; }
 
-        public ICollection<Staff>? Staff { get; set; }
+        public ICollection<Pharmacist> Pharmacists { get; set; } = new List<Pharmacist>();
     }
 }

@@ -1,10 +1,11 @@
 ﻿using Rujta.Infrastructure.Constants;
+using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Pharmacist")]
+    [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
     public class InventoryItemController : ControllerBase
     {
         private readonly IInventoryItemService _inventoryService;
