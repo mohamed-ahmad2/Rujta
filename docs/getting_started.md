@@ -105,7 +105,7 @@ This will create or update the database schema based on the Entity Framework mig
 Navigate to the frontend directory and run:
 
 ```bash
-cd Frontend
+cd Frontend\rujta-frontend
 
 # Install dependencies
 npm install

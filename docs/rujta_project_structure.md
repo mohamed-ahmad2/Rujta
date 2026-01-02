@@ -24,7 +24,7 @@ Handles HTTP requests, controllers, and presentation logic. Includes Firebase an
 - **Firebase/**: Firebase-related files.
   - **Service-account.json**: Service account credentials for Firebase (exclude from version control).
 - **Maps/**: Mapping data (e.g., OSM files for routing).
-  > **Note**: Download content from [this Google Drive link](https://drive.google.com/file/d/1dPXuE1p8ZNKFnxUUCtsyz1lUAZdkU02j/view?usp=sharing) and place in this folder. Used by ItineroMapBuilder.cs for RouterDb.
+  > **Note**: Download content from [this Google Drive link](https://drive.google.com/drive/folders/1hN9vmao9Mj94jkp0DUeUyVmEXE_6fNIt?usp=sharing) and place in this folder. Used by ItineroMapBuilder.cs for RouterDb.
 
 ### Rujta.Application
 Defines services, interfaces, and DTOs. Orchestrates business logic without infrastructure ties.
@@ -55,7 +55,7 @@ Concrete implementations for data, services, and utilities.
 - **Extensions/**: Extension methods (e.g., for DI).
 - **Data/**: DbContext (e.g., ApplicationDbContext.cs).
 - **Constants/**: Infrastructure constants (e.g., connection strings).
-- **BackgroundJobs/**: Background tasks (e.g., Hangfire/Quartz).
+- **BackgroundJobs/**: Background tasks (e.g., Refresh Token Cleanup Service).
 - **Configuration/**: App settings loaders.
 - **Certificates/**: JWT/HTTPS certificates (related to JWT__CertPassword).
 
@@ -80,23 +80,32 @@ Frontend/
     │   ├── auth/             # Authentication
     │   │   ├── api/          # API calls (e.g., login/register)
     │   │   ├── hook/         # Hooks (e.g., auth state)
+    │   │   ├── components/   # components
     │   │   └── pages/        # UI pages (e.g., Login/Register)
     │   ├── dashboard/        # Analytics dashboards
+    │   │   ├── components/
+    │   │   └── pages/
+    │   ├── landing/        # Analytics dashboards
+    │   │   ├── components/
+    │   │   └── pages/
+    │   ├── medicines/          # User medicines
     │   │   ├── api/
     │   │   ├── hook/
     │   │   └── pages/
-    │   ├── profile/          # User profiles
+    │   ├── userProfile/          # User profiles
     │   │   ├── api/
     │   │   ├── hook/
     │   │   └── pages/
     │   ├── user/             # User functionalities
-    │   │   ├── api/
+    │   │   ├── components/
     │   │   ├── hook/
     │   │   └── pages/
-    │   └── order/            # Orders
+    │   ├── orders/            # Orders
+    │   |   ├── api/
+    │   |   └── hook/
+    │   └── pharmacies/        # pharmacies
     │       ├── api/
-    │       ├── hook/
-    │       └── pages/
+    │       └── hook/
     ├── assets/               # Images, fonts, etc.
     ├── routes/               # Route definitions
     ├── shared/               # Reusable items
