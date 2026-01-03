@@ -79,6 +79,14 @@ namespace Rujta.API
 
             var app = builder.Build();
 
+            app.Use(async (context, next) =>
+            {
+                context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'";
+                await next();
+            });
+
+
+
             // -------------------------------
             // Middleware
             // -------------------------------
@@ -87,6 +95,11 @@ namespace Rujta.API
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI();
+            }
+            else
+            {
+                app.UseExceptionHandler("/api/error");
+                app.UseHsts();
             }
 
             app.UseHttpsRedirection();
