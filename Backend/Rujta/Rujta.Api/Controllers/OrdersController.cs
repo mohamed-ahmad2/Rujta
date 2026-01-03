@@ -1,4 +1,5 @@
-﻿using Rujta.Application.Constants;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.Constants;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 
@@ -7,6 +8,7 @@ namespace Rujta.Api.Controllers
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
+    [EnableRateLimiting("Fixed")]
     public class OrdersController : ControllerBase
     {
         private readonly IOrderService _orderService;

@@ -1,4 +1,5 @@
-﻿using Rujta.Application.Interfaces;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.Interfaces;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 
@@ -8,6 +9,7 @@ namespace Rujta.API.Controllers
     [Authorize(Roles = nameof(UserRole.User))]
     [ApiController]
     [Route("api/[controller]")]
+    [EnableRateLimiting("Fixed")]
     public class PriorityPharmaciesController : ControllerBase
     {
         private readonly IPharmacyCartService _cartService;

@@ -1,10 +1,12 @@
-﻿using Rujta.Infrastructure.Identity;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize(Roles = nameof(UserRole.SuperAdmin))]
+    [EnableRateLimiting("Fixed")]
     public class LogsController : ControllerBase
     {
         private readonly ILogService _logService;

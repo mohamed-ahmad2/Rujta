@@ -1,10 +1,12 @@
-﻿using Rujta.Infrastructure.Constants;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Infrastructure.Constants;
 
 namespace Rujta.API.Controllers
 {
     [ApiController]
     [Authorize]
     [Route("api/medicines/search")]
+    [EnableRateLimiting("Fixed")]
     public class MedicinesSearchController : ControllerBase
     {
         private readonly ISearchMedicineService _searchMedicineService;
