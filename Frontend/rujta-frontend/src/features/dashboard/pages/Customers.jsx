@@ -12,13 +12,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-/*
-  Customers.jsx
-  - Single-file page for Customers (stats cards, toolbar, table, add-customer modal, pagination)
-  - Uses local uploaded image for decoration: /mnt/data/d79c4d60-31fb-49ec-83d1-7e49b87cab5e.png
-  - Tries to fetch from /api/customers (GET/POST/DELETE). Falls back to static data if API not available.
-*/
-
 const initialCustomers = [
   { id: "#CUS001", name: "John Smith", email: "john.smith@example.com", phone: "123-456-7890", orders: 15, spend: "$2,500", lastOrder: "27-11-2024" },
   { id: "#CUS002", name: "Emily Davis", email: "emily.davis@example.com", phone: "234-567-8901", orders: 10, spend: "$1,800", lastOrder: "26-11-2024" },
@@ -99,17 +92,20 @@ function AddCustomerModal({ open, onClose, onSave }) {
 }
 
 export default function Customers() {
-  // data + UI state
   const [customers, setCustomers] = useState(initialCustomers);
   const [loading, setLoading] = useState(false);
-
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const perPage = 9;
-
   const [openModal, setOpenModal] = useState(false);
 
-  // Try load from API
+  // Filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterId, setFilterId] = useState("");
+  const [filterName, setFilterName] = useState("");
+  const [filterEmail, setFilterEmail] = useState("");
+  const [filterPhone, setFilterPhone] = useState("");
+
   useEffect(() => {
     let mounted = true;
     async function load() {
@@ -119,17 +115,13 @@ export default function Customers() {
         if (!res.ok) throw new Error("no api");
         const data = await res.json();
         if (mounted) setCustomers(data);
-      } catch (e) {
-        // fallback to initialCustomers already set
-      } finally {
-        if (mounted) setLoading(false);
-      }
+      } catch {}
+      finally { if (mounted) setLoading(false); }
     }
     load();
     return () => (mounted = false);
   }, []);
 
-  // Derived data (search + paginate)
   const filtered = useMemo(() => {
     let list = [...customers];
     if (q.trim()) {
@@ -142,16 +134,18 @@ export default function Customers() {
           c.phone?.toLowerCase().includes(s)
       );
     }
+    if (filterId) list = list.filter((c) => c.id.toLowerCase().includes(filterId.toLowerCase()));
+    if (filterName) list = list.filter((c) => c.name.toLowerCase().includes(filterName.toLowerCase()));
+    if (filterEmail) list = list.filter((c) => c.email.toLowerCase().includes(filterEmail.toLowerCase()));
+    if (filterPhone) list = list.filter((c) => c.phone.toLowerCase().includes(filterPhone.toLowerCase()));
     return list;
-  }, [customers, q]);
+  }, [customers, q, filterId, filterName, filterEmail, filterPhone]);
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const pageData = filtered.slice((page - 1) * perPage, page * perPage);
 
-  // handlers
   const handleAdd = async (newCustomer) => {
-    // try POST to API else fallback to local state
     try {
       const res = await fetch("/api/customers", {
         method: "POST",
@@ -161,12 +155,8 @@ export default function Customers() {
       if (res.ok) {
         const saved = await res.json();
         setCustomers((p) => [saved, ...p]);
-      } else {
-        setCustomers((p) => [newCustomer, ...p]);
-      }
-    } catch {
-      setCustomers((p) => [newCustomer, ...p]);
-    }
+      } else { setCustomers((p) => [newCustomer, ...p]); }
+    } catch { setCustomers((p) => [newCustomer, ...p]); }
     setOpenModal(false);
     setPage(1);
   };
@@ -175,11 +165,8 @@ export default function Customers() {
     if (!confirm("Delete this customer?")) return;
     try {
       const res = await fetch(`/api/customers/${id.replace("#CUS", "")}`, { method: "DELETE" });
-      if (res.ok) setCustomers((p) => p.filter((c) => c.id !== id));
-      else setCustomers((p) => p.filter((c) => c.id !== id));
-    } catch {
       setCustomers((p) => p.filter((c) => c.id !== id));
-    }
+    } catch { setCustomers((p) => p.filter((c) => c.id !== id)); }
   };
 
   const handleExport = () => {
@@ -199,27 +186,11 @@ export default function Customers() {
 
   return (
     <div className="space-y-6">
-      {/* Top Stats (cards) */}
+      {/* Top Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <CustomersCard
-          title="Total Customers"
-          value="12,500"
-          sub="Since last week"
-          percent="+ 8%"
-          variant="green"
-        />
-        <CustomersCard
-          title="New Customers"
-          value="120"
-          sub="Since last week"
-          percent="+ 5.4%"
-        />
-        <CustomersCard
-          title="Returning Customers"
-          value="65%"
-          sub="Since last week"
-          percent="+ 2.4%"
-        />
+        <CustomersCard title="Total Customers" value="12,500" sub="Since last week" percent="+ 8%" variant="green"/>
+        <CustomersCard title="New Customers" value="120" sub="Since last week" percent="+ 5.4%"/>
+        <CustomersCard title="Returning Customers" value="65%" sub="Since last week" percent="+ 2.4%"/>
       </div>
 
       {/* Toolbar */}
@@ -230,22 +201,38 @@ export default function Customers() {
             className="bg-transparent outline-none w-full text-sm"
             placeholder="Search customers..."
             value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => { setQ(e.target.value); setPage(1); }}
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative">
           <button onClick={() => setOpenModal(true)} className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-full font-medium text-white">
             <Plus size={16} /> Add New Customer
           </button>
 
-          <div className="hidden sm:flex items-center gap-2">
-            <button className="px-3 py-2 rounded-full border flex items-center gap-2 text-sm" onClick={() => { /* optional filters */ }}>
+          <div className="hidden sm:flex items-center gap-2 relative">
+            <button className="px-3 py-2 rounded-full border flex items-center gap-2 text-sm" onClick={() => setShowFilters((s) => !s)}>
               <Filter size={16} /> Filters
             </button>
+
+            {showFilters && (
+              <div className="absolute right-0 top-full mt-2 p-4 bg-white shadow-lg rounded-xl border w-64 z-50">
+                <div className="flex flex-col gap-2">
+                  <input value={filterId} onChange={(e) => setFilterId(e.target.value)} placeholder="Filter by Customer ID" className="border px-3 py-2 rounded-lg w-full text-sm"/>
+                  <input value={filterName} onChange={(e) => setFilterName(e.target.value)} placeholder="Filter by Name" className="border px-3 py-2 rounded-lg w-full text-sm"/>
+                  <input value={filterEmail} onChange={(e) => setFilterEmail(e.target.value)} placeholder="Filter by Email" className="border px-3 py-2 rounded-lg w-full text-sm"/>
+                  <input value={filterPhone} onChange={(e) => setFilterPhone(e.target.value)} placeholder="Filter by Phone" className="border px-3 py-2 rounded-lg w-full text-sm"/>
+
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={() => setShowFilters(false)} className="flex-1 px-4 py-2 rounded-lg border">Cancel</button>
+                    <button onClick={() => { setPage(1); setShowFilters(false); }} className="flex-1 px-4 py-2 rounded-lg bg-secondary text-white">Apply</button>
+                  </div>
+
+                  <button onClick={() => { setFilterId(""); setFilterName(""); setFilterEmail(""); setFilterPhone(""); setPage(1); }} className="mt-1 px-4 py-2 rounded-lg border text-sm w-full">Clear Filters</button>
+                </div>
+              </div>
+            )}
+
             <button className="px-3 py-2 rounded-full border flex items-center gap-2 text-sm" onClick={handleExport}>
               <Download size={16} /> Export
             </button>
@@ -269,43 +256,33 @@ export default function Customers() {
               <th className="py-3 px-2">Action</th>
             </tr>
           </thead>
-
           <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={8} className="p-4 text-center">Loading...</td>
+            {loading ? <tr><td colSpan={8} className="p-4 text-center">Loading...</td></tr>
+            : pageData.length === 0 ? <tr><td colSpan={8} className="p-4 text-center">No customers found</td></tr>
+            : pageData.map((c) => (
+              <tr key={c.id} className="border-t hover:bg-gray-50">
+                <td className="py-3 px-2 font-medium text-secondary">{c.id}</td>
+                <td className="py-3 px-2">{c.name}</td>
+                <td className="py-3 px-2 text-blue-600">{c.email}</td>
+                <td className="py-3 px-2">{c.phone}</td>
+                <td className="py-3 px-2">{c.orders}</td>
+                <td className="py-3 px-2">{c.spend}</td>
+                <td className="py-3 px-2">{c.lastOrder}</td>
+                <td className="py-3 px-2 text-gray-600">
+                  <div className="flex items-center gap-3">
+                    <Eye size={18} className="cursor-pointer hover:text-green-600" />
+                    <Edit size={18} className="cursor-pointer hover:text-blue-600" />
+                    <button onClick={() => handleDelete(c.id)}><Trash2 size={18} className="cursor-pointer hover:text-red-600" /></button>
+                  </div>
+                </td>
               </tr>
-            ) : pageData.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="p-4 text-center">No customers found</td>
-              </tr>
-            ) : (
-              pageData.map((c) => (
-                <tr key={c.id} className="border-t hover:bg-gray-50">
-                  <td className="py-3 px-2 font-medium text-secondary">{c.id}</td>
-                  <td className="py-3 px-2">{c.name}</td>
-                  <td className="py-3 px-2 text-blue-600">{c.email}</td>
-                  <td className="py-3 px-2">{c.phone}</td>
-                  <td className="py-3 px-2">{c.orders}</td>
-                  <td className="py-3 px-2">{c.spend}</td>
-                  <td className="py-3 px-2">{c.lastOrder}</td>
-                  <td className="py-3 px-2 text-gray-600">
-                    <div className="flex items-center gap-3">
-                      <Eye size={18} className="cursor-pointer hover:text-green-600" />
-                      <Edit size={18} className="cursor-pointer hover:text-blue-600" />
-                      <button onClick={() => handleDelete(c.id)}><Trash2 size={18} className="cursor-pointer hover:text-red-600" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
         </table>
 
-        {/* pagination footer */}
+        {/* Pagination */}
         <div className="flex items-center justify-between mt-4">
           <div className="text-sm text-gray-500">Showing {pageData.length} of {total}</div>
-
           <div className="flex items-center gap-2">
             <button onClick={() => setPage(1)} disabled={page === 1} className="px-3 py-1 rounded-md bg-white border text-sm">First</button>
             {Array.from({ length: totalPages }).map((_, i) => (
@@ -316,12 +293,12 @@ export default function Customers() {
         </div>
       </div>
 
-      {/* Decorative image (uses uploaded file path) */}
+      {/* Decorative image */}
       <div className="hidden lg:block">
         <img src={"/mnt/data/d79c4d60-31fb-49ec-83d1-7e49b87cab5e.png"} alt="customers-hero" className="w-full rounded-2xl shadow mt-2" />
       </div>
 
-      {/* Modal */}
+      {/* Add Modal */}
       <AddCustomerModal open={openModal} onClose={() => setOpenModal(false)} onSave={handleAdd} />
     </div>
   );

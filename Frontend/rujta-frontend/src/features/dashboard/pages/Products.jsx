@@ -1,3 +1,4 @@
+// src/dashboard/pages/Products.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import ProductsCard from "../components/ProductsCard";
 import {
@@ -11,12 +12,11 @@ import {
   Trash2,
   Edit,
   UploadCloud,
+  Filter,
+  X,
 } from "lucide-react";
 
-import StatCard from "../components/StatCard";
 import ProductModal from "../components/ProductModal";
-
-
 
 const initialProducts = [
   { id: "#001", name: "Paracetamol 500mg", qty: "120 Units", price: "$5.00", expiry: "15-03-2025", status: "In stock", category: "Antibiotics" },
@@ -40,18 +40,23 @@ export default function Products() {
   const [products, setProducts] = useState(initialProducts);
   const [openModal, setOpenModal] = useState(false);
   const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
   const [page, setPage] = useState(1);
   const perPage = 6;
 
-  // filter
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterCategory, setFilterCategory] = useState("All");
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterSearch, setFilterSearch] = useState("");
+
+  // filtered products
   const filtered = useMemo(() => {
     return products.filter(p => {
-      if (statusFilter !== "All" && p.status !== statusFilter) return false;
-      if (q && !p.name.toLowerCase().includes(q.toLowerCase()) && !p.id.includes(q)) return false;
+      if (filterStatus !== "All" && p.status !== filterStatus) return false;
+      if (filterCategory !== "All" && p.category !== filterCategory) return false;
+      if (filterSearch && !p.name.toLowerCase().includes(filterSearch.toLowerCase()) && !p.id.includes(filterSearch)) return false;
       return true;
     });
-  }, [products, q, statusFilter]);
+  }, [products, filterCategory, filterStatus, filterSearch]);
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -73,63 +78,26 @@ export default function Products() {
     setPage(1);
   };
 
+  // filter modal handlers
+  const applyFilters = () => {
+    setFilterOpen(false);
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setFilterCategory("All");
+    setFilterStatus("All");
+    setFilterSearch("");
+  };
+
   return (
     <div className="space-y-6">
 
-     {/* stats row */}
-<div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-
-  <ProductsCard
-    title="Total Products"
-    value={totalProducts.toLocaleString()}
-    icon={<Package size={18} />}
-    color="bg-secondary"
-  />
-
-  <ProductsCard
-    title="Low Stock Items"
-    value={lowStockCount}
-    icon={<AlertTriangle size={18} />}
-    color="bg-yellow-500"
-  />
-
-  <ProductsCard
-    title="Out of Stock"
-    value={outOfStockCount}
-    icon={<XCircle size={18} />}
-    color="bg-red-500"
-  />
-
-</div>
-
-
-      {/* categories */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {categoriesList.map((cat, idx) => {
-          const isFirst = idx === 0;
-          const count = products.filter(p => p.category === cat).length || (isFirst ? 120 : Math.floor(20 + Math.random()*90));
-          const change = isFirst ? "+ 2%" : (idx % 3 === 0 ? "+ 0.6%" : "+ 2%");
-          const positive = !String(change).startsWith("-");
-          return (
-            <div key={cat} className={`${isFirst ? "bg-gradient-to-br from-secondary to-secondary text-white" : "bg-white"} rounded-2xl p-5 shadow border`}>
-              <div className="flex justify-between items-start">
-                <p className={`${isFirst ? "text-white/90 text-sm" : "text-gray-500 text-sm"}`}>{cat}</p>
-                <MoreVertical size={18} className={isFirst ? "text-white/70" : "text-gray-400"} />
-              </div>
-
-              <div className="flex items-center justify-between mt-4">
-                <h3 className={`${isFirst ? "text-3xl font-bold" : "text-2xl font-bold"}`}>{count}</h3>
-                <div className={`${isFirst ? "bg-white/10 text-white p-2 rounded-full" : "bg-gray-100 p-2 rounded-full"}`}>
-                  <Package size={18} />
-                </div>
-              </div>
-
-              <p className={`mt-3 text-sm ${positive ? (isFirst ? "text-white/80" : "text-green-600") : "text-red-500"}`}>
-                {positive ? "▲" : "▼"} {change} <span className={`${isFirst ? "text-white/80" : "text-gray-500"} ml-2`}>Since last week</span>
-              </p>
-            </div>
-          );
-        })}
+      {/* stats row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <ProductsCard title="Total Products" value={totalProducts.toLocaleString()} icon={<Package size={18} />} color="bg-secondary"/>
+        <ProductsCard title="Low Stock Items" value={lowStockCount} icon={<AlertTriangle size={18} />} color="bg-yellow-500"/>
+        <ProductsCard title="Out of Stock" value={outOfStockCount} icon={<XCircle size={18} />} color="bg-red-500"/>
       </div>
 
       {/* action bar */}
@@ -139,22 +107,46 @@ export default function Products() {
           <input value={q} onChange={(e)=>{ setQ(e.target.value); setPage(1); }} placeholder="Search..." className="bg-transparent outline-none w-full text-sm" />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative">
           <button onClick={()=>setOpenModal(true)} className="flex items-center gap-2 bg-secondary text-white px-4 py-2 rounded-full font-medium">
             <PlusCircle size={16} /> Add New Product
           </button>
 
-          <button className="flex items-center gap-2 bg-white border px-3 py-2 rounded-full text-sm">
-            <MoreVertical size={16} /> Filters
+          <button onClick={()=>setFilterOpen(!filterOpen)} className="flex items-center gap-2 bg-white border px-3 py-2 rounded-full text-sm">
+            <Filter size={16} /> Filters
           </button>
 
           <button className="flex items-center gap-2 bg-white border px-3 py-2 rounded-full text-sm">
             <UploadCloud size={16} /> Export
           </button>
 
-          <div className="flex items-center gap-1 bg-white border px-3 py-2 rounded-full text-sm">
-            This Month <MoreVertical size={14} />
-          </div>
+          {filterOpen && (
+            <div className="absolute top-full right-0 mt-2 bg-white shadow-lg rounded-2xl p-4 w-64 z-50 border">
+              <div className="flex flex-col gap-3">
+                <input value={filterSearch} onChange={e=>setFilterSearch(e.target.value)} placeholder="Search by Name/ID" className="border px-3 py-2 rounded-lg w-full" />
+
+                <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} className="border px-3 py-2 rounded-lg w-full">
+                  <option>All</option>
+                  <option>In stock</option>
+                  <option>Low stock</option>
+                  <option>Out of stock</option>
+                </select>
+
+                <select value={filterCategory} onChange={e=>setFilterCategory(e.target.value)} className="border px-3 py-2 rounded-lg w-full">
+                  <option>All</option>
+                  {categoriesList.map(c=> <option key={c}>{c}</option>)}
+                </select>
+
+                <div className="flex justify-between mt-2">
+                  <button onClick={clearFilters} className="px-3 py-1 rounded-lg border text-sm">Clear</button>
+                  <div className="flex gap-2">
+                    <button onClick={()=>setFilterOpen(false)} className="px-3 py-1 rounded-lg border text-sm flex items-center gap-1"><X size={14}/> Cancel</button>
+                    <button onClick={applyFilters} className="px-3 py-1 rounded-lg bg-secondary text-white text-sm">Apply</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -172,12 +164,11 @@ export default function Products() {
               <th className="py-3 px-2">Action</th>
             </tr>
           </thead>
-
           <tbody>
             {pageData.length === 0 ? (
               <tr><td colSpan={7} className="p-4 text-center">No products</td></tr>
             ) : (
-              pageData.map((p) => (
+              pageData.map(p => (
                 <tr key={p.id} className="border-t hover:bg-gray-50">
                   <td className="py-3 px-2 font-medium">{p.id}</td>
                   <td className="py-3 px-2">{p.name}</td>
@@ -185,15 +176,13 @@ export default function Products() {
                   <td className="py-3 px-2">{p.price}</td>
                   <td className="py-3 px-2">{p.expiry}</td>
                   <td className="py-3 px-2">
-                    <span className={`px-3 py-1 rounded-full text-xs ${statusColor[p.status] || "bg-gray-100 text-gray-700"}`}>
-                      {p.status}
-                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs ${statusColor[p.status] || "bg-gray-100 text-gray-700"}`}>{p.status}</span>
                   </td>
                   <td className="py-3 px-2">
                     <div className="flex items-center gap-3 text-gray-600">
                       <Eye size={18} className="cursor-pointer hover:text-green-600" />
                       <Edit size={18} className="cursor-pointer hover:text-blue-600" />
-                      <button onClick={() => handleDelete(p.id)}><Trash2 size={18} className="cursor-pointer hover:text-red-600" /></button>
+                      <button onClick={()=>handleDelete(p.id)}><Trash2 size={18} className="cursor-pointer hover:text-red-600" /></button>
                     </div>
                   </td>
                 </tr>
@@ -202,15 +191,15 @@ export default function Products() {
           </tbody>
         </table>
 
-        {/* footer pagination */}
+        {/* pagination */}
         <div className="flex items-center justify-between mt-4">
           <div className="text-sm text-gray-500">Showing {pageData.length} of {total} products</div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setPage(1)} disabled={page === 1} className="px-3 py-1 rounded-md bg-white border">First</button>
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <button key={i} onClick={()=>setPage(i+1)} className={`px-3 py-1 rounded-md ${page === i+1 ? "bg-[#0B6B55] text-white" : "bg-white border"}`}>{i+1}</button>
+            <button onClick={()=>setPage(1)} disabled={page===1} className="px-3 py-1 rounded-md bg-white border">First</button>
+            {Array.from({length:totalPages}).map((_,i)=>(
+              <button key={i} onClick={()=>setPage(i+1)} className={`px-3 py-1 rounded-md ${page===i+1 ? "bg-[#0B6B55] text-white":"bg-white border"}`}>{i+1}</button>
             ))}
-            <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-3 py-1 rounded-md bg-white border">Last</button>
+            <button onClick={()=>setPage(totalPages)} disabled={page===totalPages} className="px-3 py-1 rounded-md bg-white border">Last</button>
           </div>
         </div>
       </div>
