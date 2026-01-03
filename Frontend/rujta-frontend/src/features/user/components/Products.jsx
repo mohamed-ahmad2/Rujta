@@ -4,11 +4,24 @@ import { FaStar } from "react-icons/fa";
 import useMedicine from "../../medicines/hook/useMedicines";
 import { useNavigate } from "react-router-dom";
 
+const categoryOptions = [
+  "All",
+  "Haircare",
+  "Hygiene",
+  "Vitamins",
+  "Painkillers",
+  "First Aid",
+  "Skincare",
+  "Baby Care",
+  "Make Up",
+];
+
 const Products = ({ cart, setCart }) => {
   const { medicines, fetchAll, loading, error } = useMedicine();
   const navigate = useNavigate();
 
   const [expanded, setExpanded] = useState({});
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   useEffect(() => {
     fetchAll();
@@ -36,6 +49,11 @@ const Products = ({ cart, setCart }) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // Filter medicines by category only
+  const filteredMedicines = medicines.filter(
+    (med) => selectedCategory === "All" || med.categoryName === selectedCategory
+  );
+
   return (
     <div className="bg-white py-20">
       <div className="container mx-auto px-4">
@@ -51,16 +69,36 @@ const Products = ({ cart, setCart }) => {
           </p>
         </div>
 
+        {/* Category Filter Cards */}
+              
+          <div className="flex flex-wrap justify-center gap-4 mb-8">
+            {categoryOptions.map((cat) => (
+              <div
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`cursor-pointer px-6 py-3 rounded-2xl shadow-md transform transition-all duration-500
+                  ${
+                    selectedCategory === cat
+                      ? "bg-secondary text-white shadow-lg scale-110"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-md scale-100"
+                  }
+                `}
+              >
+                {cat}
+              </div>
+            ))}
+          </div>
+
+
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 justify-items-center">
-          {medicines.map((data) => {
+          {filteredMedicines.map((data) => {
             const desc = data.description || "No description available";
 
             return (
               <div
                 key={data.id}
-                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-500 
-                        border border-gray-100 w-[270px] overflow-hidden group"
+                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-500 border border-gray-100 w-[270px] overflow-hidden group"
               >
                 {/* Image */}
                 <div className="relative bg-[#E8F3E8] flex justify-center items-center h-[200px] overflow-hidden">
@@ -78,7 +116,6 @@ const Products = ({ cart, setCart }) => {
 
                 {/* Info */}
                 <div className="p-5 text-center">
-                  {/* Stars */}
                   <div className="flex justify-center mb-2 text-yellow-400">
                     {[...Array(5)].map((_, i) => (
                       <FaStar key={i} />
@@ -89,7 +126,6 @@ const Products = ({ cart, setCart }) => {
                     {data.name}
                   </h3>
 
-                  {/* Description */}
                   <p className="text-sm text-gray-500 mt-1">
                     {expanded[data.id]
                       ? desc
@@ -107,22 +143,17 @@ const Products = ({ cart, setCart }) => {
                     </button>
                   )}
 
-                  {/* Price */}
                   <p className="text-lg font-semibold text-secondary mt-3">
                     {data.price + " EGP"}
                   </p>
 
-                  {/* Add to Cart */}
                   <button
                     onClick={() => handleAddToCart(data)}
-                    className="mt-4 bg-gradient-to-r from-secondary to-[#9DC873] 
-                      hover:scale-105 transition-transform duration-300 
-                      text-white font-medium py-2 px-5 rounded-full w-full"
+                    className="mt-4 bg-gradient-to-r from-secondary to-[#9DC873] hover:scale-105 transition-transform duration-300 text-white font-medium py-2 px-5 rounded-full w-full"
                   >
                     Add to Cart
                   </button>
                 </div>
-
               </div>
             );
           })}
