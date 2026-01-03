@@ -640,9 +640,6 @@ namespace Rujta.Infrastructure.Migrations
                     b.Property<double>("Longitude")
                         .HasColumnType("float");
 
-                    b.Property<Guid?>("ManagerId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -663,8 +660,6 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AdminId");
-
-                    b.HasIndex("ManagerId");
 
                     b.HasIndex("ParentPharmacyID");
 
@@ -968,7 +963,7 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasDiscriminator().HasValue("Admin");
                 });
 
-            modelBuilder.Entity("Rujta.Domain.Entities.Pharmacist", b =>
+            modelBuilder.Entity("Rujta.Domain.Entities.Employee", b =>
                 {
                     b.HasBaseType("Rujta.Domain.Common.Person");
 
@@ -976,6 +971,9 @@ namespace Rujta.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("ExperienceYears")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PharmacyId")
                         .HasColumnType("int");
 
                     b.Property<string>("Qualification")
@@ -994,10 +992,10 @@ namespace Rujta.Infrastructure.Migrations
                     b.ToTable("People", t =>
                         {
                             t.Property("AddressId")
-                                .HasColumnName("Pharmacist_AddressId");
+                                .HasColumnName("Employee_AddressId");
                         });
 
-                    b.HasDiscriminator().HasValue("Pharmacist");
+                    b.HasDiscriminator().HasValue("Employee");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.User", b =>
@@ -1047,7 +1045,7 @@ namespace Rujta.Infrastructure.Migrations
 
             modelBuilder.Entity("Rujta.Domain.Entities.Manager", b =>
                 {
-                    b.HasBaseType("Rujta.Domain.Entities.Pharmacist");
+                    b.HasBaseType("Rujta.Domain.Entities.Employee");
 
                     b.Property<Guid?>("AdminId")
                         .HasColumnType("uniqueidentifier");
@@ -1060,27 +1058,26 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("AdminId");
 
+                    b.HasIndex("PharmacyId");
+
                     b.ToTable("People", t =>
                         {
                             t.Property("AddressId")
-                                .HasColumnName("Pharmacist_AddressId");
+                                .HasColumnName("Employee_AddressId");
                         });
 
                     b.HasDiscriminator().HasValue("Manager");
                 });
 
-            modelBuilder.Entity("Rujta.Domain.Entities.Staff", b =>
+            modelBuilder.Entity("Rujta.Domain.Entities.Pharmacist", b =>
                 {
-                    b.HasBaseType("Rujta.Domain.Entities.Pharmacist");
+                    b.HasBaseType("Rujta.Domain.Entities.Employee");
 
                     b.Property<DateTime>("HireDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("ManagerID")
+                    b.Property<Guid>("ManagerId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<int?>("PharmacyID")
-                        .HasColumnType("int");
 
                     b.Property<string>("Position")
                         .IsRequired()
@@ -1091,17 +1088,17 @@ namespace Rujta.Infrastructure.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
-                    b.HasIndex("ManagerID");
+                    b.HasIndex("ManagerId");
 
-                    b.HasIndex("PharmacyID");
+                    b.HasIndex("PharmacyId");
 
                     b.ToTable("People", t =>
                         {
                             t.Property("AddressId")
-                                .HasColumnName("Pharmacist_AddressId");
+                                .HasColumnName("Employee_AddressId");
                         });
 
-                    b.HasDiscriminator().HasValue("Staff");
+                    b.HasDiscriminator().HasValue("Pharmacist");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -1268,19 +1265,12 @@ namespace Rujta.Infrastructure.Migrations
                         .HasForeignKey("AdminId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Rujta.Domain.Entities.Manager", "Manager")
-                        .WithMany()
-                        .HasForeignKey("ManagerId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("Rujta.Domain.Entities.Pharmacy", "ParentPharmacy")
-                        .WithMany()
+                        .WithMany("Branches")
                         .HasForeignKey("ParentPharmacyID")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Admin");
-
-                    b.Navigation("Manager");
 
                     b.Navigation("ParentPharmacy");
                 });
@@ -1298,7 +1288,7 @@ namespace Rujta.Infrastructure.Migrations
 
             modelBuilder.Entity("Rujta.Domain.Entities.ProcessPrescription", b =>
                 {
-                    b.HasOne("Rujta.Domain.Entities.Pharmacist", "Pharmacist")
+                    b.HasOne("Rujta.Domain.Entities.Employee", "Pharmacist")
                         .WithMany("ProcessPrescriptions")
                         .HasForeignKey("PharmacistID")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -1371,7 +1361,7 @@ namespace Rujta.Infrastructure.Migrations
                     b.Navigation("Address");
                 });
 
-            modelBuilder.Entity("Rujta.Domain.Entities.Pharmacist", b =>
+            modelBuilder.Entity("Rujta.Domain.Entities.Employee", b =>
                 {
                     b.HasOne("Rujta.Domain.Entities.Address", "Address")
                         .WithMany()
@@ -1387,20 +1377,28 @@ namespace Rujta.Infrastructure.Migrations
                         .HasForeignKey("AdminId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Rujta.Domain.Entities.Pharmacy", "Pharmacy")
+                        .WithMany()
+                        .HasForeignKey("PharmacyId");
+
                     b.Navigation("Admin");
+
+                    b.Navigation("Pharmacy");
                 });
 
-            modelBuilder.Entity("Rujta.Domain.Entities.Staff", b =>
+            modelBuilder.Entity("Rujta.Domain.Entities.Pharmacist", b =>
                 {
                     b.HasOne("Rujta.Domain.Entities.Manager", "Manager")
-                        .WithMany("Staff")
-                        .HasForeignKey("ManagerID")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .WithMany("Pharmacists")
+                        .HasForeignKey("ManagerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("Rujta.Domain.Entities.Pharmacy", "Pharmacy")
-                        .WithMany("Staff")
-                        .HasForeignKey("PharmacyID")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .WithMany("Pharmacists")
+                        .HasForeignKey("PharmacyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_People_Pharmacies_PharmacyId1");
 
                     b.Navigation("Manager");
 
@@ -1428,13 +1426,15 @@ namespace Rujta.Infrastructure.Migrations
 
             modelBuilder.Entity("Rujta.Domain.Entities.Pharmacy", b =>
                 {
+                    b.Navigation("Branches");
+
                     b.Navigation("InventoryItems");
 
                     b.Navigation("Orders");
 
-                    b.Navigation("SellDrugViaPharmacies");
+                    b.Navigation("Pharmacists");
 
-                    b.Navigation("Staff");
+                    b.Navigation("SellDrugViaPharmacies");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Prescription", b =>
@@ -1458,7 +1458,7 @@ namespace Rujta.Infrastructure.Migrations
                     b.Navigation("Pharmacies");
                 });
 
-            modelBuilder.Entity("Rujta.Domain.Entities.Pharmacist", b =>
+            modelBuilder.Entity("Rujta.Domain.Entities.Employee", b =>
                 {
                     b.Navigation("ProcessPrescriptions");
                 });
@@ -1476,7 +1476,7 @@ namespace Rujta.Infrastructure.Migrations
 
             modelBuilder.Entity("Rujta.Domain.Entities.Manager", b =>
                 {
-                    b.Navigation("Staff");
+                    b.Navigation("Pharmacists");
                 });
 #pragma warning restore 612, 618
         }

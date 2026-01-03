@@ -3,6 +3,7 @@
 namespace Rujta.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/medicines/search")]
     public class MedicinesSearchController : ControllerBase
     {

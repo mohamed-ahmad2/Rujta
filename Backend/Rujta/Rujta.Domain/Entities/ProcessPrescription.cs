@@ -22,7 +22,7 @@ namespace Rujta.Domain.Entities
 
 
 
-        public required virtual Pharmacist Pharmacist { get; set; }
+        public required virtual Employee Pharmacist { get; set; }
         public required virtual Prescription Prescription { get; set; }
     }
 }

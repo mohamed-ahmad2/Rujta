@@ -9,12 +9,12 @@ namespace Rujta.Application.MappingProfiles
         public StaffProfile()
         {
             // Map DTO to entity, only if source property is not null
-            CreateMap<StaffDto, Staff>()
+            CreateMap<PharmacistDto, Pharmacist>()
                 .ForAllMembers(opts =>
                     opts.Condition((src, dest, srcMember) => srcMember != null));
 
             // Map entity to DTO
-            CreateMap<Staff, StaffDto>()
+            CreateMap<Pharmacist, PharmacistDto>()
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id));
         }
     }

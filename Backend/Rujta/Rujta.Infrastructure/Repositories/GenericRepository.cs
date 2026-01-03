@@ -50,6 +50,5 @@ namespace Rujta.Infrastructure.Repositories
 
         public IQueryable<T> GetQueryable() =>
             _dbSet.AsNoTracking();
-        
     }
 }

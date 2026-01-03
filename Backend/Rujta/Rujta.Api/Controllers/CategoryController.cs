@@ -3,7 +3,7 @@ using Rujta.Infrastructure.Constants;
 
 namespace Rujta.API.Controllers
 {
-    //[Authorize(Roles = "Admin,PharmacyAdmin,Manager,Pharmacist")]
+    //[Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
     [ApiController]
     [Route("api/[controller]")]
     public class CategoryController : ControllerBase

@@ -1,4 +1,5 @@
 ﻿using Rujta.Application.DTOs;
+using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Interfaces.InterfaceServices
 {
@@ -13,5 +14,6 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task<(bool success, string message)> ProcessOrderAsync(int id, CancellationToken cancellationToken = default);
         Task<(bool success, string message)> OutForDeliveryAsync(int id, CancellationToken cancellationToken = default);
         Task<(bool success, string message)> MarkAsDeliveredAsync(int id, CancellationToken cancellationToken = default);
+        Task<IEnumerable<OrderDto>> GetPharmacyOrdersAsync(int pharmacyId,CancellationToken cancellationToken = default);
     }
 }

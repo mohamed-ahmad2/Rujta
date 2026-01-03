@@ -9,15 +9,17 @@
            
         }
 
-        public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(Guid userId,CancellationToken cancellationToken = default)
         {
             return await _context.Orders
                 .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Medicine)
                 .Include(o => o.Pharmacy)
                 .Where(o => o.UserID == userId)
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync(cancellationToken);
         }
+
 
         public async Task<Order?> GetOrderWithItemsAsync(int orderId, CancellationToken cancellationToken = default)
         {
@@ -39,6 +41,19 @@
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<IEnumerable<Order>> GetOrdersByPharmacyIdAsync(int pharmacyId,CancellationToken cancellationToken = default)
+        {
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Medicine)
+                .Include(o => o.User)
+                .Include(o => o.Pharmacy)
+                .Where(o => o.PharmacyID == pharmacyId)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync(cancellationToken);
+        }
+
 
     }
 }

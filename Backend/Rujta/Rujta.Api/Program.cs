@@ -4,6 +4,7 @@ using Microsoft.OpenApi.Models;
 using Rujta.Application.MappingProfiles;
 using Rujta.Domain.Hubs;
 using Rujta.Infrastructure.Extensions;
+using System.Text.Json.Serialization;
 
 namespace Rujta.API
 {
@@ -18,7 +19,12 @@ namespace Rujta.API
             // -------------------------------
             // Add services
             // -------------------------------
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
             {

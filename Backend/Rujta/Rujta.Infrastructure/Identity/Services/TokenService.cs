@@ -1,4 +1,7 @@
-﻿namespace Rujta.Infrastructure.Identity.Services
+﻿using Rujta.Domain.Entities;
+using System.Threading;
+
+namespace Rujta.Infrastructure.Identity.Services
 {
     public class TokenService : ITokenService
     {
@@ -62,6 +65,11 @@
 
             ApplicationUser user = _mapper.Map<ApplicationUser>(userDto);
 
+            var employee = await _unitOfWork.People.GetByGuidAsync(user.DomainPersonId);
+
+            if (employee == null)
+                throw new InvalidOperationException("Employee not found.");
+
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -70,8 +78,13 @@
                 new Claim(JwtRegisteredClaimNames.Name, user.FullName ?? string.Empty),
                 new Claim(JwtRegisteredClaimNames.Jti, jwtId ?? Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat,
-                    new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
+                new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
             };
+
+            if (employee is Employee emp && emp.PharmacyId != null)
+            {
+                claims.Add(new Claim("PharmacyId", emp.PharmacyId.Value.ToString()));
+            }
 
             var roles = await _userManager.GetRolesAsync(user);
             claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));

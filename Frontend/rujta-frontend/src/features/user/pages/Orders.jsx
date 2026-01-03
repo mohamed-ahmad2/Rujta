@@ -1,9 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useOrders } from "../../orders/hooks/useOrders";
-import {
-  getOrderDetails,
-  cancelOrder,
-} from "../../orders/api/ordersApi";
 import useMedicines from "../../medicines/hook/useMedicines";
 
 export default function Orders() {
@@ -13,22 +9,24 @@ export default function Orders() {
   const [details, setDetails] = useState({});
   const [showMoreOrders, setShowMoreOrders] = useState({});
 
-  /* ================= Load Medicines ================= */
+  // ================= Load Medicines =================
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
-  /* ================= Load Orders + Details ================= */
+  // ================= Load Orders + Details =================
   useEffect(() => {
     const loadOrdersWithDetails = async () => {
       const userOrders = await fetchUserOrders();
 
       for (const order of userOrders) {
         try {
-          const res = await getOrderDetails(order.id);
+          const orderDetailsRes = await fetch(`/api/orders/${order.id}/details`);
+          if (!orderDetailsRes.ok) throw new Error("Failed to fetch order details");
+          const data = await orderDetailsRes.json();
           setDetails((prev) => ({
             ...prev,
-            [order.id]: res.data,
+            [order.id]: data,
           }));
         } catch (err) {
           console.error("Error loading order details", err);
@@ -39,7 +37,7 @@ export default function Orders() {
     loadOrdersWithDetails();
   }, [fetchUserOrders]);
 
-  /* ================= Helpers ================= */
+  // ================= Helpers =================
   const getMedicineName = (id) => {
     const med = medicines.find((m) => m.id === id);
     return med ? med.name : `Medicine ID: ${id}`;
@@ -52,7 +50,8 @@ export default function Orders() {
     if (!confirmCancel) return;
 
     try {
-      await cancelOrder(orderId);
+      const res = await fetch(`/api/orders/${orderId}/cancel/user`, { method: "PUT" });
+      if (!res.ok) throw new Error("Failed to cancel order");
       await fetchUserOrders();
       alert("Order cancelled successfully");
     } catch (err) {
@@ -61,35 +60,26 @@ export default function Orders() {
     }
   };
 
-  /* ================= Status Badge ================= */
-  const statusMap = {
-    0: "Pending",
-    1: "Accepted",
-    2: "Processing",
-    3: "OutForDelivery",
-    4: "Delivered",
-    5: "Cancelled",
-    6: "Cancelled",
-  };
-
+  // ================= Status Badge =================
   const getStatusBadge = (status) => {
-    const text = statusMap[status] || "Unknown";
     const base =
       "px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap";
 
+    // Use the exact enum names from backend
     const styles = {
       Pending: "bg-yellow-100 text-yellow-700",
       Accepted: "bg-blue-100 text-blue-700",
       Processing: "bg-indigo-100 text-indigo-700",
       OutForDelivery: "bg-purple-100 text-purple-700",
       Delivered: "bg-green-100 text-green-700",
-      Cancelled: "bg-red-100 text-red-700",
+      CancelledByUser: "bg-red-100 text-red-700",
+      CancelledByPharmacy: "bg-red-100 text-red-700",
     };
 
-    return <span className={`${base} ${styles[text]}`}>{text}</span>;
+    return <span className={`${base} ${styles[status] || ""}`}>{status}</span>;
   };
 
-  /* ================= UI ================= */
+  // ================= UI =================
   return (
     <section className="min-h-screen bg-[#F3F4F6] p-10">
       <div className="bg-white p-6 rounded-xl shadow-md">
@@ -100,29 +90,19 @@ export default function Orders() {
         ) : (
           orders
             .slice()
-            .sort(
-              (a, b) =>
-                new Date(b.orderDate) - new Date(a.orderDate)
-            )
+            .sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate))
             .map((order) => (
-              <div
-                key={order.id}
-                className="border rounded-xl p-4 mb-4"
-              >
+              <div key={order.id} className="border rounded-xl p-4 mb-4">
                 {/* ===== Header ===== */}
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="text-sm text-gray-500">Order ID</p>
                     <p className="font-semibold">{order.id}</p>
 
-                    <p className="text-sm text-gray-500 mt-2">
-                      Created At
-                    </p>
+                    <p className="text-sm text-gray-500 mt-2">Created At</p>
                     <p className="text-sm">
                       {order.orderDate
-                        ? new Date(
-                            order.orderDate
-                          ).toLocaleString()
+                        ? new Date(order.orderDate).toLocaleString()
                         : "N/A"}
                     </p>
                   </div>
@@ -139,17 +119,13 @@ export default function Orders() {
                       }
                       className="bg-secondary text-white px-3 py-1 rounded-lg text-sm"
                     >
-                      {showMoreOrders[order.id]
-                        ? "Show Less"
-                        : "Show More"}
+                      {showMoreOrders[order.id] ? "Show Less" : "Show More"}
                     </button>
 
                     {/* ===== Cancel Button ===== */}
-                    {[0, 1, 2].includes(order.status) && (
+                    {["Pending", "Accepted", "Processing"].includes(order.status) && (
                       <button
-                        onClick={() =>
-                          handleCancelOrder(order.id)
-                        }
+                        onClick={() => handleCancelOrder(order.id)}
                         className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm"
                       >
                         Cancel
@@ -165,24 +141,18 @@ export default function Orders() {
                       <ul className="list-disc list-inside">
                         {order.orderItems.map((item, i) => (
                           <li key={i}>
-                            {getMedicineName(
-                              item.medicineID
-                            )}{" "}
-                            – Qty: {item.quantity}
+                            {getMedicineName(item.medicineID)} – Qty: {item.quantity}
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-sm text-gray-500">
-                        No items found.
-                      </p>
+                      <p className="text-sm text-gray-500">No items found.</p>
                     )}
 
-                    {details[order.id] && (
+                    {details[order.id]?.deliveryAddress && (
                       <p className="text-sm text-gray-600 mt-2">
                         Delivery Address:{" "}
-                        {details[order.id].deliveryAddress ||
-                          "N/A"}
+                        {`${details[order.id].deliveryAddress.street}, ${details[order.id].deliveryAddress.buildingNo}, ${details[order.id].deliveryAddress.city}, ${details[order.id].deliveryAddress.governorate}`}
                       </p>
                     )}
                   </div>

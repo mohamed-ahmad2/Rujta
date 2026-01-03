@@ -1,35 +1,116 @@
-import React from 'react';
-import { Plus, Edit, Trash2, Save, RefreshCw } from 'lucide-react'; // optional icons
+import React from "react";
+import { Save, RefreshCw } from "lucide-react";
 
 export default function Settings() {
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold text-blue-700 mb-4">⚙️ Settings</h1>
-      <p className="text-gray-600 mb-6">Manage your preferences and system settings here.</p>
+    <div className="space-y-6">
 
-      <div className="bg-white shadow rounded-lg p-4 max-w-xl">
-        <h2 className="text-lg font-semibold mb-3 text-gray-800">Actions</h2>
-        <div className="flex flex-wrap gap-3">
-          <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-            <Plus size={18} /> Add New
-          </button>
+      {/* Page Title */}
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-800">Settings</h1>
+        <p className="text-sm text-gray-500">
+          Manage your pharmacy system settings
+        </p>
+      </div>
 
-          <button className="flex items-center gap-2 bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition">
-            <Edit size={18} /> Edit
-          </button>
+      {/* ===== General Settings ===== */}
+      <div className="bg-white rounded-xl shadow p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-700">
+          General Settings
+        </h2>
 
-          <button className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
-            <Trash2 size={18} /> Delete
-          </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm text-gray-600">Pharmacy Name</label>
+            <input
+              type="text"
+              placeholder="Rujta Pharmacy"
+              className="mt-1 w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-          <button className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
-            <Save size={18} /> Save Changes
-          </button>
-
-          <button className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
-            <RefreshCw size={18} /> Reset
-          </button>
+          <div>
+            <label className="text-sm text-gray-600">Email Address</label>
+            <input
+              type="email"
+              placeholder="admin@rujta.com"
+              className="mt-1 w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
+      </div>
+
+      {/* ===== Account Settings ===== */}
+      <div className="bg-white rounded-xl shadow p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-700">
+          Account Settings
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm text-gray-600">Admin Name</label>
+            <input
+              type="text"
+              placeholder="James Bond"
+              className="mt-1 w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-600">New Password</label>
+            <input
+              type="password"
+              placeholder="********"
+              className="mt-1 w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ===== System Settings ===== */}
+      <div className="bg-white rounded-xl shadow p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-700">
+          System Preferences
+        </h2>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-gray-700">
+              Enable Notifications
+            </p>
+            <p className="text-sm text-gray-500">
+              Receive alerts for new orders
+            </p>
+          </div>
+
+          <input type="checkbox" className="w-5 h-5 accent-green-700" />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-gray-700">
+              Maintenance Mode
+            </p>
+            <p className="text-sm text-gray-500">
+              Temporarily disable the system
+            </p>
+          </div>
+
+          <input type="checkbox" className="w-5 h-5 accent-green-700" />
+        </div>
+      </div>
+
+      {/* ===== Actions ===== */}
+      <div className="flex justify-end gap-3">
+        <button className="flex items-center gap-2 px-5 py-2 rounded-lg border hover:bg-gray-100">
+          <RefreshCw size={16} />
+          Reset
+        </button>
+
+        <button className="flex items-center gap-2 px-5 py-2 rounded-lg bg-secondary text-white hover:secondary">
+          <Save size={16} />
+          Save Changes
+        </button>
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
 ﻿using Rujta.Application.DTOs.UserProfile;
 using Rujta.Infrastructure.Constants;
-using System.IdentityModel.Tokens.Jwt;
 
 namespace Rujta.API.Controllers
 {

@@ -4,6 +4,7 @@ import {
   getOrderById,
   getOrderDetails,
   getUserOrders,
+  getPharmacyOrders,
   createOrder,
   updateOrder,
   deleteOrder,
@@ -11,83 +12,46 @@ import {
   processOrder,
   outForDelivery,
   markAsDelivered,
-  cancelByUser,
-  cancelByPharmacy,
+  cancelOrderByUser,
+  cancelOrderByPharmacy,
 } from "../api/ordersApi";
 
 export const useOrders = () => {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [details, setDetails] = useState(null);
-
   const [loading, setLoading] = useState(false);
-  const [ordersLoading, setOrdersLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  /* ================= User Orders ================= */
-  const fetchUserOrders = useCallback(async () => {
-  setOrdersLoading(true);
-  setError(null);
-  try {
-    const res = await getUserOrders();
-    setOrders(res.data);
-    return res.data; 
-  } catch (err) {
-    setError(err.response?.data || err.message);
-    return []; 
-  } finally {
-    setOrdersLoading(false);
-  }
-}, []);
 
+  const fetchAll = useCallback(async () => fetchOrders(getAllOrders), []);
+  const fetchUser = useCallback(async () => fetchOrders(getUserOrders), []);
+  const fetchPharmacy = useCallback(async () => fetchOrders(getPharmacyOrders), []);
 
-  /* ================= Admin / All Orders ================= */
-  const fetchAll = useCallback(async () => {
+  const fetchById = useCallback(async (id) => fetchSingle(getOrderById, id, setSelectedOrder), []);
+  const fetchDetailsById = useCallback(async (id) => fetchSingle(getOrderDetails, id, setDetails), []);
+
+  const fetchOrders = async (fetchFn) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getAllOrders();
+      const res = await fetchFn();
       setOrders(res.data);
+      return res.data;
     } catch (err) {
       setError(err.response?.data || err.message);
+      return [];
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const fetchById = useCallback(async (id) => {
+  const fetchSingle = async (fetchFn, id, setStateFn) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getOrderById(id);
-      setSelectedOrder(res.data);
-    } catch (err) {
-      setError(err.response?.data || err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchDetails = useCallback(async (id) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getOrderDetails(id);
-      setDetails(res.data);
-    } catch (err) {
-      setError(err.response?.data || err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  /* ================= CRUD ================= */
-  const create = async (data) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await createOrder(data);
-      await fetchUserOrders(); // ✅ مهم
+      const res = await fetchFn(id);
+      setStateFn(res.data);
       return res.data;
     } catch (err) {
       setError(err.response?.data || err.message);
@@ -97,40 +61,25 @@ export const useOrders = () => {
     }
   };
 
-  const update = async (id, data) => {
-    setLoading(true);
-    setError(null);
-    try {
-      await updateOrder(id, data);
-      await fetchUserOrders(); // ✅ مش fetchAll
-    } catch (err) {
-      setError(err.response?.data || err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const create = async (data, refreshFn = fetchUser) => runMutation(createOrder, data, refreshFn);
+  const update = async (id, data, refreshFn = fetchUser) => runMutation(() => updateOrder(id, data), null, refreshFn);
+  const remove = async (id, refreshFn = fetchUser) => runMutation(() => deleteOrder(id), null, refreshFn);
 
-  const remove = async (id) => {
-    setLoading(true);
-    setError(null);
-    try {
-      await deleteOrder(id);
-      setOrders((prev) => prev.filter((o) => o.id !== id));
-    } catch (err) {
-      setError(err.response?.data || err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  /* ================= Status Actions ================= */
-  const runAction = async (actionFn, id) => {
+  const accept = (id, refreshFn = fetchUser) => runMutation(() => acceptOrder(id), null, refreshFn);
+  const process = (id, refreshFn = fetchUser) => runMutation(() => processOrder(id), null, refreshFn);
+  const _outForDelivery = (id, refreshFn = fetchUser) => runMutation(() => outForDelivery(id), null, refreshFn);
+  const deliver = (id, refreshFn = fetchUser) => runMutation(() => markAsDelivered(id), null, refreshFn);
+  const cancelByUser = (id, refreshFn = fetchUser) => runMutation(() => cancelOrderByUser(id), null, refreshFn);
+  const cancelByPharmacy = (id, refreshFn = fetchPharmacy) => runMutation(() => cancelOrderByPharmacy(id), null, refreshFn);
+
+  const runMutation = async (fn, data = null, refreshFn) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await actionFn(id);
-      await fetchUserOrders(); // ✅
-      return res.data;
+      const res = data ? await fn(data) : await fn();
+      if (refreshFn) await refreshFn();
+      return res?.data || null;
     } catch (err) {
       setError(err.response?.data || err.message);
       return null;
@@ -144,23 +93,26 @@ export const useOrders = () => {
     selectedOrder,
     details,
     loading,
-    ordersLoading,
     error,
 
+
     fetchAll,
+    fetchUser,
+    fetchPharmacy,
     fetchById,
-    fetchDetails,
-    fetchUserOrders,
+    fetchDetailsById,
+
 
     create,
     update,
     remove,
 
-    accept: (id) => runAction(acceptOrder, id),
-    process: (id) => runAction(processOrder, id),
-    outForDelivery: (id) => runAction(outForDelivery, id),
-    deliver: (id) => runAction(markAsDelivered, id),
-    cancelByUser: (id) => runAction(cancelByUser, id),
-    cancelByPharmacy: (id) => runAction(cancelByPharmacy, id),
+
+    accept,
+    process,
+    outForDelivery,
+    deliver,
+    cancelByUser,
+    cancelByPharmacy,
   };
 };
