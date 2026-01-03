@@ -24,3 +24,7 @@ export const deleteMedicine = (id) => {
 export const searchMedicines = (query) => {
   return apiClient.get(`/medicines/search?query=${query}`);
 };
+
+export const filterMedicines = (filter) => {
+  return apiClient.get("/medicines/filter", {params: filter,});
+};
