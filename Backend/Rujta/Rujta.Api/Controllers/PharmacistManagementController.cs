@@ -1,10 +1,12 @@
-﻿using Rujta.Infrastructure.Identity;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Infrastructure.Identity;
 
 namespace Rujta.API.Controllers
 {
     [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)}")]
     [ApiController]
     [Route("api/[controller]")]
+    [EnableRateLimiting("Fixed")]
     public class PharmacistManagementController : ControllerBase
     {
         private readonly IPharmacistManagementService _service;

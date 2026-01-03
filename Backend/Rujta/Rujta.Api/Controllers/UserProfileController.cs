@@ -1,4 +1,5 @@
-﻿using Rujta.Application.DTOs.UserProfile;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.DTOs.UserProfile;
 using Rujta.Infrastructure.Constants;
 
 namespace Rujta.API.Controllers
@@ -6,6 +7,7 @@ namespace Rujta.API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    [EnableRateLimiting("Fixed")]
     public class UserProfileController : ControllerBase
     {
         private readonly IUserRepository _userProfileService;

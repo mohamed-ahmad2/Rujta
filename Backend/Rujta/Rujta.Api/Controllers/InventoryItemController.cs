@@ -1,4 +1,5 @@
-﻿using Rujta.Infrastructure.Constants;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Api.Controllers
@@ -6,6 +7,7 @@ namespace Rujta.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
+    [EnableRateLimiting("Fixed")]
     public class InventoryItemController : ControllerBase
     {
         private readonly IInventoryItemService _inventoryService;

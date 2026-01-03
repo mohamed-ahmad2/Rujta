@@ -1,8 +1,11 @@
-﻿namespace Rujta.API.Controllers
+﻿using Microsoft.AspNetCore.RateLimiting;
+
+namespace Rujta.API.Controllers
 {
     [ApiController]
     [Authorize]
     [Route("api/[controller]")]
+    [EnableRateLimiting("Fixed")]
     public class PharmaciesController : ControllerBase
     {
         private readonly PharmacyDistanceService _distanceService;
