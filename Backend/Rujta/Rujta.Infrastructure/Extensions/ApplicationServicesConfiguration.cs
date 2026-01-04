@@ -27,10 +27,11 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<ISearchMedicineService, SearchMedicineService>();
             services.AddScoped<IPharmacySearchService, PharmacySearchService>();
             services.AddScoped<IPharmacyCartService, PharmacyCartService>();
-             services.AddScoped<ISearchMedicineService, SearchMedicineService>();
+            services.AddScoped<ISearchMedicineService, SearchMedicineService>();
             services.AddScoped<IPharmacySearchService, PharmacySearchService>();
             services.AddScoped<IPharmacyCartService, PharmacyCartService>();
             services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IInventoryItemService, InventoryItemService>();
 
             services.AddScoped<PharmacyDistanceService>();
 
@@ -43,7 +44,6 @@ namespace Rujta.Infrastructure.Extensions
                 ?? throw new InvalidOperationException("Routing:RouterDbRelativePath is missing in configuration.");
             var routerDbPath = Path.Combine(solutionRoot, routerDbRelativePath);
 
-            // Optional: check if RouterDb exists
             if (!File.Exists(routerDbPath))
             {
                 Console.WriteLine("RouterDb not found. Attempting to build it...");
