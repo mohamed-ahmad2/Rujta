@@ -32,6 +32,8 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IPharmacyCartService, PharmacyCartService>();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IInventoryItemService, InventoryItemService>();
+            services.AddScoped<ICategoryService, CategoryService>();
+
 
             services.AddScoped<PharmacyDistanceService>();
 

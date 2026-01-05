@@ -30,8 +30,7 @@ namespace Rujta.Api.Controllers
         [HttpGet(Name = "GetAllInventoryItems")]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetAll()
         {
-            int pharmacyId = GetPharmacyIdFromClaims();
-            var items = await _inventoryService.GetByPharmacyAsync(pharmacyId);
+            var items = await _inventoryService.GetAllAsync();
             return Ok(items);
         }
 
