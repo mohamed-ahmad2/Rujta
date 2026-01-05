@@ -15,7 +15,8 @@ import {
 
 import ProductModal from "../components/ProductModal";
 import useInventory from "../../inventory item/hook/useInventoryItem";
-import useCategory from "../../category/hook/useCategory"; // 👈 import category hook
+import useCategory from "../../category/hook/useCategory";
+import useMedicines from "../../medicines/hook/useMedicines"; // Assuming the path is correct
 
 const statusColor = {
   "In stock": "bg-green-100 text-green-700",
@@ -31,6 +32,11 @@ export default function Products() {
     fetchAll: fetchCategories,
     loading: loadingCategories,
   } = useCategory();
+  const {
+    medicines,
+    fetchAll: fetchMedicines,
+    loading: loadingMedicines,
+  } = useMedicines();
 
   const [openModal, setOpenModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -43,11 +49,12 @@ export default function Products() {
   const [filterCategory, setFilterCategory] = useState("All");
   const [filterStatus, setFilterStatus] = useState("All");
 
-  // fetch products and categories on mount
+  // fetch products, categories, and medicines on mount
   useEffect(() => {
     fetchAll();
     fetchCategories();
-  }, [fetchAll, fetchCategories]);
+    fetchMedicines();
+  }, [fetchAll, fetchCategories, fetchMedicines]);
 
   // filter products
   const filtered = useMemo(() => {
@@ -56,7 +63,6 @@ export default function Products() {
 
       if (filterStatus !== "All" && p.status !== filterStatus) return false;
 
-      // check category by name (since p.category is the name)
       if (filterCategory !== "All" && p.category !== filterCategory)
         return false;
 
@@ -230,6 +236,7 @@ export default function Products() {
               <tr className="text-sm text-gray-500">
                 <th className="py-3 px-2">Product ID</th>
                 <th className="py-3 px-2">Product Name</th>
+                <th className="py-3 px-2">Category</th>
                 <th className="py-3 px-2">Quantity</th>
                 <th className="py-3 px-2">Price</th>
                 <th className="py-3 px-2">Expiry Date</th>
@@ -239,9 +246,15 @@ export default function Products() {
             </thead>
             <tbody>
               {pageData.map((p) => (
-                <tr key={p.id} className="border-t hover:bg-gray-50">
+                <tr
+                  key={p.id}
+                  className={`border-t hover:bg-gray-50 ${
+                    p.expired ? "bg-red-50" : ""
+                  }`}
+                >
                   <td className="py-3 px-2 font-medium">{p.id}</td>
                   <td className="py-3 px-2">{p.name}</td>
+                  <td className="py-3 px-2">{p.category}</td>
                   <td className="py-3 px-2">{p.qty}</td>
                   <td className="py-3 px-2">{p.price}</td>
                   <td className="py-3 px-2">{p.expiry}</td>
@@ -275,7 +288,7 @@ export default function Products() {
         )}
       </div>
 
-      {/* Product modal with dynamic categories */}
+      {/* Product modal with dynamic categories and medicines */}
       <ProductModal
         open={openModal}
         onClose={() => {
@@ -283,8 +296,10 @@ export default function Products() {
           setEditingProduct(null);
         }}
         onSave={handleAddOrUpdate}
-        categories={categories} // 👈 pass full categories with {id, name}
+        categories={categories}
         loadingCategories={loadingCategories}
+        medicines={medicines}
+        loadingMedicines={loadingMedicines}
         initialData={editingProduct?.raw || null}
       />
     </div>

@@ -21,22 +21,30 @@ export default function useInventory() {
   const mapItem = (item = {}) => {
     const quantity = toNumber(item.quantity);
     const price = toNumber(item.price);
+    const expiryDate = item.expiryDate ? new Date(item.expiryDate) : null;
+    const expired = expiryDate && expiryDate < new Date("2026-01-05");
+
+    let status;
+    if (expiryDate && expiryDate < new Date("2026-01-05")) {
+      status = "Out of stock";
+    } else {
+      status =
+        quantity === 0
+          ? "Out of stock"
+          : quantity < 10
+          ? "Low stock"
+          : "In stock";
+    }
 
     return {
       id: `#${item.id ?? "-"}`,
       name: item.medicineName || "Unknown",
       qty: `${quantity} Units`,
       price: `$${price.toFixed(2)}`,
-      expiry: item.expiryDate
-        ? new Date(item.expiryDate).toLocaleDateString("en-GB")
-        : "-",
-      status:
-        quantity === 0
-          ? "Out of stock"
-          : quantity < 20
-          ? "Low stock"
-          : "In stock",
+      expiry: expiryDate ? expiryDate.toLocaleDateString("en-GB") : "-",
+      status,
       category: item.categoryName || "General",
+      expired,
       raw: item,
     };
   };

@@ -65,9 +65,8 @@ namespace Rujta.Application.Services
 
         private static void UpdateProductStatus(InventoryItem item)
         {
-            int lowStockThreshold = 5;
+            int lowStockThreshold = 10;
 
-            
             if (item.ExpiryDate < DateTime.UtcNow)
             {
                 item.Status = ProductStatus.OutOfStock;
