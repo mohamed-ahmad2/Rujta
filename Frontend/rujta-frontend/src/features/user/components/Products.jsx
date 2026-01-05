@@ -105,7 +105,7 @@ const Products = ({ cart, setCart }) => {
                   <img
                     src={data.imageUrl || imge1}
                     alt={data.name}
-                    onClick={() => navigate(`/medicine/${data.id}`)}
+                   onClick={() => navigate(`/medicines/${data.id}`)}
                     className="w-[150px] object-contain group-hover:scale-110 duration-300 cursor-pointer"
                     onError={(e) => (e.currentTarget.src = imge1)}
                   />
@@ -117,9 +117,7 @@ const Products = ({ cart, setCart }) => {
                 {/* Info */}
                 <div className="p-5 text-center">
                   <div className="flex justify-center mb-2 text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <FaStar key={i} />
-                    ))}
+                  
                   </div>
 
                   <h3 className="text-lg font-bold text-secondary group-hover:text-[#2b472b] transition-colors">
