@@ -144,7 +144,7 @@ namespace Rujta.Infrastructure.Identity.Services
                 {
                     HttpOnly = true,
                     Secure = true,
-                    SameSite = SameSiteMode.None,
+                    SameSite = SameSiteMode.Strict,
                     Expires = DateTime.UtcNow.AddYears(1)
                 });
 
@@ -413,7 +413,7 @@ namespace Rujta.Infrastructure.Identity.Services
             {
                 HttpOnly = true,
                 Secure = true,
-                SameSite = SameSiteMode.None,
+                SameSite = SameSiteMode.Strict,
                 Expires = DateTime.UtcNow.AddDays(expirationDays)
             });
         }

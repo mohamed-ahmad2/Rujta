@@ -27,11 +27,11 @@ namespace Rujta.Domain.Entities
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
         [Timestamp]
-        public byte[] RowVersion { get; set; }
+        public byte[]? RowVersion { get; set; }
 
         public Address? DeliveryAddress { get; set; }
-        public  virtual User User { get; set; }
-        public  virtual Pharmacy Pharmacy { get; set; }
+        public virtual User User { get; set; } = null!;
+        public virtual Pharmacy Pharmacy { get; set; } = null!;
         public virtual Prescription? Prescription { get; set; }
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     }

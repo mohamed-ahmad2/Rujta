@@ -23,12 +23,9 @@ namespace Rujta.Infrastructure.Configuration
             builder.Property(i => i.ExpiryDate)
                    .IsRequired();
 
-            builder.Property(i => i.IsDispensed)
+            builder.Property(i => i.Status)
                    .IsRequired();
 
-            
-
-            
             builder.HasOne(i => i.Pharmacy)
                    .WithMany(p => p.InventoryItems)
                    .HasForeignKey(i => i.PharmacyID)

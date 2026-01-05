@@ -1,4 +1,5 @@
-﻿using Rujta.Infrastructure.Constants;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Api.Controllers
@@ -6,6 +7,7 @@ namespace Rujta.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
+    [EnableRateLimiting("Fixed")]
     public class InventoryItemController : ControllerBase
     {
         private readonly IInventoryItemService _inventoryService;
@@ -28,11 +30,9 @@ namespace Rujta.Api.Controllers
         [HttpGet(Name = "GetAllInventoryItems")]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetAll()
         {
-            int pharmacyId = GetPharmacyIdFromClaims();
-            var items = await _inventoryService.GetByPharmacyAsync(pharmacyId);
+            var items = await _inventoryService.GetAllAsync();
             return Ok(items);
         }
-
 
         [HttpGet("{id}", Name = "GetInventoryItemById")]
         public async Task<ActionResult<InventoryItemDto>> GetById(int id)
@@ -105,6 +105,14 @@ namespace Rujta.Api.Controllers
                 throw new InvalidOperationException("PharmacyID claim missing in JWT.");
 
             return int.Parse(claim.Value);
+        }
+
+        [HttpGet("products", Name = "GetInventoryProducts")]
+        public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetInventoryProducts()
+        {
+            int pharmacyId = GetPharmacyIdFromClaims();
+            var products = await _inventoryService.GetByPharmacyAsync(pharmacyId);
+            return Ok(products);
         }
     }
 }

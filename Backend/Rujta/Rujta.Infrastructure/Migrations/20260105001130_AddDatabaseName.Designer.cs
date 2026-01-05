@@ -12,8 +12,13 @@ using Rujta.Infrastructure.Data;
 namespace Rujta.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
+<<<<<<<< HEAD:Backend/Rujta/Rujta.Infrastructure/Migrations/20260103104751_updfigne.Designer.cs
     [Migration("20260103104751_updfigne")]
     partial class updfigne
+========
+    [Migration("20260105001130_AddDatabaseName")]
+    partial class AddDatabaseName
+>>>>>>>> 05c98f71a10ad05963e0df936cd93da650198b72:Backend/Rujta/Rujta.Infrastructure/Migrations/20260105001130_AddDatabaseName.Designer.cs
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -339,9 +344,6 @@ namespace Rujta.Infrastructure.Migrations
                     b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsDispensed")
-                        .HasColumnType("bit");
-
                     b.Property<int>("MedicineID")
                         .HasColumnType("int");
 
@@ -356,6 +358,9 @@ namespace Rujta.Infrastructure.Migrations
                         .HasColumnType("decimal(10,2)");
 
                     b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -536,7 +541,6 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
-                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
