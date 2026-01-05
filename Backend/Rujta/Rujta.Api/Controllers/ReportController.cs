@@ -1,4 +1,5 @@
-﻿using Rujta.Infrastructure.Identity;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace Rujta.API.Controllers
@@ -6,6 +7,7 @@ namespace Rujta.API.Controllers
     [Authorize(Roles = nameof(UserRole.SuperAdmin))]
     [ApiController]
     [Route("api/[controller]")]
+    [EnableRateLimiting("Fixed")]
     public class ReportController : ControllerBase
     {
         private readonly IReportService _reportService;

@@ -336,9 +336,6 @@ namespace Rujta.Infrastructure.Migrations
                     b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsDispensed")
-                        .HasColumnType("bit");
-
                     b.Property<int>("MedicineID")
                         .HasColumnType("int");
 
@@ -353,6 +350,9 @@ namespace Rujta.Infrastructure.Migrations
                         .HasColumnType("decimal(10,2)");
 
                     b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -533,7 +533,6 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
-                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 

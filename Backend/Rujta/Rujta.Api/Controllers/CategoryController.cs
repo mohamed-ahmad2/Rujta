@@ -1,11 +1,14 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using Microsoft.AspNetCore.RateLimiting;
 using Rujta.Infrastructure.Constants;
+using Rujta.Infrastructure.Identity;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Rujta.API.Controllers
 {
-    //[Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
+    [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
     [ApiController]
     [Route("api/[controller]")]
+    [EnableRateLimiting("Fixed")]
     public class CategoryController : ControllerBase
     {
         private readonly ICategoryService _categoryService;
