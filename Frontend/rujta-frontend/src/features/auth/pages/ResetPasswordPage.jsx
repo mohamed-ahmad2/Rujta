@@ -6,17 +6,14 @@ import { useAuth } from "../hooks/useAuth";
 const ResetPasswordPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { resetPassword } = useAuth();
+  const { handleResetPassword } = useAuth(); // ✅ FIX
 
   const params = new URLSearchParams(location.search);
-
-  
   const email = params.get("email") || "";
 
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
- 
   const handleReset = async (e) => {
     e.preventDefault();
 
@@ -36,12 +33,12 @@ const ResetPasswordPage = () => {
     }
 
     try {
-      await resetPassword({ email, otp, newPassword });
+      await handleResetPassword({ email, otp, newPassword }); // ✅ FIX
 
       alert("Password reset successfully!");
-      navigate("/auth"); 
+      navigate("/auth");
     } catch (err) {
-      alert(err.response?.data || "Failed to reset password");
+      alert(err.response?.data?.message || "Failed to reset password");
     }
   };
 

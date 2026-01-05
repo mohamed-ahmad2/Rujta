@@ -33,6 +33,18 @@ import Orders from "../features/dashboard/pages/Orders";
 import Settings from "../features/dashboard/pages/Settings";
 import Customers from "../features/dashboard/pages/Customers";
 import Sales from "../features/dashboard/pages/Sales";
+import Logs from "../features/dashboard/pages/Logs";
+
+// ...
+
+<Route
+  path="/dashboard/logs"
+  element={
+    <ProtectedRoute>
+      <Logs />
+    </ProtectedRoute>
+  }
+/>
 
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Routes>
@@ -84,7 +96,11 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
     </Route>
 
     {/* ========= Medicine ========= */}
-    <Route path="/medicines/:id" element={<MedicineDetails />} />
+ <Route
+  path="/medicines/:id"
+  element={<MedicineDetails cart={cart} setCart={setCart} />}
+/>
+
 
     {/* ========= Dashboard ========= */}
     <Route
@@ -101,6 +117,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
       <Route path="sales" element={<Sales />} />
       <Route path="customers" element={<Customers />} />
       <Route path="settings" element={<Settings />} />
+      <Route path="logs" element={<Logs />} /> 
     </Route>
 
   </Routes>

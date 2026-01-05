@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "../../../assets/Logo.png";
 import { RiLogoutCircleLine } from "react-icons/ri";
-
+import { FiUsers } from "react-icons/fi";
 // Icons
 import { IoHomeOutline } from "react-icons/io5";
 import { MdInventory, MdMenuOpen } from "react-icons/md";
@@ -22,6 +22,8 @@ export default function Sidebar({ open, setOpen }) {
     { label: "Sales", icon: <TbReportSearch size={22} />, path: "/dashboard/sales" },
     { label: "Customers", icon: <IoLogoBuffer size={22} />, path: "/dashboard/customers" },
     { label: "Settings", icon: <CiSettings size={22} />, path: "/dashboard/settings" },
+    { label: "Logs", icon: <FiUsers size={22} />, path: "/dashboard/logs", role: "Pharmacist" },
+
   ];
 
   return (

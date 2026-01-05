@@ -24,6 +24,7 @@ const { googleFirebaseLogin } = useGoogleAuth();
   } catch (err) {
     alert(err.response?.data?.message || "Something went wrong.");
   }
+  
 };
 
   return (
