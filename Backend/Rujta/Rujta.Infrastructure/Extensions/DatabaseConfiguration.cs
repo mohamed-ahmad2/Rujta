@@ -1,6 +1,4 @@
-﻿
-
-namespace Rujta.Infrastructure.Extensions
+﻿namespace Rujta.Infrastructure.Extensions
 {
     public static class DatabaseConfiguration
     {

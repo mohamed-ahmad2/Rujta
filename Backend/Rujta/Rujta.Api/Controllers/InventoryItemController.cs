@@ -30,11 +30,9 @@ namespace Rujta.Api.Controllers
         [HttpGet(Name = "GetAllInventoryItems")]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetAll()
         {
-            int pharmacyId = GetPharmacyIdFromClaims();
-            var items = await _inventoryService.GetByPharmacyAsync(pharmacyId);
+            var items = await _inventoryService.GetAllAsync();
             return Ok(items);
         }
-
 
         [HttpGet("{id}", Name = "GetInventoryItemById")]
         public async Task<ActionResult<InventoryItemDto>> GetById(int id)
@@ -107,6 +105,14 @@ namespace Rujta.Api.Controllers
                 throw new InvalidOperationException("PharmacyID claim missing in JWT.");
 
             return int.Parse(claim.Value);
+        }
+
+        [HttpGet("products", Name = "GetInventoryProducts")]
+        public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetInventoryProducts()
+        {
+            int pharmacyId = GetPharmacyIdFromClaims();
+            var products = await _inventoryService.GetByPharmacyAsync(pharmacyId);
+            return Ok(products);
         }
     }
 }
