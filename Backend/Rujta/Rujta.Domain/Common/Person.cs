@@ -1,13 +1,15 @@
 ﻿using Rujta.Domain.Entities;
-
-public abstract class Person
+namespace Rujta.Domain.Common
 {
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string PhoneNumber { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string? ProfileImageUrl { get; set; }
-    public Address? Address { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? UpdatedAt { get; set; }
+    public abstract class Person
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? ProfileImageUrl { get; set; }
+        public Address? Address { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt { get; set; }
+    }
 }

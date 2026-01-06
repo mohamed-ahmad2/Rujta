@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using Rujta.Domain.Common;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Rujta.Domain.Entities
 {

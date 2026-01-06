@@ -59,7 +59,7 @@ namespace Rujta.Application.Services
                 // Check if medicine exists
                 var medicine = await _unitOfWork.Medicines.GetByIdAsync(item.MedicineID);
                 if (medicine == null)
-                    throw new Exception($"Medicine with ID {item.MedicineID} does not exist.");
+                    throw new KeyNotFoundException($"Medicine with ID {item.MedicineID} does not exist.");
 
                 // Add order item
                 order.OrderItems.Add(new OrderItem
@@ -68,6 +68,7 @@ namespace Rujta.Application.Services
                     Quantity = item.Quantity
                 });
             }
+
 
 
             // 5️⃣ Save order
