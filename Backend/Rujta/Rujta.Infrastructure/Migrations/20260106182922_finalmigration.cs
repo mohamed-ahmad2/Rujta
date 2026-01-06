@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Rujta.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class final_migration : Migration
+    public partial class finalmigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -415,6 +415,12 @@ namespace Rujta.Infrastructure.Migrations
                         column: x => x.AddressId,
                         principalTable: "Addresses",
                         principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Admin_People_Id",
+                        column: x => x.Id,
+                        principalTable: "People",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -526,9 +532,9 @@ namespace Rujta.Infrastructure.Migrations
                     MedicineID = table.Column<int>(type: "int", nullable: false),
                     PrescriptionID = table.Column<int>(type: "int", nullable: true),
                     Quantity = table.Column<int>(type: "int", nullable: false),
-                    ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Price = table.Column<decimal>(type: "decimal(10,2)", precision: 10, scale: 2, nullable: false),
-                    IsDispensed = table.Column<bool>(type: "bit", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -601,13 +607,13 @@ namespace Rujta.Infrastructure.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserID = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     CustomerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    PharmacyID = table.Column<int>(type: "int", nullable: false),
-                    PrescriptionID = table.Column<int>(type: "int", nullable: true),
+                    PharmacyId = table.Column<int>(type: "int", nullable: false),
+                    PrescriptionId = table.Column<int>(type: "int", nullable: true),
+                    DeliveryAddressId = table.Column<int>(type: "int", nullable: true),
                     OrderDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     TotalPrice = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    DeliveryAddressId = table.Column<int>(type: "int", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -626,22 +632,23 @@ namespace Rujta.Infrastructure.Migrations
                         name: "FK_Orders_Customers_CustomerId",
                         column: x => x.CustomerId,
                         principalTable: "Customers",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Orders_Pharmacies_PharmacyID",
-                        column: x => x.PharmacyID,
+                        name: "FK_Orders_Pharmacies_PharmacyId",
+                        column: x => x.PharmacyId,
                         principalTable: "Pharmacies",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Orders_Prescriptions_PrescriptionID",
-                        column: x => x.PrescriptionID,
+                        name: "FK_Orders_Prescriptions_PrescriptionId",
+                        column: x => x.PrescriptionId,
                         principalTable: "Prescriptions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_Orders_User_UserID",
-                        column: x => x.UserID,
+                        name: "FK_Orders_User_UserId",
+                        column: x => x.UserId,
                         principalTable: "User",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -874,19 +881,19 @@ namespace Rujta.Infrastructure.Migrations
                 column: "DeliveryAddressId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Orders_PharmacyID",
+                name: "IX_Orders_PharmacyId",
                 table: "Orders",
-                column: "PharmacyID");
+                column: "PharmacyId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Orders_PrescriptionID",
+                name: "IX_Orders_PrescriptionId",
                 table: "Orders",
-                column: "PrescriptionID");
+                column: "PrescriptionId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Orders_UserID",
+                name: "IX_Orders_UserId",
                 table: "Orders",
-                column: "UserID");
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Pharmacies_AdminId",

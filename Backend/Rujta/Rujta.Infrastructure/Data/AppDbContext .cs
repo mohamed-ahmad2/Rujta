@@ -41,7 +41,7 @@ namespace Rujta.Infrastructure.Data
         {
             base.OnModelCreating(builder);
 
-            // Table-per-Type (TPT) mapping
+            // TPT Mapping
             builder.Entity<Person>().ToTable("People");
             builder.Entity<Customer>().ToTable("Customers");
             builder.Entity<Employee>().ToTable("Employees");
@@ -50,7 +50,7 @@ namespace Rujta.Infrastructure.Data
             // Pharmacy -> Employee (one-to-many)
             builder.Entity<Employee>()
                 .HasOne(e => e.Pharmacy)
-                .WithMany(p => p.Employees) // Pharmacy collection
+                .WithMany(p => p.Employees)
                 .HasForeignKey(e => e.PharmacyId)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -78,12 +78,47 @@ namespace Rujta.Infrastructure.Data
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Pharmacy -> ParentPharmacy (self-referencing)
+            // Pharmacy -> ParentPharmacy (self-reference)
             builder.Entity<Pharmacy>()
                 .HasOne(p => p.ParentPharmacy)
                 .WithMany(p => p.Branches)
                 .HasForeignKey(p => p.ParentPharmacyID)
                 .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Order>()
+    .HasOne(o => o.User)
+    .WithMany() // or .WithMany(u => u.Orders) if you want collection
+    .HasForeignKey(o => o.UserId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Order>()
+                .HasOne(o => o.Customer)
+                .WithMany() // or .WithMany(c => c.Orders)
+                .HasForeignKey(o => o.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+
+            // Order -> Pharmacy
+            builder.Entity<Order>()
+                .HasOne(o => o.Pharmacy)
+                .WithMany(p => p.Orders)
+                .HasForeignKey(o => o.PharmacyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Order -> Prescription
+            builder.Entity<Order>()
+                .HasOne(o => o.Prescription)
+                .WithMany()
+                .HasForeignKey(o => o.PrescriptionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Order -> DeliveryAddress
+            builder.Entity<Order>()
+                .HasOne(o => o.DeliveryAddress)
+                .WithMany()
+                .HasForeignKey(o => o.DeliveryAddressId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Notification configuration
@@ -97,7 +132,7 @@ namespace Rujta.Infrastructure.Data
                 b.Property(n => n.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             });
 
-            // Identity & Decimal precision mappings
+            // Identity & Decimal precision
             builder.ApplyIdentityMapping();
             builder.ApplyDecimalPrecision();
 

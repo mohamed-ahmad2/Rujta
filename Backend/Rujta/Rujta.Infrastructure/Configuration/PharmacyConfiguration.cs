@@ -46,10 +46,10 @@ namespace Rujta.Infrastructure.Configuration
 
             builder.HasMany(p => p.Orders)
                    .WithOne(o => o.Pharmacy)
-                   .HasForeignKey(o => o.PharmacyID)
+                   .HasForeignKey(o => o.PharmacyId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasMany(p => p.SellDrugViaPharmacies)
+            builder.HasMany(p => p.SellDrugViaPharmacy)
                    .WithOne(s => s.Pharmacy)
                    .HasForeignKey(s => s.PharmacyID)
                    .OnDelete(DeleteBehavior.Restrict);

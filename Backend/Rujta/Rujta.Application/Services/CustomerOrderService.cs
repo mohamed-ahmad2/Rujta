@@ -10,24 +10,25 @@ namespace Rujta.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
 
-
         public CustomerOrderService(IUnitOfWork unitOfWork)
         {
             _unitOfWork = unitOfWork;
-
         }
 
+        /// <summary>
+        /// Create order for offline Customer
+        /// </summary>
         public async Task<CustomerOrderResponse> CreateCustomerOrderAsync(
             CreateCustomerOrderRequest request,
             CancellationToken cancellationToken = default)
         {
-            // 1️⃣ Get customer by phone + pharmacy
+            // 1️⃣ Find existing customer by phone + pharmacy
             var customer = await _unitOfWork.Customers
                 .GetByPhoneAsync(request.PhoneNumber, request.PharmacyId);
 
             bool isNewCustomer = false;
 
-            // 2️⃣ Create customer if not exists
+            // 2️⃣ Create new customer if not exists
             if (customer == null)
             {
                 isNewCustomer = true;
@@ -43,23 +44,31 @@ namespace Rujta.Application.Services
                 await _unitOfWork.SaveAsync(cancellationToken);
             }
 
-            // 3️⃣ Create order
+            // 3️⃣ Create order linked only to Customer
             var order = new Order
             {
-                CustomerId = customer.Id,
-                PharmacyID = request.PharmacyId,
+                CustomerId = customer.Id,   // only customer
+                PharmacyId = request.PharmacyId,
                 OrderItems = new List<OrderItem>()
             };
 
             // 4️⃣ Add order items
+            // 4️⃣ Validate medicines and add order items
             foreach (var item in request.Items)
             {
+                // Check if medicine exists
+                var medicine = await _unitOfWork.Medicines.GetByIdAsync(item.MedicineID);
+                if (medicine == null)
+                    throw new Exception($"Medicine with ID {item.MedicineID} does not exist.");
+
+                // Add order item
                 order.OrderItems.Add(new OrderItem
                 {
                     MedicineID = item.MedicineID,
                     Quantity = item.Quantity
                 });
             }
+
 
             // 5️⃣ Save order
             await _unitOfWork.Orders.AddAsync(order);
@@ -77,23 +86,31 @@ namespace Rujta.Application.Services
                     : "Order saved successfully"
             };
         }
-         public async Task<CheckCustomerResponse> CheckCustomerByPhoneAsync(int pharmacyId, string phoneNumber, CancellationToken cancellationToken = default)
-    {
-        var customer = await _unitOfWork.Customers.GetByPhoneAsync(phoneNumber, pharmacyId);
-        if (customer != null)
+
+        /// <summary>
+        /// Check if a customer exists by phone + pharmacy
+        /// </summary>
+        public async Task<CheckCustomerResponse> CheckCustomerByPhoneAsync(
+            int pharmacyId,
+            string phoneNumber,
+            CancellationToken cancellationToken = default)
         {
+            var customer = await _unitOfWork.Customers.GetByPhoneAsync(phoneNumber, pharmacyId);
+
+            if (customer != null)
+            {
+                return new CheckCustomerResponse
+                {
+                    Exists = true,
+                    CustomerId = customer.Id,
+                    FullName = customer.Name
+                };
+            }
+
             return new CheckCustomerResponse
             {
-                Exists = true,
-                CustomerId = customer.Id,
-                FullName = customer.Name
+                Exists = false
             };
         }
-
-        return new CheckCustomerResponse
-        {
-            Exists = false
-        };
-    }
     }
 }

@@ -43,7 +43,7 @@ namespace Rujta.Infrastructure.Repositories
             // 1) Total Orders + Sales Summary
             // -----------------------------
             var orders = await _context.Orders
-                .Where(o => o.PharmacyID == filter.PharmacyId &&
+                .Where(o => o.PharmacyId == filter.PharmacyId &&
                             o.OrderDate >= filter.From &&
                             o.OrderDate <= filter.To)
                 .ToListAsync(cancellationToken);
@@ -127,7 +127,7 @@ namespace Rujta.Infrastructure.Repositories
         {
             return await _context.OrderItems
                 .Where(oi =>
-                    oi.Order.PharmacyID == pharmacyId &&
+                    oi.Order.PharmacyId == pharmacyId &&
                     oi.Order.OrderDate >= from &&
                     oi.Order.OrderDate <= to &&
                     oi.Medicine != null)
@@ -199,7 +199,7 @@ namespace Rujta.Infrastructure.Repositories
         {
             return await _context.Orders
                 .Where(o =>
-                    o.PharmacyID == pharmacyId &&
+                    o.PharmacyId == pharmacyId &&
                     o.OrderDate >= from &&
                     o.OrderDate <= to &&
                     o.Status == OrderStatus.Accepted)

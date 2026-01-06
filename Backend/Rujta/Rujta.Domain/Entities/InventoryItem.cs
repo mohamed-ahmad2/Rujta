@@ -1,4 +1,5 @@
 ﻿using Rujta.Domain.Common;
+using Rujta.Domain.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
@@ -17,11 +18,11 @@ namespace Rujta.Domain.Entities
 
         public int Quantity { get; set; }
 
-        public DateTime ExpiryDate { get; set; }
-
         public decimal Price { get; set; }
 
-        public bool IsDispensed { get; set; }
+        public ProductStatus Status { get; set; } = ProductStatus.InStock;
+
+        public DateTime ExpiryDate { get; set; }
 
         public virtual Pharmacy? Pharmacy { get; set; }
         public virtual Medicine? Medicine { get; set; }

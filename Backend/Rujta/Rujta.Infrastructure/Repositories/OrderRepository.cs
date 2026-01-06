@@ -15,7 +15,7 @@
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Medicine)
                 .Include(o => o.Pharmacy)
-                .Where(o => o.UserID == userId)
+                .Where(o => o.UserId == userId)
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync(cancellationToken);
         }
@@ -49,7 +49,7 @@
                     .ThenInclude(oi => oi.Medicine)
                 .Include(o => o.User)
                 .Include(o => o.Pharmacy)
-                .Where(o => o.PharmacyID == pharmacyId)
+                .Where(o => o.PharmacyId == pharmacyId)
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync(cancellationToken);
         }
@@ -57,7 +57,7 @@
         {
             return await _context.Orders
                 .Include(o => o.OrderItems)
-                .Where(o => o.CustomerId == customerId)
+                .Where(o => o.UserId == customerId)
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
         }

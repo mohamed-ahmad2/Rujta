@@ -9,11 +9,9 @@ namespace Rujta.Domain.Entities
 {
     public class Customer : Person
     {
-
         public int PharmacyId { get; set; }
-        public Pharmacy Pharmacy { get; set; }
-
-        public ICollection<Order> Orders { get; set; } = new List<Order>();
+        public Pharmacy Pharmacy { get; set; } = null!;
     }
+
 
 }
