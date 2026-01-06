@@ -12,12 +12,11 @@ namespace Rujta.Domain.Entities
 
         [ForeignKey("Pharmacy")]
         public int? PharmacyId { get; set; }
+        public virtual Pharmacy? Pharmacy { get; set; }
 
         public ICollection<ProcessPrescription>? ProcessPrescriptions { get; set; }
 
         [NotMapped]
         public object? ManagerData { get; set; }
-
-        public virtual Pharmacy? Pharmacy { get; set; }
     }
 }

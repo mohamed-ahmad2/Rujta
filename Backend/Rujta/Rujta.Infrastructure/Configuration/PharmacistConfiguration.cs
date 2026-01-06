@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
-
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Rujta.Domain.Entities;
 
 namespace Rujta.Infrastructure.Configuration
 {
@@ -18,17 +19,12 @@ namespace Rujta.Infrastructure.Configuration
             builder.Property(p => p.HireDate)
                    .IsRequired();
 
-
             builder.HasOne(p => p.Manager)
                    .WithMany(m => m.Pharmacists)
                    .HasForeignKey(p => p.ManagerId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-
-            builder.HasOne(p => p.Pharmacy)
-                   .WithMany(ph => ph.Pharmacists)
-                   .HasForeignKey(p => p.PharmacyId)
-                   .OnDelete(DeleteBehavior.Restrict);
+            // لا نربط Pharmacist مباشرة بالPharmacy، لأنه مرتبط عبر Employee
         }
     }
 }

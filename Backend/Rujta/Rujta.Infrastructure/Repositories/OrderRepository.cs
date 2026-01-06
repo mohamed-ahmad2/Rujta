@@ -53,6 +53,14 @@
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync(cancellationToken);
         }
+        public async Task<IEnumerable<Order>> GetOrdersByCustomerAsync(Guid customerId)
+        {
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                .Where(o => o.CustomerId == customerId)
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
+        }
 
 
     }

@@ -4,6 +4,7 @@ namespace Rujta.Domain.Entities
 {
     public class Manager : Employee
     {
+
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
 

@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Rujta.Domain.Common;
+using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Extensions;
 using Rujta.Infrastructure.Identity;
 
@@ -19,7 +22,7 @@ namespace Rujta.Infrastructure.Data
         public DbSet<Address> Addresses { get; set; } = null!;
         public DbSet<Pharmacy> Pharmacies { get; set; } = null!;
         public DbSet<Medicine> Medicines { get; set; } = null!;
-        public DbSet<Category> Categories{ get; set; } = null!;
+        public DbSet<Category> Categories { get; set; } = null!;
         public DbSet<InventoryItem> InventoryItems { get; set; } = null!;
         public DbSet<Order> Orders { get; set; } = null!;
         public DbSet<OrderItem> OrderItems { get; set; } = null!;
@@ -30,10 +33,58 @@ namespace Rujta.Infrastructure.Data
         public DbSet<Device> Devices { get; set; } = null!;
         public DbSet<Notification> Notifications { get; set; } = null!;
         public DbSet<Log> Logs { get; set; } = null!;
+        public DbSet<Customer> Customers { get; set; } = null!;
+        public DbSet<Employee> Employees { get; set; } = null!;
+        public DbSet<Manager> Managers { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // Table-per-Type (TPT) mapping
+            builder.Entity<Person>().ToTable("People");
+            builder.Entity<Customer>().ToTable("Customers");
+            builder.Entity<Employee>().ToTable("Employees");
+            builder.Entity<Manager>().ToTable("Managers");
+
+            // Pharmacy -> Employee (one-to-many)
+            builder.Entity<Employee>()
+                .HasOne(e => e.Pharmacy)
+                .WithMany(p => p.Employees) // Pharmacy collection
+                .HasForeignKey(e => e.PharmacyId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Customer -> Pharmacy (one-to-many)
+            builder.Entity<Customer>()
+                .HasOne(c => c.Pharmacy)
+                .WithMany(p => p.Customers)
+                .HasForeignKey(c => c.PharmacyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Manager -> Admin (optional)
+            builder.Entity<Manager>()
+                .HasOne(m => m.Admin)
+                .WithMany()
+                .HasForeignKey(m => m.AdminId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Pharmacy -> Admin (optional)
+            builder.Entity<Pharmacy>()
+                .HasOne(p => p.Admin)
+                .WithMany()
+                .HasForeignKey(p => p.AdminId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Pharmacy -> ParentPharmacy (self-referencing)
+            builder.Entity<Pharmacy>()
+                .HasOne(p => p.ParentPharmacy)
+                .WithMany(p => p.Branches)
+                .HasForeignKey(p => p.ParentPharmacyID)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Notification configuration
             builder.Entity<Notification>(b =>

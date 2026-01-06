@@ -1,38 +1,38 @@
 ﻿using Rujta.Domain.Common;
+using Rujta.Domain.Entities;
 using Rujta.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-
-namespace Rujta.Domain.Entities
+public class Order : BaseEntity
 {
-    public class Order : BaseEntity
-    {
-        [ForeignKey("User")]
-        public Guid UserID { get; set; }
+    // 🔹 Online order
+    public Guid? UserID { get; set; }
+    public virtual User? User { get; set; }
 
-        [ForeignKey("Pharmacy")]
-        public int PharmacyID { get; set; }
+    // 🔹 Walk-in order
+    public Guid? CustomerId { get; set; }
+    public virtual Customer? Customer { get; set; }
 
-        [ForeignKey("Prescription")]
-        public int? PrescriptionID { get; set; }
+    [ForeignKey("Pharmacy")]
+    public int PharmacyID { get; set; }
+    public virtual Pharmacy Pharmacy { get; set; }
 
-        public DateTime OrderDate { get; set; } = DateTime.Now;
+    public int? PrescriptionID { get; set; }
+    public virtual Prescription? Prescription { get; set; }
 
-        public decimal TotalPrice { get; set; }
+    public DateTime OrderDate { get; set; } = DateTime.UtcNow;
 
-        [ForeignKey("DeliveryAddress")]
-        public int? DeliveryAddressId { get; set; }
-        
-        public OrderStatus Status { get; set; } = OrderStatus.Pending;
+    public decimal TotalPrice { get; set; }
 
-        [Timestamp]
-        public byte[] RowVersion { get; set; }
+    public int? DeliveryAddressId { get; set; }
+    public Address? DeliveryAddress { get; set; }
 
-        public Address? DeliveryAddress { get; set; }
-        public  virtual User User { get; set; }
-        public  virtual Pharmacy Pharmacy { get; set; }
-        public virtual Prescription? Prescription { get; set; }
-        public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-    }
+    public OrderStatus Status { get; set; } = OrderStatus.Pending;
+
+    [Timestamp]
+    public byte[] RowVersion { get; set; }
+
+    public virtual ICollection<OrderItem> OrderItems { get; set; }
+        = new List<OrderItem>();
 }

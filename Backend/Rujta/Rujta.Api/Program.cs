@@ -49,6 +49,10 @@ namespace Rujta.API
             // Application Services
             builder.Services.AddApplicationServices(builder.Configuration);
 
+
+
+            builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
+
             // -------------------------------
             // Firebase Admin SDK
             // -------------------------------

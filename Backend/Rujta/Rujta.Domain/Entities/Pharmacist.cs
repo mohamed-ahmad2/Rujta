@@ -11,6 +11,5 @@ namespace Rujta.Domain.Entities
         [ForeignKey("Manager")]
         public Guid ManagerId { get; set; }
         public virtual Manager Manager { get; set; } = null!;
-
     }
 }

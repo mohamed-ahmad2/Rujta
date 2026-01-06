@@ -1,9 +1,8 @@
 ﻿using Rujta.Domain.Entities;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Rujta.Domain.Common
 {
-    public abstract class Person 
+    public abstract class Person
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
