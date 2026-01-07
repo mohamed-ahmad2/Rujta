@@ -58,7 +58,7 @@ namespace Rujta.Infrastructure.Data
             builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         }
 
-        public override int SaveChanges()
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             foreach (var entry in ChangeTracker.Entries<BaseEntity>())
             {
@@ -69,7 +69,7 @@ namespace Rujta.Infrastructure.Data
                     entry.Entity.UpdatedAt = DateTime.UtcNow;
             }
 
-            return base.SaveChanges();
+            return await base.SaveChangesAsync(cancellationToken);
         }
     }
 }
