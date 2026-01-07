@@ -26,10 +26,10 @@ namespace Rujta.Application.Services
         }
 
         public async Task<List<PharmacyMatchResultDto>> GetRankedPharmaciesAsync(
-    ItemDto order,
-    double userLat,
-    double userLng,
-    int topK)
+            ItemDto order,
+            double userLat,
+            double userLng,
+            int topK)
         {
             _logger.LogInformation("=== Start GetRankedPharmaciesAsync ===");
             _logger.LogInformation("User location: Lat={Lat}, Lng={Lng}, topK={TopK}", userLat, userLng, topK);
@@ -53,9 +53,7 @@ namespace Rujta.Application.Services
                 var pharmacyResult = await ProcessPharmacyAsync(entry, order, medicineNames);
 
                 if (pharmacyResult.MatchedDrugs > 0)
-                {
                     results.Add(pharmacyResult);
-                }
             }
 
             var finalResults = results
@@ -68,6 +66,8 @@ namespace Rujta.Application.Services
 
             return finalResults;
         }
+
+        #region Helpers
 
         private bool IsValidOrder(ItemDto order)
         {
@@ -87,16 +87,14 @@ namespace Rujta.Application.Services
 
             for (int i = 0; i < order.Items.Count; i++)
             {
-                var item = order.Items[i];
-                _logger.LogInformation(
-                    "Order item {Index}: MedicineId={MedicineId}, Quantity={Quantity}",
-                    i, item.MedicineId, item.Quantity);
+                LogOrderItem(order.Items[i], i);
             }
 
             return true;
         }
 
-        private async Task<List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>> GetNearestPharmaciesSafe(double userLat, double userLng, int topK)
+        private async Task<List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>> GetNearestPharmaciesSafe(
+            double userLat, double userLng, int topK)
         {
             try
             {
@@ -114,7 +112,6 @@ namespace Rujta.Application.Services
             }
         }
 
-        // Assuming HaversineDistance is defined here or moved from PharmacyDistanceService
         private static double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
         {
             const double R = 6371000; // meters
@@ -155,8 +152,7 @@ namespace Rujta.Application.Services
 
                 if (stock > 0)
                 {
-                    if (isEnough)
-                        matched++;
+                    if (isEnough) matched++;
 
                     foundMedicines.Add(new FoundMedicineDto
                     {
@@ -203,58 +199,30 @@ namespace Rujta.Application.Services
         {
             try
             {
-                _logger.LogInformation(
-                    "Checking stock for MedicineId={MedicineId}, Quantity={Quantity}",
-                    item.MedicineId, item.Quantity);
+                _logger.LogInformation("Checking stock for MedicineId={MedicineId}, Quantity={Quantity}", item.MedicineId, item.Quantity);
 
-                int stock = await _pharmacyRepo
-                    .GetMedicineStockAsync(pharmacyId, item.MedicineId);
-
-                _logger.LogInformation(
-                    "Stock for MedicineId={MedicineId} in PharmacyId={PharmacyId}: {Stock}",
-                    item.MedicineId, pharmacyId, stock);
-
+                int stock = await _pharmacyRepo.GetMedicineStockAsync(pharmacyId, item.MedicineId);
                 bool isEnough = stock >= item.Quantity;
 
-                if (!isEnough)
-                {
-                    _logger.LogWarning(
-                        "MedicineId={MedicineId} not enough stock. Needed {Needed}, Available {Available}",
-                        item.MedicineId, item.Quantity, stock);
-                }
-
-                if (stock == 0)
-                {
-                    _logger.LogWarning(
-                        "MedicineId={MedicineId} stock is zero in PharmacyId={PharmacyId}. Possibly missing in InventoryItems table",
-                        item.MedicineId, pharmacyId);
-                }
+                LogStockCheck(pharmacyId, item, stock, isEnough);
 
                 if (item.MedicineId == 0)
                 {
-                    _logger.LogError(
-                        "MedicineId=0 detected for PharmacyId={PharmacyId}. Check database or DTO mapping!",
-                        pharmacyId);
+                    _logger.LogError("MedicineId=0 detected for PharmacyId={PharmacyId}. Check database or DTO mapping!", pharmacyId);
                 }
 
                 return (stock, isEnough);
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Failed stock query PharmacyId={PharmacyId}, MedicineId={MedicineId}",
-                    pharmacyId, item.MedicineId);
-
+                _logger.LogError(ex, "Failed stock query PharmacyId={PharmacyId}, MedicineId={MedicineId}", pharmacyId, item.MedicineId);
                 return (0, false);
             }
         }
 
         private void LogFinalResults(List<PharmacyMatchResultDto> results)
         {
-            _logger.LogInformation(
-                "=== Returning {Count} ranked pharmacy results ===",
-                results.Count);
+            _logger.LogInformation("=== Returning {Count} ranked pharmacy results ===", results.Count);
 
             foreach (var r in results)
             {
@@ -269,5 +237,26 @@ namespace Rujta.Application.Services
             }
         }
 
+        // Helper methods for logging
+        private void LogOrderItem(CartItemDto item, int index)
+        {
+            _logger.LogInformation(
+                "Order item {Index}: MedicineId={MedicineId}, Quantity={Quantity}",
+                index, item.MedicineId, item.Quantity);
+        }
+
+        private void LogStockCheck(int pharmacyId, CartItemDto item, int stock, bool isEnough)
+        {
+            if (stock == 0)
+            {
+                _logger.LogWarning("MedicineId={MedicineId} stock is zero in PharmacyId={PharmacyId}. Possibly missing in InventoryItems table", item.MedicineId, pharmacyId);
+            }
+            else if (!isEnough)
+            {
+                _logger.LogWarning("MedicineId={MedicineId} not enough stock. Needed {Needed}, Available {Available}", item.MedicineId, item.Quantity, stock);
+            }
+        }
+
+        #endregion
     }
 }
