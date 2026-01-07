@@ -5,7 +5,7 @@
 [![Vite](https://img.shields.io/badge/Vite-4.3.9-646CFF?style=flat&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.3.2-06B6D4?style=flat&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat)](LICENSE)
-[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=flat)](https://github.com/yourusername/rujta/actions)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen?style=flat)](https://github.com/mohamed-ahmad2/Rujta/actions)
 
 Rujta is a modern, full-stack web application designed to revolutionize pharmacy management and medicine ordering. It empowers users to effortlessly browse, cart, and order medicines while providing pharmacies with intuitive tools to manage inventory, process orders, and track statuses. Built with scalability and user experience in mind, Rujta bridges the gap between customers and pharmacies for faster, more efficient access to essential healthcare products.
 
@@ -89,11 +89,18 @@ This structure ensures loose coupling, easy testing, and seamless full-stack int
 
 ## 🔒 Security Features
 
-- **Authentication**: JWT with refresh tokens, Google OAuth, and Firebase integration.
+- **Authentication**: JWT signed with RSA private key (verified with public key), refresh tokens, Google OAuth, and Firebase integration.
 - **Authorization**: Role-based access control.
 - **Data Protection**: Secure hashing, input validation, and protection against SQL Injection/XSS.
 - **Encryption**: HTTPS/SSL for all communications; sensitive data via environment variables.
-- **Best Practices**: Token rotation, CORS handling via Vite proxy, and centralized error handling.
+- **Rate Limiting**: Implemented to prevent Denial-of-Service (DoS) attacks.
+- **Request Size Limits**: Maximum request body size to mitigate DoS and resource exhaustion.
+- **Timeout Policies**: HttpClient with timeout policies to handle hanging requests and prevent DoS.
+- **Resource Management**: SetHandlerLifetime to avoid resource leaks.
+- **CSRF Protection**: SameSite=Strict mode for cookies and CORS handling.
+- **Content Security**: Content-Security-Policy (CSP) enforced in backend to prevent XSS (frontend fixes pending).
+- **Information Disclosure Prevention**: Measures to safeguard against unintended data exposure.
+- **Best Practices**: Refresh token rotation, CORS handling via Vite proxy, and centralized error handling.
 
 ---
 
@@ -106,7 +113,7 @@ This structure ensures loose coupling, easy testing, and seamless full-stack int
 - Set Environment Variable: `JWT__CertPassword="Rujta123987"` (for JWT signing)
 
 ### Backend Setup
-1. Clone the repo: `git clone https://github.com/yourusername/rujta.git`
+1. Clone the repo: `git clone https://github.com/mohamed-ahmad2/Rujta.git`
 2. Navigate: `cd Backend/Rujta`
 3. Restore packages: `dotnet restore`
 4. Update connection string in `appsettings.Development.json`
@@ -152,7 +159,7 @@ This is an academic graduation project focused on real-world pharmacy solutions.
 ## 📧 Contact
 For inquiries, issues, or collaborations:  
 📧 [rujta.pharmacy@example.com](mailto:rujta.pharmacy@example.com)  
-🌐 [GitHub Repository](https://github.com/yourusername/rujta)  
+🌐 [GitHub Repository](https://github.com/mohamed-ahmad2/Rujta)  
 
 We welcome contributions! Check the [Developer Docs](docs/index.md) for guidelines.
 
