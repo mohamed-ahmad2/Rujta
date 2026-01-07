@@ -1,4 +1,6 @@
-﻿
+﻿using Microsoft.AspNetCore.Http;
+using Rujta.Infrastructure.Identity.Services.Auth;
+
 namespace Rujta.Infrastructure.Extensions
 {
     public static class ApplicationServicesConfiguration
@@ -33,6 +35,28 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IInventoryItemService, InventoryItemService>();
             services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<INotificationService, NotificationService>();
+
+
+            services.AddScoped<AuthIdentityContext>(sp =>
+            {
+                var identityServices = sp.GetRequiredService<IdentityServices>();
+                var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+                var mapper = sp.GetRequiredService<IMapper>();
+
+                return new AuthIdentityContext(identityServices, unitOfWork, mapper);
+            });
+
+            services.AddScoped<AuthInfrastructureContext>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<AuthService>>();
+                var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+                var configuration = sp.GetRequiredService<IConfiguration>();
+                var emailService = sp.GetRequiredService<IEmailService>();
+
+                return new AuthInfrastructureContext(logger, httpContextAccessor, configuration, emailService);
+            });
 
 
             services.AddScoped<PharmacyDistanceService>();
