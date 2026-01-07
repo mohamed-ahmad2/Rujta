@@ -1,4 +1,6 @@
-﻿namespace Rujta.Domain.Entities
+﻿using Rujta.Domain.Common;
+
+namespace Rujta.Domain.Entities
 {
     public enum ReceiverType
     {
@@ -6,15 +8,12 @@
         Pharmacy = 2
     }
 
-    public class Notification
+    public class Notification : BaseEntity
     {
-        public int Id { get; set; }
-
-        // who should receive this notification
         public ReceiverType ReceiverType { get; set; }
 
-        public string? UserId { get; set; }       // used when ReceiverType.User
-        public int? PharmacyId { get; set; }      // used when ReceiverType.Pharmacy
+        public string? UserId { get; set; }
+        public int? PharmacyId { get; set; }
 
         public string Title { get; set; } = default!;
         public string Message { get; set; } = default!;
@@ -22,6 +21,5 @@
         public string? Payload { get; set; }
 
         public bool IsRead { get; set; } = false;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

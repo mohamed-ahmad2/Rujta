@@ -14,7 +14,8 @@ namespace Rujta.Infrastructure.Extensions
                 { typeof(Employee), "Employee" },
                 { typeof(Manager), "Manager" },
                 { typeof(Pharmacist), "Pharmacist" },
-                { typeof(Admin), "Admin" }
+                { typeof(Admin), "Admin" },
+                { typeof(Customer), "Customer" }
             };
 
             var discriminatorBuilder = builder.Entity<Person>().HasDiscriminator<string>("Discriminator");

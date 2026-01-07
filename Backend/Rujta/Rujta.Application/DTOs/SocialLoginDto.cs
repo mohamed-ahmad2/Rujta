@@ -2,6 +2,6 @@
 {
     public class SocialLoginDto
     {
-        public string IdToken { get; set; }  // Google ID Token
+        public string IdToken { get; set; } = string.Empty;  // Google ID Token
     }
 }

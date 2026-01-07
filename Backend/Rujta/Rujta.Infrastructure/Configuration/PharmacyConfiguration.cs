@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
-
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Rujta.Domain.Entities;
 
 namespace Rujta.Infrastructure.Configuration
 {
@@ -27,18 +28,15 @@ namespace Rujta.Infrastructure.Configuration
                    .HasForeignKey(p => p.AdminId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-           
-
-
-
             builder.HasOne(p => p.ParentPharmacy)
                    .WithMany(p => p.Branches)
                    .HasForeignKey(p => p.ParentPharmacyID)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasMany(p => p.Pharmacists)
-                   .WithOne(s => s.Pharmacy)
-                   .HasForeignKey(s => s.PharmacyId)
+            // Employees relationship (يشمل Pharmacists أيضاً)
+            builder.HasMany(p => p.Employees)
+                   .WithOne(e => e.Pharmacy)
+                   .HasForeignKey(e => e.PharmacyId)
                    .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasMany(p => p.InventoryItems)
@@ -48,10 +46,10 @@ namespace Rujta.Infrastructure.Configuration
 
             builder.HasMany(p => p.Orders)
                    .WithOne(o => o.Pharmacy)
-                   .HasForeignKey(o => o.PharmacyID)
+                   .HasForeignKey(o => o.PharmacyId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasMany(p => p.SellDrugViaPharmacies)
+            builder.HasMany(p => p.SellDrugViaPharmacy)
                    .WithOne(s => s.Pharmacy)
                    .HasForeignKey(s => s.PharmacyID)
                    .OnDelete(DeleteBehavior.Restrict);

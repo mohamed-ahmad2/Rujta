@@ -1,4 +1,6 @@
-﻿namespace Rujta.Infrastructure.Identity.Mapper
+﻿using Rujta.Domain.Common;
+
+namespace Rujta.Infrastructure.Identity.Mapper
 {
     public class AuthProfile : Profile
     {

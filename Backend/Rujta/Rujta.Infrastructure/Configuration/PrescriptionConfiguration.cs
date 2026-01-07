@@ -38,7 +38,7 @@ namespace Rujta.Infrastructure.Configuration
 
             builder.HasMany(p => p.Orders)
                    .WithOne(o => o.Prescription)
-                   .HasForeignKey(o => o.PrescriptionID)
+                   .HasForeignKey(o => o.PrescriptionId)
                    .OnDelete(DeleteBehavior.SetNull);
 
             builder.HasMany(p => p.InventoryItems)

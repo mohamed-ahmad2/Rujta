@@ -1,3 +1,4 @@
+// src/features/orders/api/ordersApi.js
 import apiClient from "../../../shared/api/apiClient";
 
 export const getAllOrders = () => apiClient.get("/orders");

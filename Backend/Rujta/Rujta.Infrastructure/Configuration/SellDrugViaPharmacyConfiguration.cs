@@ -24,7 +24,7 @@ namespace Rujta.Infrastructure.Configuration
                    .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(s => s.Pharmacy)
-                   .WithMany(p => p.SellDrugViaPharmacies)
+                   .WithMany(p => p.SellDrugViaPharmacy)
                    .HasForeignKey(s => s.PharmacyID)
                    .OnDelete(DeleteBehavior.Restrict);
 

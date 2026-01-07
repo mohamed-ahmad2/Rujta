@@ -21,9 +21,12 @@ const Navbar = ({ cart,setCart, onCartClick }) => {
   } = useSearchMedicines(query, 10);
 
   const logoutAndRedirect = async () => {
-    await handleLogout();
-    
-    navigate("/user");
+    try {
+      await handleLogout();
+      navigate('/auth');
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
   };
 
   return (

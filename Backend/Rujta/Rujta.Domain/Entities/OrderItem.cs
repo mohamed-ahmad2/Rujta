@@ -18,7 +18,7 @@ namespace Rujta.Domain.Entities
         public decimal SubTotal { get; set; }
 
 
-        public virtual Order Order { get; set; }
-        public virtual Medicine Medicine { get; set; } 
+        public virtual Order Order { get; set; } = null!;
+        public virtual Medicine Medicine { get; set; } = null!;
     }
 }
