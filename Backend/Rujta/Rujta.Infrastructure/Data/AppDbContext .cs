@@ -39,17 +39,6 @@ namespace Rujta.Infrastructure.Data
         {
             base.OnModelCreating(builder);
 
-            // Notification configuration
-            builder.Entity<Notification>(b =>
-            {
-                b.HasKey(n => n.Id);
-                b.Property(n => n.UserId).IsRequired().HasMaxLength(200);
-                b.Property(n => n.Title).IsRequired().HasMaxLength(250);
-                b.Property(n => n.Message).IsRequired().HasMaxLength(2048);
-                b.Property(n => n.Payload).HasMaxLength(4000);
-                b.Property(n => n.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-            });
-
             // Identity & Decimal precision
             builder.ApplyIdentityMapping();
             builder.ApplyDecimalPrecision();
