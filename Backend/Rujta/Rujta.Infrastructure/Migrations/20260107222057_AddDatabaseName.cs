@@ -372,7 +372,7 @@ namespace Rujta.Infrastructure.Migrations
                     CustomerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     PharmacyId = table.Column<int>(type: "int", nullable: false),
                     PrescriptionId = table.Column<int>(type: "int", nullable: true),
-                    DeliveryAddressId = table.Column<int>(type: "int", nullable: true),
+                    DeliveryAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     OrderDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     TotalPrice = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
@@ -383,12 +383,6 @@ namespace Rujta.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Orders", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Orders_Addresses_DeliveryAddressId",
-                        column: x => x.DeliveryAddressId,
-                        principalTable: "Addresses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -654,11 +648,6 @@ namespace Rujta.Infrastructure.Migrations
                 column: "CustomerId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Orders_DeliveryAddressId",
-                table: "Orders",
-                column: "DeliveryAddressId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Orders_PharmacyId",
                 table: "Orders",
                 column: "PharmacyId");
@@ -869,6 +858,9 @@ namespace Rujta.Infrastructure.Migrations
                 table: "Pharmacies");
 
             migrationBuilder.DropTable(
+                name: "Addresses");
+
+            migrationBuilder.DropTable(
                 name: "Devices");
 
             migrationBuilder.DropTable(
@@ -918,9 +910,6 @@ namespace Rujta.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
-
-            migrationBuilder.DropTable(
-                name: "Addresses");
 
             migrationBuilder.DropTable(
                 name: "Prescriptions");

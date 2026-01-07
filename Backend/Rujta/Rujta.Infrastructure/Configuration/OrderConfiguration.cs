@@ -13,10 +13,10 @@ namespace Rujta.Infrastructure.Configuration
                    .HasColumnType("decimal(18,2)");
 
 
-            builder.HasOne(o => o.DeliveryAddress)
-                   .WithMany()
-                   .HasForeignKey(o => o.DeliveryAddressId)
-                   .OnDelete(DeleteBehavior.Restrict);
+            builder.Property(o => o.DeliveryAddress)
+                   .HasMaxLength(500)
+                   .IsRequired();
+
 
             builder.HasOne(o => o.User)
                    .WithMany(u => u.Orders)

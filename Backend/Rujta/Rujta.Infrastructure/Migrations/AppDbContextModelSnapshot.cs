@@ -526,8 +526,10 @@ namespace Rujta.Infrastructure.Migrations
                     b.Property<Guid?>("CustomerId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int?>("DeliveryAddressId")
-                        .HasColumnType("int");
+                    b.Property<string>("DeliveryAddress")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
@@ -561,8 +563,6 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
-
-                    b.HasIndex("DeliveryAddressId");
 
                     b.HasIndex("PharmacyId");
 
@@ -1210,11 +1210,6 @@ namespace Rujta.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("CustomerId");
 
-                    b.HasOne("Rujta.Domain.Entities.Address", "DeliveryAddress")
-                        .WithMany()
-                        .HasForeignKey("DeliveryAddressId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("Rujta.Domain.Entities.Pharmacy", "Pharmacy")
                         .WithMany("Orders")
                         .HasForeignKey("PharmacyId")
@@ -1232,8 +1227,6 @@ namespace Rujta.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Customer");
-
-                    b.Navigation("DeliveryAddress");
 
                     b.Navigation("Pharmacy");
 
