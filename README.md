@@ -1,6 +1,6 @@
 # 💊 Rujta – Pharmacy Management & Ordering System
 
-[![.NET](https://img.shields.io/badge/.NET-7.0-blue?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/) 
+[![.NET](https://img.shields.io/badge/.NET-8.0-blue?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/) 
 [![React](https://img.shields.io/badge/React-18.2.0-blue?logo=react&logoColor=white)](https://reactjs.org/) 
 [![Vite](https://img.shields.io/badge/Vite-4.3.9-brightgreen?logo=vite&logoColor=white)](https://vitejs.dev/) 
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.3.2-blue?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/) 
@@ -93,7 +93,7 @@ Rujta solves this problem by providing a **centralized system** that matches use
 ### 1️⃣ Backend (ASP.NET Core)
 
 **Prerequisites:**
-- [.NET 7 SDK](https://dotnet.microsoft.com/download/dotnet/7.0)  
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)  
 - SQL Server  
 - Optional: Redis for caching  
 
