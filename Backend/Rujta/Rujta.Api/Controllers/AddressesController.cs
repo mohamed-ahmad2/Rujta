@@ -52,7 +52,7 @@ namespace Rujta.Api.Controllers
         [HttpGet("user")]
         public async Task<IActionResult> GetUserAddresses(CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier); ;
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userIdClaim == null)
                 return Unauthorized("DomainPersonId not found in token.");
 
