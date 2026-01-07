@@ -38,7 +38,8 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<INotificationService, NotificationService>();
-            
+            services.AddScoped<IAddressService, AddressService>();
+
 
             services.AddScoped<AuthIdentityContext>(sp =>
             {
