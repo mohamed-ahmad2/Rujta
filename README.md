@@ -128,7 +128,6 @@ For production builds and deployment, refer to the [Developer Documentation](doc
 
 ## 🔮 Future Enhancements
 - **AI Integration**: Prescription image analysis for automatic medicine extraction.
-- **Mobile Apps**: Native iOS/Android versions.
 - **Payments & Delivery**: Integrate payment gateways and logistics APIs.
 - **Advanced Analytics**: AI-driven insights for trends and predictions.
 - **Multi-Language Support**: For global accessibility.
