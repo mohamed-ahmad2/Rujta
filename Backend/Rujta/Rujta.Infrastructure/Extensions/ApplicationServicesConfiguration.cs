@@ -18,6 +18,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<TokenHelper>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IMedicineService, MedicineService>();
+            services.AddScoped<IMedicineRepository, MedicineRepository>();
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IPharmacyRepository, PharmacyRepo>();
@@ -37,7 +38,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<INotificationService, NotificationService>();
-
+            
 
             services.AddScoped<AuthIdentityContext>(sp =>
             {

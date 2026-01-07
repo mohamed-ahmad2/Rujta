@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
 import { useOrders } from "../../orders/hooks/useOrders";
 import { useAuth } from "../../auth/hooks/useAuth";
+import useAddress from "../../address/hook/useAddress"; // Assuming the hook is in this path based on the provided useAddress.js
 import apiClient from "../../../shared/api/apiClient";
 
 const Checkout = () => {
@@ -9,17 +10,21 @@ const Checkout = () => {
     const { pharmacies, loading, error, fetchPharmacies } = usePharmacies();
     const { create } = useOrders();
     const { user } = useAuth();
+    const { addresses, loading: addressesLoading, error: addressesError, fetchUserAddresses, create: createAddress } = useAddress();
 
     const [showLocationPrompt, setShowLocationPrompt] = useState(false);
 
     // FOR ORDER FORM
     const [showOrderForm, setShowOrderForm] = useState(false);
     const [selectedPharmacyId, setSelectedPharmacyId] = useState(null);
-    const [addressForm, setAddressForm] = useState({
+    const [selectedAddress, setSelectedAddress] = useState(null);
+    const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+    const [newAddressForm, setNewAddressForm] = useState({
         Street: "",
         BuildingNo: "",
         City: "",
         Governorate: "",
+        IsDefault: false,
     });
 
     // Show location prompt if needed
@@ -34,7 +39,7 @@ const Checkout = () => {
         }
     }, [error]);
 
-    // Load cart from localStorage
+    // Load cart from localStorage and fetch user addresses
     useEffect(() => {
         if (!user) return;
 
@@ -49,6 +54,8 @@ const Checkout = () => {
             }));
             fetchPharmacies(dtoItems);
         }
+
+        fetchUserAddresses(); // Fetch user's addresses on load
     }, [user]);
 
     const handleSetLocation = () => {
@@ -70,37 +77,44 @@ const Checkout = () => {
         }
     };
 
-    // فتح فورم الطلب عند الضغط على Order
+    // Open order form and reset states
     const openOrderForm = (pharmacyId) => {
         setSelectedPharmacyId(pharmacyId);
-        // لو المستخدم عنده عنوان جاهز، نحط البيانات تلقائيًا
-        if (user?.address) {
-            setAddressForm(user.address);
-        } else {
-            setAddressForm({
-                Street: "",
-                BuildingNo: "",
-                City: "",
-                Governorate: "",
-            });
-        }
+        setSelectedAddress(null);
+        setShowNewAddressForm(false);
+        setNewAddressForm({
+            Street: "",
+            BuildingNo: "",
+            City: "",
+            Governorate: "",
+            IsDefault: false,
+        });
         setShowOrderForm(true);
     };
 
-    const handleAddressChange = (e) => {
+    const handleNewAddressChange = (e) => {
         const { name, value } = e.target;
-        setAddressForm((prev) => ({ ...prev, [name]: value }));
+        setNewAddressForm((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleUseAccountAddress = () => {
-        if (user?.address) {
-            setAddressForm(user.address);
+    const handleAddNewAddress = async () => {
+        try {
+            await createAddress(newAddressForm);
+            await fetchUserAddresses(); // Refresh addresses after adding new one
+            setShowNewAddressForm(false);
+        } catch (err) {
+            console.error("Failed to add new address:", err);
         }
     };
 
     const handleConfirmOrder = async () => {
         if (!cart || cart.length === 0) {
             alert("Cart is empty!");
+            return;
+        }
+
+        if (!selectedAddress) {
+            alert("Please select a delivery address!");
             return;
         }
 
@@ -111,7 +125,7 @@ const Checkout = () => {
 
         const orderDto = {
             PharmacyID: selectedPharmacyId,
-            DeliveryAddress: addressForm,
+            DeliveryAddress: selectedAddress, // Send the selected address object
             OrderItems: orderItems,
         };
 
@@ -190,6 +204,22 @@ const Checkout = () => {
                                             Matched Drugs: {p.matchedDrugs} / {p.totalRequestedDrugs} (
                                             {p.matchPercentage.toFixed(2)}%)
                                         </p>
+                                        <p className="text-sm font-medium mt-3">Found Medicines:</p>
+                                        <ul className="list-disc pl-5 text-sm">
+                                            {p.foundMedicines.map((m) => (
+                                                <li key={m.medicineId}>
+                                                    {m.medicineName} - Requested: {m.requestedQuantity}, Available: {m.availableQuantity} (Enough: {m.isQuantityEnough ? "Yes" : "No"})
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <p className="text-sm font-medium mt-3">Not Found Medicines:</p>
+                                        <ul className="list-disc pl-5 text-sm">
+                                            {p.notFoundMedicines.map((m) => (
+                                                <li key={m.medicineId}>
+                                                    {m.medicineName} - Requested: {m.requestedQuantity}
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
 
                                     <button
@@ -207,51 +237,86 @@ const Checkout = () => {
                     {showOrderForm && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
                             <div className="bg-white p-6 rounded-xl w-[400px]">
-                                <h2 className="text-xl font-semibold mb-4">Delivery Address</h2>
+                                <h2 className="text-xl font-semibold mb-4">Select Delivery Address</h2>
 
-                                <div className="flex flex-col gap-3">
-                                    <input
-                                        type="text"
-                                        name="Street"
-                                        placeholder="Street"
-                                        value={addressForm.Street}
-                                        onChange={handleAddressChange}
-                                        className="border p-2 rounded"
-                                    />
-                                    <input
-                                        type="text"
-                                        name="BuildingNo"
-                                        placeholder="Building No"
-                                        value={addressForm.BuildingNo}
-                                        onChange={handleAddressChange}
-                                        className="border p-2 rounded"
-                                    />
-                                    <input
-                                        type="text"
-                                        name="City"
-                                        placeholder="City"
-                                        value={addressForm.City}
-                                        onChange={handleAddressChange}
-                                        className="border p-2 rounded"
-                                    />
-                                    <input
-                                        type="text"
-                                        name="Governorate"
-                                        placeholder="Governorate"
-                                        value={addressForm.Governorate}
-                                        onChange={handleAddressChange}
-                                        className="border p-2 rounded"
-                                    />
+                                {addressesLoading && <p>Loading addresses...</p>}
+                                {addressesError && <p className="text-red-500">{addressesError}</p>}
 
-                                    {user?.address && (
+                                {!showNewAddressForm ? (
+                                    <div className="flex flex-col gap-3">
+                                        {addresses.length > 0 ? (
+                                            addresses.map((addr) => (
+                                                <div
+                                                    key={addr.id}
+                                                    className={`border p-3 rounded cursor-pointer ${selectedAddress?.Id === addr.id ? "bg-gray-200" : ""}`}
+                                                    onClick={() => setSelectedAddress(addr)}
+                                                >
+                                                    <p>{addr.street}, {addr.buildingNo}</p>
+                                                    <p>{addr.city}, {addr.governorate}</p>
+                                                    {addr.isDefault && <p className="text-green-600">Default</p>}
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p>No addresses found. Add a new one.</p>
+                                        )}
                                         <button
-                                            onClick={handleUseAccountAddress}
+                                            onClick={() => setShowNewAddressForm(true)}
                                             className="bg-gray-300 text-black px-3 py-2 rounded mt-2"
                                         >
-                                            Use my account address
+                                            Add New Address
                                         </button>
-                                    )}
-                                </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-3">
+                                        <input
+                                            type="text"
+                                            name="Street"
+                                            placeholder="Street"
+                                            value={newAddressForm.Street}
+                                            onChange={handleNewAddressChange}
+                                            className="border p-2 rounded"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="BuildingNo"
+                                            placeholder="Building No"
+                                            value={newAddressForm.BuildingNo}
+                                            onChange={handleNewAddressChange}
+                                            className="border p-2 rounded"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="City"
+                                            placeholder="City"
+                                            value={newAddressForm.City}
+                                            onChange={handleNewAddressChange}
+                                            className="border p-2 rounded"
+                                        />
+                                        <input
+                                            type="text"
+                                            name="Governorate"
+                                            placeholder="Governorate"
+                                            value={newAddressForm.Governorate}
+                                            onChange={handleNewAddressChange}
+                                            className="border p-2 rounded"
+                                        />
+                                        <label className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                name="IsDefault"
+                                                checked={newAddressForm.IsDefault}
+                                                onChange={(e) => setNewAddressForm((prev) => ({ ...prev, IsDefault: e.target.checked }))}
+                                            />
+                                            <span className="ml-2">Set as Default</span>
+                                        </label>
+                                        <button
+                                            onClick={handleAddNewAddress}
+                                            className="bg-blue-500 text-white px-3 py-2 rounded mt-2"
+                                        >
+                                            Save New Address
+                                        </button>
+                                    </div>
+                                )}
 
                                 <div className="flex justify-end gap-3 mt-4">
                                     <button
@@ -260,12 +325,15 @@ const Checkout = () => {
                                     >
                                         Cancel
                                     </button>
-                                    <button
-                                        onClick={handleConfirmOrder}
-                                        className="px-4 py-2 rounded bg-secondary text-white"
-                                    >
-                                        Confirm Order
-                                    </button>
+                                    {!showNewAddressForm && (
+                                        <button
+                                            onClick={handleConfirmOrder}
+                                            className="px-4 py-2 rounded bg-secondary text-white"
+                                            disabled={!selectedAddress}
+                                        >
+                                            Confirm Order
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
