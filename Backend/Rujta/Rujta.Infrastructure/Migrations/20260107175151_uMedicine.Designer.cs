@@ -12,13 +12,8 @@ using Rujta.Infrastructure.Data;
 namespace Rujta.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-<<<<<<<< HEAD:Backend/Rujta/Rujta.Infrastructure/Migrations/20260103104751_updfigne.Designer.cs
-    [Migration("20260103104751_updfigne")]
-    partial class updfigne
-========
-    [Migration("20260105001130_AddDatabaseName")]
-    partial class AddDatabaseName
->>>>>>>> 05c98f71a10ad05963e0df936cd93da650198b72:Backend/Rujta/Rujta.Infrastructure/Migrations/20260105001130_AddDatabaseName.Designer.cs
+    [Migration("20260107175151_uMedicine")]
+    partial class uMedicine
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

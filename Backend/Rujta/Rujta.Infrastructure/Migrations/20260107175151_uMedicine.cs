@@ -6,11 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Rujta.Infrastructure.Migrations
 {
     /// <inheritdoc />
-<<<<<<<< HEAD:Backend/Rujta/Rujta.Infrastructure/Migrations/20260103104751_updfigne.cs
-    public partial class updfigne : Migration
-========
-    public partial class AddDatabaseName : Migration
->>>>>>>> 05c98f71a10ad05963e0df936cd93da650198b72:Backend/Rujta/Rujta.Infrastructure/Migrations/20260105001130_AddDatabaseName.cs
+    public partial class uMedicine : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
