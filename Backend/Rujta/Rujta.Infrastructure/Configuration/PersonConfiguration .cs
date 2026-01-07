@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Rujta.Domain.Common;
 
 namespace Rujta.Infrastructure.Configuration
@@ -18,7 +19,15 @@ namespace Rujta.Infrastructure.Configuration
                    .IsRequired()
                    .HasMaxLength(100);
 
-            
+            builder.HasMany(p => p.Addresses)
+                   .WithOne(a => a.Person)
+                   .HasForeignKey(a => a.PersonId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+
+            builder.Property(p => p.PhoneNumber)
+                   .IsRequired()
+                   .HasMaxLength(20);
 
             builder.Property(p => p.CreatedAt)
                    .HasDefaultValueSql("GETUTCDATE()");

@@ -1,9 +1,5 @@
 using Rujta.Application.DTOs;
-using Rujta.Application.DTOs.UserProfile;
 using Rujta.Domain.Entities;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {

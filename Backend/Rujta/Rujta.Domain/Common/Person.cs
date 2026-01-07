@@ -10,7 +10,7 @@ namespace Rujta.Domain.Common
         public string PhoneNumber { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string? ProfileImageUrl { get; set; }
-        public Address? Address { get; set; }
+        public ICollection<Address> Addresses { get; set; } = new List<Address>();
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
     }

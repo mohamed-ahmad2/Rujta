@@ -133,7 +133,7 @@ namespace Rujta.Infrastructure.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    PersonId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Street = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     BuildingNo = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     City = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
@@ -395,13 +395,12 @@ namespace Rujta.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ProfileImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Discriminator = table.Column<string>(type: "nvarchar(13)", maxLength: 13, nullable: false),
-                    AddressId = table.Column<int>(type: "int", nullable: true),
                     Qualification = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     ExperienceYears = table.Column<int>(type: "int", nullable: true),
                     WorkStartTime = table.Column<TimeSpan>(type: "time", nullable: true),
@@ -414,7 +413,6 @@ namespace Rujta.Infrastructure.Migrations
                     HireDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Salary = table.Column<decimal>(type: "decimal(10,2)", precision: 10, scale: 2, nullable: true),
                     ManagerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    Employee_AddressId = table.Column<int>(type: "int", nullable: true),
                     MedicalHistory = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     Allergies = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
                     DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -430,16 +428,6 @@ namespace Rujta.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_People", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_People_Addresses_AddressId",
-                        column: x => x.AddressId,
-                        principalTable: "Addresses",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_People_Addresses_Employee_AddressId",
-                        column: x => x.Employee_AddressId,
-                        principalTable: "Addresses",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_People_People_AdminId",
                         column: x => x.AdminId,
@@ -590,11 +578,9 @@ namespace Rujta.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Addresses_UserId",
+                name: "IX_Addresses_PersonId",
                 table: "Addresses",
-                column: "UserId",
-                unique: true,
-                filter: "[UserId] IS NOT NULL");
+                column: "PersonId");
 
             migrationBuilder.CreateIndex(
                 name: "EmailIndex",
@@ -680,19 +666,9 @@ namespace Rujta.Infrastructure.Migrations
                 column: "UserID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_People_AddressId",
-                table: "People",
-                column: "AddressId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_People_AdminId",
                 table: "People",
                 column: "AdminId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_People_Employee_AddressId",
-                table: "People",
-                column: "Employee_AddressId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_People_ManagerId",
@@ -777,11 +753,12 @@ namespace Rujta.Infrastructure.Migrations
                 column: "RoleId");
 
             migrationBuilder.AddForeignKey(
-                name: "FK_Addresses_People_UserId",
+                name: "FK_Addresses_People_PersonId",
                 table: "Addresses",
-                column: "UserId",
+                column: "PersonId",
                 principalTable: "People",
-                principalColumn: "Id");
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_AspNetUsers_People_DomainPersonId",
@@ -867,10 +844,6 @@ namespace Rujta.Infrastructure.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
-                name: "FK_Addresses_People_UserId",
-                table: "Addresses");
-
-            migrationBuilder.DropForeignKey(
                 name: "FK_Pharmacies_People_AdminId",
                 table: "Pharmacies");
 
@@ -926,6 +899,9 @@ namespace Rujta.Infrastructure.Migrations
                 name: "AspNetUsers");
 
             migrationBuilder.DropTable(
+                name: "Addresses");
+
+            migrationBuilder.DropTable(
                 name: "Prescriptions");
 
             migrationBuilder.DropTable(
@@ -933,9 +909,6 @@ namespace Rujta.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "People");
-
-            migrationBuilder.DropTable(
-                name: "Addresses");
 
             migrationBuilder.DropTable(
                 name: "Pharmacies");

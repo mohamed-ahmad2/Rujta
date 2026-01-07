@@ -9,20 +9,8 @@ using Rujta.Domain.Enums;
 
 namespace Rujta.Application.Services
 {
-    public class OrderService : IOrderService
+    public class OrderService(IUnitOfWork _unitOfWork,IMapper _mapper,ILogger<OrderService> _logger) : IOrderService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-        private readonly ILogger<OrderService> _logger;
-
-        public OrderService(IUnitOfWork unitOfWork, IMapper mapper, ILogger<OrderService> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
-            _logger = logger;
-        }
-
-
         public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto, Guid userId, CancellationToken cancellationToken = default)
         {
             try
@@ -35,46 +23,18 @@ namespace Rujta.Application.Services
                 var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(createOrderDto.PharmacyID, cancellationToken)
                     ?? throw new InvalidOperationException($"Pharmacy with ID {createOrderDto.PharmacyID} not found.");
 
-                Address? deliveryAddressEntity = null;
+                int? deliveryAddressId = createOrderDto.DeliveryAddressId;
 
-                if (createOrderDto.DeliveryAddress != null)
-                {
-                    deliveryAddressEntity = (await _unitOfWork.Address.FindAsync(
-                        a => a.UserId == userId,
-                        cancellationToken
-                    )).FirstOrDefault();
-
-                    if (deliveryAddressEntity != null)
-                    {
-                        deliveryAddressEntity.Street = createOrderDto.DeliveryAddress.Street;
-                        deliveryAddressEntity.BuildingNo = createOrderDto.DeliveryAddress.BuildingNo;
-                        deliveryAddressEntity.City = createOrderDto.DeliveryAddress.City;
-                        deliveryAddressEntity.Governorate = createOrderDto.DeliveryAddress.Governorate;
-                        deliveryAddressEntity.IsDefault = true;
-                        await _unitOfWork.Address.UpdateAsync(deliveryAddressEntity, cancellationToken);
-                    }
-                    else
-                    {
-                        deliveryAddressEntity = _mapper.Map<Address>(createOrderDto.DeliveryAddress);
-                        deliveryAddressEntity.UserId = userId;
-                        deliveryAddressEntity.IsDefault = true;
-                        await _unitOfWork.Address.AddAsync(deliveryAddressEntity, cancellationToken);
-                        await _unitOfWork.SaveAsync(cancellationToken);
-                    }
-                }
-
-               
                 var order = new Order
                 {
                     UserID = userId,
                     PharmacyID = createOrderDto.PharmacyID,
                     OrderDate = DateTime.UtcNow,
                     Status = OrderStatus.Pending,
-                    DeliveryAddressId = deliveryAddressEntity?.Id,
+                    DeliveryAddressId = deliveryAddressId,
                     OrderItems = new List<OrderItem>()
                 };
 
-                
                 decimal totalPrice = 0;
                 var medicineIds = createOrderDto.OrderItems.Select(i => i.MedicineID).ToList();
                 var medicines = await _unitOfWork.Medicines.FindAsync(m => medicineIds.Contains(m.Id), cancellationToken);
@@ -99,12 +59,10 @@ namespace Rujta.Application.Services
 
                 order.TotalPrice = totalPrice;
 
-                
                 await _unitOfWork.Orders.AddAsync(order, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
-                _logger.LogInformation("Order {OrderId} created successfully for UserId {UserId}",order.Id.ToString(),userId.ToString());
-
+                _logger.LogInformation("Order {OrderId} created successfully for UserId {UserId}", order.Id.ToString(), userId.ToString());
 
                 var orderDto = _mapper.Map<OrderDto>(order);
                 orderDto.UserName = appUser.Name;
@@ -119,6 +77,7 @@ namespace Rujta.Application.Services
                 throw new InvalidOperationException(message, ex);
             }
         }
+
 
 
 
