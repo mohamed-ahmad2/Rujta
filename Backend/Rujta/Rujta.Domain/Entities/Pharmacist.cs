@@ -1,6 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-
-namespace Rujta.Domain.Entities
+﻿using Rujta.Domain.Entities;
+namespace Rujta.Domain.Common
 {
     public class Pharmacist : Employee
     {
@@ -8,9 +7,7 @@ namespace Rujta.Domain.Entities
         public DateTime HireDate { get; set; }
         public decimal Salary { get; set; }
 
-        [ForeignKey("Manager")]
         public Guid ManagerId { get; set; }
         public virtual Manager Manager { get; set; } = null!;
-
     }
 }

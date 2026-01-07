@@ -1,9 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using Rujta.Domain.Common;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Rujta.Domain.Entities
 {
     public class Manager : Employee
     {
+
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
 

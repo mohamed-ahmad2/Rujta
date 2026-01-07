@@ -20,6 +20,7 @@ namespace Rujta.Infrastructure.Repositories
         private ILogRepository? _logs;
         private IPharmacistRepository? _pharmacists;
         private ICategoryRepository? _category;
+        private ICustomerRepository? _customers;
 
 
         public UnitOfWork(AppDbContext context, IServiceProvider serviceProvider)
@@ -43,6 +44,7 @@ namespace Rujta.Infrastructure.Repositories
         public ILogRepository Logs => _logs ??= new LogRepository(_context);
 
         public IPharmacistRepository Pharmacists => _pharmacists ??= new PharmacistRepository(_context);
+        public ICustomerRepository Customers => _customers ??= new CustomerRepository(_context);
 
         // Save changes
         public async Task<int> SaveAsync(CancellationToken cancellationToken = default)

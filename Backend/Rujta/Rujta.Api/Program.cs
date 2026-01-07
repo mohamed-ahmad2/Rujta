@@ -49,10 +49,9 @@ namespace Rujta.API
             // Application Services
             builder.Services.AddApplicationServices(builder.Configuration);
 
-            // -------------------------------
-            // Firebase Admin SDK
-            // -------------------------------
-            // Make sure to put the JSON in your project and update the path
+
+
+            builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
 
             // Firebase Initialization
             try

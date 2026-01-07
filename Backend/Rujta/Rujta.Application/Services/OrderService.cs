@@ -27,8 +27,8 @@ namespace Rujta.Application.Services
 
                 var order = new Order
                 {
-                    UserID = userId,
-                    PharmacyID = createOrderDto.PharmacyID,
+                    UserId = userId,
+                    PharmacyId = createOrderDto.PharmacyID,
                     OrderDate = DateTime.UtcNow,
                     Status = OrderStatus.Pending,
                     DeliveryAddressId = deliveryAddressId,
