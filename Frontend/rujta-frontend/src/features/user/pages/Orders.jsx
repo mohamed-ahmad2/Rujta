@@ -3,7 +3,13 @@ import { useOrders } from "../../orders/hooks/useOrders";
 import useMedicines from "../../medicines/hook/useMedicines";
 
 export default function Orders() {
-  const { orders, fetchUserOrders } = useOrders();
+  const {
+    orders,
+    fetchUser,
+    cancelByUser,
+    loading,
+  } = useOrders();
+
   const { medicines, fetchAll } = useMedicines();
 
   const [details, setDetails] = useState({});
@@ -14,28 +20,10 @@ export default function Orders() {
     fetchAll();
   }, [fetchAll]);
 
-  // ================= Load Orders + Details =================
+  // ================= Load Orders =================
   useEffect(() => {
-    const loadOrdersWithDetails = async () => {
-      const userOrders = await fetchUserOrders();
-
-      for (const order of userOrders) {
-        try {
-          const orderDetailsRes = await fetch(`/api/orders/${order.id}/details`);
-          if (!orderDetailsRes.ok) throw new Error("Failed to fetch order details");
-          const data = await orderDetailsRes.json();
-          setDetails((prev) => ({
-            ...prev,
-            [order.id]: data,
-          }));
-        } catch (err) {
-          console.error("Error loading order details", err);
-        }
-      }
-    };
-
-    loadOrdersWithDetails();
-  }, [fetchUserOrders]);
+    fetchUser();
+  }, [fetchUser]);
 
   // ================= Helpers =================
   const getMedicineName = (id) => {
@@ -49,14 +37,10 @@ export default function Orders() {
     );
     if (!confirmCancel) return;
 
-    try {
-      const res = await fetch(`/api/orders/${orderId}/cancel/user`, { method: "PUT" });
-      if (!res.ok) throw new Error("Failed to cancel order");
-      await fetchUserOrders();
+    const res = await cancelByUser(orderId);
+
+    if (res) {
       alert("Order cancelled successfully");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to cancel order");
     }
   };
 
@@ -65,7 +49,6 @@ export default function Orders() {
     const base =
       "px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap";
 
-    // Use the exact enum names from backend
     const styles = {
       Pending: "bg-yellow-100 text-yellow-700",
       Accepted: "bg-blue-100 text-blue-700",
@@ -127,6 +110,7 @@ export default function Orders() {
                       <button
                         onClick={() => handleCancelOrder(order.id)}
                         className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm"
+                        disabled={loading}
                       >
                         Cancel
                       </button>
@@ -137,23 +121,17 @@ export default function Orders() {
                 {/* ===== Order Details ===== */}
                 {showMoreOrders[order.id] && (
                   <div className="mt-4">
-                    {order.orderItems.length > 0 ? (
+                    {order.orderItems?.length > 0 ? (
                       <ul className="list-disc list-inside">
                         {order.orderItems.map((item, i) => (
                           <li key={i}>
-                            {getMedicineName(item.medicineID)} – Qty: {item.quantity}
+                            {getMedicineName(item.medicineID)} – Qty:{" "}
+                            {item.quantity}
                           </li>
                         ))}
                       </ul>
                     ) : (
                       <p className="text-sm text-gray-500">No items found.</p>
-                    )}
-
-                    {details[order.id]?.deliveryAddress && (
-                      <p className="text-sm text-gray-600 mt-2">
-                        Delivery Address:{" "}
-                        {`${details[order.id].deliveryAddress.street}, ${details[order.id].deliveryAddress.buildingNo}, ${details[order.id].deliveryAddress.city}, ${details[order.id].deliveryAddress.governorate}`}
-                      </p>
                     )}
                   </div>
                 )}
