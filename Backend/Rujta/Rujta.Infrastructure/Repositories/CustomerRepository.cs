@@ -23,18 +23,20 @@ namespace Rujta.Infrastructure.Repositories
         {
             var normalizedPhone = phoneNumber.Trim();
 
-            return await _context.Customers
+            return await _context.People
+                .OfType<Customer>()
                 .FirstOrDefaultAsync(c =>
                     c.PhoneNumber.Trim() == normalizedPhone &&
                     c.PharmacyId == pharmacyId);
         }
+
 
         // جلب جميع الأوردرات الخاصة بالعميل باستخدام الـ UserID
         public async Task<IEnumerable<Order>> GetCustomerOrdersAsync(Guid customerId)
         {
             return await _context.Orders
                 .Include(o => o.OrderItems) // Include OrderItems لو تحب تجيب تفاصيل الأدوية
-                .Where(o => o.UserId == customerId)
+                .Where(o => o.CustomerId == customerId)
                 .ToListAsync();
         }
     }

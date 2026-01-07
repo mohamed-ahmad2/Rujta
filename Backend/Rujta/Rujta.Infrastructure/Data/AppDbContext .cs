@@ -33,9 +33,7 @@ namespace Rujta.Infrastructure.Data
         public DbSet<Device> Devices { get; set; } = null!;
         public DbSet<Notification> Notifications { get; set; } = null!;
         public DbSet<Log> Logs { get; set; } = null!;
-        public DbSet<Customer> Customers { get; set; } = null!;
-        public DbSet<Employee> Employees { get; set; } = null!;
-        public DbSet<Manager> Managers { get; set; } = null!;
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
