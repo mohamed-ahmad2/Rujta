@@ -119,7 +119,7 @@ namespace Rujta.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(dto?.Email ?? LogConstants.UnknownUser,$"Registration error: {ex.Message}");
+                await _logService.AddLogAsync(dto?.Email ?? LogConstants.UnknownUser, $"Registration error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -199,7 +199,7 @@ namespace Rujta.API.Controllers
         {
             try
             {
-                var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null)
                     return Unauthorized(AuthMessages.UserNotFoundInToken);
 
@@ -254,7 +254,7 @@ namespace Rujta.API.Controllers
         public IActionResult GetUserEmail()
         {
             var email = JwtRegisteredClaimNames.Email;
-               
+
             if (string.IsNullOrEmpty(email))
                 return Ok(new EmailResponse(string.Empty));
 
