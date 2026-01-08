@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.RateLimiting;
+﻿/*
+using Microsoft.AspNetCore.RateLimiting;
 using Rujta.Application.Interfaces;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
@@ -45,11 +46,7 @@ namespace Rujta.API.Controllers
             }
 
 
-            var pharmacies = await _cartService.GetTopPharmaciesForCartAsync(
-    order,
-    user.Latitude.Value,
-    user.Longitude.Value,
-    topK);
+            var pharmacies = await _cartService.GetTopPharmaciesForCartAsync(order,user.Latitude.Value,user.Longitude.Value,topK);
 
             return Ok(pharmacies);
 
@@ -57,3 +54,4 @@ namespace Rujta.API.Controllers
 
     }
 }
+*/

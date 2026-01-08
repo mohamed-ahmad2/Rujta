@@ -10,19 +10,83 @@ namespace Rujta.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IGeocodingService _geocodingService;
 
-        public AddressService(IUnitOfWork unitOfWork, IMapper mapper)
+        private const double CoordinateTolerance = 0.0001;
+
+        public AddressService(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            IGeocodingService geocodingService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _geocodingService = geocodingService;
         }
 
         public async Task AddAsync(AddressDto dto, CancellationToken cancellationToken = default)
         {
-            var address = _mapper.Map<Address>(dto);
+            var (latitude, longitude) = await ResolveCoordinatesAsync(dto, cancellationToken);
+            dto.Latitude = latitude;
+            dto.Longitude = longitude;
 
+            var address = _mapper.Map<Address>(dto);
             await _unitOfWork.Address.AddAsync(address, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
+        }
+
+        public async Task UpdateAsync(int id, AddressDto dto, CancellationToken cancellationToken = default)
+        {
+            var address = await _unitOfWork.Address.GetByIdAsync(id, cancellationToken);
+            if (address == null)
+                throw new KeyNotFoundException("Address not found");
+
+            var (latitude, longitude) = await ResolveCoordinatesAsync(dto, cancellationToken);
+            dto.Latitude = latitude;
+            dto.Longitude = longitude;
+
+            _mapper.Map(dto, address);
+            await _unitOfWork.Address.UpdateAsync(address, cancellationToken);
+            await _unitOfWork.SaveAsync(cancellationToken);
+        }
+
+        private static bool NeedsGeocoding(double latitude, double longitude)
+        {
+            return
+                Math.Abs(latitude) < CoordinateTolerance ||
+                Math.Abs(longitude) < CoordinateTolerance ||
+                latitude < -90 || latitude > 90 ||
+                longitude < -180 || longitude > 180;
+        }
+
+        private async Task<(double Latitude, double Longitude)> ResolveCoordinatesAsync(
+            AddressDto dto,
+            CancellationToken cancellationToken)
+        {
+            if (!NeedsGeocoding(dto.Latitude, dto.Longitude))
+                return (dto.Latitude, dto.Longitude);
+
+            var parts = new[]
+            {
+                dto.BuildingNo,
+                dto.Street,
+                dto.City,
+                dto.Governorate,
+                "Egypt"
+            };
+
+            var fullAddress = string.Join(", ", parts.Where(p => !string.IsNullOrWhiteSpace(p))).Trim();
+
+            try
+            {
+                var coords = await _geocodingService.GetCoordinatesAsync(fullAddress, cancellationToken);
+                return (coords.Latitude, coords.Longitude);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Unable to geocode address: {fullAddress}. Exception: {ex.Message}");
+                return (dto.Latitude, dto.Longitude);
+            }
         }
 
 
@@ -62,20 +126,6 @@ namespace Rujta.Application.Services
                 return new List<AddressDto>();
 
             return _mapper.Map<List<AddressDto>>(addresses);
-        }
-
-
-
-        public async Task UpdateAsync(int id, AddressDto dto, CancellationToken cancellationToken = default)
-        {
-            var address = await _unitOfWork.Address.GetByIdAsync(id, cancellationToken);
-            if (address == null)
-                throw new KeyNotFoundException("Address not found");
-
-            _mapper.Map(dto, address);
-
-            await _unitOfWork.Address.UpdateAsync(address, cancellationToken);
-            await _unitOfWork.SaveAsync(cancellationToken);
         }
     }
 }

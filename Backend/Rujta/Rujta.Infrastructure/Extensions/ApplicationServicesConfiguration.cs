@@ -30,15 +30,13 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<ISearchMedicineService, SearchMedicineService>();
             services.AddScoped<IPharmacySearchService, PharmacySearchService>();
             services.AddScoped<IPharmacyCartService, PharmacyCartService>();
-            services.AddScoped<ISearchMedicineService, SearchMedicineService>();
-            services.AddScoped<IPharmacySearchService, PharmacySearchService>();
-            services.AddScoped<IPharmacyCartService, PharmacyCartService>();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IInventoryItemService, InventoryItemService>();
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IAddressService, AddressService>();
+            services.AddHttpClient<IGeocodingService, GeocodingService>();
 
 
             services.AddScoped<AuthIdentityContext>(sp =>
@@ -61,10 +59,18 @@ namespace Rujta.Infrastructure.Extensions
             });
 
 
-            services.AddScoped<PharmacyDistanceService>();
-
             // HttpClient services
             services.AddHttpClient<MedicineDataImportService>();
+
+            services.AddSingleton<IOfflineGeocodingService>(sp =>
+            {
+                var configuration = sp.GetRequiredService<IConfiguration>();
+                var pbfPath = configuration["Routing:PbfFilePath"]
+                    ?? throw new InvalidOperationException("Routing:PbfFilePath is missing in configuration.");
+
+                return new OfflineGeocodingService(pbfPath);
+            });
+
 
             var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
             var solutionRoot = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\..\"));
