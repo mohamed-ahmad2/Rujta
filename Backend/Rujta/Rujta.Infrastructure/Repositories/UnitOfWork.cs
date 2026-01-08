@@ -33,7 +33,8 @@ namespace Rujta.Infrastructure.Repositories
         public IMedicineRepository Medicines => _medicines ??= new MedicineRepository(_context);
         public IPharmacyRepository Pharmacies => _pharmacies ??= new PharmacyRepo(_context);
         public IOrderRepository Orders => _orders ??= new OrderRepository(_context);
-        public IAddressRepository Address => _address ??= new AddressRepository(_context);
+        public IAddressRepository Address =>
+    _address ??= ActivatorUtilities.CreateInstance<AddressRepository>(_serviceProvider);
         public ICategoryRepository Categories => _category ??= new CategoryRepository(_context);
         public IPeopleRepository People => _people ??= new PeopleRepository(_context);
         public IDeviceRepository Devices => _device ??= new DeviceRepository(_context);

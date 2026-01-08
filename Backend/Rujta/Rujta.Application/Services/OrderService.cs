@@ -23,7 +23,26 @@ namespace Rujta.Application.Services
                 var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(createOrderDto.PharmacyID, cancellationToken)
                     ?? throw new InvalidOperationException($"Pharmacy with ID {createOrderDto.PharmacyID} not found.");
 
-                int? deliveryAddressId = createOrderDto.DeliveryAddressId;
+                if (!createOrderDto.DeliveryAddressId.HasValue)
+                    throw new InvalidOperationException("Delivery address ID is required.");
+                
+
+                var address = await _unitOfWork.Address.GetByIdAsync(createOrderDto.DeliveryAddressId.Value, cancellationToken);
+
+                if (address == null)
+                    throw new InvalidOperationException("The delivery address does not exist.");
+                
+
+                string street = address.Street ?? "";
+                string buildingNo = address.BuildingNo ?? "";
+                string city = address.City ?? "";
+                string governorate = address.Governorate ?? "";
+
+                string DeliveryAddressText = $"{street} {buildingNo}".Trim();
+                if (!string.IsNullOrEmpty(city) || !string.IsNullOrEmpty(governorate))
+                {
+                    DeliveryAddressText += $"\n{city} {governorate}".Trim();
+                }
 
                 var order = new Order
                 {
@@ -31,7 +50,7 @@ namespace Rujta.Application.Services
                     PharmacyId = createOrderDto.PharmacyID,
                     OrderDate = DateTime.UtcNow,
                     Status = OrderStatus.Pending,
-                    DeliveryAddressId = deliveryAddressId,
+                    DeliveryAddress = DeliveryAddressText,
                     OrderItems = new List<OrderItem>()
                 };
 
@@ -77,8 +96,6 @@ namespace Rujta.Application.Services
                 throw new InvalidOperationException(message, ex);
             }
         }
-
-
 
 
         public async Task<(bool success, string message)> AcceptOrderAsync(int id, CancellationToken cancellationToken = default)

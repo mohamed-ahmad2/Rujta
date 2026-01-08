@@ -14,8 +14,9 @@ namespace Rujta.Application.Validation
                 .GreaterThan(0).WithMessage("Pharmacy ID must be greater than zero.");
 
             RuleFor(x => x.DeliveryAddress)
-                .NotNull().WithMessage("Delivery address is required.")
-                .SetValidator(new DeliveryAddressDtoValidator());
+                .NotEmpty().WithMessage("Delivery address is required.")
+                .MaximumLength(500).WithMessage("Delivery address is too long.");
+
 
             RuleFor(x => x.TotalPrice)
                 .GreaterThanOrEqualTo(0).WithMessage("Total price must be non-negative.");
