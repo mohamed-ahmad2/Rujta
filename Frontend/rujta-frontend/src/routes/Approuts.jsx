@@ -35,6 +35,9 @@ import Customers from "../features/dashboard/pages/Customers";
 import Sales from "../features/dashboard/pages/Sales";
 import Logs from "../features/dashboard/pages/Logs";
 
+
+import NotificationsPage from "../features/notifications/pages/NotificationsPage";
+
 // ...
 
 <Route
@@ -93,6 +96,8 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
       <Route path="orders" element={<Ordersuser />} />
       <Route path="profile" element={<Profile />} />
       <Route path="checkout" element={<Checkout />} />
+
+      <Route path="notifications" element={<NotificationsPage />} />
     </Route>
 
     {/* ========= Medicine ========= */}
@@ -100,6 +105,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   path="/medicines/:id"
   element={<MedicineDetails cart={cart} setCart={setCart} />}
 />
+
 
 
     {/* ========= Dashboard ========= */}

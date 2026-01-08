@@ -4,10 +4,12 @@ import { FaCartShopping } from "react-icons/fa6";
 import { LuLogOut } from "react-icons/lu";
 import { CgProfile } from "react-icons/cg";
 import { BsBoxSeam } from "react-icons/bs";
+import { IoNotificationsOutline } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { useSearchMedicines } from "../../medicines/hook/useSearchMedicines";
 import { useOrders } from "../../orders/hooks/useOrders";
+import { useNotifications } from "../../notifications/hook/useNotifications";
 
 const Navbar = ({ cart, setCart, onCartClick }) => {
   const [query, setQuery] = useState("");
@@ -15,6 +17,10 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
 
   const navigate = useNavigate();
   const { handleLogout } = useAuth();
+
+// ================= Notification =================
+ const { unreadCount } = useNotifications();
+
 
   // ================= Orders =================
   const { orders, fetchUser, loading } = useOrders();
@@ -126,6 +132,19 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
                 </span>
               )}
             </div>
+                  {/* Notifications */}
+                  <div
+                    className="relative cursor-pointer"
+                    onClick={() => navigate("/user/notifications")}
+                  >
+                    <IoNotificationsOutline className="text-2xl text-gray-600 hover:text-secondary" />
+
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                       )}
+                  </div>
 
             {/* Profile */}
             <CgProfile
