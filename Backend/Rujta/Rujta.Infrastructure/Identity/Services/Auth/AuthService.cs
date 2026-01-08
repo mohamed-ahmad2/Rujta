@@ -1,9 +1,4 @@
-﻿using FirebaseAdmin.Auth;
-using Microsoft.AspNetCore.Http;
-using Rujta.Domain.Common;
-using System.Threading.Tasks;
-
-namespace Rujta.Infrastructure.Identity.Services.Auth
+﻿namespace Rujta.Infrastructure.Identity.Services.Auth
 {
     public partial class AuthService : IAuthService
     {
