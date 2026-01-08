@@ -65,11 +65,20 @@ namespace Rujta.Infrastructure.Extensions
             services.AddSingleton<IOfflineGeocodingService>(sp =>
             {
                 var configuration = sp.GetRequiredService<IConfiguration>();
-                var pbfPath = configuration["Routing:PbfFilePath"]
-                    ?? throw new InvalidOperationException("Routing:PbfFilePath is missing in configuration.");
+                var relativePath = configuration["Routing:PbfFilePath"]
+                                   ?? throw new InvalidOperationException("Routing:PbfFilePath is missing in configuration.");
 
-                return new OfflineGeocodingService(pbfPath);
+                var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                var solutionRoot = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\..\")); // جذر المشروع
+                var absolutePath = Path.Combine(solutionRoot, relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+
+                if (!File.Exists(absolutePath))
+                    throw new FileNotFoundException($"PBF file not found at {absolutePath}");
+
+                return new OfflineGeocodingService(absolutePath);
             });
+
+
 
 
             var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;

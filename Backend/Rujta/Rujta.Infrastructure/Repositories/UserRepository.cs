@@ -1,25 +1,24 @@
+// UserRepository.cs (corrected version - removed unused constant)
 using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Infrastructure.Repositories
 {
     public class UserRepository : GenericRepository<User>, IUserRepository
     {
-        private const double CoordinateTolerance = 0.0001;
-
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMapper _mapper;
-        private readonly IGeocodingService _geocodingService;
+        private readonly IOfflineGeocodingService _offlineGeocodingService;
 
         public UserRepository(
             AppDbContext context,
             UserManager<ApplicationUser> userManager,
             IMapper mapper,
-            IGeocodingService geocodingService)
+            IOfflineGeocodingService offlineGeocodingService)
             : base(context)
         {
             _userManager = userManager;
             _mapper = mapper;
-            _geocodingService = geocodingService;
+            _offlineGeocodingService = offlineGeocodingService;
         }
 
         // =======================
@@ -58,9 +57,6 @@ namespace Rujta.Infrastructure.Repositories
             };
         }
 
-        // =======================
-        // ==== UpdateProfile ====
-        // =======================
         public async Task<bool> UpdateProfileAsync(
             Guid userId,
             UpdateUserProfileDto dto,
@@ -82,9 +78,8 @@ namespace Rujta.Infrastructure.Repositories
 
                 foreach (var addressDto in dto.Addresses)
                 {
-                    var (latitude, longitude) =
-                        await ResolveCoordinatesAsync(addressDto, cancellationToken);
-
+                    // Always resolve coordinates from address fields, ignoring provided lat/lon
+                    var (latitude, longitude) = await ResolveCoordinatesAsync(addressDto);
                     UpsertAddress(user, addressDto, latitude, longitude);
                 }
             }
@@ -138,49 +133,14 @@ namespace Rujta.Infrastructure.Repositories
                 _context.Addresses.Remove(address);
         }
 
-        private async Task<(double Latitude, double Longitude)> ResolveCoordinatesAsync(
-            AddressDto addressDto,
-            CancellationToken cancellationToken)
+        private async Task<(double Latitude, double Longitude)> ResolveCoordinatesAsync(AddressDto addressDto)
         {
-            if (!NeedsGeocoding(addressDto.Latitude, addressDto.Longitude))
-                return (addressDto.Latitude, addressDto.Longitude);
-
-            var parts = new[]
-            {
-                addressDto.BuildingNo,
-                addressDto.Street,
-                addressDto.City,
-                addressDto.Governorate,
-                "Egypt"
-            };
-
-            var fullAddress = string.Join(", ", parts.Where(p => !string.IsNullOrWhiteSpace(p))).Trim();
-
-            try
-            {
-                var coords = await _geocodingService
-                    .GetCoordinatesAsync(fullAddress, cancellationToken);
-
-                return (coords.Latitude, coords.Longitude);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Unable to geocode address: {fullAddress}. Exception: {ex.Message}");
-
-               
-                return (addressDto.Latitude, addressDto.Longitude);
-            }
+            return await _offlineGeocodingService
+                .GetCoordinatesAsync(addressDto.Street ?? "",
+                                     addressDto.BuildingNo,
+                                     addressDto.City ?? "",
+                                     addressDto.Governorate ?? "");
         }
-
-        private static bool NeedsGeocoding(double latitude, double longitude)
-        {
-            return
-                Math.Abs(latitude) < CoordinateTolerance ||
-                Math.Abs(longitude) < CoordinateTolerance ||
-                latitude < -90 || latitude > 90 ||
-                longitude < -180 || longitude > 180;
-        }
-
 
         private static void UpsertAddress(
             User user,
