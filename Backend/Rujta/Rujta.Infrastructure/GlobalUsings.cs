@@ -13,7 +13,6 @@ global using System.Security.Cryptography.X509Certificates;
 global using AutoMapper;
 
 global using Rujta.Application.DTOs;
-global using Rujta.Application.DTOs.UserProfile;
 global using Rujta.Application.Interfaces;
 global using Rujta.Application.Interfaces.InterfaceServices;
 global using Rujta.Application.Interfaces.InterfaceRepositories;

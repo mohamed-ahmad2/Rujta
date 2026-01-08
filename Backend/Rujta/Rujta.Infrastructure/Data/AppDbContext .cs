@@ -39,97 +39,6 @@ namespace Rujta.Infrastructure.Data
         {
             base.OnModelCreating(builder);
 
-            // TPT Mapping
-            builder.Entity<Person>().ToTable("People");
-            builder.Entity<Customer>().ToTable("Customers");
-            builder.Entity<Employee>().ToTable("Employees");
-            builder.Entity<Manager>().ToTable("Managers");
-
-            // Pharmacy -> Employee (one-to-many)
-            builder.Entity<Employee>()
-                .HasOne(e => e.Pharmacy)
-                .WithMany(p => p.Employees)
-                .HasForeignKey(e => e.PharmacyId)
-                .IsRequired(false)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Customer -> Pharmacy (one-to-many)
-            builder.Entity<Customer>()
-                .HasOne(c => c.Pharmacy)
-                .WithMany(p => p.Customers)
-                .HasForeignKey(c => c.PharmacyId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Manager -> Admin (optional)
-            builder.Entity<Manager>()
-                .HasOne(m => m.Admin)
-                .WithMany()
-                .HasForeignKey(m => m.AdminId)
-                .IsRequired(false)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Pharmacy -> Admin (optional)
-            builder.Entity<Pharmacy>()
-                .HasOne(p => p.Admin)
-                .WithMany()
-                .HasForeignKey(p => p.AdminId)
-                .IsRequired(false)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Pharmacy -> ParentPharmacy (self-reference)
-            builder.Entity<Pharmacy>()
-                .HasOne(p => p.ParentPharmacy)
-                .WithMany(p => p.Branches)
-                .HasForeignKey(p => p.ParentPharmacyID)
-                .IsRequired(false)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<Order>()
-    .HasOne(o => o.User)
-    .WithMany() // or .WithMany(u => u.Orders) if you want collection
-    .HasForeignKey(o => o.UserId)
-    .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<Order>()
-                .HasOne(o => o.Customer)
-                .WithMany() // or .WithMany(c => c.Orders)
-                .HasForeignKey(o => o.CustomerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-
-
-            // Order -> Pharmacy
-            builder.Entity<Order>()
-                .HasOne(o => o.Pharmacy)
-                .WithMany(p => p.Orders)
-                .HasForeignKey(o => o.PharmacyId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Order -> Prescription
-            builder.Entity<Order>()
-                .HasOne(o => o.Prescription)
-                .WithMany()
-                .HasForeignKey(o => o.PrescriptionId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Order -> DeliveryAddress
-            builder.Entity<Order>()
-                .HasOne(o => o.DeliveryAddress)
-                .WithMany()
-                .HasForeignKey(o => o.DeliveryAddressId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Notification configuration
-            builder.Entity<Notification>(b =>
-            {
-                b.HasKey(n => n.Id);
-                b.Property(n => n.UserId).IsRequired().HasMaxLength(200);
-                b.Property(n => n.Title).IsRequired().HasMaxLength(250);
-                b.Property(n => n.Message).IsRequired().HasMaxLength(2048);
-                b.Property(n => n.Payload).HasMaxLength(4000);
-                b.Property(n => n.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-            });
-
             // Identity & Decimal precision
             builder.ApplyIdentityMapping();
             builder.ApplyDecimalPrecision();
@@ -138,7 +47,7 @@ namespace Rujta.Infrastructure.Data
             builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         }
 
-        public override int SaveChanges()
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             foreach (var entry in ChangeTracker.Entries<BaseEntity>())
             {
@@ -149,7 +58,7 @@ namespace Rujta.Infrastructure.Data
                     entry.Entity.UpdatedAt = DateTime.UtcNow;
             }
 
-            return base.SaveChanges();
+            return await base.SaveChangesAsync(cancellationToken);
         }
     }
 }

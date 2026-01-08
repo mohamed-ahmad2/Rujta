@@ -1,18 +1,17 @@
 // src/features/user/pages/Profile.jsx
 import React, { useState, useEffect } from "react";
 import { FiTrash2 } from "react-icons/fi";
-import { useUserProfile } from "../../userProfile/hook/useUserProfile";
+import { useUserProfile } from "../../userProfile/hook/useUserProfile";// Adjusted path to match the hook location
 
 export default function Profile() {
-  const { profile, loading, error, updateProfile } = useUserProfile();
+  const { profile, loading, error, updateProfile } =
+    useUserProfile();
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     phoneNumber: "",
-    addresses: [
-      { street: "", buildingNo: "", city: "", governorate: "" },
-    ],
+    addresses: [{ street: "", buildingNo: "", city: "", governorate: "" }],
   });
 
   /* ================= Profile Init ================= */
@@ -26,10 +25,10 @@ export default function Profile() {
             ? profile.addresses
             : [
                 {
-                  street: profile.address?.street || "",
-                  buildingNo: profile.address?.buildingNo || "",
-                  city: profile.address?.city || "",
-                  governorate: profile.address?.governorate || "",
+                  street: "",
+                  buildingNo: "",
+                  city: "",
+                  governorate: "",
                 },
               ],
       });
@@ -78,8 +77,7 @@ export default function Profile() {
 
   /* ================= States ================= */
   if (loading) return <p className="p-10 text-center">Loading...</p>;
-  if (error)
-    return <p className="p-10 text-center text-red-500">{error}</p>;
+  if (error) return <p className="p-10 text-center text-red-500">{error}</p>;
 
   /* ================= UI ================= */
   return (
@@ -93,12 +91,8 @@ export default function Profile() {
                 {formData.fullName?.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h3 className="text-lg font-semibold">
-                  {formData.fullName}
-                </h3>
-                <p className="text-sm text-gray-500">
-                  {profile?.email}
-                </p>
+                <h3 className="text-lg font-semibold">{formData.fullName}</h3>
+                <p className="text-sm text-gray-500">{profile?.email}</p>
               </div>
             </div>
 
@@ -130,29 +124,26 @@ export default function Profile() {
             label="Phone Number"
             value={formData.phoneNumber}
             disabled={!isEditing}
-            onChange={(e) =>
-              handleChange("phoneNumber", e.target.value)
-            }
+            onChange={(e) => handleChange("phoneNumber", e.target.value)}
           />
         </div>
 
         {/* ================= Addresses ================= */}
         <div className="mt-8">
-          <p className="font-semibold mb-4 text-gray-700">
-            My Addresses
+          <p className="font-semibold mb-4 text-gray-700">My Addresses</p>
+          <p className="text-sm text-gray-500 mb-4">
+            The first address is your primary address used for main purposes.
+            Additional addresses can be for other uses.
           </p>
 
           {formData.addresses.map((address, i) => (
-            <div
-              key={i}
-              className="border rounded-xl p-4 mb-6"
-            >
+            <div key={i} className="border rounded-xl p-4 mb-6">
               <div className="flex justify-between items-center mb-4">
                 <p className="font-semibold text-gray-700">
-                  Address #{i + 1}
+                  {i === 0 ? "Primary Address" : `Additional Address #${i}`}
                 </p>
 
-                {isEditing && formData.addresses.length > 1 && (
+                {isEditing && formData.addresses.length > 1 && i > 0 && (
                   <button
                     onClick={() => removeAddress(i)}
                     className="text-red-500"
@@ -168,11 +159,7 @@ export default function Profile() {
                   value={address.street}
                   disabled={!isEditing}
                   onChange={(e) =>
-                    handleAddressChange(
-                      i,
-                      "street",
-                      e.target.value
-                    )
+                    handleAddressChange(i, "street", e.target.value)
                   }
                 />
                 <Input
@@ -180,11 +167,7 @@ export default function Profile() {
                   value={address.buildingNo}
                   disabled={!isEditing}
                   onChange={(e) =>
-                    handleAddressChange(
-                      i,
-                      "buildingNo",
-                      e.target.value
-                    )
+                    handleAddressChange(i, "buildingNo", e.target.value)
                   }
                 />
                 <Input
@@ -192,11 +175,7 @@ export default function Profile() {
                   value={address.city}
                   disabled={!isEditing}
                   onChange={(e) =>
-                    handleAddressChange(
-                      i,
-                      "city",
-                      e.target.value
-                    )
+                    handleAddressChange(i, "city", e.target.value)
                   }
                 />
                 <Input
@@ -204,11 +183,7 @@ export default function Profile() {
                   value={address.governorate}
                   disabled={!isEditing}
                   onChange={(e) =>
-                    handleAddressChange(
-                      i,
-                      "governorate",
-                      e.target.value
-                    )
+                    handleAddressChange(i, "governorate", e.target.value)
                   }
                 />
               </div>

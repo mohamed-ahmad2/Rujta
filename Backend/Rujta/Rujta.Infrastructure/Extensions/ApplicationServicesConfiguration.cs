@@ -1,5 +1,4 @@
-﻿
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Rujta.Infrastructure.Identity.Services.Auth;
 
 namespace Rujta.Infrastructure.Extensions
@@ -36,6 +35,9 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IInventoryItemService, InventoryItemService>();
             services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<INotificationService, NotificationService>();
+
 
             services.AddScoped<AuthIdentityContext>(sp =>
             {

@@ -53,11 +53,6 @@ namespace Rujta.API
 
             builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
 
-            // -------------------------------
-            // Firebase Admin SDK
-            // -------------------------------
-            // Make sure to put the JSON in your project and update the path
-
             // Firebase Initialization
             try
             {

@@ -17,13 +17,13 @@ namespace Rujta.Infrastructure.Repositories
         {
             var appUser = await _userManager.Users
                 .Include(u => u.DomainPerson)
+                    .ThenInclude(p => (p as User)!.Addresses)
                 .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (appUser?.DomainPerson is not User user)
                 return null;
 
-            var userAddress = await _context.Addresses
-                    .FirstOrDefaultAsync(a => a.UserId == user.Id, cancellationToken);
+            var addresses = user.Addresses ?? new List<Address>();
 
             return new UserProfileDto
             {
@@ -34,47 +34,79 @@ namespace Rujta.Infrastructure.Repositories
                 ProfileImageUrl = user.ProfileImageUrl,
                 Latitude = user.Latitude,
                 Longitude = user.Longitude,
-                Address = userAddress is null ? null : new AddressDto
+                Addresses = addresses.Select(a => new AddressDto
                 {
-                    Street = userAddress.Street,
-                    BuildingNo = userAddress.BuildingNo,
-                    City = userAddress.City,
-                    Governorate = userAddress.Governorate,
-                }
+                    Street = a.Street,
+                    BuildingNo = a.BuildingNo,
+                    City = a.City,
+                    Governorate = a.Governorate
+                }).ToList()
             };
         }
+
+
 
         public async Task<bool> UpdateProfileAsync(Guid userId, UpdateUserProfileDto dto, CancellationToken cancellationToken = default)
         {
             var appUser = await _userManager.Users
-    .Include(u => (u.DomainPerson as User)!.Address)
-    .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-
+                .Include(u => u.DomainPerson)
+                    .ThenInclude(p => (p as User)!.Addresses)
+                .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (appUser?.DomainPerson is not User user)
                 return false;
 
             user.Name = dto.Name ?? user.Name;
             appUser.FullName = dto.Name ?? appUser.FullName;
+            appUser.PhoneNumber = dto.PhoneNumber ?? appUser.PhoneNumber;
+            user.ProfileImageUrl = dto.ProfileImageUrl ?? user.ProfileImageUrl;
 
-            if (dto.Address != null)
+            if (dto.Addresses != null)
             {
-                if (user.Address == null)
-                    user.Address = new Address { UserId = user.Id };
+                var toRemove = user.Addresses
+                    .Where(a => !dto.Addresses.Any(d => d.Id.HasValue && d.Id == a.Id))
+                    .ToList();
 
-                var address = user.Address;
-                address.Street = dto.Address.Street ?? address.Street;
-                address.BuildingNo = dto.Address.BuildingNo ?? address.BuildingNo;
-                address.City = dto.Address.City ?? address.City;
-                address.Governorate = dto.Address.Governorate ?? address.Governorate;
+                foreach (var r in toRemove)
+                    _context.Addresses.Remove(r);
+
+                foreach (var addressDto in dto.Addresses)
+                {
+                    if (addressDto.Id.HasValue)
+                    {
+                        var existing = user.Addresses.FirstOrDefault(a => a.Id == addressDto.Id);
+                        if (existing != null)
+                        {
+                            existing.Street = addressDto.Street ?? existing.Street;
+                            existing.BuildingNo = addressDto.BuildingNo ?? existing.BuildingNo;
+                            existing.City = addressDto.City ?? existing.City;
+                            existing.Governorate = addressDto.Governorate ?? existing.Governorate;
+                            existing.IsDefault = addressDto.IsDefault;
+                        }
+                    }
+                    else
+                    {
+                        user.Addresses.Add(new Address
+                        {
+                            PersonId = user.Id,
+                            Street = addressDto.Street ?? "",
+                            BuildingNo = addressDto.BuildingNo ?? "",
+                            City = addressDto.City ?? "",
+                            Governorate = addressDto.Governorate ?? "",
+                            IsDefault = addressDto.IsDefault
+                        });
+                    }
+                }
             }
 
-            user.ProfileImageUrl = dto.ProfileImageUrl ?? user.ProfileImageUrl;
-            appUser.PhoneNumber = dto.PhoneNumber ?? appUser.PhoneNumber;
-
             var result = await _userManager.UpdateAsync(appUser);
+            await _context.SaveChangesAsync(cancellationToken);
+
             return result.Succeeded;
         }
+
+
+
 
         public async Task<ApplicationUserDto?> GetByEmailAsync(string email)
         {

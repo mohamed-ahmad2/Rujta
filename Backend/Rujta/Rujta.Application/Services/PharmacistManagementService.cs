@@ -12,11 +12,14 @@ namespace Rujta.Infrastructure.Services
     {
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
+        private readonly ILogService _logService;
 
-        public PharmacistManagementService(IUnitOfWork uow, IMapper mapper)
+
+        public PharmacistManagementService(IUnitOfWork uow, IMapper mapper , ILogService logService)
         {
             _uow = uow;
             _mapper = mapper;
+            _logService = logService;
         }
 
         public async Task<IEnumerable<PharmacistDto>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -34,9 +37,17 @@ namespace Rujta.Infrastructure.Services
         public async Task AddAsync(PharmacistDto dto, CancellationToken cancellationToken = default)
         {
             var entity = _mapper.Map<Pharmacist>(dto);
+
             await _uow.Pharmacists.AddAsync(entity, cancellationToken);
             await _uow.SaveAsync(cancellationToken);
+
+            await _logService.AddLogAsync(
+                user: dto.Email ?? "System",
+                action: $"Pharmacist Added (Name: {dto.FullName})",
+                cancellationToken
+            );
         }
+
 
         public async Task UpdateAsync(int id, PharmacistDto dto, CancellationToken cancellationToken = default)
         {
@@ -47,7 +58,14 @@ namespace Rujta.Infrastructure.Services
             _mapper.Map(dto, entity);
             await _uow.Pharmacists.UpdateAsync(entity, cancellationToken);
             await _uow.SaveAsync(cancellationToken);
+
+            await _logService.AddLogAsync(
+                user: dto.Email ?? "System",
+                action: $"Pharmacist Updated (ID: {id})",
+                cancellationToken
+            );
         }
+
 
         public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
@@ -57,7 +75,14 @@ namespace Rujta.Infrastructure.Services
 
             await _uow.Pharmacists.DeleteAsync(entity, cancellationToken);
             await _uow.SaveAsync(cancellationToken);
+
+            await _logService.AddLogAsync(
+                user: "System",
+                action: $"Pharmacist Deleted (ID: {id})",
+                cancellationToken
+            );
         }
+
         // Get staff by manager
         public async Task<IEnumerable<PharmacistDto>> GetPharmacistByManagerAsync(Guid managerId, CancellationToken cancellationToken = default)
         {
