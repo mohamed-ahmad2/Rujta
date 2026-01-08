@@ -20,7 +20,6 @@
                 .ToListAsync(cancellationToken);
         }
 
-
         public async Task<Order?> GetOrderWithItemsAsync(int orderId, CancellationToken cancellationToken = default)
         {
             return await _context.Orders
@@ -61,7 +60,5 @@
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
         }
-
-
     }
 }
