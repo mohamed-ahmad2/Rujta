@@ -10,7 +10,8 @@ namespace Rujta.Domain.Entities
         public string BuildingNo { get; set; } = string.Empty;
         public string City { get; set; } = string.Empty;
         public string Governorate { get; set; } = string.Empty;
-        public bool IsDefault { get; set; }
+        public double Latitude { get; set; } = 0.0;
+        public double Longitude { get; set; } = 0.0;
         public Person Person { get; set; } = null!;
     }
 

@@ -126,7 +126,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while accepting order {OrderId}", id);
-                return (false, "An unexpected error occurred.");
+                return (false, "An unexpected error occurred");
             }
         }
 
@@ -159,7 +159,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while cancelling order {OrderId} by user", id);
-                return (false, "An unexpected error occurred.");
+                return (false, "An unexpected error occurred");
             }
         }
 
@@ -192,7 +192,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while pharmacy cancelling Order {OrderId}", id);
-                return (false, "An unexpected error occurred.");
+                return (false, "An unexpected error occurred");
             }
         }
 
@@ -225,7 +225,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while processing Order {OrderId}", id);
-                return (false, "An unexpected error occurred.");
+                return (false, "An unexpected error occurred");
             }
         }
 
@@ -258,7 +258,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while setting Order {OrderId} out for delivery", id);
-                return (false, "An unexpected error occurred.");
+                return (false, "An unexpected error occurred");
             }
         }
 
@@ -291,7 +291,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while delivering Order {OrderId}", id);
-                return (false, "An unexpected error occurred.");
+                return (false, "An unexpected error occurred");
             }
         }
 

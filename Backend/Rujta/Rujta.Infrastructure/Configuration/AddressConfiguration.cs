@@ -21,8 +21,13 @@ namespace Rujta.Infrastructure.Configuration
                    .IsRequired()
                    .HasMaxLength(100);
 
-            builder.Property(a => a.IsDefault)
-                   .HasDefaultValue(true);
+            builder.Property(a => a.Latitude)
+                   .IsRequired()
+                   .HasColumnType("decimal(9,6)");
+
+            builder.Property(a => a.Longitude)
+                   .IsRequired()
+                   .HasColumnType("decimal(9,6)");
         }
     }
 }
