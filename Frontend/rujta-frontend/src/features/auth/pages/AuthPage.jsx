@@ -23,7 +23,10 @@ export const AuthPage = () => {
   const redirectByRole = (role) => {
   if (role === "Admin") navigate("/admin/dashboard");
 
-  else if (role === "Pharmacist") navigate("/dashboard/");
+ else if (role === "Pharmacist" || role === "PharmacyAdmin") {
+  navigate("/dashboard");
+}
+
   else if (role === "User") navigate("/user/");
   else navigate("/");
 };
