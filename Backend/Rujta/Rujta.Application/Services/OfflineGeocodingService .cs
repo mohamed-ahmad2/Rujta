@@ -123,9 +123,12 @@ namespace Rujta.Infrastructure.Services
 
         private static string NormalizeString(string? input)
         {
-            if (string.IsNullOrEmpty(input)) return string.Empty;
+            if (string.IsNullOrEmpty(input))
+                return string.Empty;
 
-            input = Regex.Replace(input, @"[^\w\s]", "");
+            var regex = new Regex(@"[^\w\s]", RegexOptions.None, TimeSpan.FromMilliseconds(100));
+            input = regex.Replace(input, "");
+
             input = new string(input.Normalize(NormalizationForm.FormD)
                 .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
                 .ToArray())
@@ -133,6 +136,7 @@ namespace Rujta.Infrastructure.Services
 
             return input.Trim().ToLowerInvariant();
         }
+
 
         internal sealed record AddressNode
         {
