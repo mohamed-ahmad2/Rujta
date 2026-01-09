@@ -112,18 +112,27 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
     <Route
       path="/dashboard"
       element={
-        <ProtectedRoute role="Pharmacist">
+     <ProtectedRoute roles={["Pharmacist", "PharmacyAdmin"]}>
           <DashboardLayout />
         </ProtectedRoute>
       }
     >
+      <Route index element={<Home />} />
       <Route path="home" element={<Home />} />
       <Route path="products" element={<Products />} />
       <Route path="orders" element={<Orders />} />
       <Route path="sales" element={<Sales />} />
       <Route path="customers" element={<Customers />} />
       <Route path="settings" element={<Settings />} />
-      <Route path="logs" element={<Logs />} /> 
+      {/* Logs page restricted to PharmacyAdmin only */}
+          <Route
+            path="logs"
+            element={
+              <ProtectedRoute roles={["PharmacyAdmin"]}>
+                <Logs />
+              </ProtectedRoute>
+            }
+          />
     </Route>
 
   </Routes>

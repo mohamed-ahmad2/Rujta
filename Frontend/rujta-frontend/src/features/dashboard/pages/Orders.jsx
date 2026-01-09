@@ -4,7 +4,16 @@ import StatCard from "../components/OrderCard";
 import { useOrders } from "../../orders/hooks/useOrders";
 
 export default function Orders() {
-  const { orders, loading, fetchPharmacy } = useOrders();
+  const {
+    orders,
+    loading,
+    fetchPharmacy,
+    accept,
+    process,
+    outForDelivery,
+    deliver,
+    cancelByPharmacy,
+  } = useOrders();
 
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -31,17 +40,12 @@ export default function Orders() {
           o.id?.toString().includes(s)
       );
     }
-
     if (filterOrderId)
-      list = list.filter((o) =>
-        o.id?.toString().includes(filterOrderId)
-      );
-
+      list = list.filter((o) => o.id?.toString().includes(filterOrderId));
     if (filterCustomer)
       list = list.filter((o) =>
         o.userName?.toLowerCase().includes(filterCustomer.toLowerCase())
       );
-
     if (filterDate)
       list = list.filter(
         (o) =>
@@ -51,8 +55,7 @@ export default function Orders() {
     return list;
   }, [orders, q, filterOrderId, filterCustomer, filterDate]);
 
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const pageData = filtered.slice((page - 1) * perPage, page * perPage);
 
   const statusStyle = (status) => {
@@ -60,8 +63,11 @@ export default function Orders() {
       case "Delivered":
         return "bg-green-100 text-green-700";
       case "Pending":
+      case "Accepted":
       case "Processing":
         return "bg-yellow-100 text-yellow-700";
+      case "OutForDelivery":
+        return "bg-blue-100 text-blue-700";
       case "CancelledByUser":
       case "CancelledByPharmacy":
         return "bg-red-100 text-red-600";
@@ -101,9 +107,18 @@ export default function Orders() {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
         <StatCard title="Total Orders" value={orders.length} />
-        <StatCard title="Completed Orders" value={orders.filter(o => o.status === "Delivered").length} />
-        <StatCard title="Pending Orders" value={orders.filter(o => o.status === "Pending").length} />
-        <StatCard title="Cancelled Orders" value={orders.filter(o => o.status?.startsWith("Cancelled")).length} />
+        <StatCard
+          title="Completed Orders"
+          value={orders.filter((o) => o.status === "Delivered").length}
+        />
+        <StatCard
+          title="Pending Orders"
+          value={orders.filter((o) => ["Pending","Accepted","Processing"].includes(o.status)).length}
+        />
+        <StatCard
+          title="Cancelled Orders"
+          value={orders.filter((o) => o.status?.startsWith("Cancelled")).length}
+        />
       </div>
 
       {/* Toolbar */}
@@ -118,7 +133,7 @@ export default function Orders() {
           />
         </div>
 
-        <div className="flex gap-2 relative">
+        <div className="flex gap-2">
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="px-4 py-2 rounded-full border text-sm flex items-center gap-2"
@@ -127,38 +142,14 @@ export default function Orders() {
           </button>
 
           {showFilters && (
-            <div className="absolute right-0 top-full mt-2 bg-white border shadow-lg rounded-xl p-4 w-64 z-50 space-y-2">
-              <input
-                placeholder="Order ID"
-                value={filterOrderId}
-                onChange={(e) => setFilterOrderId(e.target.value)}
-                className="border px-3 py-2 rounded-lg w-full text-sm"
-              />
-              <input
-                placeholder="Customer name"
-                value={filterCustomer}
-                onChange={(e) => setFilterCustomer(e.target.value)}
-                className="border px-3 py-2 rounded-lg w-full text-sm"
-              />
-              <input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="border px-3 py-2 rounded-lg w-full text-sm"
-              />
-              <button
-                onClick={() => setShowFilters(false)}
-                className="w-full bg-secondary text-white rounded-lg py-2 text-sm"
-              >
-                Apply
-              </button>
+            <div className="absolute mt-2 bg-white border shadow-lg rounded-xl p-4 w-64 z-50 space-y-2">
+              <input placeholder="Order ID" value={filterOrderId} onChange={e => setFilterOrderId(e.target.value)} className="border px-3 py-2 rounded-lg w-full text-sm" />
+              <input placeholder="Customer name" value={filterCustomer} onChange={e => setFilterCustomer(e.target.value)} className="border px-3 py-2 rounded-lg w-full text-sm" />
+              <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="border px-3 py-2 rounded-lg w-full text-sm" />
             </div>
           )}
 
-          <button
-            onClick={handleExport}
-            className="px-4 py-2 rounded-full border text-sm flex items-center gap-2"
-          >
+          <button onClick={handleExport} className="px-4 py-2 rounded-full border text-sm flex items-center gap-2">
             <Download size={16} /> Export
           </button>
         </div>
@@ -178,27 +169,32 @@ export default function Orders() {
               <th className="px-6 py-4 text-center">Action</th>
             </tr>
           </thead>
-
           <tbody>
             {loading ? (
               <tr><td colSpan={7} className="text-center py-8">Loading...</td></tr>
-            ) : pageData.map(o => (
-              <tr key={o.id} className="border-t hover:bg-gray-50">
-                <td className="px-6 py-4 text-secondary font-medium">#{o.id}</td>
-                <td className="px-6 py-4">{o.userName}</td>
-                <td className="px-6 py-4">{o.pharmacyName}</td>
-                <td className="px-6 py-4 text-center">{new Date(o.orderDate).toLocaleDateString()}</td>
-                <td className="px-6 py-4 text-center">{o.totalPrice} EGP</td>
-                <td className="px-6 py-4 text-center">
-                  <span className={`px-3 py-1 rounded-full text-xs ${statusStyle(o.status)}`}>
-                    {o.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <Edit size={16} className="cursor-pointer hover:text-secondary" />
-                </td>
-              </tr>
-            ))}
+            ) : pageData.length === 0 ? (
+              <tr><td colSpan={7} className="text-center py-8">No orders found.</td></tr>
+            ) : (
+              pageData.map((o) => (
+                <tr key={o.id} className="border-t hover:bg-gray-50">
+                  <td className="px-6 py-4 text-secondary font-medium">#{o.id}</td>
+                  <td className="px-6 py-4">{o.userName}</td>
+                  <td className="px-6 py-4">{o.pharmacyName}</td>
+                  <td className="px-6 py-4 text-center">{new Date(o.orderDate).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 text-center">{o.totalPrice} EGP</td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`px-3 py-1 rounded-full text-xs ${statusStyle(o.status)}`}>{o.status}</span>
+                  </td>
+                  <td className="px-6 py-4 text-center space-x-2">
+                    {o.status === "Pending" && <button disabled={loading} onClick={() => accept(o.id, fetchPharmacy)} className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200">Accept</button>}
+                    {o.status === "Accepted" && <button disabled={loading} onClick={() => process(o.id, fetchPharmacy)} className="px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700 hover:bg-yellow-200">Process</button>}
+                    {o.status === "Processing" && <button disabled={loading} onClick={() => outForDelivery(o.id, fetchPharmacy)} className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200">Out For Delivery</button>}
+                    {o.status === "OutForDelivery" && <button disabled={loading} onClick={() => deliver(o.id, fetchPharmacy)} className="px-3 py-1 text-xs rounded-full bg-green-200 text-green-800 hover:bg-green-300">Delivered</button>}
+                    {!["Delivered","OutForDelivery"].includes(o.status) && !o.status?.startsWith("Cancelled") && <button disabled={loading} onClick={() => cancelByPharmacy(o.id)} className="px-3 py-1 text-xs rounded-full bg-red-100 text-red-600 hover:bg-red-200">Cancel</button>}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
