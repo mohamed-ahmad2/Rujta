@@ -1,5 +1,5 @@
 import React from "react";
-import Logo from "../../../assets/Logo.png";
+import Logo from "../../../assets/Logo2.png";
 import { NavbarMenu } from "../../../mockData/data";
 import { CiSearch } from "react-icons/ci";
 import { PiShoppingCartThin } from "react-icons/pi";
@@ -14,7 +14,7 @@ const Navbar = () => {
   return (
     <>
       <nav>
-        <div className="container flex justify-between items-center py-8">
+        <div className="container flex justify-between items-center py-8 bg-page">
           
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
@@ -30,10 +30,10 @@ const Navbar = () => {
 
           {/* Menu */}
           <div
-            className="bg-white rounded-md border-2 hidden md:block"
+            className=" rounded-md border-2 hidden md:block"
             style={{ marginLeft: "70px" }}
           >
-            <ul className="flex items-center gap-6 text-gray-600">
+            <ul className="flex items-center gap-6 ">
               {NavbarMenu.map((item) => (
                 <li key={item.id}>
                   <Link
@@ -49,13 +49,7 @@ const Navbar = () => {
 
           {/* Icons */}
           <div className="flex items-center gap-4">
-            <button className="text-2xl hover:bg-secondary hover:text-white rounded-full p-2 duration-200">
-              <CiSearch />
-            </button>
-
-            <button className="text-2xl hover:bg-secondary hover:text-white rounded-full p-2 duration-200">
-              <PiShoppingCartThin />
-            </button>
+           
 
             <button
               onClick={() => navigate("/auth")}
