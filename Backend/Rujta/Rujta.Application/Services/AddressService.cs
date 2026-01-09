@@ -10,23 +10,42 @@ namespace Rujta.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        private readonly IGeocodingService _geocodingService;
+        private readonly IOfflineGeocodingService _offlineGeocodingService;
 
         private const double CoordinateTolerance = 0.0001;
 
         public AddressService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
-            IGeocodingService geocodingService)
+            IOfflineGeocodingService offlineGeocodingService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
-            _geocodingService = geocodingService;
+            _offlineGeocodingService = offlineGeocodingService;
         }
+
+        public async Task AddByUserAsync(Guid userId, AddressDto dto, CancellationToken cancellationToken = default)
+        {
+            if (userId == Guid.Empty)
+                throw new ArgumentException("Invalid userId");
+
+            var (latitude, longitude) = await ResolveCoordinatesAsync(dto);
+            dto.Latitude = latitude;
+            dto.Longitude = longitude;
+
+            var address = _mapper.Map<Address>(dto);
+
+            address.PersonId = userId;
+
+            await _unitOfWork.Address.AddAsync(address, cancellationToken);
+            await _unitOfWork.SaveAsync(cancellationToken);
+        }
+
+
 
         public async Task AddAsync(AddressDto dto, CancellationToken cancellationToken = default)
         {
-            var (latitude, longitude) = await ResolveCoordinatesAsync(dto, cancellationToken);
+            var (latitude, longitude) = await ResolveCoordinatesAsync(dto);
             dto.Latitude = latitude;
             dto.Longitude = longitude;
 
@@ -41,7 +60,7 @@ namespace Rujta.Application.Services
             if (address == null)
                 throw new KeyNotFoundException("Address not found");
 
-            var (latitude, longitude) = await ResolveCoordinatesAsync(dto, cancellationToken);
+            var (latitude, longitude) = await ResolveCoordinatesAsync(dto);
             dto.Latitude = latitude;
             dto.Longitude = longitude;
 
@@ -59,36 +78,27 @@ namespace Rujta.Application.Services
                 longitude < -180 || longitude > 180;
         }
 
-        private async Task<(double Latitude, double Longitude)> ResolveCoordinatesAsync(
-            AddressDto dto,
-            CancellationToken cancellationToken)
+        private async Task<(double Latitude, double Longitude)> ResolveCoordinatesAsync(AddressDto dto)
         {
             if (!NeedsGeocoding(dto.Latitude, dto.Longitude))
                 return (dto.Latitude, dto.Longitude);
 
-            var parts = new[]
-            {
-                dto.BuildingNo,
-                dto.Street,
-                dto.City,
-                dto.Governorate,
-                "Egypt"
-            };
-
-            var fullAddress = string.Join(", ", parts.Where(p => !string.IsNullOrWhiteSpace(p))).Trim();
-
             try
             {
-                var coords = await _geocodingService.GetCoordinatesAsync(fullAddress, cancellationToken);
-                return (coords.Latitude, coords.Longitude);
+                var result = await _offlineGeocodingService.GetCoordinatesAsync(
+                    dto.Street,
+                    dto.BuildingNo,
+                    dto.City,
+                    dto.Governorate);
+
+                return result;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unable to geocode address: {fullAddress}. Exception: {ex.Message}");
+                Console.WriteLine($"Offline geocoding failed for address {dto.Street}, {dto.BuildingNo}: {ex.Message}");
                 return (dto.Latitude, dto.Longitude);
             }
         }
-
 
         public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
@@ -100,13 +110,11 @@ namespace Rujta.Application.Services
             await _unitOfWork.SaveAsync(cancellationToken);
         }
 
-
         public async Task<IEnumerable<AddressDto>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             var addresses = await _unitOfWork.Address.GetAllAsync(cancellationToken);
             return _mapper.Map<IEnumerable<AddressDto>>(addresses);
         }
-
 
         public async Task<AddressDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
@@ -114,13 +122,12 @@ namespace Rujta.Application.Services
             return address == null ? null : _mapper.Map<AddressDto>(address);
         }
 
-        public async Task<List<AddressDto>> GetUserAddressesAsync(Guid userId,CancellationToken cancellationToken = default)
+        public async Task<List<AddressDto>> GetUserAddressesAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             if (userId == Guid.Empty)
                 throw new ArgumentException("Invalid userId");
 
-            var addresses = await _unitOfWork.Address
-                .GetUserAddressesAsync(userId, cancellationToken);
+            var addresses = await _unitOfWork.Address.GetUserAddressesAsync(userId, cancellationToken);
 
             if (addresses == null || !addresses.Any())
                 return new List<AddressDto>();

@@ -78,7 +78,6 @@ namespace Rujta.Infrastructure.Repositories
 
                 foreach (var addressDto in dto.Addresses)
                 {
-                    // Always resolve coordinates from address fields, ignoring provided lat/lon
                     var (latitude, longitude) = await ResolveCoordinatesAsync(addressDto);
                     UpsertAddress(user, addressDto, latitude, longitude);
                 }

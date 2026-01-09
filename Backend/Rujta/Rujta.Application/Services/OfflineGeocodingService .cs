@@ -1,26 +1,27 @@
-﻿// OfflineGeocodingService.cs (corrected version)
-using F23.StringSimilarity;
+﻿using F23.StringSimilarity;
 using OsmSharp;
 using OsmSharp.Streams;
 using Rujta.Application.Interfaces.InterfaceServices;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+
 
 namespace Rujta.Infrastructure.Services
 {
     public class OfflineGeocodingService : IOfflineGeocodingService
     {
-        private readonly Dictionary<string, List<AddressNode>> _nodesByGovCity;
-        private readonly Dictionary<string, (double Latitude, double Longitude)> _cache;
+        private readonly ConcurrentDictionary<string, List<AddressNode>> _nodesByGovCity;
+        private readonly ConcurrentDictionary<string, (double Latitude, double Longitude)> _cache;
         private readonly JaroWinkler _jw;
 
         public OfflineGeocodingService(string pbfFilePath)
         {
             var nodes = LoadAddressesFromPbf(pbfFilePath);
             _nodesByGovCity = BuildIndex(nodes);
-            _cache = new Dictionary<string, (double, double)>();
-            _jw = new JaroWinkler(); // Initialize Jaro-Winkler
+            _cache = new ConcurrentDictionary<string, (double, double)>();
+            _jw = new JaroWinkler();
         }
 
         private List<AddressNode> LoadAddressesFromPbf(string path)
@@ -29,6 +30,7 @@ namespace Rujta.Infrastructure.Services
             var source = new PBFOsmStreamSource(fs);
 
             var nodes = source
+                .AsParallel()
                 .OfType<Node>()
                 .Where(n => n.Tags != null && n.Tags.ContainsKey("addr:street"))
                 .Select(n => new AddressNode
@@ -46,19 +48,20 @@ namespace Rujta.Infrastructure.Services
             return nodes;
         }
 
-        private static Dictionary<string, List<AddressNode>> BuildIndex(List<AddressNode> nodes)
+        private static ConcurrentDictionary<string, List<AddressNode>> BuildIndex(List<AddressNode> nodes)
         {
-            var index = new Dictionary<string, List<AddressNode>>();
-            foreach (var node in nodes)
+            var index = new ConcurrentDictionary<string, List<AddressNode>>();
+
+            Parallel.ForEach(nodes, node =>
             {
                 var key = $"{node.Governorate?.ToLowerInvariant()}|{node.City?.ToLowerInvariant()}";
-                if (!index.TryGetValue(key, out var list))
+                var list = index.GetOrAdd(key, _ => new List<AddressNode>());
+                lock (list)
                 {
-                    list = new List<AddressNode>();
-                    index[key] = list;
+                    list.Add(node);
                 }
-                list.Add(node);
-            }
+            });
+
             return index;
         }
 
@@ -79,12 +82,10 @@ namespace Rujta.Infrastructure.Services
 
             var indexKey = $"{governorate?.ToLowerInvariant()}|{city?.ToLowerInvariant()}";
             if (!_nodesByGovCity.TryGetValue(indexKey, out var filteredNodes) || filteredNodes == null || !filteredNodes.Any())
-            {
-                // Fallback to broader search if no exact gov/city match
                 filteredNodes = _nodesByGovCity.Values.SelectMany(v => v).ToList();
-            }
 
             var bestMatch = filteredNodes
+                .AsParallel()
                 .Select(n => new
                 {
                     Node = n,
@@ -102,11 +103,7 @@ namespace Rujta.Infrastructure.Services
             (double Latitude, double Longitude) result = (0.0, 0.0);
 
             if (bestMatch != null)
-            {
-                // We always take the best match even if score < 0.75, because it's the closest available
-                // (This removes the duplicated logic of the if/else if branches)
                 result = (bestMatch.Node.Latitude, bestMatch.Node.Longitude);
-            }
 
             _cache[cacheKey] = result;
 
@@ -128,8 +125,7 @@ namespace Rujta.Infrastructure.Services
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;
 
-            // Remove diacritics, punctuation, normalize spaces, to lower
-            input = Regex.Replace(input, @"[^\w\s]", ""); // Remove punctuation
+            input = Regex.Replace(input, @"[^\w\s]", "");
             input = new string(input.Normalize(NormalizationForm.FormD)
                 .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
                 .ToArray())
