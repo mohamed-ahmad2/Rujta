@@ -30,7 +30,8 @@ namespace Rujta.Infrastructure.Repositories
                 BuildingNo = a.BuildingNo,
                 City = a.City,
                 Governorate = a.Governorate,
-                IsDefault = a.IsDefault
+                Latitude = a.Latitude,
+                Longitude= a.Longitude,
             }).ToList();
         }
 

@@ -24,7 +24,6 @@ namespace Rujta.Api.Controllers
 
         private string GetUser() => User.Identity?.Name ?? LogConstants.UnknownUser;
 
-        // Create a new order
         [Authorize(Roles = nameof(UserRole.User))]
         [HttpPost]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto createOrderDto)

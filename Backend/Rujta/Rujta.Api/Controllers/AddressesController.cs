@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.RateLimiting;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 
@@ -12,13 +13,16 @@ namespace Rujta.Api.Controllers
     {
         private readonly IAddressService _addressService;
         private readonly ILogService _logService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public AddressesController(
             IAddressService addressService,
-            ILogService logService)
+            ILogService logService,
+            UserManager<ApplicationUser> userManager)
         {
             _addressService = addressService;
             _logService = logService;
+            _userManager = userManager;
         }
 
         private string GetUser() =>
@@ -72,7 +76,17 @@ namespace Rujta.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] AddressDto dto,CancellationToken cancellationToken)
         {
-            await _addressService.AddAsync(dto, cancellationToken);
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
+
+            var userGuid = Guid.Parse(userIdClaim);
+
+            var appUser = await _userManager.FindByIdAsync(userGuid.ToString());
+            if (appUser == null)
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
+
+            await _addressService.AddByUserAsync(appUser.DomainPersonId, dto, cancellationToken);
             await _logService.AddLogAsync(GetUser(), "Created new address");
             return Ok(new { message = "Address created successfully" });
         }
