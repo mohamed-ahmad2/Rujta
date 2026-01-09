@@ -11,6 +11,8 @@ import {
   Edit,
   UploadCloud,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import ProductModal from "../components/ProductModal";
@@ -118,6 +120,18 @@ export default function Products() {
     setFilterCategory("All");
     setFilterStatus("All");
     setPage(1);
+  };
+
+  const handlePrevPage = () => {
+    if (page > 1) setPage(page - 1);
+  };
+
+  const handleNextPage = () => {
+    if (page < totalPages) setPage(page + 1);
+  };
+
+  const handlePageClick = (p) => {
+    setPage(p);
   };
 
   return (
@@ -287,6 +301,37 @@ export default function Products() {
           </table>
         )}
       </div>
+
+      {/* pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={handlePrevPage}
+            disabled={page === 1}
+            className="flex items-center gap-1 px-3 py-1 rounded-full border text-sm disabled:opacity-50"
+          >
+            <ChevronLeft size={16} /> Prev
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              onClick={() => handlePageClick(p)}
+              className={`px-3 py-1 rounded-full text-sm ${
+                page === p ? "bg-secondary text-white" : "border"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+          <button
+            onClick={handleNextPage}
+            disabled={page === totalPages}
+            className="flex items-center gap-1 px-3 py-1 rounded-full border text-sm disabled:opacity-50"
+          >
+            Next <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Product modal with dynamic categories and medicines */}
       <ProductModal

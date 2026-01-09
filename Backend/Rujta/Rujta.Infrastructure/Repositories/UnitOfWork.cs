@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore.Storage;
+
 namespace Rujta.Infrastructure.Repositories
 {
     public class UnitOfWork : IUnitOfWork
@@ -51,7 +53,9 @@ namespace Rujta.Infrastructure.Repositories
         public async Task<int> SaveAsync(CancellationToken cancellationToken = default)
             => await _context.SaveChangesAsync(cancellationToken);
 
-
+        public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)=>
+            await _context.Database.BeginTransactionAsync(cancellationToken);
+        
         // Dispose
         protected virtual void Dispose(bool disposing)
         {

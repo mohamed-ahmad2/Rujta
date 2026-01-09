@@ -15,5 +15,10 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
             int id,
             int pharmacyId,
             CancellationToken cancellationToken = default);
+
+        Task<InventoryItem?> GetByMedicineAndPharmacyAsync(
+            int medicineId,
+            int pharmacyId,
+            CancellationToken cancellationToken = default);
     }
 }

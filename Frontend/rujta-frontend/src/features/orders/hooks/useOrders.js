@@ -24,13 +24,21 @@ export const useOrders = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-
   const fetchAll = useCallback(async () => fetchOrders(getAllOrders), []);
   const fetchUser = useCallback(async () => fetchOrders(getUserOrders), []);
-  const fetchPharmacy = useCallback(async () => fetchOrders(getPharmacyOrders), []);
+  const fetchPharmacy = useCallback(
+    async () => fetchOrders(getPharmacyOrders),
+    []
+  );
 
-  const fetchById = useCallback(async (id) => fetchSingle(getOrderById, id, setSelectedOrder), []);
-  const fetchDetailsById = useCallback(async (id) => fetchSingle(getOrderDetails, id, setDetails), []);
+  const fetchById = useCallback(
+    async (id) => fetchSingle(getOrderById, id, setSelectedOrder),
+    []
+  );
+  const fetchDetailsById = useCallback(
+    async (id) => fetchSingle(getOrderDetails, id, setDetails),
+    []
+  );
 
   const fetchOrders = async (fetchFn) => {
     setLoading(true);
@@ -62,17 +70,25 @@ export const useOrders = () => {
     }
   };
 
-  const create = async (data, refreshFn = fetchUser) => runMutation(createOrder, data, refreshFn);
-  const update = async (id, data, refreshFn = fetchUser) => runMutation(() => updateOrder(id, data), null, refreshFn);
-  const remove = async (id, refreshFn = fetchUser) => runMutation(() => deleteOrder(id), null, refreshFn);
+  const create = async (data, refreshFn = fetchUser) =>
+    runMutation(createOrder, data, refreshFn);
+  const update = async (id, data, refreshFn = fetchUser) =>
+    runMutation(() => updateOrder(id, data), null, refreshFn);
+  const remove = async (id, refreshFn = fetchUser) =>
+    runMutation(() => deleteOrder(id), null, refreshFn);
 
-
-  const accept = (id, refreshFn = fetchUser) => runMutation(() => acceptOrder(id), null, refreshFn);
-  const process = (id, refreshFn = fetchUser) => runMutation(() => processOrder(id), null, refreshFn);
-  const _outForDelivery = (id, refreshFn = fetchUser) => runMutation(() => outForDelivery(id), null, refreshFn);
-  const deliver = (id, refreshFn = fetchUser) => runMutation(() => markAsDelivered(id), null, refreshFn);
-  const cancelByUser = (id, refreshFn = fetchUser) => runMutation(() => cancelOrderByUser(id), null, refreshFn);
-  const cancelByPharmacy = (id, refreshFn = fetchPharmacy) => runMutation(() => cancelOrderByPharmacy(id), null, refreshFn);
+  const accept = (id, refreshFn = fetchUser) =>
+    runMutation(() => acceptOrder(id), null, refreshFn);
+  const process = (id, refreshFn = fetchUser) =>
+    runMutation(() => processOrder(id), null, refreshFn);
+  const _outForDelivery = (id, refreshFn = fetchUser) =>
+    runMutation(() => outForDelivery(id), null, refreshFn);
+  const deliver = (id, refreshFn = fetchUser) =>
+    runMutation(() => markAsDelivered(id), null, refreshFn);
+  const cancelByUser = (id, refreshFn = fetchUser) =>
+    runMutation(() => cancelOrderByUser(id), null, refreshFn);
+  const cancelByPharmacy = (id, refreshFn = fetchPharmacy) =>
+    runMutation(() => cancelOrderByPharmacy(id), null, refreshFn);
 
   const runMutation = async (fn, data = null, refreshFn) => {
     setLoading(true);
@@ -96,22 +112,19 @@ export const useOrders = () => {
     loading,
     error,
 
-
     fetchAll,
     fetchUser,
     fetchPharmacy,
     fetchById,
     fetchDetailsById,
 
-
     create,
     update,
     remove,
 
-
     accept,
     process,
-    outForDelivery,
+    outForDelivery: _outForDelivery,
     deliver,
     cancelByUser,
     cancelByPharmacy,
