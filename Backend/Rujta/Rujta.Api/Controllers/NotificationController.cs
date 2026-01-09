@@ -1,10 +1,12 @@
-﻿using Rujta.Infrastructure.Constants;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Infrastructure.Constants;
 
 namespace Rujta.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [EnableRateLimiting("Fixed")]
     public class NotificationController : ControllerBase
     {
         private readonly INotificationService _notificationService;

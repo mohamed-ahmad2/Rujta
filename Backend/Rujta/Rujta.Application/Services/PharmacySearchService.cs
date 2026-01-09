@@ -2,6 +2,8 @@
 using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Application.Interfaces.InterfaceServices;
+using Rujta.Application.Services.Builders;
+using Rujta.Application.Services.Logging;
 using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Services
@@ -10,227 +12,160 @@ namespace Rujta.Application.Services
     {
         private readonly IPharmacyRepository _pharmacyRepo;
         private readonly PharmacyDistanceService _distanceService;
+        private readonly IMedicineRepository _medicineRepo;
         private readonly ILogger<PharmacySearchService> _logger;
 
         public PharmacySearchService(
             IPharmacyRepository pharmacyRepo,
             PharmacyDistanceService distanceService,
+            IMedicineRepository medicineRepo,
             ILogger<PharmacySearchService> logger)
         {
             _pharmacyRepo = pharmacyRepo;
             _distanceService = distanceService;
+            _medicineRepo = medicineRepo;
             _logger = logger;
         }
 
         public async Task<List<PharmacyMatchResultDto>> GetRankedPharmaciesAsync(
-    ItemDto order,
-    double userLat,
-    double userLng,
-    int topK)
+            ItemDto order,
+            double userLat,
+            double userLng,
+            int topK)
         {
-            _logger.LogInformation("=== Start GetRankedPharmaciesAsync ===");
-            _logger.LogInformation("User location: Lat={Lat}, Lng={Lng}, topK={TopK}", userLat, userLng, topK);
+            PharmacySearchLogger.LogStart(_logger, userLat, userLng, topK);
 
             if (!IsValidOrder(order))
-                return new List<PharmacyMatchResultDto>();
+                return new();
+
+            var medicineIds = order.Items.Select(i => i.MedicineId).Distinct().ToList();
+            var medicines = await _medicineRepo.FindAsync(m => medicineIds.Contains(m.Id));
+            var medicineNames = medicines.ToDictionary(m => m.Id, m => m.Name ?? "Unknown");
 
             var nearestPharmacies = await GetNearestPharmaciesSafe(userLat, userLng, topK);
-            if (!nearestPharmacies.Any())
-                return new List<PharmacyMatchResultDto>();
 
             var results = new List<PharmacyMatchResultDto>();
 
             foreach (var entry in nearestPharmacies)
             {
-                var pharmacyResult = await ProcessPharmacyAsync(entry, order);
-
-                if (pharmacyResult.MatchedDrugs > 0)
-                {
-                    results.Add(pharmacyResult);
-                }
+                var result = await ProcessPharmacyAsync(entry, order, medicineNames);
+                if (result.MatchedDrugs > 0)
+                    results.Add(result);
             }
 
-
-            var finalResults = results
+            var final = results
                 .OrderByDescending(r => r.MatchedDrugs)
                 .ThenBy(r => r.DistanceKm)
                 .Take(topK)
                 .ToList();
 
-            LogFinalResults(finalResults);
+            PharmacySearchLogger.LogFinalResults(_logger, final.Count);
 
-            return finalResults;
+            return final;
         }
-
 
         private bool IsValidOrder(ItemDto order)
         {
-            if (order == null)
-            {
-                _logger.LogWarning("Order is null");
+            if (order?.Items == null || !order.Items.Any())
                 return false;
-            }
-
-            if (order.Items == null || !order.Items.Any())
-            {
-                _logger.LogWarning("Order items are null or empty");
-                return false;
-            }
-
-            _logger.LogInformation("Total requested items: {Count}", order.Items.Count);
 
             for (int i = 0; i < order.Items.Count; i++)
             {
-                var item = order.Items[i];
-                _logger.LogInformation(
-                    "Order item {Index}: MedicineId={MedicineId}, Quantity={Quantity}",
-                    i, item.MedicineId, item.Quantity);
-
-                if (item.MedicineId == 0)
-                {
-                    _logger.LogError(
-                        "MedicineId is 0 for item index {Index}. Check frontend / DTO mapping!", i);
-                }
+                PharmacySearchLogger.LogOrderItem(_logger, order.Items[i], i);
             }
 
             return true;
         }
 
-
-        private async Task<List<(Pharmacy pharmacy, double distance, double durationMinutes)>>
-    GetNearestPharmaciesSafe(double userLat, double userLng, int topK)
-
+        private async Task<List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>> GetNearestPharmaciesSafe(
+            double lat, double lng, int topK)
         {
             try
             {
-                var rawNearest = await _distanceService
-                    .GetNearestPharmaciesRouted(userLat, userLng, "car", topK);
-
-                var result = rawNearest
-                    .Select(r => (r.pharmacy, r.distanceMeters, r.durationMinutes))
-                    .ToList();
-
-                _logger.LogInformation("Found {Count} nearest pharmacies", result.Count);
-                return result;
+                return await _distanceService.GetNearestPharmaciesRouted(lat, lng, "car", topK * 2);
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Error getting nearest pharmacies from DistanceService");
-                // Return an empty list with the correct tuple type
-                return new List<(Pharmacy pharmacy, double distance, double durationMinutes)>();
+                var all = await _pharmacyRepo.GetAllPharmacies();
+                return all
+                    .Select(p => (p, Haversine(lat, lng, p.Latitude, p.Longitude), 0.0))
+                    .OrderBy(x => x.Item2)
+                    .Take(topK * 2)
+                    .ToList();
             }
         }
 
-
         private async Task<PharmacyMatchResultDto> ProcessPharmacyAsync(
-    (Pharmacy pharmacy, double distance, double durationMinutes) entry,
-    ItemDto order)
-
+            (Pharmacy pharmacy, double distanceMeters, double durationMinutes) entry,
+            ItemDto order,
+            Dictionary<int, string> medicineNames)
         {
             var pharmacy = entry.pharmacy;
-            var distance = entry.distance;
-            var duration = entry.durationMinutes;
+            var distanceKm = entry.distanceMeters / 1000;
+
+            PharmacySearchLogger.LogPharmacyProcessing(
+                _logger,
+                pharmacy.Id,
+                pharmacy.Name,
+                distanceKm);
 
             int matched = 0;
-
-            _logger.LogInformation(
-                "=== Processing PharmacyId={PharmacyId}, Name={PharmacyName}, Distance={Distance}m ===",
-                pharmacy.Id, pharmacy.Name, distance);
+            var found = new List<FoundMedicineDto>();
+            var notFound = new List<NotFoundMedicineDto>();
 
             foreach (var item in order.Items)
             {
-                matched += await CheckMedicineStockAsync(pharmacy.Id, item);
-            }
+                int stock = await _pharmacyRepo.GetMedicineStockAsync(pharmacy.Id, item.MedicineId);
+                PharmacySearchLogger.LogStockCheck(_logger, pharmacy.Id, item, stock);
 
-            _logger.LogInformation(
-                "PharmacyId={PharmacyId} matched {Matched}/{TotalRequested} items",
-                pharmacy.Id, matched, order.Items.Count);
+                var name = medicineNames.GetValueOrDefault(item.MedicineId, "Unknown");
 
-            return new PharmacyMatchResultDto
-            {
-                PharmacyId = pharmacy.Id,
-                Name = pharmacy.Name,
-                Latitude = pharmacy.Latitude,
-                Longitude = pharmacy.Longitude,
-                ContactNumber = pharmacy.ContactNumber,
-                MatchedDrugs = matched,
-                TotalRequestedDrugs = order.Items.Count,
-                DistanceKm = distance,
-                EstimatedDurationMinutes = Math.Round(duration, 1),
-                MatchPercentage = order.Items.Count > 0
-        ? Math.Round(((double)matched / order.Items.Count) * 100, 1)
-        : 0
-            };
-
-        }
-
-        private async Task<int> CheckMedicineStockAsync(int pharmacyId, CartItemDto item)
-        {
-            try
-            {
-                _logger.LogInformation(
-                    "Checking stock for MedicineId={MedicineId}, Quantity={Quantity}",
-                    item.MedicineId, item.Quantity);
-
-                int stock = await _pharmacyRepo
-                    .GetMedicineStockAsync(pharmacyId, item.MedicineId);
-
-                _logger.LogInformation(
-                    "Stock for MedicineId={MedicineId} in PharmacyId={PharmacyId}: {Stock}",
-                    item.MedicineId, pharmacyId, stock);
-
-                if (stock >= item.Quantity)
-                    return 1;
-
-                _logger.LogWarning(
-                    "MedicineId={MedicineId} not enough stock. Needed {Needed}, Available {Available}",
-                    item.MedicineId, item.Quantity, stock);
-
-                if (stock == 0)
+                if (stock > 0)
                 {
-                    _logger.LogWarning(
-                        "MedicineId={MedicineId} stock is zero in PharmacyId={PharmacyId}. Possibly missing in InventoryItems table",
-                        item.MedicineId, pharmacyId);
+                    if (stock >= item.Quantity) matched++;
+
+                    found.Add(new FoundMedicineDto
+                    {
+                        MedicineId = item.MedicineId,
+                        MedicineName = name,
+                        RequestedQuantity = item.Quantity,
+                        AvailableQuantity = stock
+                    });
                 }
-
-                if (item.MedicineId == 0)
+                else
                 {
-                    _logger.LogError(
-                        "MedicineId=0 detected for PharmacyId={PharmacyId}. Check database or DTO mapping!",
-                        pharmacyId);
+                    notFound.Add(new NotFoundMedicineDto
+                    {
+                        MedicineId = item.MedicineId,
+                        MedicineName = name,
+                        RequestedQuantity = item.Quantity
+                    });
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Failed stock query PharmacyId={PharmacyId}, MedicineId={MedicineId}",
-                    pharmacyId, item.MedicineId);
-            }
 
-            return 0;
+            return PharmacyMatchResultBuilder.Build(
+                pharmacy,
+                order,
+                matched,
+                distanceKm,
+                entry.durationMinutes,
+                found,
+                notFound);
         }
 
-
-        private void LogFinalResults(List<PharmacyMatchResultDto> results)
+        private static double Haversine(double lat1, double lon1, double lat2, double lon2)
         {
-            _logger.LogInformation(
-                "=== Returning {Count} ranked pharmacy results ===",
-                results.Count);
+            const double R = 6371000;
+            double dLat = (lat2 - lat1) * Math.PI / 180;
+            double dLon = (lon2 - lon1) * Math.PI / 180;
 
-            foreach (var r in results)
-            {
-                _logger.LogInformation(
-                    "PharmacyId={PharmacyId}, Name={Name}, Matched={Matched}/{TotalRequested}, MatchPercentage={Percentage}%, Distance={DistanceKm}km",
-                    r.PharmacyId,
-                    r.Name,
-                    r.MatchedDrugs,
-                    r.TotalRequestedDrugs,
-                    r.MatchPercentage,
-                    r.DistanceKm);
-            }
+            double a =
+                Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                Math.Cos(lat1 * Math.PI / 180) *
+                Math.Cos(lat2 * Math.PI / 180) *
+                Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+            return 2 * R * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
         }
-
-
     }
 }

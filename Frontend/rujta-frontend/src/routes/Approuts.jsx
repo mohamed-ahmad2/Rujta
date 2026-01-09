@@ -33,6 +33,21 @@ import Orders from "../features/dashboard/pages/Orders";
 import Settings from "../features/dashboard/pages/Settings";
 import Customers from "../features/dashboard/pages/Customers";
 import Sales from "../features/dashboard/pages/Sales";
+import Logs from "../features/dashboard/pages/Logs";
+
+
+import NotificationsPage from "../features/notifications/pages/NotificationsPage";
+
+// ...
+
+<Route
+  path="/dashboard/logs"
+  element={
+    <ProtectedRoute>
+      <Logs />
+    </ProtectedRoute>
+  }
+/>
 
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Routes>
@@ -81,26 +96,43 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
       <Route path="orders" element={<Ordersuser />} />
       <Route path="profile" element={<Profile />} />
       <Route path="checkout" element={<Checkout />} />
+
+      <Route path="notifications" element={<NotificationsPage />} />
     </Route>
 
     {/* ========= Medicine ========= */}
-    <Route path="/medicines/:id" element={<MedicineDetails />} />
+ <Route
+  path="/medicines/:id"
+  element={<MedicineDetails cart={cart} setCart={setCart} />}
+/>
+
+
 
     {/* ========= Dashboard ========= */}
     <Route
       path="/dashboard"
       element={
-        <ProtectedRoute role="Pharmacist">
+     <ProtectedRoute roles={["Pharmacist", "PharmacyAdmin"]}>
           <DashboardLayout />
         </ProtectedRoute>
       }
     >
+      <Route index element={<Home />} />
       <Route path="home" element={<Home />} />
       <Route path="products" element={<Products />} />
       <Route path="orders" element={<Orders />} />
       <Route path="sales" element={<Sales />} />
       <Route path="customers" element={<Customers />} />
       <Route path="settings" element={<Settings />} />
+      {/* Logs page restricted to PharmacyAdmin only */}
+          <Route
+            path="logs"
+            element={
+              <ProtectedRoute roles={["PharmacyAdmin"]}>
+                <Logs />
+              </ProtectedRoute>
+            }
+          />
     </Route>
 
   </Routes>

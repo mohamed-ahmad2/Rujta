@@ -1,4 +1,5 @@
-﻿using Rujta.Domain.Entities;
+﻿using Rujta.Domain.Common;
+using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {

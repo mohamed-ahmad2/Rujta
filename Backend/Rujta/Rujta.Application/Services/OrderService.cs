@@ -9,20 +9,8 @@ using Rujta.Domain.Enums;
 
 namespace Rujta.Application.Services
 {
-    public class OrderService : IOrderService
+    public class OrderService(IUnitOfWork _unitOfWork,IMapper _mapper,ILogger<OrderService> _logger) : IOrderService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-        private readonly ILogger<OrderService> _logger;
-
-        public OrderService(IUnitOfWork unitOfWork, IMapper mapper, ILogger<OrderService> logger)
-        {
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
-            _logger = logger;
-        }
-
-
         public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto, Guid userId, CancellationToken cancellationToken = default)
         {
             try
@@ -35,46 +23,37 @@ namespace Rujta.Application.Services
                 var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(createOrderDto.PharmacyID, cancellationToken)
                     ?? throw new InvalidOperationException($"Pharmacy with ID {createOrderDto.PharmacyID} not found.");
 
-                Address? deliveryAddressEntity = null;
+                if (!createOrderDto.DeliveryAddressId.HasValue)
+                    throw new InvalidOperationException("Delivery address ID is required.");
+                
 
-                if (createOrderDto.DeliveryAddress != null)
+                var address = await _unitOfWork.Address.GetByIdAsync(createOrderDto.DeliveryAddressId.Value, cancellationToken);
+
+                if (address == null)
+                    throw new InvalidOperationException("The delivery address does not exist.");
+                
+
+                string street = address.Street ?? "";
+                string buildingNo = address.BuildingNo ?? "";
+                string city = address.City ?? "";
+                string governorate = address.Governorate ?? "";
+
+                string DeliveryAddressText = $"{street} {buildingNo}".Trim();
+                if (!string.IsNullOrEmpty(city) || !string.IsNullOrEmpty(governorate))
                 {
-                    deliveryAddressEntity = (await _unitOfWork.Address.FindAsync(
-                        a => a.UserId == userId,
-                        cancellationToken
-                    )).FirstOrDefault();
-
-                    if (deliveryAddressEntity != null)
-                    {
-                        deliveryAddressEntity.Street = createOrderDto.DeliveryAddress.Street;
-                        deliveryAddressEntity.BuildingNo = createOrderDto.DeliveryAddress.BuildingNo;
-                        deliveryAddressEntity.City = createOrderDto.DeliveryAddress.City;
-                        deliveryAddressEntity.Governorate = createOrderDto.DeliveryAddress.Governorate;
-                        deliveryAddressEntity.IsDefault = true;
-                        await _unitOfWork.Address.UpdateAsync(deliveryAddressEntity, cancellationToken);
-                    }
-                    else
-                    {
-                        deliveryAddressEntity = _mapper.Map<Address>(createOrderDto.DeliveryAddress);
-                        deliveryAddressEntity.UserId = userId;
-                        deliveryAddressEntity.IsDefault = true;
-                        await _unitOfWork.Address.AddAsync(deliveryAddressEntity, cancellationToken);
-                        await _unitOfWork.SaveAsync(cancellationToken);
-                    }
+                    DeliveryAddressText += $"\n{city} {governorate}".Trim();
                 }
 
-               
                 var order = new Order
                 {
-                    UserID = userId,
-                    PharmacyID = createOrderDto.PharmacyID,
+                    UserId = userId,
+                    PharmacyId = createOrderDto.PharmacyID,
                     OrderDate = DateTime.UtcNow,
                     Status = OrderStatus.Pending,
-                    DeliveryAddressId = deliveryAddressEntity?.Id,
+                    DeliveryAddress = DeliveryAddressText,
                     OrderItems = new List<OrderItem>()
                 };
 
-                
                 decimal totalPrice = 0;
                 var medicineIds = createOrderDto.OrderItems.Select(i => i.MedicineID).ToList();
                 var medicines = await _unitOfWork.Medicines.FindAsync(m => medicineIds.Contains(m.Id), cancellationToken);
@@ -99,12 +78,10 @@ namespace Rujta.Application.Services
 
                 order.TotalPrice = totalPrice;
 
-                
                 await _unitOfWork.Orders.AddAsync(order, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
-                _logger.LogInformation("Order {OrderId} created successfully for UserId {UserId}",order.Id.ToString(),userId.ToString());
-
+                _logger.LogInformation("Order {OrderId} created successfully for UserId {UserId}", order.Id.ToString(), userId.ToString());
 
                 var orderDto = _mapper.Map<OrderDto>(order);
                 orderDto.UserName = appUser.Name;
@@ -119,7 +96,6 @@ namespace Rujta.Application.Services
                 throw new InvalidOperationException(message, ex);
             }
         }
-
 
 
         public async Task<(bool success, string message)> AcceptOrderAsync(int id, CancellationToken cancellationToken = default)
@@ -150,7 +126,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while accepting order {OrderId}", id);
-                return (false, "An unexpected error occurred.");
+                return (false, "An unexpected error occurred");
             }
         }
 
@@ -183,7 +159,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while cancelling order {OrderId} by user", id);
-                return (false, "An unexpected error occurred.");
+                return (false, "An unexpected error occurred");
             }
         }
 
@@ -216,7 +192,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while pharmacy cancelling Order {OrderId}", id);
-                return (false, "An unexpected error occurred.");
+                return (false, "An unexpected error occurred");
             }
         }
 
@@ -249,7 +225,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while processing Order {OrderId}", id);
-                return (false, "An unexpected error occurred.");
+                return (false, "An unexpected error occurred");
             }
         }
 
@@ -282,7 +258,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while setting Order {OrderId} out for delivery", id);
-                return (false, "An unexpected error occurred.");
+                return (false, "An unexpected error occurred");
             }
         }
 
@@ -315,7 +291,7 @@ namespace Rujta.Application.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while delivering Order {OrderId}", id);
-                return (false, "An unexpected error occurred.");
+                return (false, "An unexpected error occurred");
             }
         }
 

@@ -1,4 +1,6 @@
-﻿namespace Rujta.Infrastructure.Repositories
+﻿using Rujta.Domain.Common;
+
+namespace Rujta.Infrastructure.Repositories
 {
     public class PharmacistRepository : GenericRepository<Pharmacist>, IPharmacistRepository
     {

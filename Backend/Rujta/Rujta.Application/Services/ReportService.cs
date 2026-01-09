@@ -38,7 +38,7 @@ namespace Rujta.Application.Services
 
             
             var orders = (await _unitOfWork.Orders.FindAsync(
-                o => o.PharmacyID == pharmacy.Id &&
+                o => o.PharmacyId == pharmacy.Id &&
                      o.OrderDate >= filter.From && o.OrderDate <= filter.To,
                 cancellationToken))
                 .ToList();

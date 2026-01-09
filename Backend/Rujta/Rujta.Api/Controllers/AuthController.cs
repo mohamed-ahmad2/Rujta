@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
@@ -6,6 +7,7 @@ namespace Rujta.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [EnableRateLimiting("Fixed")]
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
@@ -18,6 +20,7 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             try
@@ -50,6 +53,7 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("register")]
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
             try
@@ -115,7 +119,7 @@ namespace Rujta.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(dto?.Email ?? LogConstants.UnknownUser,$"Registration error: {ex.Message}");
+                await _logService.AddLogAsync(dto?.Email ?? LogConstants.UnknownUser, $"Registration error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -195,7 +199,7 @@ namespace Rujta.API.Controllers
         {
             try
             {
-                var userIdClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null)
                     return Unauthorized(AuthMessages.UserNotFoundInToken);
 
@@ -250,7 +254,7 @@ namespace Rujta.API.Controllers
         public IActionResult GetUserEmail()
         {
             var email = JwtRegisteredClaimNames.Email;
-               
+
             if (string.IsNullOrEmpty(email))
                 return Ok(new EmailResponse(string.Empty));
 
@@ -258,6 +262,7 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("reset-password")]
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
             try
@@ -272,6 +277,7 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("forgot-password")]
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto dto)
         {
             try
@@ -284,7 +290,9 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
         [HttpPost("google-login")]
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> GoogleLogin([FromBody] SocialLoginDto dto)
         {
             try

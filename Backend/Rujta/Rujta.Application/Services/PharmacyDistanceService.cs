@@ -37,14 +37,12 @@ namespace Rujta.Application.Services
             return 2 * R * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
         }
 
-        // 🚗 Get nearest pharmacies using both Haversine + Itinero
+
         public async Task<List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>>
 GetNearestPharmaciesRouted(double userLat, double userLon, string mode = "car", int topK = 5)
         {
-            // ✅ انتظر النتيجة من الـ repository
             var allPharmacies = await _pharmacyRepository.GetAllPharmacies();
 
-            // ✅ Step 1: Use Haversine to pre-filter
             var topCandidates = allPharmacies
                 .Select(p => new
                 {
@@ -55,14 +53,13 @@ GetNearestPharmaciesRouted(double userLat, double userLon, string mode = "car", 
                 .Take(topK * 3)
                 .ToList();
 
-            // ✅ Step 2: Prepare Itinero profile
             var profile = mode.ToLower() switch
             {
                 "walk" => Vehicle.Pedestrian.Fastest(),
                 _ => Vehicle.Car.Fastest()
             };
 
-            // ✅ Step 3: Compute accurate distances
+
             var results = new List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>();
             const double TOLERANCE = 1e-6;
 

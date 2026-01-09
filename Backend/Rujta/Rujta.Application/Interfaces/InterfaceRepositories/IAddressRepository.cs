@@ -1,13 +1,10 @@
-﻿using Rujta.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Rujta.Application.DTOs;
+using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
     public interface IAddressRepository : IGenericRepository<Address>
     {
+        Task<List<AddressDto>> GetUserAddressesAsync(Guid userId, CancellationToken cancellationToken = default);
     }
 }

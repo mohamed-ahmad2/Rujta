@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Rujta.Domain.Common;
+using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Extensions;
 using Rujta.Infrastructure.Identity;
 
@@ -19,7 +22,7 @@ namespace Rujta.Infrastructure.Data
         public DbSet<Address> Addresses { get; set; } = null!;
         public DbSet<Pharmacy> Pharmacies { get; set; } = null!;
         public DbSet<Medicine> Medicines { get; set; } = null!;
-        public DbSet<Category> Categories{ get; set; } = null!;
+        public DbSet<Category> Categories { get; set; } = null!;
         public DbSet<InventoryItem> InventoryItems { get; set; } = null!;
         public DbSet<Order> Orders { get; set; } = null!;
         public DbSet<OrderItem> OrderItems { get; set; } = null!;
@@ -31,22 +34,12 @@ namespace Rujta.Infrastructure.Data
         public DbSet<Notification> Notifications { get; set; } = null!;
         public DbSet<Log> Logs { get; set; } = null!;
 
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
-            // Notification configuration
-            builder.Entity<Notification>(b =>
-            {
-                b.HasKey(n => n.Id);
-                b.Property(n => n.UserId).IsRequired().HasMaxLength(200);
-                b.Property(n => n.Title).IsRequired().HasMaxLength(250);
-                b.Property(n => n.Message).IsRequired().HasMaxLength(2048);
-                b.Property(n => n.Payload).HasMaxLength(4000);
-                b.Property(n => n.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-            });
-
-            // Identity & Decimal precision mappings
+            // Identity & Decimal precision
             builder.ApplyIdentityMapping();
             builder.ApplyDecimalPrecision();
 
@@ -54,7 +47,7 @@ namespace Rujta.Infrastructure.Data
             builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         }
 
-        public override int SaveChanges()
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             foreach (var entry in ChangeTracker.Entries<BaseEntity>())
             {
@@ -65,7 +58,7 @@ namespace Rujta.Infrastructure.Data
                     entry.Entity.UpdatedAt = DateTime.UtcNow;
             }
 
-            return base.SaveChanges();
+            return await base.SaveChangesAsync(cancellationToken);
         }
     }
 }

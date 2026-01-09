@@ -1,7 +1,10 @@
-﻿namespace Rujta.API.Controllers
+﻿using Microsoft.AspNetCore.RateLimiting;
+
+namespace Rujta.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [EnableRateLimiting("Fixed")]
     public class MedicineImportController : ControllerBase
     {
         private readonly MedicineDataImportService _importService;

@@ -6,7 +6,7 @@ namespace Rujta.Application.DTOs
     {
         public int PharmacyID { get; set; }
         public int? PrescriptionID { get; set; }
-        public AddressDto DeliveryAddress { get; set; }
+        public int? DeliveryAddressId { get; set; }
         public List<OrderItemDto> OrderItems { get; set; } = new();
     }
 

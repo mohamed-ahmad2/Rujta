@@ -17,6 +17,7 @@ namespace Rujta.Application.Interfaces
         IPharmacistRepository Pharmacists { get; }
         IAddressRepository Address { get; }
         ICategoryRepository Categories { get; }
+        ICustomerRepository Customers { get; }
 
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
     }

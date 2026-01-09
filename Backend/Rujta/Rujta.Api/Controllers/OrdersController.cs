@@ -1,4 +1,5 @@
-﻿using Rujta.Application.Constants;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.Constants;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 
@@ -7,6 +8,7 @@ namespace Rujta.Api.Controllers
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
+    [EnableRateLimiting("Fixed")]
     public class OrdersController : ControllerBase
     {
         private readonly IOrderService _orderService;
@@ -22,7 +24,6 @@ namespace Rujta.Api.Controllers
 
         private string GetUser() => User.Identity?.Name ?? LogConstants.UnknownUser;
 
-        // Create a new order
         [Authorize(Roles = nameof(UserRole.User))]
         [HttpPost]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto createOrderDto)
@@ -219,8 +220,10 @@ namespace Rujta.Api.Controllers
             return Ok(order);
         }
 
-        [Authorize(Roles = nameof(UserRole.Pharmacist))]
-        [HttpGet("pharmacy")]
+        [HttpGet("pharmacy/orders")]
+        [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetPharmacyOrders(CancellationToken cancellationToken)
         {
             var pharmacyId = GetCurrentPharmacyId();

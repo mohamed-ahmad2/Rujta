@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Rujta.Domain.Entities;
 
 namespace Rujta.Infrastructure.Configuration
 {
@@ -12,24 +13,24 @@ namespace Rujta.Infrastructure.Configuration
                    .HasColumnType("decimal(18,2)");
 
 
-            builder.HasOne(o => o.DeliveryAddress)
-                   .WithMany()
-                   .HasForeignKey(o => o.DeliveryAddressId)
-                   .OnDelete(DeleteBehavior.Restrict);
+            builder.Property(o => o.DeliveryAddress)
+                   .HasMaxLength(500)
+                   .IsRequired();
+
 
             builder.HasOne(o => o.User)
                    .WithMany(u => u.Orders)
-                   .HasForeignKey(o => o.UserID)
+                   .HasForeignKey(o => o.UserId)
                    .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(o => o.Pharmacy)
                    .WithMany(p => p.Orders)
-                   .HasForeignKey(o => o.PharmacyID)
+                   .HasForeignKey(o => o.PharmacyId)
                    .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(o => o.Prescription)
                    .WithMany(p => p.Orders)
-                   .HasForeignKey(o => o.PrescriptionID)
+                   .HasForeignKey(o => o.PrescriptionId)
                    .OnDelete(DeleteBehavior.SetNull);
 
             builder.HasMany(o => o.OrderItems)

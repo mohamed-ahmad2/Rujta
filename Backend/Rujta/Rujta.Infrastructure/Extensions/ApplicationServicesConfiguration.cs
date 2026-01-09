@@ -1,4 +1,6 @@
-﻿
+﻿using Microsoft.AspNetCore.Http;
+using Rujta.Infrastructure.Identity.Services.Auth;
+
 namespace Rujta.Infrastructure.Extensions
 {
     public static class ApplicationServicesConfiguration
@@ -16,6 +18,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<TokenHelper>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IMedicineService, MedicineService>();
+            services.AddScoped<IMedicineRepository, MedicineRepository>();
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IPharmacyRepository, PharmacyRepo>();
@@ -27,15 +30,56 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<ISearchMedicineService, SearchMedicineService>();
             services.AddScoped<IPharmacySearchService, PharmacySearchService>();
             services.AddScoped<IPharmacyCartService, PharmacyCartService>();
-             services.AddScoped<ISearchMedicineService, SearchMedicineService>();
-            services.AddScoped<IPharmacySearchService, PharmacySearchService>();
-            services.AddScoped<IPharmacyCartService, PharmacyCartService>();
             services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IInventoryItemService, InventoryItemService>();
+            services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IAddressService, AddressService>();
+            services.AddHttpClient<IGeocodingService, GeocodingService>();
 
-            services.AddScoped<PharmacyDistanceService>();
+
+            services.AddScoped<AuthIdentityContext>(sp =>
+            {
+                var identityServices = sp.GetRequiredService<IdentityServices>();
+                var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+                var mapper = sp.GetRequiredService<IMapper>();
+
+                return new AuthIdentityContext(identityServices, unitOfWork, mapper);
+            });
+
+            services.AddScoped<AuthInfrastructureContext>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger<AuthInfrastructureContext>>();
+                var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+                var configuration = sp.GetRequiredService<IConfiguration>();
+                var emailService = sp.GetRequiredService<IEmailService>();
+
+                return new AuthInfrastructureContext(logger, httpContextAccessor, configuration, emailService);
+            });
+
 
             // HttpClient services
             services.AddHttpClient<MedicineDataImportService>();
+
+            services.AddSingleton<IOfflineGeocodingService>(sp =>
+            {
+                var configuration = sp.GetRequiredService<IConfiguration>();
+                var relativePath = configuration["Routing:PbfFilePath"]
+                                   ?? throw new InvalidOperationException("Routing:PbfFilePath is missing in configuration.");
+
+                var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                var solutionRoot = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\..\")); // جذر المشروع
+                var absolutePath = Path.Combine(solutionRoot, relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+
+                if (!File.Exists(absolutePath))
+                    throw new FileNotFoundException($"PBF file not found at {absolutePath}");
+
+                return new OfflineGeocodingService(absolutePath);
+            });
+
+
+
 
             var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
             var solutionRoot = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\..\"));
@@ -43,7 +87,6 @@ namespace Rujta.Infrastructure.Extensions
                 ?? throw new InvalidOperationException("Routing:RouterDbRelativePath is missing in configuration.");
             var routerDbPath = Path.Combine(solutionRoot, routerDbRelativePath);
 
-            // Optional: check if RouterDb exists
             if (!File.Exists(routerDbPath))
             {
                 Console.WriteLine("RouterDb not found. Attempting to build it...");

@@ -1,9 +1,7 @@
-using FirebaseAdmin;
-using Google.Apis.Auth.OAuth2;
-using Microsoft.OpenApi.Models;
+using Polly;
 using Rujta.Application.MappingProfiles;
-using Rujta.Domain.Hubs;
 using Rujta.Infrastructure.Extensions;
+using Rujta.Infrastructure.Firebase;
 using System.Text.Json.Serialization;
 
 namespace Rujta.API
@@ -26,32 +24,7 @@ namespace Rujta.API
             });
 
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen(c =>
-            {
-                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                    {
-                        Name = "Authorization",
-                        Type = SecuritySchemeType.Http,
-                        Scheme = "bearer",
-                        BearerFormat = "JWT",
-                        In = ParameterLocation.Header
-                    });
-
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        Array.Empty<string>()
-                    }
-                });
-            });
+            builder.Services.AddCustomSwagger();
 
 
             builder.Services.AddAutoMapper(typeof(StaffProfile).Assembly);
@@ -76,39 +49,40 @@ namespace Rujta.API
             // Application Services
             builder.Services.AddApplicationServices(builder.Configuration);
 
-            // -------------------------------
-            // Firebase Admin SDK
-            // -------------------------------
-            // Make sure to put the JSON in your project and update the path
+            builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
 
             // Firebase Initialization
             try
             {
-                var credentialPath = Path.Combine(AppContext.BaseDirectory, "Firebase", "Service-account.json");
-                if (File.Exists(credentialPath))
-                {
-                    var serviceAccountCredential = CredentialFactory
-                        .FromFile<ServiceAccountCredential>(credentialPath)
-                        .ToGoogleCredential();
-
-                    FirebaseApp.Create(new AppOptions()
-                    {
-                        Credential = serviceAccountCredential
-                    });
-
-                    Console.WriteLine("Firebase initialized successfully!");
-                }
-                else
-                {
-                    Console.WriteLine($"Firebase JSON not found at {credentialPath}");
-                }
+                FirebaseInitializer.Initialize();
+                Console.WriteLine("Firebase initialized successfully!");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error initializing Firebase: {ex.Message}");
             }
 
+            builder.Services.AddCustomRateLimiting();
+
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.Limits.MaxRequestBodySize = 10 * 1024 * 1024;
+            });
+
+            builder.Services.AddHttpClient("Default")
+                    .SetHandlerLifetime(TimeSpan.FromMinutes(5))
+                    .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(10));
+
+
             var app = builder.Build();
+
+            app.Use(async (context, next) =>
+            {
+                context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'";
+                await next();
+            });
+
+
 
             // -------------------------------
             // Middleware
@@ -119,10 +93,17 @@ namespace Rujta.API
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+            else
+            {
+                app.UseExceptionHandler("/api/error");
+                app.UseHsts();
+            }
 
             app.UseHttpsRedirection();
 
             app.UseCors("AllowReactApp");
+
+            app.UseRateLimiter();
 
             app.UseAuthentication();
             app.UseAuthorization();
@@ -140,7 +121,7 @@ namespace Rujta.API
             }
 
             // SignalR Hub
-            app.MapHub<NotificationHub>("/notificationHub");
+            app.MapSignalRHubs();
 
             await app.RunAsync();
         }
