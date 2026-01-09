@@ -220,7 +220,7 @@ namespace Rujta.Api.Controllers
             return Ok(order);
         }
 
-        [Authorize(Roles = nameof(UserRole.Pharmacist))]
+      
         [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         public async Task<IActionResult> GetPharmacyOrders(CancellationToken cancellationToken)
         {
