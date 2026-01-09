@@ -45,10 +45,7 @@ export const RegisterForm = ({ name, setName, email, setEmail, phone, setPhone, 
                 </motion.button>
             </form>
 
-            <p className="text-center text-muted-foreground mt-8">
-                Already have an account?{" "}
-                <button onClick={toggleForm} className="text-primary font-semibold hover:underline">Sign In</button>
-            </p>
+            
         </motion.div>
     );
 };

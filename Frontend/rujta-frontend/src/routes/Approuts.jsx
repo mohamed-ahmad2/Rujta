@@ -35,36 +35,48 @@ import Customers from "../features/dashboard/pages/Customers";
 import Sales from "../features/dashboard/pages/Sales";
 import Logs from "../features/dashboard/pages/Logs";
 
-
+/* ================= Notifications ================= */
 import NotificationsPage from "../features/notifications/pages/NotificationsPage";
-
-// ...
-
-<Route
-  path="/dashboard/logs"
-  element={
-    <ProtectedRoute>
-      <Logs />
-    </ProtectedRoute>
-  }
-/>
 
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Routes>
-
     {/* ========= Landing ========= */}
     <Route
       path="/"
       element={
-        <>
+        <div className="min-h-screen bg-page">
           <NavbarLanding />
           <HeroLanding />
-        </>
+        </div>
       }
     />
-    <Route path="/features" element={<><NavbarLanding /><Features /></>} />
-    <Route path="/how-it-works" element={<><NavbarLanding /><HowItWorks /></>} />
-    <Route path="/contact" element={<><NavbarLanding /><Contact /></>} />
+    <Route
+      path="/features"
+      element={
+        <div className="min-h-screen bg-page">
+          <NavbarLanding />
+          <Features />
+        </div>
+      }
+    />
+    <Route
+      path="/how-it-works"
+      element={
+        <div className="min-h-screen bg-page">
+          <NavbarLanding />
+          <HowItWorks />
+        </div>
+      }
+    />
+    <Route
+      path="/contact"
+      element={
+        <div className="min-h-screen bg-page">
+          <NavbarLanding />
+          <Contact />
+        </div>
+      }
+    />
 
     {/* ========= Auth ========= */}
     <Route path="/auth" element={<AuthPage />} />
@@ -96,23 +108,20 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
       <Route path="orders" element={<Ordersuser />} />
       <Route path="profile" element={<Profile />} />
       <Route path="checkout" element={<Checkout />} />
-
       <Route path="notifications" element={<NotificationsPage />} />
     </Route>
 
-    {/* ========= Medicine ========= */}
- <Route
-  path="/medicines/:id"
-  element={<MedicineDetails cart={cart} setCart={setCart} />}
-/>
-
-
+    {/* ========= Medicines ========= */}
+    <Route
+      path="/medicines/:id"
+      element={<MedicineDetails cart={cart} setCart={setCart} />}
+    />
 
     {/* ========= Dashboard ========= */}
     <Route
       path="/dashboard"
       element={
-     <ProtectedRoute roles={["Pharmacist", "PharmacyAdmin"]}>
+        <ProtectedRoute roles={["Pharmacist", "PharmacyAdmin"]}>
           <DashboardLayout />
         </ProtectedRoute>
       }
@@ -125,16 +134,15 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
       <Route path="customers" element={<Customers />} />
       <Route path="settings" element={<Settings />} />
       {/* Logs page restricted to PharmacyAdmin only */}
-          <Route
-            path="logs"
-            element={
-              <ProtectedRoute roles={["PharmacyAdmin"]}>
-                <Logs />
-              </ProtectedRoute>
-            }
-          />
+      <Route
+        path="logs"
+        element={
+          <ProtectedRoute roles={["PharmacyAdmin"]}>
+            <Logs />
+          </ProtectedRoute>
+        }
+      />
     </Route>
-
   </Routes>
 );
 
