@@ -220,7 +220,7 @@ namespace Rujta.Api.Controllers
             return Ok(order);
         }
 
-      
+        [HttpGet("pharmacy/orders")]
         [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
