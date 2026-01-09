@@ -56,7 +56,7 @@ namespace Rujta.Application.Services
 
                 decimal totalPrice = 0;
                 var medicineIds = createOrderDto.OrderItems.Select(i => i.MedicineID).ToList();
-                var medicines = await _unitOfWork.Medicines.FindAsync(m => medicineIds.Contains(m.Id), cancellationToken);
+                var medicines = await _unitOfWork.InventoryItems.FindAsync(m => medicineIds.Contains(m.Id), cancellationToken);
                 var medicineDict = medicines.ToDictionary(m => m.Id);
 
                 foreach (var itemDto in createOrderDto.OrderItems)
@@ -263,37 +263,68 @@ namespace Rujta.Application.Services
         }
 
 
-        public async Task<(bool success, string message)> MarkAsDeliveredAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<(bool success, string message)> MarkAsDeliveredAsync(
+    int id,
+    CancellationToken cancellationToken = default)
         {
+            await using var transaction =
+                await _unitOfWork.BeginTransactionAsync(cancellationToken);
+
             try
             {
                 _logger.LogInformation("Marking Order {OrderId} as Delivered", id);
 
-                var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
+                var order = await _unitOfWork.Orders
+                    .GetOrderWithItemsAsync(id, cancellationToken);
+
                 if (order == null)
-                {
-                    _logger.LogWarning("Order {OrderId} not found to mark delivered", id);
                     return (false, OrderMessages.OrderNotFound);
-                }
 
                 if (!CanChangeStatus(order.Status, OrderStatus.Delivered))
-                {
-                    _logger.LogWarning("Invalid status transition to Delivered for Order {OrderId}", id);
                     return (false, OrderMessages.InvalidStateTransition);
+
+                foreach (var item in order.OrderItems)
+                {
+                    var inventoryItem =
+                        await _unitOfWork.InventoryItems
+                            .GetByMedicineAndPharmacyAsync(
+                                item.MedicineID,
+                                order.PharmacyId,
+                                cancellationToken);
+
+                    if (inventoryItem == null)
+                        return (false, "Inventory item not found");
+
+                    if (inventoryItem.Quantity < item.Quantity)
+                        return (false, "Insufficient stock to deliver order");
+
+                    inventoryItem.Quantity -= item.Quantity;
+
+                    if (inventoryItem.Quantity == 0)
+                        inventoryItem.Status = ProductStatus.OutOfStock;
+
+                    await _unitOfWork.InventoryItems.UpdateAsync(inventoryItem);
                 }
 
                 order.Status = OrderStatus.Delivered;
-                await _unitOfWork.SaveAsync(cancellationToken);
 
-                _logger.LogInformation("Order {OrderId} marked as Delivered", id);
+                await _unitOfWork.SaveAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+
+                _logger.LogInformation(
+                    "Order {OrderId} delivered and inventory updated", id);
+
                 return (true, OrderMessages.OrderMarkAsDelivered);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error while delivering Order {OrderId}", id);
+                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogError(ex, "Error delivering Order {OrderId}", id);
                 return (false, "An unexpected error occurred");
             }
         }
+
+
 
 
         public async Task<IEnumerable<OrderDto>> GetUserOrdersAsync(Guid userId, CancellationToken cancellationToken = default)

@@ -37,5 +37,8 @@
                       .ThenInclude(m => m!.Category)
                   .ToListAsync(cancellationToken);
 
+        public async Task<InventoryItem?> GetByMedicineAndPharmacyAsync(int medicineId,int pharmacyId,CancellationToken cancellationToken = default)=>
+             await _context.InventoryItems
+                .FirstOrDefaultAsync(i => i.MedicineID == medicineId &&i.PharmacyID == pharmacyId, cancellationToken);
     }
 }

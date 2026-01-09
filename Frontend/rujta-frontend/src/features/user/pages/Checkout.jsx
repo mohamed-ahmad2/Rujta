@@ -119,9 +119,25 @@ const Checkout = () => {
       return;
     }
 
-    const orderItems = cart.map((item) => ({
-      MedicineID: item.id,
-      Quantity: item.quantity,
+    const selectedPharmacy = pharmacies.find(
+      (p) => p.pharmacyId === pharmacyId
+    );
+    if (!selectedPharmacy) {
+      alert("Selected pharmacy not found!");
+      return;
+    }
+
+    const availableItems = selectedPharmacy.foundMedicines.filter(
+      (m) => m.isQuantityEnough
+    );
+    if (availableItems.length === 0) {
+      alert("No available medicines in this pharmacy!");
+      return;
+    }
+
+    const orderItems = availableItems.map((m) => ({
+      MedicineID: m.medicineId,
+      Quantity: m.requestedQuantity,
     }));
 
     const orderDto = {
@@ -138,6 +154,14 @@ const Checkout = () => {
 
       if (result) {
         alert("Order created successfully!");
+        // Remove only the ordered items from cart
+        const orderedIds = availableItems.map((m) => m.medicineId);
+        const updatedCart = cart.filter(
+          (item) => !orderedIds.includes(item.id)
+        );
+        setCart(updatedCart);
+        const key = `cart_${user.email}`;
+        localStorage.setItem(key, JSON.stringify(updatedCart));
       } else {
         alert("Failed to create order!");
       }
