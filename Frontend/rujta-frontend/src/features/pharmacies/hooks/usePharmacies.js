@@ -7,33 +7,43 @@ export const usePharmacies = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchPharmacies = async (cartItems) => {
+  /**
+   * Fetch top pharmacies for cart using selected address
+   * @param {Array} cartItems - UI cart items
+   * @param {number} addressId - Selected address ID
+   * @param {number} topK - Number of pharmacies
+   */
+  const fetchPharmacies = async (cartItems, addressId, topK = 5) => {
     setLoading(true);
     setError(null);
 
     try {
+      // Map UI items -> API DTO
       const dtoItems = cartItems.map((item) => ({
         medicineId: item.id,
         quantity: item.quantity,
       }));
 
-   
-      const payload = { items: dtoItems };
-
-      const res = await getTopPharmacies(dtoItems); 
+      const res = await getTopPharmacies(dtoItems, addressId, topK);
 
       setPharmacies(res.data);
     } catch (err) {
       const errorMessage =
-        err?.message ||
         err?.response?.data?.message ||
         err?.response?.data ||
+        err?.message ||
         "An error occurred while fetching pharmacies.";
+
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  return { pharmacies, loading, error, fetchPharmacies };
+  return {
+    pharmacies,
+    loading,
+    error,
+    fetchPharmacies,
+  };
 };
