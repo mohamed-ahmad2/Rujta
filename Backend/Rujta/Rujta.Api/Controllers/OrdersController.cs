@@ -220,8 +220,10 @@ namespace Rujta.Api.Controllers
             return Ok(order);
         }
 
-        [Authorize(Roles = nameof(UserRole.Pharmacist))]
+        [HttpGet("pharmacy/orders")]
         [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetPharmacyOrders(CancellationToken cancellationToken)
         {
             var pharmacyId = GetCurrentPharmacyId();
