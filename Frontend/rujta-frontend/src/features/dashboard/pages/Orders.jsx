@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, Filter, Download, Edit } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Download,
+  Edit,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import StatCard from "../components/OrderCard";
 import { useOrders } from "../../orders/hooks/useOrders";
 
@@ -17,7 +24,7 @@ export default function Orders() {
 
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
-  const perPage = 5;
+  const perPage = 6;
 
   const [showFilters, setShowFilters] = useState(false);
   const [filterOrderId, setFilterOrderId] = useState("");
@@ -48,8 +55,7 @@ export default function Orders() {
       );
     if (filterDate)
       list = list.filter(
-        (o) =>
-          new Date(o.orderDate).toLocaleDateString("en-CA") === filterDate
+        (o) => new Date(o.orderDate).toLocaleDateString("en-CA") === filterDate
       );
 
     return list;
@@ -102,6 +108,18 @@ export default function Orders() {
     URL.revokeObjectURL(url);
   };
 
+  const handlePrevPage = () => {
+    if (page > 1) setPage(page - 1);
+  };
+
+  const handleNextPage = () => {
+    if (page < totalPages) setPage(page + 1);
+  };
+
+  const handlePageClick = (p) => {
+    setPage(p);
+  };
+
   return (
     <div className="space-y-6">
       {/* Stats */}
@@ -113,7 +131,11 @@ export default function Orders() {
         />
         <StatCard
           title="Pending Orders"
-          value={orders.filter((o) => ["Pending","Accepted","Processing"].includes(o.status)).length}
+          value={
+            orders.filter((o) =>
+              ["Pending", "Accepted", "Processing"].includes(o.status)
+            ).length
+          }
         />
         <StatCard
           title="Cancelled Orders"
@@ -129,7 +151,10 @@ export default function Orders() {
             className="bg-transparent outline-none w-full text-sm"
             placeholder="Search orders..."
             value={q}
-            onChange={(e) => { setQ(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
           />
         </div>
 
@@ -143,13 +168,31 @@ export default function Orders() {
 
           {showFilters && (
             <div className="absolute mt-2 bg-white border shadow-lg rounded-xl p-4 w-64 z-50 space-y-2">
-              <input placeholder="Order ID" value={filterOrderId} onChange={e => setFilterOrderId(e.target.value)} className="border px-3 py-2 rounded-lg w-full text-sm" />
-              <input placeholder="Customer name" value={filterCustomer} onChange={e => setFilterCustomer(e.target.value)} className="border px-3 py-2 rounded-lg w-full text-sm" />
-              <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="border px-3 py-2 rounded-lg w-full text-sm" />
+              <input
+                placeholder="Order ID"
+                value={filterOrderId}
+                onChange={(e) => setFilterOrderId(e.target.value)}
+                className="border px-3 py-2 rounded-lg w-full text-sm"
+              />
+              <input
+                placeholder="Customer name"
+                value={filterCustomer}
+                onChange={(e) => setFilterCustomer(e.target.value)}
+                className="border px-3 py-2 rounded-lg w-full text-sm"
+              />
+              <input
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="border px-3 py-2 rounded-lg w-full text-sm"
+              />
             </div>
           )}
 
-          <button onClick={handleExport} className="px-4 py-2 rounded-full border text-sm flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 rounded-full border text-sm flex items-center gap-2"
+          >
             <Download size={16} /> Export
           </button>
         </div>
@@ -171,26 +214,85 @@ export default function Orders() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center py-8">Loading...</td></tr>
+              <tr>
+                <td colSpan={7} className="text-center py-8">
+                  Loading...
+                </td>
+              </tr>
             ) : pageData.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-8">No orders found.</td></tr>
+              <tr>
+                <td colSpan={7} className="text-center py-8">
+                  No orders found.
+                </td>
+              </tr>
             ) : (
               pageData.map((o) => (
                 <tr key={o.id} className="border-t hover:bg-gray-50">
-                  <td className="px-6 py-4 text-secondary font-medium">#{o.id}</td>
+                  <td className="px-6 py-4 text-secondary font-medium">
+                    #{o.id}
+                  </td>
                   <td className="px-6 py-4">{o.userName}</td>
                   <td className="px-6 py-4">{o.pharmacyName}</td>
-                  <td className="px-6 py-4 text-center">{new Date(o.orderDate).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 text-center">
+                    {new Date(o.orderDate).toLocaleDateString()}
+                  </td>
                   <td className="px-6 py-4 text-center">{o.totalPrice} EGP</td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`px-3 py-1 rounded-full text-xs ${statusStyle(o.status)}`}>{o.status}</span>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs ${statusStyle(
+                        o.status
+                      )}`}
+                    >
+                      {o.status}
+                    </span>
                   </td>
                   <td className="px-6 py-4 text-center space-x-2">
-                    {o.status === "Pending" && <button disabled={loading} onClick={() => accept(o.id, fetchPharmacy)} className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200">Accept</button>}
-                    {o.status === "Accepted" && <button disabled={loading} onClick={() => process(o.id, fetchPharmacy)} className="px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700 hover:bg-yellow-200">Process</button>}
-                    {o.status === "Processing" && <button disabled={loading} onClick={() => outForDelivery(o.id, fetchPharmacy)} className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200">Out For Delivery</button>}
-                    {o.status === "OutForDelivery" && <button disabled={loading} onClick={() => deliver(o.id, fetchPharmacy)} className="px-3 py-1 text-xs rounded-full bg-green-200 text-green-800 hover:bg-green-300">Delivered</button>}
-                    {!["Delivered","OutForDelivery"].includes(o.status) && !o.status?.startsWith("Cancelled") && <button disabled={loading} onClick={() => cancelByPharmacy(o.id)} className="px-3 py-1 text-xs rounded-full bg-red-100 text-red-600 hover:bg-red-200">Cancel</button>}
+                    {o.status === "Pending" && (
+                      <button
+                        disabled={loading}
+                        onClick={() => accept(o.id, fetchPharmacy)}
+                        className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200"
+                      >
+                        Accept
+                      </button>
+                    )}
+                    {o.status === "Accepted" && (
+                      <button
+                        disabled={loading}
+                        onClick={() => process(o.id, fetchPharmacy)}
+                        className="px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                      >
+                        Process
+                      </button>
+                    )}
+                    {o.status === "Processing" && (
+                      <button
+                        disabled={loading}
+                        onClick={() => outForDelivery(o.id, fetchPharmacy)}
+                        className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200"
+                      >
+                        Out For Delivery
+                      </button>
+                    )}
+                    {o.status === "OutForDelivery" && (
+                      <button
+                        disabled={loading}
+                        onClick={() => deliver(o.id, fetchPharmacy)}
+                        className="px-3 py-1 text-xs rounded-full bg-green-200 text-green-800 hover:bg-green-300"
+                      >
+                        Delivered
+                      </button>
+                    )}
+                    {!["Delivered", "OutForDelivery"].includes(o.status) &&
+                      !o.status?.startsWith("Cancelled") && (
+                        <button
+                          disabled={loading}
+                          onClick={() => cancelByPharmacy(o.id)}
+                          className="px-3 py-1 text-xs rounded-full bg-red-100 text-red-600 hover:bg-red-200"
+                        >
+                          Cancel
+                        </button>
+                      )}
                   </td>
                 </tr>
               ))
@@ -198,6 +300,37 @@ export default function Orders() {
           </tbody>
         </table>
       </div>
+
+      {/* pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={handlePrevPage}
+            disabled={page === 1}
+            className="flex items-center gap-1 px-3 py-1 rounded-full border text-sm disabled:opacity-50"
+          >
+            <ChevronLeft size={16} /> Prev
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              onClick={() => handlePageClick(p)}
+              className={`px-3 py-1 rounded-full text-sm ${
+                page === p ? "bg-secondary text-white" : "border"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+          <button
+            onClick={handleNextPage}
+            disabled={page === totalPages}
+            className="flex items-center gap-1 px-3 py-1 rounded-full border text-sm disabled:opacity-50"
+          >
+            Next <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

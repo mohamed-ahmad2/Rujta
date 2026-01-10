@@ -1,4 +1,5 @@
-﻿using Rujta.Application.Interfaces.InterfaceRepositories;
+﻿using Microsoft.EntityFrameworkCore.Storage;
+using Rujta.Application.Interfaces.InterfaceRepositories;
 
 namespace Rujta.Application.Interfaces
 {
@@ -19,6 +20,7 @@ namespace Rujta.Application.Interfaces
         ICategoryRepository Categories { get; }
         ICustomerRepository Customers { get; }
 
+        Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
     }
 }

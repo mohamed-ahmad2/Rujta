@@ -4,7 +4,7 @@ import HeroImg from "../../../assets/HeroImg.png";
 const Hero = () => {
   return (
     <section>
-        <div className='container grid grid-col-1 md:grid-col-2 min-h-[650px] relative'>
+        <div className='container grid grid-col-1 md:grid-col-2 min-h-[650px] relative bg-page'>
             {/* Brand Info */}
             <div className='flex flex-col justify-center py-14 md:py-0 '>
                <div className='text-center md:text-left space-y-6'>
