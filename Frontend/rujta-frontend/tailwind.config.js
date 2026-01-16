@@ -4,7 +4,9 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+
   darkMode: "class",
+
   theme: {
     container: {
       center: true,
@@ -16,6 +18,7 @@ export default {
         "2xl": "6rem",
       },
     },
+
     extend: {
       /* ===== FONTS ===== */
       fontFamily: {
@@ -62,11 +65,13 @@ export default {
           },
         },
       },
+
       animation: {
         moveStars: "moveStars 100s linear infinite",
         float: "float 5s ease-in-out infinite",
       },
     },
   },
+
   plugins: [],
 };
