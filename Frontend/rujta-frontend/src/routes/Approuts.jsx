@@ -1,7 +1,8 @@
-// routes/AppRoutes.jsx
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "../shared/components/ProtectedRoute";
+
+import AnimatedErrorPage from "../features/Error/AnimatedErrorPage";
 
 /* ================= Landing ================= */
 import NavbarLanding from "../features/landing/components/Navbarlanding";
@@ -40,6 +41,10 @@ import NotificationsPage from "../features/notifications/pages/NotificationsPage
 
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Routes>
+
+    {/* ========= Error Pages ========= */}
+    <Route path="/error" element={<AnimatedErrorPage />} />
+
     {/* ========= Landing ========= */}
     <Route
       path="/"
@@ -133,7 +138,6 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
       <Route path="sales" element={<Sales />} />
       <Route path="customers" element={<Customers />} />
       <Route path="settings" element={<Settings />} />
-      {/* Logs page restricted to PharmacyAdmin only */}
       <Route
         path="logs"
         element={
@@ -143,6 +147,10 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         }
       />
     </Route>
+
+    {/* ========= 404 ========= */}
+    <Route path="*" element={<AnimatedErrorPage />} />
+
   </Routes>
 );
 
