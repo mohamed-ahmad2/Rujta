@@ -1,9 +1,4 @@
-﻿using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
-
-namespace Rujta.Infrastructure.Services
+﻿namespace Rujta.Infrastructure.Services
 {
     public class LogService : ILogService
     {

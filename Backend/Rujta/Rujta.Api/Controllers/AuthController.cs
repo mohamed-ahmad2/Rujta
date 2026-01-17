@@ -124,7 +124,7 @@ namespace Rujta.API.Controllers
             }
         }
 
-        [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)}")]
+        [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)}")]
         [HttpPost("register/staff")]
         public async Task<IActionResult> RegisterStaff([FromBody] RegisterByAdminDto dto)
         {

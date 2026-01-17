@@ -1,8 +1,4 @@
-﻿using AutoMapper;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
+﻿using Microsoft.Extensions.Caching.Memory;
 
 namespace Rujta.Application.Services
 {
@@ -11,17 +7,18 @@ namespace Rujta.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IOfflineGeocodingService _offlineGeocodingService;
-
+        private readonly IMemoryCache _cache;
         private const double CoordinateTolerance = 0.0001;
 
         public AddressService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
-            IOfflineGeocodingService offlineGeocodingService)
+            IOfflineGeocodingService offlineGeocodingService, IMemoryCache cache)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _offlineGeocodingService = offlineGeocodingService;
+            _cache = cache;
         }
 
         public async Task AddByUserAsync(Guid userId, AddressDto dto, CancellationToken cancellationToken = default)
@@ -39,6 +36,10 @@ namespace Rujta.Application.Services
 
             await _unitOfWork.Address.AddAsync(address, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
+
+            _cache.Remove("AllAddresses");
+            _cache.Remove($"UserAddresses_{userId}");
+
         }
 
 
@@ -52,6 +53,10 @@ namespace Rujta.Application.Services
             var address = _mapper.Map<Address>(dto);
             await _unitOfWork.Address.AddAsync(address, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
+            _cache.Remove("AllAddresses");
+            if (address.PersonId != Guid.Empty)
+                _cache.Remove($"UserAddresses_{address.PersonId}");
+
         }
 
         public async Task UpdateAsync(int id, AddressDto dto, CancellationToken cancellationToken = default)
@@ -67,6 +72,12 @@ namespace Rujta.Application.Services
             _mapper.Map(dto, address);
             await _unitOfWork.Address.UpdateAsync(address, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
+
+            _cache.Remove("AllAddresses");
+            _cache.Remove($"Address_{id}");
+            if (address.PersonId != Guid.Empty)
+                _cache.Remove($"UserAddresses_{address.PersonId}");
+
         }
 
         private static bool NeedsGeocoding(double latitude, double longitude)
@@ -108,31 +119,58 @@ namespace Rujta.Application.Services
 
             await _unitOfWork.Address.DeleteAsync(address, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
-        }
+            _cache.Remove("AllAddresses");
+            _cache.Remove($"Address_{id}");
+            if (address.PersonId != Guid.Empty)
+                _cache.Remove($"UserAddresses_{address.PersonId}");
 
-        public async Task<IEnumerable<AddressDto>> GetAllAsync(CancellationToken cancellationToken = default)
-        {
-            var addresses = await _unitOfWork.Address.GetAllAsync(cancellationToken);
-            return _mapper.Map<IEnumerable<AddressDto>>(addresses);
         }
 
         public async Task<AddressDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
+            string cacheKey = $"Address_{id}";
+            if (_cache.TryGetValue<AddressDto>(cacheKey, out var cached) && cached != null)
+                return cached;
+
             var address = await _unitOfWork.Address.GetByIdAsync(id, cancellationToken);
-            return address == null ? null : _mapper.Map<AddressDto>(address);
+            if (address == null) return null;
+
+            var result = _mapper.Map<AddressDto>(address);
+            _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+
+            return result;
         }
+
+        public async Task<IEnumerable<AddressDto>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            string cacheKey = "AllAddresses";
+            if (_cache.TryGetValue<IEnumerable<AddressDto>>(cacheKey, out var cached) && cached != null)
+                return cached;
+
+            var addresses = await _unitOfWork.Address.GetAllAsync(cancellationToken);
+            var result = _mapper.Map<IEnumerable<AddressDto>>(addresses);
+            _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+
+            return result;
+        }
+
 
         public async Task<List<AddressDto>> GetUserAddressesAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             if (userId == Guid.Empty)
                 throw new ArgumentException("Invalid userId");
 
+            string cacheKey = $"UserAddresses_{userId}";
+
+            if (_cache.TryGetValue<List<AddressDto>>(cacheKey, out var cached) && cached != null)
+                return cached;
+
             var addresses = await _unitOfWork.Address.GetUserAddressesAsync(userId, cancellationToken);
+            var result = _mapper.Map<List<AddressDto>>(addresses ?? new List<AddressDto>());
 
-            if (addresses == null || !addresses.Any())
-                return new List<AddressDto>();
+            _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
 
-            return _mapper.Map<List<AddressDto>>(addresses);
+            return result;
         }
     }
 }

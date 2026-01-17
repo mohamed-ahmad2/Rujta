@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Rujta.Application.Interfaces.InterfaceServices;
 using System.Net.Mail;
 using System.Net;
 

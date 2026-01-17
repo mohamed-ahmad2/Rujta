@@ -1,6 +1,5 @@
 ﻿using Itinero;
 using Itinero.LocalGeo;
-using Microsoft.Extensions.Logging;
 
 namespace Rujta.Infrastructure.Services
 {

@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Rujta.Infrastructure.Identity;
+﻿using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Infrastructure.Repositories
 {

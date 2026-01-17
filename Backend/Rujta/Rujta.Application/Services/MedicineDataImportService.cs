@@ -1,8 +1,4 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Rujta.Application.Constants;
-using Rujta.Application.Interfaces;
-using Rujta.Domain.Entities;
 using System.Text.Json;
 
 namespace Rujta.Application.Services

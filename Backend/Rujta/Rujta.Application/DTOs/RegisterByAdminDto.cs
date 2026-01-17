@@ -5,7 +5,7 @@ namespace Rujta.Application.DTOs
 {
     public class RegisterByAdminDto : RegisterDto
     {
-        public UserRole? Role { get; set; }
+        public UserRole? Role { get; set; } = null;
 
         [JsonIgnore]
         public int? PharmacyId { get; set; }

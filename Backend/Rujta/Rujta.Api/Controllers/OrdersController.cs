@@ -24,7 +24,7 @@ namespace Rujta.Api.Controllers
 
         private string GetUser() => User.Identity?.Name ?? LogConstants.UnknownUser;
 
-        [Authorize(Roles = nameof(UserRole.User))]
+        [Authorize(Roles = $"{nameof(UserRole.User)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPost]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto createOrderDto)
         {
@@ -113,7 +113,7 @@ namespace Rujta.Api.Controllers
         }
 
         // Accept order
-        [Authorize(Roles = nameof(UserRole.Pharmacist))]
+        [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPut("{id:int}/accept")]
         public async Task<IActionResult> Accept(int id, CancellationToken cancellationToken)
         {
@@ -126,7 +126,7 @@ namespace Rujta.Api.Controllers
         }
 
         // Process order
-        [Authorize(Roles = nameof(UserRole.Pharmacist))]
+        [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPut("{id:int}/process")]
         public async Task<IActionResult> Process(int id, CancellationToken cancellationToken)
         {
@@ -140,6 +140,7 @@ namespace Rujta.Api.Controllers
 
         // Out for delivery
         [HttpPut("{id:int}/out-for-delivery")]
+        [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         public async Task<IActionResult> OutForDelivery(int id, CancellationToken cancellationToken)
         {
             var result = await _orderService.OutForDeliveryAsync(id, cancellationToken);
@@ -152,6 +153,7 @@ namespace Rujta.Api.Controllers
 
         // Mark as delivered
         [HttpPut("{id:int}/delivered")]
+        [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         public async Task<IActionResult> MarkAsDelivered(int id, CancellationToken cancellationToken)
         {
             var result = await _orderService.MarkAsDeliveredAsync(id, cancellationToken);
@@ -164,6 +166,7 @@ namespace Rujta.Api.Controllers
 
         // Cancel by user
         [HttpPut("{id:int}/cancel/user")]
+        [Authorize(Roles = nameof(UserRole.User))]
         public async Task<IActionResult> CancelByUser(int id, CancellationToken cancellationToken)
         {
             var result = await _orderService.CancelOrderByUserAsync(id, cancellationToken);
@@ -175,6 +178,7 @@ namespace Rujta.Api.Controllers
         }
 
         // Cancel by pharmacy
+        [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPut("{id:int}/cancel/pharmacy")]
         public async Task<IActionResult> CancelByPharmacy(int id, CancellationToken cancellationToken)
         {

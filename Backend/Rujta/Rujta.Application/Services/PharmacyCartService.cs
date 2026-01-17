@@ -1,7 +1,4 @@
-﻿using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
-
-namespace Rujta.Application.Services
+﻿namespace Rujta.Application.Services
 {
     public class PharmacyCartService : IPharmacyCartService
     {

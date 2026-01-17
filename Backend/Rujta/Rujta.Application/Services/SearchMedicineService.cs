@@ -1,9 +1,4 @@
-﻿using AutoMapper;
-using F23.StringSimilarity;
-using Microsoft.Extensions.Logging;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceServices;
+﻿using F23.StringSimilarity;
 
 namespace Rujta.Application.Services
 {

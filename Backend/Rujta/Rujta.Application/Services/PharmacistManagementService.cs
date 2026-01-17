@@ -1,9 +1,4 @@
-﻿using AutoMapper;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Common;
-using Rujta.Domain.Entities;
+﻿using Rujta.Domain.Common;
 
 
 namespace Rujta.Infrastructure.Services

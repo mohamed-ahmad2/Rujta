@@ -1,9 +1,4 @@
-﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace Rujta.Application.Services
 {

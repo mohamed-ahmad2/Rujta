@@ -1,0 +1,9 @@
+﻿global using Rujta.Application.Interfaces.InterfaceServices;
+global using Rujta.Application.Interfaces.InterfaceRepositories;
+global using AutoMapper;
+global using Microsoft.Extensions.Logging;
+global using Rujta.Application.Constants;
+global using Rujta.Application.DTOs;
+global using Rujta.Application.Interfaces;
+global using Rujta.Domain.Entities;
+global using Rujta.Domain.Enums;

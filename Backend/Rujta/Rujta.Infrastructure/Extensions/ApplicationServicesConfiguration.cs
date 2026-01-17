@@ -37,6 +37,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IAddressService, AddressService>();
             services.AddHttpClient<IGeocodingService, GeocodingService>();
+            services.AddMemoryCache();
 
 
             services.AddScoped<AuthIdentityContext>(sp =>
