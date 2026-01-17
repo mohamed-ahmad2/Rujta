@@ -39,7 +39,7 @@ namespace Rujta.Application.Services
 
             _cache.Remove("AllAddresses");
             _cache.Remove($"UserAddresses_{userId}");
-
+            _cache.Remove($"UserProfile_{userId}");
         }
 
 
@@ -55,7 +55,10 @@ namespace Rujta.Application.Services
             await _unitOfWork.SaveAsync(cancellationToken);
             _cache.Remove("AllAddresses");
             if (address.PersonId != Guid.Empty)
+            {
                 _cache.Remove($"UserAddresses_{address.PersonId}");
+                _cache.Remove($"UserProfile_{address.PersonId}");
+            }
 
         }
 
@@ -76,7 +79,10 @@ namespace Rujta.Application.Services
             _cache.Remove("AllAddresses");
             _cache.Remove($"Address_{id}");
             if (address.PersonId != Guid.Empty)
+            {
                 _cache.Remove($"UserAddresses_{address.PersonId}");
+                _cache.Remove($"UserProfile_{address.PersonId}");
+            }
 
         }
 
@@ -122,7 +128,10 @@ namespace Rujta.Application.Services
             _cache.Remove("AllAddresses");
             _cache.Remove($"Address_{id}");
             if (address.PersonId != Guid.Empty)
+            {
                 _cache.Remove($"UserAddresses_{address.PersonId}");
+                _cache.Remove($"UserProfile_{address.PersonId}");
+            }
 
         }
 
@@ -155,12 +164,12 @@ namespace Rujta.Application.Services
         }
 
 
-        public async Task<List<AddressDto>> GetUserAddressesAsync(Guid userId, CancellationToken cancellationToken = default)
+        public async Task<List<AddressDto>> GetUserAddressesAsync(Guid userId, Guid personId, CancellationToken cancellationToken = default)
         {
             if (userId == Guid.Empty)
                 throw new ArgumentException("Invalid userId");
 
-            string cacheKey = $"UserAddresses_{userId}";
+            string cacheKey = $"UserAddresses_{personId}";
 
             if (_cache.TryGetValue<List<AddressDto>>(cacheKey, out var cached) && cached != null)
                 return cached;

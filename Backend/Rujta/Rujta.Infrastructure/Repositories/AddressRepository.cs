@@ -15,6 +15,7 @@ namespace Rujta.Infrastructure.Repositories
             var appUser = await _userManager.Users
                 .Include(u => u.DomainPerson)
                     .ThenInclude(p => (p as User)!.Addresses)
+                    .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (appUser?.DomainPerson is not User user)

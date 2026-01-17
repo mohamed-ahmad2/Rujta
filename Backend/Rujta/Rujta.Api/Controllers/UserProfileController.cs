@@ -1,13 +1,26 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
 using Rujta.Infrastructure.Constants;
+using Rujta.Infrastructure.Identity;
+
 namespace Rujta.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
     [EnableRateLimiting("Fixed")]
-    public class UserProfileController(IUserRepository _userProfileService) : ControllerBase
+    public class UserProfileController : ControllerBase
     {
+        private readonly IUserService _userProfileService;
+        private readonly UserManager<ApplicationUser> _userManager;
+
+        public UserProfileController(
+            IUserService userProfileService,
+            UserManager<ApplicationUser> userManager)
+        {
+            _userProfileService = userProfileService;
+            _userManager = userManager;
+        }
+
         [HttpGet("me")]
         public async Task<IActionResult> GetProfile()
         {
@@ -26,7 +39,12 @@ namespace Rujta.API.Controllers
                 Console.WriteLine("parse");
                 return Unauthorized(ApiMessages.UnauthorizedAccess);
             }
-            var profile = await _userProfileService.GetProfileAsync(userId);
+
+            var appUser = await _userManager.FindByIdAsync(userId.ToString());
+            if (appUser == null)
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
+
+            var profile = await _userProfileService.GetProfileAsync(appUser.Id, appUser.DomainPersonId);
             if (profile == null)
                 return NotFound(UserProfileMessages.UserNotFound);
             return Ok(profile);
@@ -38,7 +56,12 @@ namespace Rujta.API.Controllers
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdClaim, out var userId))
                 return Unauthorized(ApiMessages.UnauthorizedAccess);
-            var result = await _userProfileService.UpdateProfileAsync(userId, dto);
+
+            var appUser = await _userManager.FindByIdAsync(userId.ToString());
+            if (appUser == null)
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
+
+            var result = await _userProfileService.UpdateProfileAsync(appUser.Id, appUser.DomainPersonId, dto);
             if (!result)
                 return BadRequest(UserProfileMessages.UpdateFailed);
             return Ok(UserProfileMessages.UpdateSuccess);
