@@ -23,7 +23,7 @@ Handles HTTP requests, controllers, and presentation logic. Includes Firebase an
 - **Controllers/**: API controllers (e.g., AuthController.cs, OrdersController.cs).
 - **Firebase/**: Firebase-related files.
   - **Service-account.json**: Service account credentials for Firebase (exclude from version control).
-- **Maps/**: Mapping data (e.g., OSM files for routing).
+- **Maps/**: Mapping data (e.g., OSM files for routing and calcluate Latitude and Longitude).
   > **Note**: Download content from [this Google Drive link](https://drive.google.com/drive/folders/1hN9vmao9Mj94jkp0DUeUyVmEXE_6fNIt?usp=sharing) and place in this folder. Used by ItineroMapBuilder.cs for RouterDb.
 
 ### Rujta.Application
@@ -57,7 +57,9 @@ Concrete implementations for data, services, and utilities.
 - **Constants/**: Infrastructure constants (e.g., connection strings).
 - **BackgroundJobs/**: Background tasks (e.g., Refresh Token Cleanup Service).
 - **Configuration/**: App settings loaders.
-- **Certificates/**: JWT/HTTPS certificates (related to JWT__CertPassword).
+- **Certificates/**: Security certificates for **JWT** signing and **HTTPS** configuration.
+  > **Note**: Download the content from [this Google Drive link](https://drive.google.com/drive/folders/133C1GLry2DNNBZOEOWm7mr0htd5cehwB?usp=sharing) and place it in this folder.
+  > These certificates are used by the application for JWT authentication and HTTPS setup and are related to the `JWT__CertPassword` configuration setting.
 
 #### Backend Additional Notes
 - **Dependencies**: Run `dotnet restore` for NuGet packages in `.csproj` files.

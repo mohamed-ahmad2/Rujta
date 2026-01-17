@@ -50,7 +50,7 @@ Rujta supports multiple environments to ensure separation between development, t
    - Uses production-grade database and hosting.
 
 Configuration files:
-- Backend: `appsettings.{Environment}.json` (e.g., `appsettings.Development.json`).
+- Backend: `appsettings.json` (e.g., `appsettings.json`).
 - Frontend: `.env.{environment}` (e.g., `.env.development`).
 
 ## Steps to Run Locally

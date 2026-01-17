@@ -76,7 +76,7 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("register/admin")]
-        //[Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)}")]
+        [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)}")]
         public async Task<IActionResult> RegisterByAdmin([FromBody] RegisterByAdminDto dto)
         {
             try
@@ -124,13 +124,47 @@ namespace Rujta.API.Controllers
             }
         }
 
+        [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)}")]
+        [HttpPost("register/staff")]
+        public async Task<IActionResult> RegisterStaff([FromBody] RegisterByAdminDto dto)
+        {
+            if (dto == null)
+                return BadRequest("Invalid request data.");
+
+            UserRole roleToAssign;
+
+            if (User.IsInRole(nameof(UserRole.PharmacyAdmin)))
+            {
+                roleToAssign = UserRole.Pharmacist;
+
+                var pharmacyIdClaim = User.FindFirst("PharmacyId");
+                if (pharmacyIdClaim == null)
+                    return Unauthorized("Pharmacy context missing.");
+
+                dto.PharmacyId = int.Parse(pharmacyIdClaim.Value);
+            }
+            else
+            {
+                roleToAssign = dto.Role ?? UserRole.User;
+            }
+
+            var userId = await _authService.CreateUserAsync(dto, roleToAssign);
+
+            return Ok(new
+            {
+                UserId = userId,
+                Email = dto.Email,
+                Role = roleToAssign.ToString(),
+                PharmacyId = dto.PharmacyId
+            });
+        }
+
 
         [HttpPost("register-dummy-pharmacyadmin")]
         public async Task<IActionResult> RegisterDummyPharmacyAdmin(int pharmacyId, string email, string pass)
         {
             try
             {
-                // Dummy data for testing
                 var dummyDto = new RegisterByAdminDto
                 {
                     Email = email,

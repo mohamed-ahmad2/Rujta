@@ -1,7 +1,4 @@
 ﻿using Rujta.Domain.Entities;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
