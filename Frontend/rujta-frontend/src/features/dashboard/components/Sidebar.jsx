@@ -9,6 +9,8 @@ import { MdInventory, MdMenuOpen } from "react-icons/md";
 import { TbMenuOrder, TbReportSearch } from "react-icons/tb";
 import { IoLogoBuffer } from "react-icons/io";
 import { CiSettings } from "react-icons/ci";
+import { MdCampaign } from "react-icons/md";
+
 import { useAuth } from "../../auth/hooks/useAuth";
 
 export default function Sidebar({ open, setOpen }) {
@@ -35,6 +37,7 @@ export default function Sidebar({ open, setOpen }) {
     { label: "Customers", icon: <IoLogoBuffer size={22} />, path: "/dashboard/customers" },
     { label: "Settings", icon: <CiSettings size={22} />, path: "/dashboard/settings" },
     { label: "Logs", icon: <FiUsers size={22} />, path: "/dashboard/logs", role: "PharmacyAdmin" },
+   { label: "Ads", icon: <MdCampaign size={22} />, path: "/dashboard/ads", role: "PharmacyAdmin" },
   ];
 
   return (
