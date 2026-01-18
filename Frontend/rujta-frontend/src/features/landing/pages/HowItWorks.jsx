@@ -1,4 +1,5 @@
 import React from "react";
+
 import { UploadCloud, Cpu, CheckCircle, Clock } from "lucide-react";
 
 const steps = [
