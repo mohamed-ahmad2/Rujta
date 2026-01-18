@@ -105,3 +105,4 @@ dist-ssr
 # Firebase service account
 Backend/Rujta/Rujta.Api/Firebase/
 
+backup.bundle 

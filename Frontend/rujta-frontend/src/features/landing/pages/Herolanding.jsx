@@ -1,7 +1,10 @@
 import React from 'react'
 import HeroImg from "../../../assets/HeroImg.png";
+import { useNavigate } from "react-router-dom";
+import HowItWorks from "./HowItWorks";
 
 const Hero = () => {
+  const navigate = useNavigate();
   return (
     <section>
         <div className='container grid grid-col-1 md:grid-col-2 min-h-[650px] relative bg-page'>
@@ -25,7 +28,12 @@ const Hero = () => {
 
                {/* Button section */}
                <div className='flex justify-center gap-8 md:justify-start !mt-4'>
-                <button className='primary-btn flex items-center gap-4 mt-10 text-2xl md:text-3xl'>Learn More</button>
+                 <button
+              className="primary-btn flex items-center gap-4 mt-10 text-2xl md:text-3xl"
+              onClick={() => navigate("/how-it-works")}
+            >
+              Learn More
+            </button>
                </div>
             </div>
 
