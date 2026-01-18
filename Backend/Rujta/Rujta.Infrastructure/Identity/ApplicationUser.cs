@@ -14,6 +14,5 @@ namespace Rujta.Infrastructure.Identity
         public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         [ForeignKey("DomainPersonId")]
         public  virtual Person? DomainPerson { get; set; }
-       
     }
 }
