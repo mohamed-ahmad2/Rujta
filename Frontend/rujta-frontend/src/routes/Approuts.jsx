@@ -35,6 +35,7 @@ import Settings from "../features/dashboard/pages/Settings";
 import Customers from "../features/dashboard/pages/Customers";
 import Sales from "../features/dashboard/pages/Sales";
 import Logs from "../features/dashboard/pages/Logs";
+import Ads from "../features/dashboard/pages/Ads";
 
 /* ================= Notifications ================= */
 import NotificationsPage from "../features/notifications/pages/NotificationsPage";
@@ -123,30 +124,41 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
     />
 
     {/* ========= Dashboard ========= */}
-    <Route
-      path="/dashboard"
-      element={
-        <ProtectedRoute roles={["Pharmacist", "PharmacyAdmin"]}>
-          <DashboardLayout />
-        </ProtectedRoute>
-      }
-    >
-      <Route index element={<Home />} />
-      <Route path="home" element={<Home />} />
-      <Route path="products" element={<Products />} />
-      <Route path="orders" element={<Orders />} />
-      <Route path="sales" element={<Sales />} />
-      <Route path="customers" element={<Customers />} />
-      <Route path="settings" element={<Settings />} />
-      <Route
-        path="logs"
-        element={
-          <ProtectedRoute roles={["PharmacyAdmin"]}>
-            <Logs />
-          </ProtectedRoute>
-        }
-      />
-    </Route>
+                <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute roles={["Pharmacist", "PharmacyAdmin"]}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Home />} />
+              <Route path="home" element={<Home />} />
+              <Route path="products" element={<Products />} />
+              <Route path="orders" element={<Orders />} />
+              <Route path="sales" element={<Sales />} />
+              <Route path="customers" element={<Customers />} />
+              <Route path="settings" element={<Settings />} />
+
+              <Route
+                path="logs"
+                element={
+                  <ProtectedRoute roles={["PharmacyAdmin"]}>
+                    <Logs />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="ads"
+                element={
+                  <ProtectedRoute roles={["PharmacyAdmin"]}>
+                    <Ads />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+
 
     {/* ========= 404 ========= */}
     <Route path="*" element={<AnimatedErrorPage />} />

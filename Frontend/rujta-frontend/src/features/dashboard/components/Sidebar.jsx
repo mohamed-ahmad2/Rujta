@@ -9,6 +9,8 @@ import { MdInventory, MdMenuOpen } from "react-icons/md";
 import { TbMenuOrder, TbReportSearch } from "react-icons/tb";
 import { IoLogoBuffer } from "react-icons/io";
 import { CiSettings } from "react-icons/ci";
+import { MdCampaign } from "react-icons/md";
+
 import { useAuth } from "../../auth/hooks/useAuth";
 
 export default function Sidebar({ open, setOpen }) {
