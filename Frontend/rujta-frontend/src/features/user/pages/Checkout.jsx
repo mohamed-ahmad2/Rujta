@@ -452,6 +452,7 @@ const Checkout = () => {
                                   </li>
                                 ))}
                               </ul>
+
                             </>
                           )}
                         </div>
