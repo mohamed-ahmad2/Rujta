@@ -10,7 +10,6 @@ import { useAuth } from "../../auth/hooks/useAuth";
 import { useSearchMedicines } from "../../medicines/hook/useSearchMedicines";
 import { useOrders } from "../../orders/hooks/useOrders";
 import { useNotifications } from "../../notifications/hook/useNotifications";
-
 const Navbar = ({ cart, setCart, onCartClick }) => {
   const [query, setQuery] = useState("");
   const [incompleteOrdersCount, setIncompleteOrdersCount] = useState(0);
@@ -59,10 +58,13 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
       <div className="py-3">
         <div className="container mx-auto px-6 flex flex-wrap md:flex-nowrap justify-between items-center relative">
           {/* Logo */}
+        
+          
           <div
             onClick={() => navigate("/user")}
             className="cursor-pointer font-extrabold text-2xl text-secondary sm:text-3xl"
           >
+            
             Rujta
           </div>
 
