@@ -6,18 +6,52 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rujta</title>
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="
-        default-src 'self';
-        script-src 'self';
-        style-src 'self' 'unsafe-inline';
-        img-src 'self' data: https:;
-        object-src 'none';
-        base-uri 'self';
-        frame-ancestors 'none';
-      "
-    />
+<meta
+  http-equiv="Content-Security-Policy"
+  content="
+    default-src 'self';
+
+    connect-src
+      'self'
+      https://identitytoolkit.googleapis.com
+      https://securetoken.googleapis.com
+      https://www.googleapis.com
+      http://localhost:*
+      https://rujta-5fdf6.firebaseapp.com;
+
+    script-src
+      'self'
+      'unsafe-inline'
+      'unsafe-eval'
+      https://apis.google.com
+      https://accounts.google.com
+      https://www.gstatic.com
+      https://connect.facebook.net;
+
+    style-src
+      'self'
+      'unsafe-inline'
+      https://fonts.googleapis.com;
+
+    font-src
+      'self'
+      https://fonts.gstatic.com;
+
+    img-src
+      'self'
+      data:
+      https:;
+
+    frame-src
+      https://accounts.google.com
+      https://rujta-5fdf6.firebaseapp.com;
+
+    object-src 'none';
+    base-uri 'self';
+  "
+/>
+
+
 
 
     <!-- Google Platform SDK -->
