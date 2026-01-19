@@ -1,7 +1,12 @@
 import React, { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import logo from "../../assets/qq.png";
 
+
+
+
 const AnimatedErrorPage = () => {
+    const navigate = useNavigate();
   // نجوم عشوائية (أكبر وباللون الأخضر)
   const stars = useMemo(() => {
     return Array.from({ length: 80 }).map(() => ({
@@ -51,12 +56,13 @@ const AnimatedErrorPage = () => {
     Oops! The page you're looking for floated away.
   </p>
 
-  <a
-    href="/"
-    className="inline-block px-6 py-3 rounded-full font-bold transition-colors duration-300 bg-[#83b74e] hover:bg-primary"
-  >
-    Go Home
-  </a>
+        <button
+          onClick={() => navigate("/")} // <--- التنقل للـ landing page
+          className="inline-block px-6 py-3 rounded-full font-bold transition-colors duration-300 bg-[#83b74e] hover:bg-primary"
+        >
+          Go Home
+        </button>
+
 </div>
 
     </div>
