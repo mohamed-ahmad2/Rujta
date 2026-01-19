@@ -17,14 +17,13 @@ const Checkout = () => {
     fetchUserAddresses,
     create: createAddress,
   } = useAddress();
-  const [pharmaciesRange, setPharmaciesRange] = useState(5);
-
+  const [pharmaciesRange, setPharmaciesRange] = useState(5); // Starting with 5 as requested, not 0
 
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [showAddressSelection, setShowAddressSelection] = useState(true); // New state to show address form first
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
-  
+
   const [newAddressForm, setNewAddressForm] = useState({
     Street: "",
     BuildingNo: "",
@@ -72,7 +71,7 @@ const Checkout = () => {
         },
         (geoErr) => {
           console.error("Geolocation error:", geoErr);
-        }
+        },
       );
     }
   };
@@ -111,19 +110,18 @@ const Checkout = () => {
   };
 
   const handleExpandRange = async () => {
-  const newRange = pharmaciesRange + 5;
-  setPharmaciesRange(newRange);
+    const newRange = pharmaciesRange + 5; // Adding +5 each time as per the button label
+    setPharmaciesRange(newRange);
 
-  if (!selectedAddressId || cart.length === 0) return;
+    if (!selectedAddressId || cart.length === 0) return;
 
-  const dtoItems = cart.map((item) => ({
-    id: item.id,
-    quantity: item.quantity,
-  }));
+    const dtoItems = cart.map((item) => ({
+      id: item.id,
+      quantity: item.quantity,
+    }));
 
-  await fetchPharmacies(dtoItems, selectedAddressId, newRange);
-};
-
+    await fetchPharmacies(dtoItems, selectedAddressId, newRange);
+  };
 
   // Modified handleConfirmOrder to create order directly
   const handleConfirmOrder = async (pharmacyId) => {
@@ -138,7 +136,7 @@ const Checkout = () => {
     }
 
     const selectedPharmacy = pharmacies.find(
-      (p) => p.pharmacyId === pharmacyId
+      (p) => p.pharmacyId === pharmacyId,
     );
     if (!selectedPharmacy) {
       alert("Selected pharmacy not found!");
@@ -146,7 +144,7 @@ const Checkout = () => {
     }
 
     const availableItems = selectedPharmacy.foundMedicines.filter(
-      (m) => m.isQuantityEnough
+      (m) => m.isQuantityEnough,
     );
     if (availableItems.length === 0) {
       alert("No available medicines in this pharmacy!");
@@ -175,7 +173,7 @@ const Checkout = () => {
         // Remove only the ordered items from cart
         const orderedIds = availableItems.map((m) => m.medicineId);
         const updatedCart = cart.filter(
-          (item) => !orderedIds.includes(item.id)
+          (item) => !orderedIds.includes(item.id),
         );
         setCart(updatedCart);
         const key = `cart_${user.email}`;
@@ -207,24 +205,10 @@ const Checkout = () => {
 
         {/* RIGHT SIDE */}
         <div className="w-1/2 h-full p-8 overflow-y-auto bg-white">
-         <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-semibold">
               Pharmacy search & ranking
             </h1>
-
-            <button
-              onClick={handleExpandRange}
-              disabled={loading || showAddressSelection}
-              className={`px-5 py-2 rounded-xl font-medium transition
-                ${
-                  loading || showAddressSelection
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-secondary text-white hover:bg-secondary-dark"
-                }`}
-            >
-              Expand (+5)
-            </button>
-
           </div>
 
           {showLocationPrompt && (
@@ -437,16 +421,20 @@ const Checkout = () => {
                               </p>
                               <ul className="list-disc pl-5 text-sm">
                                 {p.foundMedicines.map((m) => {
-                                  let colorClass = "text-green-600"; // الكمية كفاية
+                                  let colorClass = "text-green-600";
 
                                   if (!m.isQuantityEnough) {
-                                    colorClass = "text-purple-600"; //  الكمية مش كفاية
+                                    colorClass = "text-purple-600";
                                   }
 
                                   return (
-                                    <li key={m.medicineId} className={colorClass}>
-                                      {m.medicineName} – Requested: {m.requestedQuantity},
-                                      Available: {m.availableQuantity}
+                                    <li
+                                      key={m.medicineId}
+                                      className={colorClass}
+                                    >
+                                      {m.medicineName} – Requested:{" "}
+                                      {m.requestedQuantity}, Available:{" "}
+                                      {m.availableQuantity}
                                       {!m.isQuantityEnough && " (Not enough)"}
                                     </li>
                                   );
@@ -459,11 +447,11 @@ const Checkout = () => {
                               <ul className="list-disc pl-5 text-sm text-red-600">
                                 {p.notFoundMedicines.map((m) => (
                                   <li key={m.medicineId}>
-                                    ❌ {m.medicineName} – Requested: {m.requestedQuantity}
+                                    {m.medicineName} – Requested:{" "}
+                                    {m.requestedQuantity}
                                   </li>
                                 ))}
                               </ul>
-
                             </>
                           )}
                         </div>
@@ -478,6 +466,22 @@ const Checkout = () => {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Moved the Expand button to the bottom, after the pharmacies list, for better UX (e.g., user sees results first then expands if needed). Adjusted shape to rounded-lg for a softer look, increased padding for better touch target. */}
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={handleExpandRange}
+                  disabled={loading || showAddressSelection}
+                  className={`px-6 py-3 rounded-lg font-medium transition
+                    ${
+                      loading || showAddressSelection
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-secondary text-white hover:bg-secondary-dark"
+                    }`}
+                >
+                  Expand (+5)
+                </button>
               </div>
             </>
           )}
