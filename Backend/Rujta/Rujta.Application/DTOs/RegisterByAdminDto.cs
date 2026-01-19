@@ -9,5 +9,6 @@ namespace Rujta.Application.DTOs
 
         [JsonIgnore]
         public int? PharmacyId { get; set; }
+
     }
 }

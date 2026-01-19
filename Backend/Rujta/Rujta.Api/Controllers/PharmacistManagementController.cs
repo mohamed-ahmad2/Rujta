@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 
 namespace Rujta.API.Controllers
@@ -16,7 +17,6 @@ namespace Rujta.API.Controllers
             _service = service;
         }
 
-        // GET: api/PharmacistManagement/GetAllPharmacist
         [HttpGet("GetAllPharmacist")]
         public async Task<IActionResult> GetAllPharmacist()
         {
@@ -24,7 +24,6 @@ namespace Rujta.API.Controllers
             return Ok(pharmacistS);
         }
 
-        // GET: api/PharmacistManagement/GetPharmacistById/{id}
         [HttpGet("GetPharmacistById/{id:int}")]
         public async Task<IActionResult> GetPharmacistById(int id)
         {
@@ -33,7 +32,6 @@ namespace Rujta.API.Controllers
             return Ok(pharmacist);
         }
 
-        // POST: api/PharmacistManagement/AddStaff
         [HttpPost("AddStaff")]
         public async Task<IActionResult> AddPharmacist([FromBody] PharmacistDto dto)
         {
@@ -41,7 +39,6 @@ namespace Rujta.API.Controllers
             return Ok(dto);
         }
 
-        // PUT: api/PharmacistManagement/UpdatePharmacist/{id}
         [HttpPut("UpdateStaff/{id:int}")]
         public async Task<IActionResult> UpdatePharmacist(int id, [FromBody] PharmacistDto dto)
         {
@@ -49,7 +46,6 @@ namespace Rujta.API.Controllers
             return NoContent();
         }
 
-        // DELETE: api/PharmacistManagement/DeleteStaff/{id}
         [HttpDelete("DeleteStaff/{id:int}")]
         public async Task<IActionResult> DeletePharmacist(int id)
         {
@@ -57,12 +53,29 @@ namespace Rujta.API.Controllers
             return NoContent();
         }
 
-        // GET: api/PharmacistManagement/GetPharmacistByManager/{managerId}
         [HttpGet("GetPharmacistByManager/{managerId}")]
         public async Task<IActionResult> GetPharmacistByManager(Guid managerId)
         {
             var pharmacists = await _service.GetPharmacistByManagerAsync(managerId);
             return Ok(pharmacists);
+        }
+
+        [HttpGet("staff")]
+        public async Task<IActionResult> GetPharmacyStaff()
+        {
+            var pharmacyIdClaim = User.FindFirst("PharmacyId");
+            if (pharmacyIdClaim == null)
+                return Unauthorized("Pharmacy context missing.");
+
+            int pharmacyId = int.Parse(pharmacyIdClaim.Value);
+
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
+
+            var staff = await _service.GetByPharmacyIdAsync(pharmacyId);
+
+            return Ok(staff);
         }
     }
 }

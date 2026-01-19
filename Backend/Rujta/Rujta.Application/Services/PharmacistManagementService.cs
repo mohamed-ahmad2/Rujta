@@ -53,11 +53,18 @@ namespace Rujta.Infrastructure.Services
             await _uow.Pharmacists.DeleteAsync(entity, cancellationToken);
             await _uow.SaveAsync(cancellationToken);
         }
-        // Get staff by manager
+ 
         public async Task<IEnumerable<PharmacistDto>> GetPharmacistByManagerAsync(Guid managerId, CancellationToken cancellationToken = default)
         {
             var staffEntities = await _uow.Pharmacists.FindAsync(s => s.ManagerId == managerId, cancellationToken);
             return _mapper.Map<IEnumerable<PharmacistDto>>(staffEntities);
+        }
+
+        public async Task<IEnumerable<PharmacistDto>> GetByPharmacyIdAsync(int pharmacyId,CancellationToken cancellationToken = default)
+        {
+            var entities = await _uow.Pharmacists.GetByPharmacyIdAsync(pharmacyId, cancellationToken);
+
+            return _mapper.Map<IEnumerable<PharmacistDto>>(entities);
         }
     }
 }

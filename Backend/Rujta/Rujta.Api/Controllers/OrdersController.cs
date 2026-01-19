@@ -164,7 +164,7 @@ namespace Rujta.Api.Controllers
             return result.success ? Ok(result) : BadRequest(result);
         }
 
-        // Cancel by user
+
         [HttpPut("{id:int}/cancel/user")]
         [Authorize(Roles = nameof(UserRole.User))]
         public async Task<IActionResult> CancelByUser(int id, CancellationToken cancellationToken)
@@ -177,7 +177,7 @@ namespace Rujta.Api.Controllers
             return result.success ? Ok(result) : BadRequest(result);
         }
 
-        // Cancel by pharmacy
+
         [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPut("{id:int}/cancel/pharmacy")]
         public async Task<IActionResult> CancelByPharmacy(int id, CancellationToken cancellationToken)
@@ -190,7 +190,7 @@ namespace Rujta.Api.Controllers
             return result.success ? Ok(result) : BadRequest(result);
         }
 
-        // Get all orders of logged-in user
+
         [Authorize(Roles = nameof(UserRole.User))]
         [HttpGet("user")]
         public async Task<IActionResult> GetUserOrders(CancellationToken cancellationToken)
