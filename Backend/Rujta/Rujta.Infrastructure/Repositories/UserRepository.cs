@@ -83,7 +83,8 @@ namespace Rujta.Infrastructure.Repositories
 
         public async Task<ApplicationUserDto?> GetByEmailAsync(string email)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            var normalizedEmail = email.ToUpperInvariant();
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail);
             if (user == null) return null;
 
             var userDto = _mapper.Map<ApplicationUserDto>(user);
@@ -93,7 +94,6 @@ namespace Rujta.Infrastructure.Repositories
             return userDto;
         }
 
-        // === Helpers === (private, repository-level only)
         private static void UpdateBasicInfo(ApplicationUser appUser, User user, UpdateUserProfileDto dto)
         {
             user.Name = dto.Name ?? user.Name;
