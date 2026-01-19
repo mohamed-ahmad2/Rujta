@@ -6,29 +6,44 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-
 namespace Rujta.Infrastructure.Services
 {
     public class OfflineGeocodingService : IOfflineGeocodingService
     {
         private readonly ConcurrentDictionary<string, List<AddressNode>> _nodesByGovCity;
+        private readonly List<string> _uniqueGovernorates;
+        private readonly List<string> _uniqueCities;
         private readonly ConcurrentDictionary<string, (double Latitude, double Longitude)> _cache;
         private readonly JaroWinkler _jw;
 
         public OfflineGeocodingService(string pbfFilePath)
         {
-            var nodes = LoadAddressesFromPbf(pbfFilePath);
-            _nodesByGovCity = BuildIndex(nodes);
+            _nodesByGovCity = LoadAndIndexAddressesFromPbf(pbfFilePath);
+
+            _uniqueGovernorates = _nodesByGovCity.Keys
+                .Select(k => k.Split('|')[0])
+                .Where(g => !string.IsNullOrEmpty(g))
+                .Distinct()
+                .ToList();
+
+            _uniqueCities = _nodesByGovCity.Keys
+                .Select(k => { var parts = k.Split('|'); return parts.Length > 1 ? parts[1] : ""; })
+                .Where(c => !string.IsNullOrEmpty(c))
+                .Distinct()
+                .ToList();
+
             _cache = new ConcurrentDictionary<string, (double, double)>();
             _jw = new JaroWinkler();
         }
 
-        private List<AddressNode> LoadAddressesFromPbf(string path)
+        private ConcurrentDictionary<string, List<AddressNode>> LoadAndIndexAddressesFromPbf(string path)
         {
             using var fs = File.OpenRead(path);
             var source = new PBFOsmStreamSource(fs);
 
-            var nodes = source
+            var index = new ConcurrentDictionary<string, List<AddressNode>>();
+
+            var addressNodesQuery = source
                 .AsParallel()
                 .OfType<Node>()
                 .Where(n => n.Tags != null && n.Tags.ContainsKey("addr:street"))
@@ -40,18 +55,11 @@ namespace Rujta.Infrastructure.Services
                     Governorate = n.Tags.ContainsKey("addr:province") ? NormalizeString(n.Tags["addr:province"]) : null,
                     Latitude = n.Latitude!.Value,
                     Longitude = n.Longitude!.Value
-                })
-                .ToList();
+                });
 
-            Console.WriteLine($"Loaded {nodes.Count} nodes from PBF");
-            return nodes;
-        }
+            int count = 0;
 
-        private static ConcurrentDictionary<string, List<AddressNode>> BuildIndex(List<AddressNode> nodes)
-        {
-            var index = new ConcurrentDictionary<string, List<AddressNode>>();
-
-            Parallel.ForEach(nodes, node =>
+            Parallel.ForEach(addressNodesQuery, node =>
             {
                 var key = $"{node.Governorate?.ToLowerInvariant()}|{node.City?.ToLowerInvariant()}";
                 var list = index.GetOrAdd(key, _ => new List<AddressNode>());
@@ -59,8 +67,10 @@ namespace Rujta.Infrastructure.Services
                 {
                     list.Add(node);
                 }
+                Interlocked.Increment(ref count);
             });
 
+            Console.WriteLine($"Loaded {count} nodes from PBF");
             return index;
         }
 
@@ -74,6 +84,24 @@ namespace Rujta.Infrastructure.Services
 
             if (string.IsNullOrEmpty(street))
                 return Task.FromResult((0.0, 0.0));
+
+            if (!string.IsNullOrEmpty(governorate))
+            {
+                var bestGov = FindBestMatch(governorate, _uniqueGovernorates);
+                if (bestGov.Score >= 0.85)
+                {
+                    governorate = bestGov.Match;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(city))
+            {
+                var bestCity = FindBestMatch(city, _uniqueCities);
+                if (bestCity.Score >= 0.85)
+                {
+                    city = bestCity.Match;
+                }
+            }
 
             string cacheKey = $"{street}|{buildingNo}|{city}|{governorate}";
             if (_cache.TryGetValue(cacheKey, out var cached))
@@ -109,6 +137,17 @@ namespace Rujta.Infrastructure.Services
             return Task.FromResult(result);
         }
 
+        private (string Match, double Score) FindBestMatch(string input, IEnumerable<string> candidates)
+        {
+            if (!candidates.Any()) return ("", 0.0);
+
+            return candidates
+                .AsParallel()
+                .Select(c => (Match: c, Score: _jw.Similarity(c, input)))
+                .OrderByDescending(x => x.Score)
+                .First();
+        }
+
         private static double GetBuildingScore(string? nodeBuildingNo, string? inputBuildingNo)
         {
             if (string.IsNullOrEmpty(inputBuildingNo) || string.IsNullOrEmpty(nodeBuildingNo))
@@ -135,7 +174,6 @@ namespace Rujta.Infrastructure.Services
 
             return input.Trim().ToLowerInvariant();
         }
-
 
         internal sealed record AddressNode
         {

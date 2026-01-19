@@ -9,17 +9,19 @@ namespace Rujta.Application.Services
         private readonly JaroWinkler _jaro;
         private readonly ILogger<SearchMedicineService> _logger;
 
-        public SearchMedicineService(IUnitOfWork unitOfWork, IMapper mapper, ILogger<SearchMedicineService> logger)
+        private const double SimilarityThreshold = 0.75;
+
+        public SearchMedicineService(IUnitOfWork unitOfWork,IMapper mapper,ILogger<SearchMedicineService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
-            _jaro = new JaroWinkler();
             _logger = logger;
+            _jaro = new JaroWinkler();
         }
 
-        public async Task<IEnumerable<MedicineDto>> SearchAsync(string query, int top = 10, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<MedicineDto>> SearchAsync(string query,int top = 10,CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Starting SearchAsync for query '{Query}' with top={Top}", query, top);
+            _logger.LogInformation("Starting SearchAsync for query '{Query}' with top={Top}",query, top);
 
             if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
             {
@@ -29,27 +31,58 @@ namespace Rujta.Application.Services
 
             try
             {
-                var allMedicines = await _unitOfWork.Medicines.GetAllAsync(cancellationToken);
+                var normalizedQuery = query.Trim().ToLowerInvariant();
 
-                var rankedMedicines = allMedicines
+                var allMedicines = await _unitOfWork.Medicines
+                    .GetAllAsync(cancellationToken);
+
+                var prefixMatches = allMedicines
+                    .Where(m =>
+                        !string.IsNullOrWhiteSpace(m.Name) &&
+                        m.Name.StartsWith(normalizedQuery, StringComparison.OrdinalIgnoreCase))
                     .Select(m => new
                     {
                         Medicine = m,
-                        Score = _jaro.Similarity(m.Name.ToLower(), query.ToLower())
+                        Score = _jaro.Similarity(m.Name!.ToLowerInvariant(), normalizedQuery)
                     })
                     .OrderByDescending(x => x.Score)
                     .Take(top)
                     .Select(x => x.Medicine)
                     .ToList();
 
-                var topMedicines = _mapper.Map<List<MedicineDto>>(rankedMedicines);
-                _logger.LogInformation("Returning {Count} ranked medicines for query '{Query}'", topMedicines.Count, query);
+                if (prefixMatches.Any())
+                {
+                    _logger.LogInformation(
+                        "Prefix search returned {Count} results for query '{Query}'",
+                        prefixMatches.Count, query);
 
-                return topMedicines;
+                    return _mapper.Map<IEnumerable<MedicineDto>>(prefixMatches);
+                }
+
+                var fuzzyMatches = allMedicines
+                    .Where(m => !string.IsNullOrWhiteSpace(m.Name))
+                    .Select(m => new
+                    {
+                        Medicine = m,
+                        Score = _jaro.Similarity(m.Name!.ToLowerInvariant(), normalizedQuery)
+                    })
+                    .Where(x => x.Score >= SimilarityThreshold)
+                    .OrderByDescending(x => x.Score)
+                    .Take(top)
+                    .Select(x => x.Medicine)
+                    .ToList();
+
+                _logger.LogInformation("Fuzzy search returned {Count} results for query '{Query}'",fuzzyMatches.Count, query);
+
+                return _mapper.Map<IEnumerable<MedicineDto>>(fuzzyMatches);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while searching for medicines with query '{Query}'", query);
+                _logger.LogError(
+                    ex,
+                    "Error occurred while searching for medicines with query '{Query}'",
+                    query);
+
                 return Enumerable.Empty<MedicineDto>();
             }
         }
