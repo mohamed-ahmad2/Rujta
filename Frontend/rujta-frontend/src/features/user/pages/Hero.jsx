@@ -15,6 +15,27 @@ import bg3 from "../../../assets/hero/bg3.png";
 
 // ===== ADS CONFIG =====
 const ads = [
+   {
+    text1: "بشرة اجمل مع ",
+    text2: "ordenary",
+    textColor1: "text-gray-900",
+    textColor2: "text-red-900",
+    textSize1: "text-3xl sm:text-5xl md:text-8xl",
+    textSize2: "text-5xl sm:text-6xl md:text-9xl",
+    bgType: "image",
+    bgImage: bg3,
+    showBrand: false,
+    productImg: productImg3,
+    productSize: "w-[260px] sm:w-[420px] md:w-[900px]",
+    productPosition: `
+      left-1/2 -translate-x-1/2 bottom-[-80px]
+      sm:bottom-[-200px]
+      md:left-[-500px] md:translate-x-0 md:bottom-[-350px]
+    `,
+    modelImg: modelImg3,
+    modelSize: "md:w-[450px]",
+    modelPosition: "hidden md:block md:right-[-100px] md:bottom-[-280px]",
+  },
   {
     text1: "يعالج ويحمي",
     text2: "من تلف الماء",
@@ -57,27 +78,7 @@ const ads = [
     modelSize: "md:w-[450px]",
     modelPosition: "hidden md:block md:right-[-100px] md:bottom-[-280px]",
   },
-  {
-    text1: "بشرة اجمل مع ",
-    text2: "ordenary",
-    textColor1: "text-gray-900",
-    textColor2: "text-red-900",
-    textSize1: "text-3xl sm:text-5xl md:text-8xl",
-    textSize2: "text-5xl sm:text-6xl md:text-9xl",
-    bgType: "image",
-    bgImage: bg3,
-    showBrand: false,
-    productImg: productImg3,
-    productSize: "w-[260px] sm:w-[420px] md:w-[900px]",
-    productPosition: `
-      left-1/2 -translate-x-1/2 bottom-[-80px]
-      sm:bottom-[-200px]
-      md:left-[-500px] md:translate-x-0 md:bottom-[-350px]
-    `,
-    modelImg: modelImg3,
-    modelSize: "md:w-[450px]",
-    modelPosition: "hidden md:block md:right-[-100px] md:bottom-[-280px]",
-  },
+ 
 ];
 
 const HeroPanteneStyle = () => {

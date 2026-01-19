@@ -17,11 +17,14 @@ const Checkout = () => {
     fetchUserAddresses,
     create: createAddress,
   } = useAddress();
+  const [pharmaciesRange, setPharmaciesRange] = useState(5);
+
 
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [showAddressSelection, setShowAddressSelection] = useState(true); // New state to show address form first
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+  
   const [newAddressForm, setNewAddressForm] = useState({
     Street: "",
     BuildingNo: "",
@@ -101,11 +104,26 @@ const Checkout = () => {
         id: item.id,
         quantity: item.quantity,
       }));
-      await fetchPharmacies(dtoItems, selectedAddressId); // Fetch pharmacies with selected address
+      await fetchPharmacies(dtoItems, selectedAddressId, pharmaciesRange); // Fetch pharmacies with selected address
     }
 
     setShowAddressSelection(false); // Hide address selection and show pharmacies
   };
+
+  const handleExpandRange = async () => {
+  const newRange = pharmaciesRange + 5;
+  setPharmaciesRange(newRange);
+
+  if (!selectedAddressId || cart.length === 0) return;
+
+  const dtoItems = cart.map((item) => ({
+    id: item.id,
+    quantity: item.quantity,
+  }));
+
+  await fetchPharmacies(dtoItems, selectedAddressId, newRange);
+};
+
 
   // Modified handleConfirmOrder to create order directly
   const handleConfirmOrder = async (pharmacyId) => {
@@ -189,9 +207,25 @@ const Checkout = () => {
 
         {/* RIGHT SIDE */}
         <div className="w-1/2 h-full p-8 overflow-y-auto bg-white">
-          <h1 className="text-2xl font-semibold mb-6">
-            Pharmacy search & ranking
-          </h1>
+         <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-semibold">
+              Pharmacy search & ranking
+            </h1>
+
+            <button
+              onClick={handleExpandRange}
+              disabled={loading || showAddressSelection}
+              className={`px-5 py-2 rounded-xl font-medium transition
+                ${
+                  loading || showAddressSelection
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-secondary text-white hover:bg-secondary-dark"
+                }`}
+            >
+              Expand (+5)
+            </button>
+
+          </div>
 
           {showLocationPrompt && (
             <div className="mb-6">
@@ -402,26 +436,34 @@ const Checkout = () => {
                                 Found Medicines:
                               </p>
                               <ul className="list-disc pl-5 text-sm">
-                                {p.foundMedicines.map((m) => (
-                                  <li key={m.medicineId}>
-                                    {m.medicineName} - Requested:{" "}
-                                    {m.requestedQuantity}, Available:{" "}
-                                    {m.availableQuantity} (Enough:{" "}
-                                    {m.isQuantityEnough ? "Yes" : "No"})
-                                  </li>
-                                ))}
+                                {p.foundMedicines.map((m) => {
+                                  let colorClass = "text-green-600"; // الكمية كفاية
+
+                                  if (!m.isQuantityEnough) {
+                                    colorClass = "text-purple-600"; //  الكمية مش كفاية
+                                  }
+
+                                  return (
+                                    <li key={m.medicineId} className={colorClass}>
+                                      {m.medicineName} – Requested: {m.requestedQuantity},
+                                      Available: {m.availableQuantity}
+                                      {!m.isQuantityEnough && " (Not enough)"}
+                                    </li>
+                                  );
+                                })}
                               </ul>
+
                               <p className="text-sm font-medium mt-3">
                                 Not Found Medicines:
                               </p>
-                              <ul className="list-disc pl-5 text-sm">
+                              <ul className="list-disc pl-5 text-sm text-red-600">
                                 {p.notFoundMedicines.map((m) => (
                                   <li key={m.medicineId}>
-                                    {m.medicineName} - Requested:{" "}
-                                    {m.requestedQuantity}
+                                    ❌ {m.medicineName} – Requested: {m.requestedQuantity}
                                   </li>
                                 ))}
                               </ul>
+
                             </>
                           )}
                         </div>
