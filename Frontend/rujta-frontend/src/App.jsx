@@ -98,7 +98,8 @@ const App = () => {
             cart={cart}
             onClick={() => setIsCartOpen(true)}
           />
-        )}
+        )
+        }
 
       {/* Cart Drawer */}
       {user && (

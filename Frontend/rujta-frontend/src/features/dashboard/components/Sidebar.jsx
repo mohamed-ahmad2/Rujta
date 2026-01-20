@@ -69,6 +69,12 @@ export default function Sidebar({ open, setOpen }) {
       path: "/dashboard/logs",
       role: "PharmacyAdmin",
     },
+    {
+      label: "Ads",
+      icon:  <MdCampaign size={22}/>,
+      path: "/dashboard/ads",
+      role: "PharmacyAdmin",
+    },
   ];
 
   const onLogout = async () => {
