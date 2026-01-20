@@ -76,9 +76,11 @@ const NavbarDashbord = () => {
 
       {/* Center — Status Chip */}
       <div>
-        <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${current.color}`}>
+      <span
+        className={`px-4 py-1.5 rounded-full text-sm font-medium ${current.color}`}>
           {current.status}
-        </span>
+          </span>
+
       </div>
 
       {/* Right — User */}
