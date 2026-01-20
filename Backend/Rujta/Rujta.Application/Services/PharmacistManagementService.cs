@@ -55,8 +55,6 @@ namespace Rujta.Infrastructure.Services
             await _uow.SaveAsync(cancellationToken);
 
             _cache.Remove("Pharmacists_All");
-            if (dto.PharmacyID.HasValue)
-                _cache.Remove($"Pharmacists_Pharmacy_{dto.PharmacyID.Value}");
             if (dto.ManagerID != Guid.Empty)
                 _cache.Remove($"Pharmacists_Manager_{dto.ManagerID}");
         }
@@ -73,8 +71,6 @@ namespace Rujta.Infrastructure.Services
 
             _cache.Remove($"Pharmacist_{id}");
             _cache.Remove("Pharmacists_All");
-            if (dto.PharmacyID.HasValue)
-                _cache.Remove($"Pharmacists_Pharmacy_{dto.PharmacyID.Value}");
             if (dto.ManagerID != Guid.Empty)
                 _cache.Remove($"Pharmacists_Manager_{dto.ManagerID}");
         }
@@ -90,8 +86,6 @@ namespace Rujta.Infrastructure.Services
 
             _cache.Remove($"Pharmacist_{id}");
             _cache.Remove("Pharmacists_All");
-            if (entity.PharmacyId.HasValue)
-                _cache.Remove($"Pharmacists_Pharmacy_{entity.PharmacyId.Value}");
             if (entity.ManagerId != Guid.Empty)
                 _cache.Remove($"Pharmacists_Manager_{entity.ManagerId}");
         }
@@ -113,16 +107,9 @@ namespace Rujta.Infrastructure.Services
 
         public async Task<IEnumerable<PharmacistDto>> GetByPharmacyIdAsync(int pharmacyId,CancellationToken cancellationToken = default)
         {
-            var cacheKey = $"Pharmacists_Pharmacy_{pharmacyId}";
-
-            if (_cache.TryGetValue(cacheKey, out IEnumerable<PharmacistDto>? cached) && cached != null)
-                return cached;
-
             var entities = await _uow.Pharmacists.GetByPharmacyIdAsync(pharmacyId, cancellationToken);
 
             var result = _mapper.Map<IEnumerable<PharmacistDto>>(entities);
-
-            _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
 
             return result;
         }
