@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import {
   login,
   registerUser,
+  registerStaff,
   logout,
   getCurrentUser,
   forgotPassword,
@@ -65,6 +66,21 @@ export const useAuth = () => {
       throw error;
     }
   };
+
+  // Register pharmacy staff (Pharmacist) - Admin only
+const handleRegisterStaff = async (dto) => {
+  try {
+    const response = await registerStaff(dto);
+    return response;
+  } catch (error) {
+    console.error(
+      "Register staff failed:",
+      error.response?.data || error.message
+    );
+    throw error;
+  }
+};
+
 
   // Logout
   const handleLogout = async () => {
@@ -149,7 +165,8 @@ export const useAuth = () => {
     handleLogin,
     handleRegister,
     handleLogout,
-    handleGoogleLogin, // updated
+    handleGoogleLogin,
+    handleRegisterStaff,
     handleForgotPassword,
     handleResetPassword,
   };

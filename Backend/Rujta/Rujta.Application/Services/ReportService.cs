@@ -1,10 +1,4 @@
-﻿using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Enums;
-
-
-namespace Rujta.Application.Services
+﻿namespace Rujta.Application.Services
 {
     public class ReportService : IReportService
     {

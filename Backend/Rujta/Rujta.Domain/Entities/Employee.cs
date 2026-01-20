@@ -1,5 +1,4 @@
 ﻿using Rujta.Domain.Common;
-using Rujta.Domain.Entities;
 using System.ComponentModel.DataAnnotations.Schema;
 namespace Rujta.Domain.Entities
 {
@@ -9,7 +8,6 @@ namespace Rujta.Domain.Entities
         public int ExperienceYears { get; set; }
         public TimeSpan WorkStartTime { get; set; }
         public TimeSpan WorkEndTime { get; set; }
-
         public int? PharmacyId { get; set; }
         public virtual Pharmacy? Pharmacy { get; set; }
 

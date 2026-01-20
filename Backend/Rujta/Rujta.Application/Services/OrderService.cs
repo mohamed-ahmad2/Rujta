@@ -1,13 +1,4 @@
-﻿using AutoMapper;
-using Microsoft.Extensions.Logging;
-using Rujta.Application.Constants;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
-using Rujta.Domain.Enums;
-
-namespace Rujta.Application.Services
+﻿namespace Rujta.Application.Services
 {
     public class OrderService(IUnitOfWork _unitOfWork,IMapper _mapper,ILogger<OrderService> _logger) : IOrderService
     {

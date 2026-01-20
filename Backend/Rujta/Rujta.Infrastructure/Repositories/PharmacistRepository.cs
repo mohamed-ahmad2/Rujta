@@ -17,5 +17,12 @@ namespace Rujta.Infrastructure.Repositories
                 .Include(p => p.Pharmacy)
                 .Include(p => p.Manager)
                 .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+
+        public async Task<IEnumerable<Pharmacist>> GetByPharmacyIdAsync(int pharmacyId,CancellationToken cancellationToken = default) =>
+            await _context.Set<Pharmacist>()
+                .Where(p => p.PharmacyId == pharmacyId)
+                .ToListAsync(cancellationToken);
+        
+
     }
 }

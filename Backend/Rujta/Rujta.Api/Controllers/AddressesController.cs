@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.RateLimiting;
+﻿using Microsoft.AspNetCore.RateLimiting;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 
@@ -63,8 +62,12 @@ namespace Rujta.Api.Controllers
             if (!Guid.TryParse(userIdClaim, out var userId))
                 return BadRequest("Invalid DomainPersonId.");
 
+            var appUser = await _userManager.FindByIdAsync(userId.ToString());
+            if (appUser == null)
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
+
             var addresses = await _addressService
-                .GetUserAddressesAsync(userId, cancellationToken);
+                .GetUserAddressesAsync(userId, appUser.DomainPersonId, cancellationToken);
 
             await _logService.AddLogAsync(GetUser(), "Fetched user addresses");
 

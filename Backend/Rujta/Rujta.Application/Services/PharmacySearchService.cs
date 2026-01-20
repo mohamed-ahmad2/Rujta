@@ -1,10 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Application.Services.Builders;
+﻿using Rujta.Application.Services.Builders;
 using Rujta.Application.Services.Logging;
-using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Services
 {

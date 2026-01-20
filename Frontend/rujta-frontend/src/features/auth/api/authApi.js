@@ -46,10 +46,13 @@ export const resetPassword = async ({ email, otp, newPassword }) => {
 export const socialLogin = async ({ IdToken }) => {
   const response = await apiClient.post(
     "/auth/google-login",
-    { IdToken }, // ✅ correct casing
+    { IdToken },
     { withCredentials: true }
   );
   return response.data;
 };
 
-
+export const registerStaff = async (dto) => {
+  const res = await apiClient.post("/auth/register/staff", dto);
+  return res.data;
+};

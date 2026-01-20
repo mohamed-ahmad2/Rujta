@@ -1,6 +1,6 @@
 // src/features/dashboard/components/Sidebar.jsx
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../../../assets/Logo.png";
 import { RiLogoutCircleLine } from "react-icons/ri";
 import { FiUsers } from "react-icons/fi";
@@ -16,12 +16,15 @@ import { useAuth } from "../../auth/hooks/useAuth";
 export default function Sidebar({ open, setOpen }) {
   const location = useLocation();
   const [expanded, setExpanded] = useState(null);
-  const { user, loading } = useAuth();
+  const { user, loading, handleLogout } = useAuth();
+  const navigate = useNavigate();
 
   // Show loading placeholder if user not loaded yet
   if (loading) {
     return (
-      <aside className={`h-screen bg-secondary text-white transition-all duration-300 ${open ? "w-64" : "w-20"}`}>
+      <aside
+        className={`h-screen bg-secondary text-white transition-all duration-300 ${open ? "w-64" : "w-20"}`}
+      >
         <div className="px-3 py-2 h-20 flex justify-center items-center">
           Loading...
         </div>
@@ -30,15 +33,48 @@ export default function Sidebar({ open, setOpen }) {
   }
 
   const menuItems = [
-    { label: "Overview", icon: <IoHomeOutline size={22} />, path: "/dashboard/home" },
-    { label: "Products", icon: <MdInventory size={22} />, path: "/dashboard/products" },
-    { label: "Orders", icon: <TbMenuOrder size={22} />, path: "/dashboard/orders" },
-    { label: "Sales", icon: <TbReportSearch size={22} />, path: "/dashboard/sales" },
-    { label: "Customers", icon: <IoLogoBuffer size={22} />, path: "/dashboard/customers" },
-    { label: "Settings", icon: <CiSettings size={22} />, path: "/dashboard/settings" },
-    { label: "Logs", icon: <FiUsers size={22} />, path: "/dashboard/logs", role: "PharmacyAdmin" },
-   { label: "Ads", icon: <MdCampaign size={22} />, path: "/dashboard/ads", role: "PharmacyAdmin" },
+    {
+      label: "Overview",
+      icon: <IoHomeOutline size={22} />,
+      path: "/dashboard/home",
+    },
+    {
+      label: "Products",
+      icon: <MdInventory size={22} />,
+      path: "/dashboard/products",
+    },
+    {
+      label: "Orders",
+      icon: <TbMenuOrder size={22} />,
+      path: "/dashboard/orders",
+    },
+    {
+      label: "Sales",
+      icon: <TbReportSearch size={22} />,
+      path: "/dashboard/sales",
+    },
+    {
+      label: "Customers",
+      icon: <IoLogoBuffer size={22} />,
+      path: "/dashboard/customers",
+    },
+    {
+      label: "Settings",
+      icon: <CiSettings size={22} />,
+      path: "/dashboard/settings",
+    },
+    {
+      label: "Logs",
+      icon: <FiUsers size={22} />,
+      path: "/dashboard/logs",
+      role: "PharmacyAdmin",
+    },
   ];
+
+  const onLogout = async () => {
+    await handleLogout();
+    navigate("/auth");
+  };
 
   return (
     <aside
@@ -88,15 +124,15 @@ export default function Sidebar({ open, setOpen }) {
 
       {/* Logout Button */}
       <div className="absolute bottom-4 left-0 w-full px-3">
-        <Link
-          to="/logout"
-          className={`flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 transition-all ${
+        <button
+          onClick={onLogout}
+          className={`flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 transition-all w-full ${
             !open && "justify-center"
           }`}
         >
           <RiLogoutCircleLine size={22} />
           {open && <span>Logout</span>}
-        </Link>
+        </button>
       </div>
     </aside>
   );

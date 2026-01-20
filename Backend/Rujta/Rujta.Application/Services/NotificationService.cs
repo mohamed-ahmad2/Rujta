@@ -1,13 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
 using Rujta.Domain.Hubs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+
 
 namespace Rujta.Infrastructure.Services
 {

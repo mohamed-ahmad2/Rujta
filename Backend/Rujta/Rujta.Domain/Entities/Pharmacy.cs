@@ -19,14 +19,12 @@ namespace Rujta.Domain.Entities
         public virtual Pharmacy? ParentPharmacy { get; set; }
         public ICollection<Pharmacy> Branches { get; set; } = new List<Pharmacy>();
 
-        // ✅ صح: Employee فقط
         public ICollection<Employee> Employees { get; set; } = new List<Employee>();
 
         public ICollection<InventoryItem> InventoryItems { get; set; } = new List<InventoryItem>();
         public ICollection<SellDrugViaPharmacy> SellDrugViaPharmacy { get; set; } = new List<SellDrugViaPharmacy>();
         public ICollection<Order> Orders { get; set; } = new List<Order>();
 
-        // ❌ دي هنتكلم عنها تحت
         public ICollection<Customer> Customers { get; set; } = new List<Customer>();
     }
 }

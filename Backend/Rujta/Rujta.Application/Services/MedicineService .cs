@@ -1,9 +1,5 @@
-﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Rujta.Application.Services
 {
@@ -11,13 +7,16 @@ namespace Rujta.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IMemoryCache _cache;
+        private const int CacheDurationMinutes = 5;
+        private const string AllMedicinesCacheKey = "Medicines_All";
 
-        public MedicineService(IUnitOfWork unitOfWork, IMapper mapper)
+        public MedicineService(IUnitOfWork unitOfWork, IMapper mapper, IMemoryCache cache)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _cache = cache;
         }
-
 
         public async Task<IEnumerable<MedicineDto>> GetFilteredAsync(MedicineFilterDto filter, CancellationToken cancellationToken = default)
         {
@@ -64,8 +63,14 @@ namespace Rujta.Application.Services
         {
             try
             {
+                if (_cache.TryGetValue<IEnumerable<MedicineDto>>(AllMedicinesCacheKey, out var cached) && cached != null)
+                    return cached;
+
                 var medicines = await _unitOfWork.Medicines.GetAllAsync(cancellationToken);
-                return _mapper.Map<IEnumerable<MedicineDto>>(medicines);
+                var result = _mapper.Map<IEnumerable<MedicineDto>>(medicines);
+
+                _cache.Set(AllMedicinesCacheKey, result, TimeSpan.FromMinutes(CacheDurationMinutes));
+                return result;
             }
             catch (Exception ex)
             {
@@ -75,11 +80,17 @@ namespace Rujta.Application.Services
 
         public async Task<MedicineDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
+            string cacheKey = $"Medicine_{id}";
+            if (_cache.TryGetValue<MedicineDto>(cacheKey, out var cached) && cached != null)
+                return cached;
+
             var medicine = await _unitOfWork.Medicines.GetByIdAsync(id, cancellationToken);
             if (medicine == null)
                 throw new KeyNotFoundException($"Medicine with ID={id} was not found.");
 
-            return _mapper.Map<MedicineDto>(medicine);
+            var result = _mapper.Map<MedicineDto>(medicine);
+            _cache.Set(cacheKey, result, TimeSpan.FromMinutes(CacheDurationMinutes));
+            return result;
         }
 
         public async Task AddAsync(MedicineDto dto, CancellationToken cancellationToken = default)
@@ -92,6 +103,8 @@ namespace Rujta.Application.Services
                 var medicine = _mapper.Map<Medicine>(dto);
                 await _unitOfWork.Medicines.AddAsync(medicine, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
+
+                _cache.Remove(AllMedicinesCacheKey);
             }
             catch (Exception ex)
             {
@@ -110,6 +123,9 @@ namespace Rujta.Application.Services
                 _mapper.Map(dto, medicine);
                 await _unitOfWork.Medicines.UpdateAsync(medicine, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
+
+                _cache.Remove(AllMedicinesCacheKey);
+                _cache.Remove($"Medicine_{id}");
             }
             catch (Exception ex)
             {
@@ -127,6 +143,9 @@ namespace Rujta.Application.Services
             {
                 await _unitOfWork.Medicines.DeleteAsync(medicine, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
+
+                _cache.Remove(AllMedicinesCacheKey);
+                _cache.Remove($"Medicine_{id}");
             }
             catch (Exception ex)
             {

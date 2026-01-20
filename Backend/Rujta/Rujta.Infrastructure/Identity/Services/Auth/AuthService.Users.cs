@@ -33,8 +33,9 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
 
             var user = _identity.Mapper.Map<ApplicationUser>(dto);
             user.DomainPersonId = person.Id;
-            user.PhoneNumber = person.PhoneNumber;
-
+            person.PhoneNumber = user.PhoneNumber ?? string.Empty;
+            person.Addresses.Add(new Address { City = user.Location });
+ 
             var result = await _identity.Identity.UserManager.CreateAsync(user, dto.CreatePassword);
             if (!result.Succeeded)
             {

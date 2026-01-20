@@ -1,8 +1,4 @@
-﻿using AutoMapper;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
+﻿using Microsoft.Extensions.Caching.Memory;
 
 namespace Rujta.Application.Services
 {
@@ -10,11 +6,14 @@ namespace Rujta.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IMemoryCache _cache;
+        private const string AllCategoriesCacheKey = "AllCategories";
 
-        public CategoryService(IUnitOfWork unitOfWork, IMapper mapper)
+        public CategoryService(IUnitOfWork unitOfWork, IMapper mapper, IMemoryCache cache)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _cache = cache;
         }
 
         public async Task AddAsync(CategoryDto dto, CancellationToken cancellationToken = default)
@@ -25,6 +24,9 @@ namespace Rujta.Application.Services
             var category = _mapper.Map<Category>(dto);
             await _unitOfWork.Categories.AddAsync(category, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
+
+            _cache.Remove(AllCategoriesCacheKey);
+            _cache.Remove(GetCategoryCacheKey(category.Id));
         }
 
         public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
@@ -35,20 +37,36 @@ namespace Rujta.Application.Services
 
             await _unitOfWork.Categories.DeleteAsync(category, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
+
+            _cache.Remove(AllCategoriesCacheKey);
+            _cache.Remove(GetCategoryCacheKey(id));
         }
 
         public async Task<IEnumerable<CategoryDto>> GetAllAsync(CancellationToken cancellationToken = default)
         {
+            if (_cache.TryGetValue<IEnumerable<CategoryDto>>(AllCategoriesCacheKey, out var cached) && cached != null)
+                return cached;
+
             var categories = await _unitOfWork.Categories.GetAllAsync(cancellationToken);
-            return _mapper.Map<IEnumerable<CategoryDto>>(categories);
+            var result = _mapper.Map<IEnumerable<CategoryDto>>(categories);
+
+            _cache.Set(AllCategoriesCacheKey, result, TimeSpan.FromMinutes(5));
+            return result;
         }
 
         public async Task<CategoryDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
+            var cacheKey = GetCategoryCacheKey(id);
+            if (_cache.TryGetValue<CategoryDto>(cacheKey, out var cached) && cached != null)
+                return cached;
+
             var category = await _unitOfWork.Categories.GetByIdAsync(id, cancellationToken);
             if (category == null) return null;
 
-            return _mapper.Map<CategoryDto>(category);
+            var result = _mapper.Map<CategoryDto>(category);
+            _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+
+            return result;
         }
 
         public async Task UpdateAsync(int id, CategoryDto dto, CancellationToken cancellationToken = default)
@@ -64,6 +82,11 @@ namespace Rujta.Application.Services
 
             await _unitOfWork.Categories.UpdateAsync(category, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
+
+            _cache.Remove(AllCategoriesCacheKey);
+            _cache.Remove(GetCategoryCacheKey(id));
         }
+
+        private static string GetCategoryCacheKey(int id) => $"Category_{id}";
     }
 }

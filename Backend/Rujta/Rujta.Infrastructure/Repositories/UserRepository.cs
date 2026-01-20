@@ -1,4 +1,3 @@
-// UserRepository.cs (corrected version - removed unused constant)
 using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Infrastructure.Repositories
@@ -21,16 +20,12 @@ namespace Rujta.Infrastructure.Repositories
             _offlineGeocodingService = offlineGeocodingService;
         }
 
-        // =======================
-        // ====== GetProfile =====
-        // =======================
-        public async Task<UserProfileDto?> GetProfileAsync(
-            Guid userId,
-            CancellationToken cancellationToken = default)
+        public async Task<UserProfileDto?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             var appUser = await _userManager.Users
                 .Include(u => u.DomainPerson)
                     .ThenInclude(p => (p as User)!.Addresses)
+                    .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (appUser?.DomainPerson is not User user)
@@ -57,10 +52,7 @@ namespace Rujta.Infrastructure.Repositories
             };
         }
 
-        public async Task<bool> UpdateProfileAsync(
-            Guid userId,
-            UpdateUserProfileDto dto,
-            CancellationToken cancellationToken = default)
+        public async Task<bool> UpdateProfileAsync(Guid userId, UpdateUserProfileDto dto, CancellationToken cancellationToken = default)
         {
             var appUser = await _userManager.Users
                 .Include(u => u.DomainPerson)
@@ -72,7 +64,7 @@ namespace Rujta.Infrastructure.Repositories
 
             UpdateBasicInfo(appUser, user, dto);
 
-            if (dto.Addresses is not null)
+            if (dto.Addresses != null)
             {
                 RemoveDeletedAddresses(user, dto);
 
@@ -89,32 +81,20 @@ namespace Rujta.Infrastructure.Repositories
             return result.Succeeded;
         }
 
-        // =======================
-        // ==== GetByEmail =======
-        // =======================
         public async Task<ApplicationUserDto?> GetByEmailAsync(string email)
         {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == email);
-
-            if (user is null)
-                return null;
+            var normalizedEmail = email.ToUpperInvariant();
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail);
+            if (user == null) return null;
 
             var userDto = _mapper.Map<ApplicationUserDto>(user);
-
             var roles = await _userManager.GetRolesAsync(user);
             userDto.Role = roles.FirstOrDefault() ?? "User";
 
             return userDto;
         }
 
-        // =======================
-        // ===== Helpers =========
-        // =======================
-        private static void UpdateBasicInfo(
-            ApplicationUser appUser,
-            User user,
-            UpdateUserProfileDto dto)
+        private static void UpdateBasicInfo(ApplicationUser appUser, User user, UpdateUserProfileDto dto)
         {
             user.Name = dto.Name ?? user.Name;
             appUser.FullName = dto.Name ?? appUser.FullName;
@@ -141,19 +121,12 @@ namespace Rujta.Infrastructure.Repositories
                                      addressDto.Governorate ?? "");
         }
 
-        private static void UpsertAddress(
-            User user,
-            AddressDto addressDto,
-            double latitude,
-            double longitude)
+        private static void UpsertAddress(User user, AddressDto addressDto, double latitude, double longitude)
         {
             if (addressDto.Id.HasValue)
             {
-                var existing = user.Addresses
-                    .FirstOrDefault(a => a.Id == addressDto.Id);
-
-                if (existing is null)
-                    return;
+                var existing = user.Addresses.FirstOrDefault(a => a.Id == addressDto.Id);
+                if (existing == null) return;
 
                 existing.Street = addressDto.Street ?? existing.Street;
                 existing.BuildingNo = addressDto.BuildingNo ?? existing.BuildingNo;

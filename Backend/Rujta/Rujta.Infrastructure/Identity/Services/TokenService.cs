@@ -1,7 +1,4 @@
-﻿using Rujta.Domain.Entities;
-using System.Threading;
-
-namespace Rujta.Infrastructure.Identity.Services
+﻿namespace Rujta.Infrastructure.Identity.Services
 {
     public class TokenService : ITokenService
     {

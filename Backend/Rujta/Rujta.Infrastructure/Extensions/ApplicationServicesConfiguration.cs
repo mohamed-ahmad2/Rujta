@@ -36,7 +36,11 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IAddressService, AddressService>();
+            services.AddScoped<IUserService, UserService>();
             services.AddHttpClient<IGeocodingService, GeocodingService>();
+            services.AddScoped<IPharmacistManagementService, PharmacistManagementService>();
+
+            services.AddMemoryCache();
 
 
             services.AddScoped<AuthIdentityContext>(sp =>
