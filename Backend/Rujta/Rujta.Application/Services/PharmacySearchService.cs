@@ -9,6 +9,7 @@ namespace Rujta.Application.Services
         private readonly PharmacyDistanceService _distanceService;
         private readonly IMedicineRepository _medicineRepo;
         private readonly ILogger<PharmacySearchService> _logger;
+        private readonly DeliveryPricingService _deliveryPricingService = new();
 
         public PharmacySearchService(
             IPharmacyRepository pharmacyRepo,
@@ -98,6 +99,9 @@ namespace Rujta.Application.Services
             var pharmacy = entry.pharmacy;
             var distanceKm = entry.distanceMeters / 1000;
 
+            var deliveryFee = _deliveryPricingService.CalculateFee(distanceKm);
+
+
             PharmacySearchLogger.LogPharmacyProcessing(
                 _logger,
                 pharmacy.Id,
@@ -137,6 +141,12 @@ namespace Rujta.Application.Services
                     });
                 }
             }
+            _logger.LogInformation(
+    "Pharmacy {Id} | Distance: {Distance}km | DeliveryFee: {Fee}",
+    pharmacy.Id,
+    distanceKm,
+    deliveryFee
+);
 
             return PharmacyMatchResultBuilder.Build(
                 pharmacy,
@@ -144,6 +154,7 @@ namespace Rujta.Application.Services
                 matched,
                 distanceKm,
                 entry.durationMinutes,
+                deliveryFee,
                 found,
                 notFound);
         }

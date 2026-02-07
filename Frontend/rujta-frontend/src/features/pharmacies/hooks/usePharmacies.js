@@ -25,7 +25,11 @@ export const usePharmacies = () => {
       }));
 
       const res = await getTopPharmacies(dtoItems, addressId, topK);
+// هنا اطبع الـ response كله
+console.log("Full Response from API:", res);
 
+// اطبع الـ data فقط عشان تشوف الـ DTO
+console.log("Response Data (DTO):", res.data);
       setPharmacies(res.data);
     } catch (err) {
       const errorMessage =

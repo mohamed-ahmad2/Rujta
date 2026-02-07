@@ -74,14 +74,7 @@ const NavbarDashbord = () => {
         <p className="text-sm text-gray-500">{current.subtitle}</p>
       </div>
 
-      {/* Center — Status Chip */}
-      <div>
-      <span
-        className={`px-4 py-1.5 rounded-full text-sm font-medium ${current.color}`}>
-          {current.status}
-          </span>
-
-      </div>
+      
 
       {/* Right — User */}
       <div className="flex items-center gap-4 transform -translate-x-4">

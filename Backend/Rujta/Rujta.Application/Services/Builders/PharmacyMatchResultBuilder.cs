@@ -11,6 +11,7 @@ namespace Rujta.Application.Services.Builders
             int matched,
             double distanceKm,
             double durationMinutes,
+            double deliveryFee,
             List<FoundMedicineDto> found,
             List<NotFoundMedicineDto> notFound)
         {
@@ -30,6 +31,7 @@ namespace Rujta.Application.Services.Builders
 
                 DistanceKm = distanceKm,
                 EstimatedDurationMinutes = Math.Round(durationMinutes, 1),
+                DeliveryFee = Math.Round(deliveryFee, 2),
 
                 FoundMedicines = found,
                 NotFoundMedicines = notFound
