@@ -1,5 +1,4 @@
-﻿// IUserPresenceService.cs (Modified: Removed event)
-namespace Rujta.Domain.Interfaces
+﻿namespace Rujta.Domain.Interfaces
 {
     public interface IUserPresenceService
     {
@@ -7,7 +6,5 @@ namespace Rujta.Domain.Interfaces
         void UserDisconnected(string connectionId);
         IEnumerable<string> GetOnlinePharmacists(string pharmacyId);
         IEnumerable<string> GetConnectionIds(string userId);
-
-        Task ForceLogoutAsync(string userId);
     }
 }

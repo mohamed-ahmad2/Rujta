@@ -6,5 +6,6 @@ namespace Rujta.Application.Interfaces.InterfaceServices
     {
         Task<IEnumerable<PharmacistDto>> GetPharmacistByManagerAsync(Guid managerId, CancellationToken cancellationToken = default);
         Task<IEnumerable<PharmacistDto>> GetByPharmacyIdAsync(int pharmacyId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<PharmacistDto>> GetPharmacistsByIdsAsync(IEnumerable<string>? ids, CancellationToken cancellationToken = default);
     }
 }

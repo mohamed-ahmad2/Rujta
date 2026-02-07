@@ -1,10 +1,8 @@
-﻿// PresenceHub.cs (Updated to fix claim lookups)
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 using Rujta.Domain.Interfaces;
 using Rujta.Infrastructure.Identity;
-using System.Security.Claims; // Add this import if not present
 
-namespace Rujta.Application.Hubs
+namespace Rujta.API.Hubs
 {
     public class PresenceHub : Hub
     {
@@ -39,7 +37,7 @@ namespace Rujta.Application.Hubs
 
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = Context.User?.FindFirst("sub")?.Value;
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var role = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
             var pharmacyId = Context.User?.FindFirst("PharmacyId")?.Value;
 

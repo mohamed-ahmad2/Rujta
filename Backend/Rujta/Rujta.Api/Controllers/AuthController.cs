@@ -13,13 +13,11 @@ namespace Rujta.API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly ILogService _logService;
-        private readonly IUserPresenceService _presenceService;
 
-        public AuthController(IAuthService authService, ILogService logService, IUserPresenceService presenceService)
+        public AuthController(IAuthService authService, ILogService logService)
         {
             _authService = authService;
             _logService = logService;
-            _presenceService = presenceService;
         }
 
 
@@ -255,8 +253,6 @@ namespace Rujta.API.Controllers
                 }
 
                 await _logService.AddLogAsync(userId.ToString(), LogConstants.LogoutMessage);
-
-                await _presenceService.ForceLogoutAsync(userIdClaim);
 
                 Response.Cookies.Delete(CookieKeys.AccessToken);
                 Response.Cookies.Delete(CookieKeys.RefreshToken);

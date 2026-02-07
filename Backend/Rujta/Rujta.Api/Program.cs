@@ -1,5 +1,5 @@
 using Polly;
-using Rujta.Application.Hubs;
+using Rujta.API.Hubs;
 using Rujta.Application.MappingProfiles;
 using Rujta.Domain.Hubs;
 using Rujta.Infrastructure.Extensions;

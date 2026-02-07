@@ -1,4 +1,6 @@
-﻿namespace Rujta.Application.Services
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace Rujta.Application.Services
 {
     public class OrderService(IUnitOfWork _unitOfWork,IMapper _mapper,ILogger<OrderService> _logger) : IOrderService
     {
@@ -88,175 +90,77 @@
             }
         }
 
-
-        public async Task<(bool success, string message)> AcceptOrderAsync(int id, CancellationToken cancellationToken = default)
+        private async Task<(bool success, string message)> SafeUpdateOrderAsync(int id, OrderStatus newStatus, CancellationToken cancellationToken = default, int maxRetries = 3)
         {
-            try
+            int retryCount = 0;
+            while (retryCount < maxRetries)
             {
-                _logger.LogInformation("Attempting to accept order {OrderId}", id);
-
-                var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
-                if (order == null)
+                try
                 {
-                    _logger.LogWarning("Order {OrderId} not found while accepting", id);
-                    return (false, OrderMessages.OrderNotFound);
-                }
+                    var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
+                    if (order == null)
+                        return (false, OrderMessages.OrderNotFound);
 
-                if (!CanChangeStatus(order.Status, OrderStatus.Accepted))
+                    if (!CanChangeStatus(order.Status, newStatus))
+                        return (false, OrderMessages.InvalidStateTransition);
+
+                    order.Status = newStatus;
+
+                    try
+                    {
+                        await _unitOfWork.SaveAsync(cancellationToken);
+                        return (true, newStatus switch
+                        {
+                            OrderStatus.Accepted => OrderMessages.OrderAccepted,
+                            OrderStatus.CancelledByUser => OrderMessages.OrderCancelByUser,
+                            OrderStatus.CancelledByPharmacy => OrderMessages.OrderCancelByPharmacy,
+                            OrderStatus.Processing => OrderMessages.OrderProcessNow,
+                            OrderStatus.OutForDelivery => OrderMessages.OrderOutForDelivery,
+                            OrderStatus.Delivered => OrderMessages.OrderMarkAsDelivered,
+                            _ => "Status updated successfully"
+                        });
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        _logger.LogWarning("Concurrency conflict when updating Order {OrderId}. Retry {RetryCount}", id, retryCount + 1);
+                        retryCount++;
+                        if (retryCount >= maxRetries)
+                        {
+                            return (false, "Order was modified by another user. Please refresh and try again after multiple attempts.");
+                        }
+
+                        await Task.Delay(100 * retryCount, cancellationToken);
+                    }
+                }
+                catch (Exception ex)
                 {
-                    _logger.LogWarning("Invalid status transition for Order {OrderId} - from {Current} to Accepted", id, order.Status);
-                    return (false, OrderMessages.InvalidStateTransition);
+                    _logger.LogError(ex, "Error updating order {OrderId}", id);
+                    return (false, "An unexpected error occurred");
                 }
-
-                order.Status = OrderStatus.Accepted;
-                await _unitOfWork.SaveAsync(cancellationToken);
-
-                _logger.LogInformation("Order {OrderId} accepted successfully", id);
-                return (true, OrderMessages.OrderAccepted);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error while accepting order {OrderId}", id);
-                return (false, "An unexpected error occurred");
-            }
+            return (false, "Maximum retries exceeded due to concurrency conflicts.");
         }
 
 
-        public async Task<(bool success, string message)> CancelOrderByUserAsync(int id, CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                _logger.LogInformation("User requested cancellation for Order {OrderId}", id);
-
-                var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
-                if (order == null)
-                {
-                    _logger.LogWarning("Order {OrderId} not found for user cancellation", id);
-                    return (false, OrderMessages.OrderNotFound);
-                }
-
-                if (!CanChangeStatus(order.Status, OrderStatus.CancelledByUser))
-                {
-                    _logger.LogWarning("Invalid cancellation request by user for Order {OrderId}", id);
-                    return (false, OrderMessages.InvalidStateTransition);
-                }
-
-                order.Status = OrderStatus.CancelledByUser;
-                await _unitOfWork.SaveAsync(cancellationToken);
-
-                _logger.LogInformation("Order {OrderId} cancelled by user successfully", id);
-                return (true, OrderMessages.OrderCancelByUser);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error while cancelling order {OrderId} by user", id);
-                return (false, "An unexpected error occurred");
-            }
-        }
+        public Task<(bool success, string message)> AcceptOrderAsync(int id, CancellationToken cancellationToken = default) =>
+           SafeUpdateOrderAsync(id, OrderStatus.Accepted, cancellationToken);
 
 
-        public async Task<(bool success, string message)> CancelOrderByPharmacyAsync(int id, CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                _logger.LogInformation("Pharmacy attempting to cancel Order {OrderId}", id);
-
-                var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
-                if (order == null)
-                {
-                    _logger.LogWarning("Order {OrderId} not found for pharmacy cancellation", id);
-                    return (false, OrderMessages.OrderNotFound);
-                }
-
-                if (!CanChangeStatus(order.Status, OrderStatus.CancelledByPharmacy))
-                {
-                    _logger.LogWarning("Invalid pharmacy cancellation for Order {OrderId} (Current Status: {Status})", id, order.Status);
-                    return (false, OrderMessages.InvalidStateTransition);
-                }
-
-                order.Status = OrderStatus.CancelledByPharmacy;
-                await _unitOfWork.SaveAsync(cancellationToken);
-
-                _logger.LogInformation("Order {OrderId} successfully cancelled by pharmacy", id);
-                return (true, OrderMessages.OrderCancelByPharmacy);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error while pharmacy cancelling Order {OrderId}", id);
-                return (false, "An unexpected error occurred");
-            }
-        }
+        public Task<(bool success, string message)> CancelOrderByUserAsync(int id, CancellationToken cancellationToken = default) =>
+            SafeUpdateOrderAsync(id, OrderStatus.CancelledByUser, cancellationToken);
 
 
-        public async Task<(bool success, string message)> ProcessOrderAsync(int id, CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                _logger.LogInformation("Processing Order {OrderId}", id);
+        public Task<(bool success, string message)> CancelOrderByPharmacyAsync(int id, CancellationToken cancellationToken = default) =>
+            SafeUpdateOrderAsync(id, OrderStatus.CancelledByPharmacy, cancellationToken);
 
-                var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
-                if (order == null)
-                {
-                    _logger.LogWarning("Order {OrderId} not found for processing", id);
-                    return (false, OrderMessages.OrderNotFound);
-                }
+        public Task<(bool success, string message)> ProcessOrderAsync(int id, CancellationToken cancellationToken = default) =>
+            SafeUpdateOrderAsync(id, OrderStatus.Processing, cancellationToken);
 
-                if (!CanChangeStatus(order.Status, OrderStatus.Processing))
-                {
-                    _logger.LogWarning("Invalid status change to PROCESSING for Order {OrderId}", id);
-                    return (false, OrderMessages.InvalidStateTransition);
-                }
-
-                order.Status = OrderStatus.Processing;
-                await _unitOfWork.SaveAsync(cancellationToken);
-
-                _logger.LogInformation("Order {OrderId} is now Processing", id);
-                return (true, OrderMessages.OrderProcessNow);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error while processing Order {OrderId}", id);
-                return (false, "An unexpected error occurred");
-            }
-        }
+        public Task<(bool success, string message)> OutForDeliveryAsync(int id, CancellationToken cancellationToken = default) =>
+            SafeUpdateOrderAsync(id, OrderStatus.OutForDelivery, cancellationToken);
 
 
-        public async Task<(bool success, string message)> OutForDeliveryAsync(int id, CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                _logger.LogInformation("Setting Order {OrderId} as OutForDelivery", id);
-
-                var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
-                if (order == null)
-                {
-                    _logger.LogWarning("Order {OrderId} not found for out-for-delivery", id);
-                    return (false, OrderMessages.OrderNotFound);
-                }
-
-                if (!CanChangeStatus(order.Status, OrderStatus.OutForDelivery))
-                {
-                    _logger.LogWarning("Invalid transition to OutForDelivery for Order {OrderId}", id);
-                    return (false, OrderMessages.InvalidStateTransition);
-                }
-
-                order.Status = OrderStatus.OutForDelivery;
-                await _unitOfWork.SaveAsync(cancellationToken);
-
-                _logger.LogInformation("Order {OrderId} is now OutForDelivery", id);
-                return (true, OrderMessages.OrderOutForDelivery);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error while setting Order {OrderId} out for delivery", id);
-                return (false, "An unexpected error occurred");
-            }
-        }
-
-
-        public async Task<(bool success, string message)> MarkAsDeliveredAsync(
-    int id,
-    CancellationToken cancellationToken = default)
+        public async Task<(bool success, string message)> MarkAsDeliveredAsync(int id,CancellationToken cancellationToken = default)
         {
             await using var transaction =
                 await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -265,8 +169,7 @@
             {
                 _logger.LogInformation("Marking Order {OrderId} as Delivered", id);
 
-                var order = await _unitOfWork.Orders
-                    .GetOrderWithItemsAsync(id, cancellationToken);
+                var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(id, cancellationToken);
 
                 if (order == null)
                     return (false, OrderMessages.OrderNotFound);
@@ -277,8 +180,7 @@
                 foreach (var item in order.OrderItems)
                 {
                     var inventoryItem =
-                        await _unitOfWork.InventoryItems
-                            .GetByMedicineAndPharmacyAsync(
+                        await _unitOfWork.InventoryItems.GetByMedicineAndPharmacyAsync(
                                 item.MedicineID,
                                 order.PharmacyId,
                                 cancellationToken);
@@ -299,13 +201,18 @@
 
                 order.Status = OrderStatus.Delivered;
 
-                await _unitOfWork.SaveAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
-
-                _logger.LogInformation(
-                    "Order {OrderId} delivered and inventory updated", id);
-
-                return (true, OrderMessages.OrderMarkAsDelivered);
+                try
+                {
+                    await _unitOfWork.SaveAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                    return (true, OrderMessages.OrderMarkAsDelivered);
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    _logger.LogWarning("Concurrency conflict when delivering Order {OrderId}", id);
+                    return (false, "Order was modified by another user. Please refresh and try again.");
+                }
             }
             catch (Exception ex)
             {
@@ -314,9 +221,6 @@
                 return (false, "An unexpected error occurred");
             }
         }
-
-
-
 
         public async Task<IEnumerable<OrderDto>> GetUserOrdersAsync(Guid userId, CancellationToken cancellationToken = default)
         {
