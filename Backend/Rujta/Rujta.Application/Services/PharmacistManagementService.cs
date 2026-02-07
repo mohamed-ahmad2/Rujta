@@ -113,5 +113,28 @@ namespace Rujta.Infrastructure.Services
 
             return result;
         }
+
+        public async Task<IEnumerable<PharmacistDto>> GetPharmacistsByIdsAsync(IEnumerable<string>? ids, CancellationToken cancellationToken = default)
+        {
+            var result = new List<PharmacistDto>();
+
+            if (ids == null || !ids.Any())
+                return result;
+
+            foreach (var id in ids)
+            {
+                if (Guid.TryParse(id, out var pharmacistId))
+                {
+                    var pharmacist = await _uow.Pharmacists.GetByGuidAsync(pharmacistId, cancellationToken);
+                    var pharmacistDto = _mapper.Map<PharmacistDto>(pharmacist);
+                    if (pharmacistDto != null)
+                        result.Add(pharmacistDto);
+                }
+            }
+
+            return result;
+        }
+
+
     }
 }
