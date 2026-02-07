@@ -80,15 +80,7 @@ const MedicineDetails = ({ cart, setCart, onCartClick }) => {
                 <span className="text-3xl font-bold text-secondary">
                   {product.price} EGP
                 </span>
-                <span
-                  className={`px-3 py-1 rounded-full w-fit text-sm font-semibold ${
-                    product.stock > 0
-                      ? "bg-green-100 text-green-700"
-                      : "bg-red-100 text-red-600"
-                  }`}
-                >
-                  {product.stock > 0 ? "In Stock" : "Out of Stock"}
-                </span>
+             
               </div>
 
               {/* Add to Cart */}

@@ -20,8 +20,9 @@ namespace Rujta.Application.DTOs
 
         public double DistanceKm { get; set; }
         public double EstimatedDurationMinutes { get; set; }
+        public double DeliveryFee { get; set; }
 
-    
+
         public List<FoundMedicineDto> FoundMedicines { get; set; } = new();
         public List<NotFoundMedicineDto> NotFoundMedicines { get; set; } = new();
     }
