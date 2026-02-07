@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Rujta.Application.Services
 {
-    public class DeliveryPricingService
+    public static class DeliveryPricingService
     {
         public static double CalculateFee(double distanceKm)
         {
