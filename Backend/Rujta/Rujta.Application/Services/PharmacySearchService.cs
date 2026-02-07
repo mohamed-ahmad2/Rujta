@@ -9,7 +9,6 @@ namespace Rujta.Application.Services
         private readonly PharmacyDistanceService _distanceService;
         private readonly IMedicineRepository _medicineRepo;
         private readonly ILogger<PharmacySearchService> _logger;
-        private readonly DeliveryPricingService _deliveryPricingService = new();
 
         public PharmacySearchService(
             IPharmacyRepository pharmacyRepo,
