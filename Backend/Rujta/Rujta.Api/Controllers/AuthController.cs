@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Domain.Interfaces;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
@@ -12,12 +13,15 @@ namespace Rujta.API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly ILogService _logService;
+        private readonly IUserPresenceService _presenceService;
 
-        public AuthController(IAuthService authService, ILogService logService)
+        public AuthController(IAuthService authService, ILogService logService, IUserPresenceService presenceService)
         {
             _authService = authService;
             _logService = logService;
+            _presenceService = presenceService;
         }
+
 
         [HttpPost("login")]
         [EnableRateLimiting("LoginPolicy")]
@@ -251,6 +255,8 @@ namespace Rujta.API.Controllers
                 }
 
                 await _logService.AddLogAsync(userId.ToString(), LogConstants.LogoutMessage);
+
+                await _presenceService.ForceLogoutAsync(userIdClaim);
 
                 Response.Cookies.Delete(CookieKeys.AccessToken);
                 Response.Cookies.Delete(CookieKeys.RefreshToken);

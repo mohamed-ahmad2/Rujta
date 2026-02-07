@@ -1,5 +1,7 @@
 using Polly;
+using Rujta.Application.Hubs;
 using Rujta.Application.MappingProfiles;
+using Rujta.Domain.Hubs;
 using Rujta.Infrastructure.Extensions;
 using Rujta.Infrastructure.Firebase;
 using System.Text.Json.Serialization;
@@ -99,6 +101,8 @@ namespace Rujta.API
                 app.UseHsts();
             }
 
+            
+
             app.UseHttpsRedirection();
 
             app.UseCors("AllowReactApp");
@@ -107,6 +111,9 @@ namespace Rujta.API
 
             app.UseAuthentication();
             app.UseAuthorization();
+
+            app.MapHub<PresenceHub>("/hubs/presence");
+            app.MapHub<NotificationHub>("/notificationHub");
 
             app.MapControllers();
 
@@ -119,9 +126,6 @@ namespace Rujta.API
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
                 await IdentitySeeder.SeedRolesAsync(roleManager);
             }
-
-            // SignalR Hub
-            app.MapSignalRHubs();
 
             await app.RunAsync();
         }
