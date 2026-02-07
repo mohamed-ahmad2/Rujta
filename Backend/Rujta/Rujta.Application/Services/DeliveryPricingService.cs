@@ -8,7 +8,7 @@ namespace Rujta.Application.Services
 {
     public class DeliveryPricingService
     {
-        public double CalculateFee(double distanceKm)
+        public static double CalculateFee(double distanceKm)
         {
             double fee;
 

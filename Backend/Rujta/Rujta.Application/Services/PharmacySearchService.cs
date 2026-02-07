@@ -92,15 +92,14 @@ namespace Rujta.Application.Services
         }
 
         private async Task<PharmacyMatchResultDto> ProcessPharmacyAsync(
-            (Pharmacy pharmacy, double distanceMeters, double durationMinutes) entry,
-            ItemDto order,
-            Dictionary<int, string> medicineNames)
+    (Pharmacy pharmacy, double distanceMeters, double durationMinutes) entry,
+    ItemDto order,
+    Dictionary<int, string> medicineNames)
         {
             var pharmacy = entry.pharmacy;
             var distanceKm = entry.distanceMeters / 1000;
 
-            var deliveryFee = _deliveryPricingService.CalculateFee(distanceKm);
-
+            var deliveryFee = DeliveryPricingService.CalculateFee(distanceKm);
 
             PharmacySearchLogger.LogPharmacyProcessing(
                 _logger,
@@ -141,23 +140,28 @@ namespace Rujta.Application.Services
                     });
                 }
             }
-            _logger.LogInformation(
-    "Pharmacy {Id} | Distance: {Distance}km | DeliveryFee: {Fee}",
-    pharmacy.Id,
-    distanceKm,
-    deliveryFee
-);
 
-            return PharmacyMatchResultBuilder.Build(
-                pharmacy,
-                order,
-                matched,
+            _logger.LogInformation(
+                "Pharmacy {Id} | Distance: {Distance}km | DeliveryFee: {Fee}",
+                pharmacy.Id,
                 distanceKm,
-                entry.durationMinutes,
-                deliveryFee,
-                found,
-                notFound);
+                deliveryFee
+            );
+
+            // استدعاء Build بالـ Parameter Object
+            return PharmacyMatchResultBuilder.Build(new PharmacyMatchResultParams
+            {
+                Pharmacy = pharmacy,
+                Order = order,
+                Matched = matched,
+                DistanceKm = distanceKm,
+                DurationMinutes = entry.durationMinutes,
+                DeliveryFee = deliveryFee,
+                Found = found,
+                NotFound = notFound
+            });
         }
+
 
         private static double Haversine(double lat1, double lon1, double lat2, double lon2)
         {
