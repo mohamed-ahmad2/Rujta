@@ -4,7 +4,7 @@ using System.IdentityModel.Tokens.Jwt;
 
 namespace Rujta.API.Controllers
 {
-    [Authorize(Roles = nameof(UserRole.SuperAdmin))]
+    [Authorize(Roles = nameof(UserRole.PharmacyAdmin))]
     [ApiController]
     [Route("api/[controller]")]
     [EnableRateLimiting("Fixed")]
@@ -20,14 +20,17 @@ namespace Rujta.API.Controllers
         [HttpGet("PharmacyReport")]
         public async Task<IActionResult> GetPharmacyReport()
         {
-            var adminIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-            if (adminIdClaim == null) return Forbid();
+            // جيب الـ PharmacyId من الـ JWT claim
+            var pharmacyIdClaim = User.FindFirst("PharmacyId");
+            if (pharmacyIdClaim == null)
+                return Unauthorized("Pharmacy context missing.");
 
-            var adminId = Guid.Parse(adminIdClaim);
+            int pharmacyId = int.Parse(pharmacyIdClaim.Value);
 
-            var report = await _reportService.GetPharmacyReportAsync(adminId);
+            var report = await _reportService.GetPharmacyReportAsync(pharmacyId);
             return Ok(report);
         }
+
     }
 
 }

@@ -52,6 +52,8 @@ namespace Rujta.API
             builder.Services.AddApplicationServices(builder.Configuration);
 
             builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
+            builder.Services.AddScoped<IReportService, ReportService>();
+
 
             // Firebase Initialization
             try
