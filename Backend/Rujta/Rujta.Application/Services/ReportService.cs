@@ -96,8 +96,6 @@ namespace Rujta.Application.Services
                 .ToList();
 
             // ===== Low Stock Items =====
-            // ===== Low Stock Items =====
-            // Detailed list (all inventory rows, but medicine name safe)
             var lowStockItems = inventoryItems
                 .Where(i => i.Quantity <= filter.LowStockThreshold)
                 .Select(i => new LowStockItemDto
@@ -108,20 +106,6 @@ namespace Rujta.Application.Services
                     ReorderLevel = filter.LowStockThreshold
                 })
                 .ToList();
-
-            // ===== Inventory Summary update (Option A) =====
-            // Count distinct medicines for summary card
-            var inv = new InventorySummaryDto
-            {
-                TotalItems = inventoryItems.Count,
-                LowStockCount = inventoryItems
-                    .Where(i => i.Quantity <= filter.LowStockThreshold)
-                    .Select(i => i.MedicineID)
-                    .Distinct()
-                    .Count(),
-                OutOfStockCount = inventoryItems.Count(i => i.Quantity == 0)
-            };
-
 
             // ===== Expired Items =====
             var expiredItems = inventoryItems
