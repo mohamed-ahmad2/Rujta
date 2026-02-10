@@ -40,11 +40,17 @@ namespace Rujta.Infrastructure.Repositories
             _dbSet.Remove(entity);
             return Task.CompletedTask;
         }
-        public virtual async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default) =>
-                await _dbSet
+        public virtual async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate,CancellationToken cancellationToken = default,Func<IQueryable<T>, IQueryable<T>>? include = null)
+        {
+            IQueryable<T> query = _dbSet
                 .AsNoTracking()
-                .Where(predicate)
-                .ToListAsync(cancellationToken);
+                .Where(predicate);
+
+            if (include != null)
+                query = include(query);
+
+            return await query.ToListAsync(cancellationToken);
+        }
 
 
 
