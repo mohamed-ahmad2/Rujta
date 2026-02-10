@@ -57,7 +57,7 @@ const AnimatedErrorPage = () => {
   </p>
 
         <button
-          onClick={() => navigate("/")} // <--- التنقل للـ landing page
+          onClick={() => navigate("/user")} // <--- التنقل للـ landing page
           className="inline-block px-6 py-3 rounded-full font-bold transition-colors duration-300 bg-[#83b74e] hover:bg-primary"
         >
           Go Home

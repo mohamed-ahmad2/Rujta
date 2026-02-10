@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Domain.Entities;
+using Rujta.Infrastructure.Repositories;
 
 namespace Rujta.API.Controllers
 {
@@ -9,12 +11,20 @@ namespace Rujta.API.Controllers
     public class PharmaciesController : ControllerBase
     {
         private readonly PharmacyDistanceService _distanceService;
+        private readonly IPharmacySearchService _pharmacySearchService;   // ✅ إضافة جديدة
+        private readonly IPharmacyRepository _pharmacyRepo;
 
-        public PharmaciesController(PharmacyDistanceService distanceService)
+        public PharmaciesController(
+            PharmacyDistanceService distanceService,
+            IPharmacySearchService pharmacySearchService,
+            IPharmacyRepository pharmacyRepo)   // ✅ حقن الخدمة الجديدة
         {
             _distanceService = distanceService;
+            _pharmacySearchService = pharmacySearchService;
+            _pharmacyRepo = pharmacyRepo;
         }
 
+        // ========== كودك الأصلي لم يتغيّر ==========
         [HttpGet("nearest-routed")]
         [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetNearestWithRouting(
@@ -23,8 +33,8 @@ namespace Rujta.API.Controllers
             string mode = "car",
             int topK = 5)
         {
-            
-            var result = await _distanceService.GetNearestPharmaciesRouted(userLat, userLon, mode, topK);
+            var result = await _distanceService
+                .GetNearestPharmaciesRouted(userLat, userLon, mode, topK);
 
             return Ok(result.Select(r => new
             {
@@ -35,5 +45,29 @@ namespace Rujta.API.Controllers
                 mode
             }));
         }
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<IActionResult> GetAllPharmacies()
+        {
+            var pharmacies = await _pharmacyRepo.GetAllPharmacies();
+            return Ok(pharmacies);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("{pharmacyId}/medicine/{medicineId}/stock")]
+        public async Task<IActionResult> GetMedicineStock(int pharmacyId, int medicineId)
+        {
+            var stock = await _pharmacyRepo.GetMedicineStockAsync(pharmacyId, medicineId);
+            return Ok(new { PharmacyId = pharmacyId, MedicineId = medicineId, Stock = stock });
+        }
+
+        [AllowAnonymous]
+        [HttpGet("{pharmacyId}/medicines")]
+        public async Task<IActionResult> GetAllMedicineIds(int pharmacyId)
+        {
+            var medicineIds = await _pharmacyRepo.GetAllMedicineIdsAsync(pharmacyId);
+            return Ok(medicineIds); // returns JSON array of IDs
+        }
+
     }
 }
