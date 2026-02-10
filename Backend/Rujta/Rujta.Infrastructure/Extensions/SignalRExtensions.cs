@@ -7,6 +7,7 @@ namespace Rujta.Infrastructure.Extensions
     {
         public static WebApplication MapSignalRHubs(this WebApplication app)
         {
+            //app.MapHub<PresenceHub>("/hubs/presence");
             app.MapHub<NotificationHub>("/notificationHub");
             return app;
         }

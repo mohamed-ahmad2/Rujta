@@ -126,5 +126,24 @@ namespace Rujta.Api.Controllers
                 return NotFound(new { message = ex.Message });
             }
         }
+
+        [Authorize(Roles = nameof(UserRole.User))]
+        [HttpGet("{id:int}/coordinates")]
+        public async Task<IActionResult> GetCoordinates(int id, CancellationToken cancellationToken)
+        {
+            var address = await _addressService.GetByIdAsync(id, cancellationToken);
+
+            if (address == null)
+                return NotFound(new { message = "Address not found" });
+
+            await _logService.AddLogAsync(GetUser(), $"Fetched coordinates for address ID={id}");
+
+            return Ok(new
+            {
+                Latitude = address.Latitude,
+                Longitude = address.Longitude
+            });
+        }
+
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Domain.Interfaces;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
@@ -18,6 +19,7 @@ namespace Rujta.API.Controllers
             _authService = authService;
             _logService = logService;
         }
+
 
         [HttpPost("login")]
         [EnableRateLimiting("LoginPolicy")]
