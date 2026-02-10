@@ -176,5 +176,9 @@ namespace Rujta.Application.Services
 
             return 2 * R * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
         }
+       
+
+
     }
+
 }

@@ -10,6 +10,7 @@ namespace Rujta.Application.Interfaces.InterfaceServices
     double userLat,
     double userLng,
     int topK);
-
+      
     }
+
 }

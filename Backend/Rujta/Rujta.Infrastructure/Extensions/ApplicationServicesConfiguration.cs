@@ -40,6 +40,8 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IUserService, UserService>();
             services.AddHttpClient<IGeocodingService, GeocodingService>();
             services.AddScoped<IPharmacistManagementService, PharmacistManagementService>();
+            
+
             services.AddSingleton<IUserPresenceService, InMemoryUserPresenceService>();
 
             services.AddMemoryCache();
