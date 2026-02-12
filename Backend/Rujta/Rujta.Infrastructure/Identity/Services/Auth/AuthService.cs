@@ -1,4 +1,5 @@
-﻿namespace Rujta.Infrastructure.Identity.Services.Auth
+﻿
+namespace Rujta.Infrastructure.Identity.Services.Auth
 {
     public partial class AuthService : IAuthService
     {

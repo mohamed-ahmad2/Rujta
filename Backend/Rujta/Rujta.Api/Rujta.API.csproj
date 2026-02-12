@@ -54,18 +54,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Update="Maps\egypt-251026.osm.pbf">
-	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-	  </None>
-	  <None Update="Maps\egypt.routerdb">
-	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-	  </None>
+		<None Update="Maps\egypt-251026.osm.pbf">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="Maps\egypt.routerdb">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 	<ItemGroup>
-  <None Update="Firebase\Service-account.json">
-    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-  </None>
-</ItemGroup>
+		<None Update="Firebase\Service-account.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
 
 </Project>

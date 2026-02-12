@@ -4,6 +4,7 @@ using Rujta.Application.MappingProfiles;
 using Rujta.Domain.Hubs;
 using Rujta.Infrastructure.Extensions;
 using Rujta.Infrastructure.Firebase;
+using Rujta.Infrastructure.Identity.Services;
 using System.Text.Json.Serialization;
 
 namespace Rujta.API
@@ -53,6 +54,8 @@ namespace Rujta.API
 
             builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
             builder.Services.AddScoped<IReportService, ReportService>();
+            builder.Services.AddScoped<ISuperAdminService, SuperAdminService>();
+
 
 
             // Firebase Initialization
