@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Rujta.API.Realtime.Hubs
 {
+    [Authorize]
+    [EnableRateLimiting("Fixed")]
     public class OrderHub : Hub
     {
         public override async Task OnConnectedAsync()
