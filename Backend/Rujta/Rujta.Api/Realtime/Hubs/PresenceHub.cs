@@ -2,7 +2,7 @@
 using Rujta.Domain.Interfaces;
 using Rujta.Infrastructure.Identity;
 
-namespace Rujta.API.Hubs
+namespace Rujta.API.Realtime.Hubs
 {
     public class PresenceHub : Hub
     {

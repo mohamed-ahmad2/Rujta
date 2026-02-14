@@ -1,8 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Rujta.Application.DTOs;
 
 namespace Rujta.Application.Services
 {
-    public class OrderService(IUnitOfWork _unitOfWork,IMapper _mapper,ILogger<OrderService> _logger) : IOrderService
+    public class OrderService(IUnitOfWork _unitOfWork,IMapper _mapper,ILogger<OrderService> _logger, IOrderNotificationService _notificationService) : IOrderService
     {
         public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto, Guid userId, CancellationToken cancellationToken = default)
         {
@@ -80,6 +81,8 @@ namespace Rujta.Application.Services
                 orderDto.UserName = appUser.Name;
                 orderDto.PharmacyName = pharmacy.Name;
 
+                await _notificationService.NotifyStatusChangedAsync(createOrderDto.PharmacyID, orderDto.Id, OrderStatus.Pending);
+
                 return orderDto;
             }
             catch (Exception ex)
@@ -90,7 +93,7 @@ namespace Rujta.Application.Services
             }
         }
 
-        private async Task<(bool success, string message)> SafeUpdateOrderAsync(int id, OrderStatus newStatus, CancellationToken cancellationToken = default, int maxRetries = 3)
+        private async Task<(bool success, string message)> SafeUpdateOrderAsync(int id, int pharmacyId, OrderStatus newStatus, CancellationToken cancellationToken = default, int maxRetries = 3)
         {
             int retryCount = 0;
             while (retryCount < maxRetries)
@@ -106,61 +109,77 @@ namespace Rujta.Application.Services
 
                     order.Status = newStatus;
 
-                    try
-                    {
-                        await _unitOfWork.SaveAsync(cancellationToken);
-                        return (true, newStatus switch
-                        {
-                            OrderStatus.Accepted => OrderMessages.OrderAccepted,
-                            OrderStatus.CancelledByUser => OrderMessages.OrderCancelByUser,
-                            OrderStatus.CancelledByPharmacy => OrderMessages.OrderCancelByPharmacy,
-                            OrderStatus.Processing => OrderMessages.OrderProcessNow,
-                            OrderStatus.OutForDelivery => OrderMessages.OrderOutForDelivery,
-                            OrderStatus.Delivered => OrderMessages.OrderMarkAsDelivered,
-                            _ => "Status updated successfully"
-                        });
-                    }
-                    catch (DbUpdateConcurrencyException)
-                    {
-                        _logger.LogWarning("Concurrency conflict when updating Order {OrderId}. Retry {RetryCount}", id, retryCount + 1);
-                        retryCount++;
-                        if (retryCount >= maxRetries)
-                        {
-                            return (false, "Order was modified by another user. Please refresh and try again after multiple attempts.");
-                        }
 
-                        await Task.Delay(100 * retryCount, cancellationToken);
-                    }
+                    await _unitOfWork.SaveAsync(cancellationToken);
+
+                    await SafeNotifyAsync(pharmacyId, id, newStatus);
+
+                    return (true, newStatus switch
+                    {
+                        OrderStatus.Accepted => OrderMessages.OrderAccepted,
+                        OrderStatus.CancelledByUser => OrderMessages.OrderCancelByUser,
+                        OrderStatus.CancelledByPharmacy => OrderMessages.OrderCancelByPharmacy,
+                        OrderStatus.Processing => OrderMessages.OrderProcessNow,
+                        OrderStatus.OutForDelivery => OrderMessages.OrderOutForDelivery,
+                        OrderStatus.Delivered => OrderMessages.OrderMarkAsDelivered,
+                        _ => "Status updated successfully"
+                    });
                 }
+
+                catch (DbUpdateConcurrencyException)
+                {
+                    _logger.LogWarning("Concurrency conflict when updating Order {OrderId}. Retry {RetryCount}", id, retryCount + 1);
+                    retryCount++;
+                    if (retryCount >= maxRetries)
+                    {
+                        return (false, "Order was modified by another user. Please refresh and try again after multiple attempts.");
+                    }
+
+                    await Task.Delay(100 * retryCount, cancellationToken);
+                }
+
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error updating order {OrderId}", id);
                     return (false, "An unexpected error occurred");
                 }
             }
+
             return (false, "Maximum retries exceeded due to concurrency conflicts.");
         }
 
-
-        public Task<(bool success, string message)> AcceptOrderAsync(int id, CancellationToken cancellationToken = default) =>
-           SafeUpdateOrderAsync(id, OrderStatus.Accepted, cancellationToken);
-
-
-        public Task<(bool success, string message)> CancelOrderByUserAsync(int id, CancellationToken cancellationToken = default) =>
-            SafeUpdateOrderAsync(id, OrderStatus.CancelledByUser, cancellationToken);
-
-
-        public Task<(bool success, string message)> CancelOrderByPharmacyAsync(int id, CancellationToken cancellationToken = default) =>
-            SafeUpdateOrderAsync(id, OrderStatus.CancelledByPharmacy, cancellationToken);
-
-        public Task<(bool success, string message)> ProcessOrderAsync(int id, CancellationToken cancellationToken = default) =>
-            SafeUpdateOrderAsync(id, OrderStatus.Processing, cancellationToken);
-
-        public Task<(bool success, string message)> OutForDeliveryAsync(int id, CancellationToken cancellationToken = default) =>
-            SafeUpdateOrderAsync(id, OrderStatus.OutForDelivery, cancellationToken);
+        private async Task SafeNotifyAsync(int pharmacyId, int orderId, OrderStatus status)
+        {
+            try
+            {
+                await _notificationService.NotifyStatusChangedAsync(pharmacyId, orderId, status);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Notification failed for Order {OrderId}", orderId);
+            }
+        }
 
 
-        public async Task<(bool success, string message)> MarkAsDeliveredAsync(int id,CancellationToken cancellationToken = default)
+        public Task<(bool success, string message)> AcceptOrderAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>
+           SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.Accepted, cancellationToken);
+
+
+        public Task<(bool success, string message)> CancelOrderByUserAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>
+            SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.CancelledByUser, cancellationToken);
+
+
+        public Task<(bool success, string message)> CancelOrderByPharmacyAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>
+            SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.CancelledByPharmacy, cancellationToken);
+
+        public Task<(bool success, string message)> ProcessOrderAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>
+            SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.Processing, cancellationToken);
+
+        public Task<(bool success, string message)> OutForDeliveryAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>
+            SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.OutForDelivery, cancellationToken);
+
+
+        public async Task<(bool success, string message)> MarkAsDeliveredAsync(int id, int pharmacyId, CancellationToken cancellationToken = default)
         {
             await using var transaction =
                 await _unitOfWork.BeginTransactionAsync(cancellationToken);
@@ -204,6 +223,7 @@ namespace Rujta.Application.Services
                 try
                 {
                     await _unitOfWork.SaveAsync(cancellationToken);
+                    await _notificationService.NotifyStatusChangedAsync(pharmacyId, id, OrderStatus.Delivered);
                     await transaction.CommitAsync(cancellationToken);
                     return (true, OrderMessages.OrderMarkAsDelivered);
                 }
