@@ -1,5 +1,6 @@
 using Polly;
-using Rujta.API.Hubs;
+using Rujta.API.Realtime.Hubs;
+using Rujta.API.Realtime.NotificationsOrders;
 using Rujta.Application.MappingProfiles;
 using Rujta.Domain.Hubs;
 using Rujta.Infrastructure.Extensions;
@@ -51,6 +52,7 @@ namespace Rujta.API
 
             // Application Services
             builder.Services.AddApplicationServices(builder.Configuration);
+            builder.Services.AddScoped<IOrderNotificationService, OrderNotificationService>();
 
             builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
             builder.Services.AddScoped<IReportService, ReportService>();
@@ -119,6 +121,7 @@ namespace Rujta.API
 
             app.MapHub<PresenceHub>("/hubs/presence");
             app.MapHub<NotificationHub>("/notificationHub");
+            app.MapHub<OrderHub>("/hubs/orders");
 
             app.MapControllers();
 
