@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Domain.Interfaces;
 using Rujta.Infrastructure.Identity.Services.Auth;
 
@@ -41,6 +42,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddHttpClient<IGeocodingService, GeocodingService>();
             services.AddScoped<IPharmacistManagementService, PharmacistManagementService>();
             
+
 
             services.AddSingleton<IUserPresenceService, InMemoryUserPresenceService>();
 

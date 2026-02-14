@@ -1,9 +1,11 @@
 using Polly;
-using Rujta.API.Hubs;
+using Rujta.API.Realtime.Hubs;
+using Rujta.API.Realtime.NotificationsOrders;
 using Rujta.Application.MappingProfiles;
 using Rujta.Domain.Hubs;
 using Rujta.Infrastructure.Extensions;
 using Rujta.Infrastructure.Firebase;
+using Rujta.Infrastructure.Identity.Services;
 using System.Text.Json.Serialization;
 
 namespace Rujta.API
@@ -50,9 +52,12 @@ namespace Rujta.API
 
             // Application Services
             builder.Services.AddApplicationServices(builder.Configuration);
+            builder.Services.AddScoped<IOrderNotificationService, OrderNotificationService>();
 
             builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
             builder.Services.AddScoped<IReportService, ReportService>();
+            builder.Services.AddScoped<ISuperAdminService, SuperAdminService>();
+
 
 
             // Firebase Initialization
@@ -116,6 +121,7 @@ namespace Rujta.API
 
             app.MapHub<PresenceHub>("/hubs/presence");
             app.MapHub<NotificationHub>("/notificationHub");
+            app.MapHub<OrderHub>("/hubs/orders");
 
             app.MapControllers();
 

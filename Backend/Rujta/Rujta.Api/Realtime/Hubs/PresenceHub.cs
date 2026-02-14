@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.SignalR;
 using Rujta.Domain.Interfaces;
 using Rujta.Infrastructure.Identity;
 
-namespace Rujta.API.Hubs
+namespace Rujta.API.Realtime.Hubs
 {
+    [Authorize]
+    [EnableRateLimiting("Fixed")]
     public class PresenceHub : Hub
     {
         private readonly IUserPresenceService _presenceService;

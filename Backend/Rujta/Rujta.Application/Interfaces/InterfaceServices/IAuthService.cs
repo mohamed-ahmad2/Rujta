@@ -19,10 +19,5 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task<TokenDto> LoginWithGoogle(string idToken);
 
 
-
-
-
-
-
     }
 }
