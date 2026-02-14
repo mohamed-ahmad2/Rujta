@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
 using Rujta.Application.Constants;
-using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 
@@ -27,7 +26,7 @@ namespace Rujta.Api.Controllers
 
         [Authorize(Roles = $"{nameof(UserRole.User)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPost]
-        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto createOrderDto)
+        public async Task<IActionResult> CreateOrder([FromBody] List<CreateOrderDto> orders)
         {
             try
             {
@@ -41,11 +40,16 @@ namespace Rujta.Api.Controllers
                 if (appUser == null)
                     return Unauthorized(ApiMessages.UnauthorizedAccess);
 
-                var order = await _orderService.CreateOrderAsync(createOrderDto, appUser.DomainPersonId);
+                var results = new List<OrderDto>();
 
-                await _logService.AddLogAsync(GetUser(), $"Order {order.Id} created successfully for UserId {appUser.DomainPersonId}");
-                
-                return Ok(order);
+                foreach (var dto in orders)
+                {
+                    var order = await _orderService.CreateOrderAsync(dto, appUser.DomainPersonId);
+                    results.Add(order);
+                    await _logService.AddLogAsync(GetUser(), $"Order {order.Id} created successfully for UserId {appUser.DomainPersonId}");
+                }
+
+                return Ok(results);
             }
             catch (InvalidOperationException ex)
             {

@@ -33,6 +33,7 @@ const Checkout = () => {
   });
 
   const [expandedPharmacies, setExpandedPharmacies] = useState({});
+  const [selectedPharmacies, setSelectedPharmacies] = useState([]); // New state for selected pharmacies
 
   // Show location prompt if needed
   useEffect(() => {
@@ -123,8 +124,17 @@ const Checkout = () => {
     await fetchPharmacies(dtoItems, selectedAddressId, newRange);
   };
 
-  // Modified handleConfirmOrder to create order directly
-  const handleConfirmOrder = async (pharmacyId) => {
+  // Toggle pharmacy selection
+  const handleTogglePharmacy = (pharmacyId) => {
+    setSelectedPharmacies((prev) =>
+      prev.includes(pharmacyId)
+        ? prev.filter((id) => id !== pharmacyId)
+        : [...prev, pharmacyId],
+    );
+  };
+
+  // Modified to handle multiple orders in one go
+  const handleConfirmOrders = async () => {
     if (!cart || cart.length === 0) {
       alert("Cart is empty!");
       return;
@@ -135,55 +145,70 @@ const Checkout = () => {
       return;
     }
 
-    const selectedPharmacy = pharmacies.find(
-      (p) => p.pharmacyId === pharmacyId,
-    );
-    if (!selectedPharmacy) {
-      alert("Selected pharmacy not found!");
+    if (selectedPharmacies.length === 0) {
+      alert("No pharmacies selected!");
       return;
     }
 
-    const availableItems = selectedPharmacy.foundMedicines.filter(
-      (m) => m.isQuantityEnough,
-    );
-    if (availableItems.length === 0) {
-      alert("No available medicines in this pharmacy!");
+    const orderDtos = [];
+
+    for (const pharmacyId of selectedPharmacies) {
+      const selectedPharmacy = pharmacies.find(
+        (p) => p.pharmacyId === pharmacyId,
+      );
+      if (!selectedPharmacy) continue;
+
+      const availableItems = selectedPharmacy.foundMedicines.filter(
+        (m) => m.isQuantityEnough,
+      );
+      if (availableItems.length === 0) continue;
+
+      const orderItems = availableItems.map((m) => ({
+        MedicineID: m.medicineId,
+        Quantity: m.requestedQuantity,
+      }));
+
+      const orderDto = {
+        PharmacyID: pharmacyId,
+        DeliveryAddressId: selectedAddressId,
+        OrderItems: orderItems,
+      };
+
+      orderDtos.push(orderDto);
+    }
+
+    if (orderDtos.length === 0) {
+      alert("No valid orders to create!");
       return;
     }
 
-    const orderItems = availableItems.map((m) => ({
-      MedicineID: m.medicineId,
-      Quantity: m.requestedQuantity,
-    }));
-
-    const orderDto = {
-      PharmacyID: pharmacyId,
-      DeliveryAddressId: selectedAddressId,
-      OrderItems: orderItems,
-    };
-
-    console.log("Creating order with DTO:", orderDto);
+    console.log("Creating orders with DTOs:", orderDtos);
 
     try {
-      const result = await create(orderDto);
-      console.log("Create order result:", result);
+      const results = await create(orderDtos);
+      console.log("Create orders result:", results);
 
-      if (result) {
-        alert("Order created successfully!");
-        // Remove only the ordered items from cart
-        const orderedIds = availableItems.map((m) => m.medicineId);
-        const updatedCart = cart.filter(
-          (item) => !orderedIds.includes(item.id),
-        );
+      if (results && results.length > 0) {
+        alert(`Successfully created ${results.length} order(s)!`);
+
+        // Remove ordered items from cart (aggregate across all orders)
+        const orderedIdsSet = new Set();
+        orderDtos.forEach((dto) => {
+          dto.OrderItems.forEach((item) => orderedIdsSet.add(item.MedicineID));
+        });
+        const updatedCart = cart.filter((item) => !orderedIdsSet.has(item.id));
         setCart(updatedCart);
         const key = `cart_${user.email}`;
         localStorage.setItem(key, JSON.stringify(updatedCart));
+
+        // Clear selections
+        setSelectedPharmacies([]);
       } else {
-        alert("Failed to create order!");
+        alert("Failed to create orders!");
       }
     } catch (err) {
-      console.error("Error while creating order:", err);
-      alert("Failed to create order! See console for details.");
+      console.error("Error while creating orders:", err);
+      alert("Failed to create orders! See console for details.");
     }
   };
 
@@ -378,91 +403,94 @@ const Checkout = () => {
               <div className="space-y-6">
                 {pharmacies.map((p, i) => {
                   const isExpanded = expandedPharmacies[p.pharmacyId] || false;
+                  const isSelected = selectedPharmacies.includes(p.pharmacyId);
                   return (
                     <div
                       key={p.pharmacyId}
                       className="pb-6 border rounded-2xl p-4 shadow-sm transition"
                     >
                       <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-lg font-semibold">
-                            {i + 1}. {p.name}
-                          </p>
-                          <p className="text-gray-500 text-sm">
-                            Lat: {p.latitude.toFixed(4)}, Lng:{" "}
-                            {p.longitude.toFixed(4)}, Distance:{" "}
-                            {p.distanceKm.toFixed(2)} km, Est. Time:{" "}
-                            {p.estimatedDurationMinutes.toFixed(0)} min
-                          </p>
-                          <p className="text-gray-500 text-sm">
-                            Contact: {p.contactNumber}
-                          </p>
-                          <p className="text-sm mt-2">
-                            Matched Drugs: {p.matchedDrugs} /{" "}
-                            {p.totalRequestedDrugs} (
-                            {p.matchPercentage.toFixed(2)}
-                            %)
-                          </p>
-                          <button
-                            onClick={() =>
-                              setExpandedPharmacies((prev) => ({
-                                ...prev,
-                                [p.pharmacyId]: !isExpanded,
-                              }))
-                            }
-                            className="text-secondary hover:text-secondary-dark hover:underline text-sm font-medium mb-2 transition-colors"
-                          >
-                            {isExpanded ? "Hide Details" : "Show More Details"}
-                          </button>
-                          {isExpanded && (
-                            <>
-                              <p className="text-sm font-medium mt-3">
-                                Found Medicines:
-                              </p>
-                              <ul className="list-disc pl-5 text-sm">
-                                {p.foundMedicines.map((m) => {
-                                  let colorClass = "text-green-600";
+                        <div className="flex items-start">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleTogglePharmacy(p.pharmacyId)}
+                            className="h-5 w-5 text-secondary focus:ring-secondary border-gray-300 rounded mr-3 mt-1"
+                          />
+                          <div>
+                            <p className="text-lg font-semibold">
+                              {i + 1}. {p.name}
+                            </p>
+                            <p className="text-gray-500 text-sm">
+                              Lat: {p.latitude.toFixed(4)}, Lng:{" "}
+                              {p.longitude.toFixed(4)}, Distance:{" "}
+                              {p.distanceKm.toFixed(2)} km, Est. Time:{" "}
+                              {p.estimatedDurationMinutes.toFixed(0)} min
+                            </p>
+                            <p className="text-gray-500 text-sm">
+                              Contact: {p.contactNumber}
+                            </p>
+                            <p className="text-sm mt-2">
+                              Matched Drugs: {p.matchedDrugs} /{" "}
+                              {p.totalRequestedDrugs} (
+                              {p.matchPercentage.toFixed(2)}
+                              %)
+                            </p>
+                            <button
+                              onClick={() =>
+                                setExpandedPharmacies((prev) => ({
+                                  ...prev,
+                                  [p.pharmacyId]: !isExpanded,
+                                }))
+                              }
+                              className="text-secondary hover:text-secondary-dark hover:underline text-sm font-medium mb-2 transition-colors"
+                            >
+                              {isExpanded
+                                ? "Hide Details"
+                                : "Show More Details"}
+                            </button>
+                            {isExpanded && (
+                              <>
+                                <p className="text-sm font-medium mt-3">
+                                  Found Medicines:
+                                </p>
+                                <ul className="list-disc pl-5 text-sm">
+                                  {p.foundMedicines.map((m) => {
+                                    let colorClass = "text-green-600";
 
-                                  if (!m.isQuantityEnough) {
-                                    colorClass = "text-purple-600";
-                                  }
+                                    if (!m.isQuantityEnough) {
+                                      colorClass = "text-purple-600";
+                                    }
 
-                                  return (
-                                    <li
-                                      key={m.medicineId}
-                                      className={colorClass}
-                                    >
+                                    return (
+                                      <li
+                                        key={m.medicineId}
+                                        className={colorClass}
+                                      >
+                                        {m.medicineName} – Requested:{" "}
+                                        {m.requestedQuantity}, Available:{" "}
+                                        {m.availableQuantity}
+                                        {!m.isQuantityEnough && " (Not enough)"}
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+
+                                <p className="text-sm font-medium mt-3">
+                                  Not Found Medicines:
+                                </p>
+                                <ul className="list-disc pl-5 text-sm text-red-600">
+                                  {p.notFoundMedicines.map((m) => (
+                                    <li key={m.medicineId}>
                                       {m.medicineName} – Requested:{" "}
-                                      {m.requestedQuantity}, Available:{" "}
-                                      {m.availableQuantity}
-                                      {!m.isQuantityEnough && " (Not enough)"}
+                                      {m.requestedQuantity}
                                     </li>
-                                  );
-                                })}
-                              </ul>
-
-                              <p className="text-sm font-medium mt-3">
-                                Not Found Medicines:
-                              </p>
-                              <ul className="list-disc pl-5 text-sm text-red-600">
-                                {p.notFoundMedicines.map((m) => (
-                                  <li key={m.medicineId}>
-                                    {m.medicineName} – Requested:{" "}
-                                    {m.requestedQuantity}
-                                  </li>
-                                ))}
-                              </ul>
-
-                            </>
-                          )}
+                                  ))}
+                                </ul>
+                              </>
+                            )}
+                          </div>
                         </div>
-
-                        <button
-                          onClick={() => handleConfirmOrder(p.pharmacyId)}
-                          className="bg-secondary text-white px-5 py-2 rounded-xl font-medium"
-                        >
-                          Order
-                        </button>
                       </div>
                     </div>
                   );
@@ -470,7 +498,7 @@ const Checkout = () => {
               </div>
 
               {/* Moved the Expand button to the bottom, after the pharmacies list, for better UX (e.g., user sees results first then expands if needed). Adjusted shape to rounded-lg for a softer look, increased padding for better touch target. */}
-              <div className="flex justify-center mt-6">
+              <div className="flex justify-center mt-6 gap-4">
                 <button
                   onClick={handleExpandRange}
                   disabled={loading || showAddressSelection}
@@ -482,6 +510,18 @@ const Checkout = () => {
                     }`}
                 >
                   Expand (+5)
+                </button>
+                <button
+                  onClick={handleConfirmOrders}
+                  disabled={loading || selectedPharmacies.length === 0}
+                  className={`px-6 py-3 rounded-lg font-medium transition
+                    ${
+                      loading || selectedPharmacies.length === 0
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-secondary text-white hover:bg-secondary-dark"
+                    }`}
+                >
+                  Order Selected ({selectedPharmacies.length})
                 </button>
               </div>
             </>
