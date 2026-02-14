@@ -63,10 +63,26 @@ namespace Rujta.API.Controllers
 
         [AllowAnonymous]
         [HttpGet("{pharmacyId}/medicines")]
-        public async Task<IActionResult> GetAllMedicineIds(int pharmacyId)
+        public async Task<IActionResult> GetAllMedicines(int pharmacyId)
         {
-            var medicineIds = await _pharmacyRepo.GetAllMedicineIdsAsync(pharmacyId);
-            return Ok(medicineIds); // returns JSON array of IDs
+            var medicines = await _pharmacyRepo
+                .GetAllMedicinesByPharmacyAsync(pharmacyId);
+
+            var result = medicines.Select(m => new MedicineDto
+            {
+                Id = m.Id,
+                Name = m.Name,
+                Description = m.Description,
+                Dosage = m.Dosage,
+                Price = m.Price,
+                ExpiryDate = m.ExpiryDate,
+                CompanyName = m.CompanyName,
+                CategoryId = m.CategoryId,
+                ActiveIngredient = m.ActiveIngredient,
+                ImageUrl = m.ImageUrl
+            });
+
+            return Ok(result);
         }
 
     }

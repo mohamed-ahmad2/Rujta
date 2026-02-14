@@ -23,7 +23,7 @@ import Profile from "../features/user/pages/Profile";
 import Ordersuser from "../features/user/pages/Orders";
 import Checkout from "../features/user/pages/Checkout";
 import PharmacyDetails from "../features/user/pages/PharmacyDetails";
-
+import Payment from "../features/user/pages/Payment";
 
 /* ================= Medicines ================= */
 import MedicineDetails from "../features/medicines/pages/MedicineDetails";
@@ -91,7 +91,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
     <Route path="/reset-password" element={<ResetPasswordPage />} />
 
     {/* ========= User ========= */}
-   <Route
+<Route
   path="/user"
   element={
     <ProtectedRoute>
@@ -117,8 +117,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Route path="profile" element={<Profile />} />
   <Route path="checkout" element={<Checkout />} />
   <Route path="notifications" element={<NotificationsPage />} />
-
-  {/* 👇 مهم جدًا — تفاصيل الصيدلية داخل UserLayout */}
+  <Route path="payment" element={<Payment />} />  {/* هنا صفحة الدفع */}
   <Route path="pharmacy/:id" element={<PharmacyDetails />} />
 </Route>
 
