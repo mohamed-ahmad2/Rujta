@@ -5,6 +5,7 @@ import { useAuth } from "../../auth/hooks/useAuth";
 import useAddress from "../../address/hook/useAddress"; // Assuming the hook is in this path based on the provided useAddress.js
 import apiClient from "../../../shared/api/apiClient";
 
+
 const Checkout = () => {
   const [cart, setCart] = useState([]);
   const { pharmacies, loading, error, fetchPharmacies } = usePharmacies();
@@ -33,6 +34,9 @@ const Checkout = () => {
   });
 
   const [expandedPharmacies, setExpandedPharmacies] = useState({});
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
 
   // Show location prompt if needed
   useEffect(() => {
@@ -186,6 +190,18 @@ const Checkout = () => {
       alert("Failed to create order! See console for details.");
     }
   };
+const handlePaymentConfirm = async () => {
+  if (paymentMethod === "Cash") {
+    setShowPaymentModal(false);
+    setTimeout(() => {
+      handleConfirmOrder(selectedPharmacyForPayment);
+    }, 0);
+  } else {
+    // Online Payment
+    window.location.href = `/user/payment`; // بدون pharmacyId
+  }
+};
+
 
   const errorMessage = typeof error === "string" ? error : error?.message || "";
 
@@ -458,11 +474,15 @@ const Checkout = () => {
                         </div>
 
                         <button
-                          onClick={() => handleConfirmOrder(p.pharmacyId)}
-                          className="bg-secondary text-white px-5 py-2 rounded-xl font-medium"
-                        >
-                          Order
-                        </button>
+                              onClick={() => {
+                                setSelectedPharmacyForPayment(p.pharmacyId);
+                                setShowPaymentModal(true);
+                              }}
+                              className="bg-secondary text-white px-5 py-2 rounded-xl font-medium"
+                            >
+                              Order
+                            </button>
+
                       </div>
                     </div>
                   );
@@ -488,6 +508,52 @@ const Checkout = () => {
           )}
         </div>
       </div>
+      {showPaymentModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+    <div className="bg-white w-[400px] p-6 rounded-2xl shadow-xl">
+      <h2 className="text-xl font-semibold mb-4">Select Payment Method</h2>
+
+      <div className="flex flex-col gap-3">
+        <label className="flex items-center gap-2">
+          <input
+            type="radio"
+            value="Cash"
+            checked={paymentMethod === "Cash"}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+          />
+          Cash on Delivery
+        </label>
+
+        <label className="flex items-center gap-2">
+          <input
+            type="radio"
+            value="Online"
+            checked={paymentMethod === "Online"}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+          />
+          Online Payment (Visa / Paymob)
+        </label>
+      </div>
+
+      <div className="flex justify-end gap-3 mt-6">
+        <button
+          onClick={() => setShowPaymentModal(false)}
+          className="px-4 py-2 bg-gray-300 rounded-lg"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handlePaymentConfirm}
+          className="px-4 py-2 bg-secondary text-white rounded-lg"
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 };
