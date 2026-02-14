@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.RateLimiting;
+﻿using Microsoft.AspNetCore.RateLimiting;
 using Rujta.Domain.Interfaces;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
@@ -341,8 +341,49 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-    }
 
-    public record MeResponse(string Email, string Role);
+
+        [HttpPost("register-dummy-superadmin")]
+        public async Task<IActionResult> RegisterDummySuperAdmin(string email, string pass)
+        {
+            try
+            {
+                var dummyDto = new RegisterByAdminDto
+                {
+                    Email = email,
+                    CreatePassword = pass,
+                    ConfirmPassword = pass,
+                    Name = "Dummy SuperAdmin",
+                    Role = UserRole.SuperAdmin,
+                };
+
+                var userId = await _authService.CreateUserAsync(dummyDto, UserRole.SuperAdmin);
+
+                await _logService.AddLogAsync(
+                    dummyDto.Email,
+                    $"Dummy SuperAdmin created for testing. UserId: {userId}");
+
+                return Ok(new
+                {
+                    UserId = userId,
+                    Email = dummyDto.Email,
+                    Role = dummyDto.Role.ToString()
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                await _logService.AddLogAsync(
+                      LogConstants.UnknownUser,
+                    $"Dummy SuperAdmin creation error: {ex.Message}");
+
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+
+
+
+        public record MeResponse(string Email, string Role);
     public record EmailResponse(string Email);
 }
+    }
