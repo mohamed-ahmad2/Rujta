@@ -1,6 +1,6 @@
-﻿using F23.StringSimilarity;
+﻿using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 
-namespace Rujta.Application.Services
+namespace Rujta.Application.Services.MedicineS
 {
     public class SearchMedicineService : ISearchMedicineService
     {

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 
-namespace Rujta.Application.Services
+namespace Rujta.Application.Services.MedicineS
 {
     public class MedicineDataImportService
     {

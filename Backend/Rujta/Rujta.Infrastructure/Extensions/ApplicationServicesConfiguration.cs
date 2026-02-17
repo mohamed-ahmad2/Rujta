@@ -1,5 +1,12 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Rujta.Application.Interfaces.InterfaceServices;
+using Rujta.Application.Interfaces.InterfaceServices.IGeocoding;
+using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
+using Rujta.Application.Interfaces.InterfaceServices.IOrder;
+using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
+using Rujta.Application.Services.Geocoding;
+using Rujta.Application.Services.MedicineS;
+using Rujta.Application.Services.OrderS;
+using Rujta.Application.Services.Pharmcy;
 using Rujta.Domain.Interfaces;
 using Rujta.Infrastructure.Identity.Services.Auth;
 

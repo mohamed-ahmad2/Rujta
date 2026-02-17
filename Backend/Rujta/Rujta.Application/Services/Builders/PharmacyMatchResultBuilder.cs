@@ -1,9 +1,4 @@
-﻿using Rujta.Application.DTOs;
-using Rujta.Domain.Entities;
-using System;
-using System.Collections.Generic;
-
-namespace Rujta.Application.Services.Builders
+﻿namespace Rujta.Application.Services.Builders
 {
     public class PharmacyMatchResultParams
     {

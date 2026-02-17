@@ -1,6 +1,6 @@
 ﻿using Rujta.Application.DTOs;
 
-namespace Rujta.Application.Interfaces.InterfaceServices
+namespace Rujta.Application.Interfaces.InterfaceServices.IMedicine
 {
     public interface ISearchMedicineService
     {

@@ -1,4 +1,4 @@
-﻿namespace Rujta.Application.Interfaces.InterfaceServices
+﻿namespace Rujta.Application.Interfaces.InterfaceServices.IGeocoding
 {
     public interface IGeocodingService
     {

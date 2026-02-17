@@ -1,7 +1,8 @@
-﻿using Rujta.Application.Services.Builders;
+﻿using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
+using Rujta.Application.Services.Builders;
 using Rujta.Application.Services.Logging;
 
-namespace Rujta.Application.Services
+namespace Rujta.Application.Services.Pharmcy
 {
     public class PharmacySearchService : IPharmacySearchService
     {

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
-using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Repositories;
+using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
+using Rujta.Application.Services.Pharmcy;
 
 namespace Rujta.API.Controllers
 {

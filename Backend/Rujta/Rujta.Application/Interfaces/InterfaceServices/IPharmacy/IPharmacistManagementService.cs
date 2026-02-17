@@ -1,6 +1,7 @@
 ﻿using Rujta.Application.DTOs;
+using Rujta.Application.Interfaces.InterfaceServices.IGenericS;
 
-namespace Rujta.Application.Interfaces.InterfaceServices
+namespace Rujta.Application.Interfaces.InterfaceServices.IPharmacy
 {
     public interface IPharmacistManagementService : IGenericService<PharmacistDto>
     {

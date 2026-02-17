@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
-using Rujta.Domain.Interfaces;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;

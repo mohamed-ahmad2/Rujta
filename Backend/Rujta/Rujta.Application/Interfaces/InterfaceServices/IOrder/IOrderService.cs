@@ -1,7 +1,8 @@
 ﻿using Rujta.Application.DTOs;
+using Rujta.Application.Interfaces.InterfaceServices.IGenericS;
 using Rujta.Domain.Entities;
 
-namespace Rujta.Application.Interfaces.InterfaceServices
+namespace Rujta.Application.Interfaces.InterfaceServices.IOrder
 {
     public interface IOrderService : IGenericService<OrderDto>
     {

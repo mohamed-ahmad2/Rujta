@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Rujta.Application.DTOs;
+using Rujta.Application.Interfaces.InterfaceServices.IGenericS;
 
 
 namespace Rujta.Application.Interfaces.InterfaceServices

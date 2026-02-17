@@ -1,13 +1,3 @@
-using Polly;
-using Rujta.API.Realtime.Hubs;
-using Rujta.API.Realtime.NotificationsOrders;
-using Rujta.Application.MappingProfiles;
-using Rujta.Domain.Hubs;
-using Rujta.Infrastructure.Extensions;
-using Rujta.Infrastructure.Firebase;
-using Rujta.Infrastructure.Identity.Services;
-using System.Text.Json.Serialization;
-
 namespace Rujta.API
 {
     public static class Program
