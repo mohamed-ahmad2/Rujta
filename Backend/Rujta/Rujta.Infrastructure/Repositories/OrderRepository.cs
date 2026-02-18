@@ -1,4 +1,6 @@
-﻿namespace Rujta.Infrastructure.Repositories
+﻿using Rujta.Domain.Enums;
+
+namespace Rujta.Infrastructure.Repositories
 {
     public class OrderRepository : GenericRepository<Order>, IOrderRepository
     {
@@ -60,5 +62,17 @@
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
         }
+
+        public async Task<List<int>> GetUserPurchasedMedicineIdsAsync(Guid userId,CancellationToken cancellationToken = default)
+        {
+            return await _context.Orders
+                .Where(o => o.UserId == userId && o.Status == OrderStatus.Delivered)
+                .SelectMany(o => o.OrderItems)
+                .GroupBy(i => i.MedicineID)
+                .OrderByDescending(g => g.Count())
+                .Select(g => g.Key)
+                .ToListAsync(cancellationToken);
+        }
+
     }
 }

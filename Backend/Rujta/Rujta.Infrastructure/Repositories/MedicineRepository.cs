@@ -24,5 +24,20 @@
                 .Where(m => m.ExpiryDate >= today && m.ExpiryDate <= upcoming)
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<List<Medicine>> GetByNamesAsync(IEnumerable<string> names,CancellationToken cancellationToken = default)
+        {
+            if (names == null || !names.Any())
+                return new List<Medicine>();
+
+            var normalizedNames = names
+                .Select(n => n.Trim().ToLowerInvariant())
+                .ToList();
+
+            return await _context.Medicines
+                .Where(m => normalizedNames.Contains(m.Name!.ToLower()))
+                .ToListAsync(cancellationToken);
+        }
+
     }
 }

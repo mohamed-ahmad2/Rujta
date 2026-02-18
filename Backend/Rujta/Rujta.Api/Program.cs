@@ -1,3 +1,6 @@
+using Rujta.Application.Interfaces;
+using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
+
 namespace Rujta.API
 {
     public static class Program
@@ -124,6 +127,16 @@ namespace Rujta.API
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
                 await IdentitySeeder.SeedRolesAsync(roleManager);
             }
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                var autocomplete = scope.ServiceProvider.GetRequiredService<IMedicineAutocompleteIndex>();
+
+                var medicines = await unitOfWork.Medicines.GetAllAsync();
+                autocomplete.Build(medicines.Select(m => m.Name!));
+            }
+
 
             await app.RunAsync();
         }

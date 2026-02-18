@@ -11,20 +11,16 @@ namespace Rujta.API.Controllers
     public class PharmaciesController : ControllerBase
     {
         private readonly PharmacyDistanceService _distanceService;
-        private readonly IPharmacySearchService _pharmacySearchService;   // ✅ إضافة جديدة
         private readonly IPharmacyRepository _pharmacyRepo;
 
         public PharmaciesController(
             PharmacyDistanceService distanceService,
-            IPharmacySearchService pharmacySearchService,
-            IPharmacyRepository pharmacyRepo)   // ✅ حقن الخدمة الجديدة
+            IPharmacyRepository pharmacyRepo)   
         {
             _distanceService = distanceService;
-            _pharmacySearchService = pharmacySearchService;
             _pharmacyRepo = pharmacyRepo;
         }
 
-        // ========== كودك الأصلي لم يتغيّر ==========
         [HttpGet("nearest-routed")]
         [ProducesResponseType(typeof(IEnumerable<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetNearestWithRouting(

@@ -1,6 +1,4 @@
-﻿using System.Security.Cryptography.X509Certificates;
-
-namespace Rujta.Domain.Autocomplete
+﻿namespace Rujta.Domain.Autocomplete
 {
     public class Trie
     {
