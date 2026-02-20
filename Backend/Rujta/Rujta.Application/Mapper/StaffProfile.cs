@@ -1,7 +1,4 @@
-﻿using AutoMapper;
-using Rujta.Application.DTOs;
-using Rujta.Domain.Common;
-using Rujta.Domain.Entities;
+﻿using Rujta.Domain.Common;
 
 namespace Rujta.Application.MappingProfiles
 {

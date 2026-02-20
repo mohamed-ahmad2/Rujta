@@ -1,6 +1,4 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using OsmSharp.API;
-using Rujta.API.Realtime.Hubs;
 using Rujta.Domain.Enums;
 
 namespace Rujta.API.Realtime.NotificationsOrders

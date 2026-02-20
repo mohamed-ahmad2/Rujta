@@ -3,7 +3,7 @@ using Rujta.Domain.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Rujta.Application.Interfaces.InterfaceServices
+namespace Rujta.Application.Interfaces.InterfaceServices.IPharmacy
 {
     public interface IPharmacyCartService
     {

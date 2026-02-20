@@ -1,8 +1,9 @@
 ﻿using Rujta.Application.DTOs;
+using Rujta.Application.Interfaces.InterfaceServices.IGenericS;
 
 
 
-namespace Rujta.Application.Interfaces.InterfaceServices
+namespace Rujta.Application.Interfaces.InterfaceServices.IMedicine
 {
     public interface IMedicineService : IGenericService<MedicineDto>
     {

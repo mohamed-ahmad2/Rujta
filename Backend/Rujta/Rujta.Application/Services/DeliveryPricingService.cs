@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Rujta.Application.Services
+﻿namespace Rujta.Application.Services
 {
     public static class DeliveryPricingService
     {

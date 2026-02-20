@@ -1,8 +1,4 @@
-﻿using AutoMapper;
-using Rujta.Application.DTOs;
-using Rujta.Domain.Entities;
-
-namespace Rujta.Application.Mapper
+﻿namespace Rujta.Application.Mapper
 {
     public class InventoryItemProfile : Profile
     {

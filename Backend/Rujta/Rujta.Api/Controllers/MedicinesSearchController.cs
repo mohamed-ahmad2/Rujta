@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.RateLimiting;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 using Rujta.Infrastructure.Constants;
+using Rujta.Infrastructure.Identity;
 
 namespace Rujta.API.Controllers
 {
@@ -11,11 +14,13 @@ namespace Rujta.API.Controllers
     {
         private readonly ISearchMedicineService _searchMedicineService;
         private readonly ILogService _logService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public MedicinesSearchController(ISearchMedicineService searchMedicineService, ILogService logService)
+        public MedicinesSearchController(ISearchMedicineService searchMedicineService, ILogService logService, UserManager<ApplicationUser> userManager)
         {
             _searchMedicineService = searchMedicineService;
             _logService = logService;
+            _userManager = userManager;
         }
 
         [HttpGet]
@@ -27,7 +32,17 @@ namespace Rujta.API.Controllers
                 return Ok(Enumerable.Empty<MedicineDto>());
             }
 
-            var results = await _searchMedicineService.SearchAsync(query, top);
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
+
+            var userGuid = Guid.Parse(userIdClaim);
+
+            var appUser = await _userManager.FindByIdAsync(userGuid.ToString());
+            if (appUser == null)
+                return Unauthorized(ApiMessages.UnauthorizedAccess);
+
+            var results = await _searchMedicineService.SearchAsync(query, appUser.DomainPersonId, top);
             await _logService.AddLogAsync(GetUser(), $"Searched medicines with query='{query}', returned {results.Count()} results");
 
             return Ok(results);

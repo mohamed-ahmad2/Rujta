@@ -1,5 +1,4 @@
-﻿
-namespace Rujta.Application.Interfaces.InterfaceServices
+﻿namespace Rujta.Application.Interfaces.InterfaceServices.IGenericS
 {
     public interface IGenericService<TDto>
     {

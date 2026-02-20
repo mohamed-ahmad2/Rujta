@@ -1,4 +1,6 @@
-﻿namespace Rujta.Application.Services
+﻿using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
+
+namespace Rujta.Application.Services.Pharmcy
 {
     public class PharmacyCartService : IPharmacyCartService
     {
