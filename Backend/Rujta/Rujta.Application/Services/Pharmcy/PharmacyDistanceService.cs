@@ -1,7 +1,7 @@
 using Itinero.Osm.Vehicles;
 using Rujta.Infrastructure.Services;
 
-namespace Rujta.Application.Services
+namespace Rujta.Application.Services.Pharmcy
 {
     public class PharmacyDistanceService
     {
@@ -76,7 +76,7 @@ GetNearestPharmaciesRouted(double userLat, double userLon, string mode = "car", 
                     else
                     {
                         var speedKmh = 25.0;
-                        var speedMps = (speedKmh * 1000) / 3600;
+                        var speedMps = speedKmh * 1000 / 3600;
                         durSeconds = dist / speedMps;
                     }
                 }

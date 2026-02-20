@@ -1,12 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.DTOs;
-using Rujta.Application.DTOs.Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
+﻿using Rujta.Application.DTOs.Rujta.Application.DTOs;
 using Rujta.Infrastructure.Identity;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Rujta.API.Controllers
 {

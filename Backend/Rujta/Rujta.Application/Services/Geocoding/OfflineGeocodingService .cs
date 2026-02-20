@@ -1,12 +1,4 @@
-﻿using F23.StringSimilarity;
-using OsmSharp;
-using OsmSharp.Streams;
-using System.Collections.Concurrent;
-using System.Globalization;
-using System.Text;
-using System.Text.RegularExpressions;
-
-namespace Rujta.Infrastructure.Services
+﻿namespace Rujta.Application.Services.Geocoding
 {
     public class OfflineGeocodingService : IOfflineGeocodingService
     {

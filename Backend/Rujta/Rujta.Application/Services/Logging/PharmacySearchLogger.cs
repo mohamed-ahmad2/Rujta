@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using Rujta.Application.DTOs;
-
-namespace Rujta.Application.Services.Logging
+﻿namespace Rujta.Application.Services.Logging
 {
     public static class PharmacySearchLogger
     {

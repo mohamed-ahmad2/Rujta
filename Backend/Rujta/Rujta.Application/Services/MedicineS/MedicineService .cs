@@ -1,7 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 
-namespace Rujta.Application.Services
+namespace Rujta.Application.Services.MedicineS
 {
     public class MedicineService : IMedicineService
     {

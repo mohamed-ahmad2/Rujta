@@ -1,7 +1,6 @@
-﻿using System.Globalization;
-using System.Text.Json;
+﻿using System.Text.Json;
 
-namespace Rujta.Application.Services
+namespace Rujta.Application.Services.Geocoding
 {
     public class GeocodingService : IGeocodingService
     {

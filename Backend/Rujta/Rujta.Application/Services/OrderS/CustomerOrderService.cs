@@ -1,4 +1,6 @@
-﻿namespace Rujta.Application.Services
+﻿using Rujta.Application.Interfaces.InterfaceServices.IOrder;
+
+namespace Rujta.Application.Services.OrderS
 {
     public class CustomerOrderService : ICustomerOrderService
     {

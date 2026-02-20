@@ -1,3 +1,4 @@
+using Rujta.Application.Interfaces.InterfaceServices.IGeocoding;
 using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Infrastructure.Repositories

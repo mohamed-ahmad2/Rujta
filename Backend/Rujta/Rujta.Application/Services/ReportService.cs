@@ -1,11 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Rujta.Application.Services
 {

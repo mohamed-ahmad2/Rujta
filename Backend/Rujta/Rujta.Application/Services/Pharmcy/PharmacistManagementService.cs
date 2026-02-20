@@ -1,8 +1,9 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
+using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
 using Rujta.Domain.Common;
 
 
-namespace Rujta.Infrastructure.Services
+namespace Rujta.Application.Services.Pharmcy
 {
     public class PharmacistManagementService : IPharmacistManagementService
     {
