@@ -13,13 +13,16 @@ namespace Rujta.Infrastructure.Repositories
             await _context.Pharmacies.ToListAsync(cancellationToken);
 
         // Get all medicine IDs in a pharmacy
-        public async Task<List<int>> GetAllMedicineIdsAsync(int pharmacyId)
+        public async Task<List<Medicine>> GetAllMedicinesByPharmacyAsync(int pharmacyId)
         {
             return await _context.InventoryItems
                 .Where(i => i.PharmacyID == pharmacyId)
-                .Select(i => i.MedicineID)
+                .Include(i => i.Medicine)   // مهم جدًا
+                .Select(i => i.Medicine)
+                .Distinct()
                 .ToListAsync();
         }
+
 
         // Get stock of a specific medicine
         public async Task<int> GetMedicineStockAsync(int pharmacyId, int medicineId)

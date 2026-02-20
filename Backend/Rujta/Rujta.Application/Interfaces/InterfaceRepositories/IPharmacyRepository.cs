@@ -9,7 +9,8 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
         Task<IEnumerable<Pharmacy>> GetAllPharmacies(CancellationToken cancellationToken = default);
 
         // Get all medicine IDs in a pharmacy
-        Task<List<int>> GetAllMedicineIdsAsync(int pharmacyId);
+        Task<List<Medicine>> GetAllMedicinesByPharmacyAsync(int pharmacyId);
+
 
         // Get stock of a specific medicine in a pharmacy
         Task<int> GetMedicineStockAsync(int pharmacyId, int medicineId);

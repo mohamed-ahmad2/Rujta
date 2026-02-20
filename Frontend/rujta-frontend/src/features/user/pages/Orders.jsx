@@ -62,6 +62,72 @@ export default function Orders() {
     return <span className={`${base} ${styles[status] || ""}`}>{status}</span>;
   };
 
+  // ================= NEW: ICON + ANIMATION STEPPER =================
+ const OrderStatusStepper = ({ currentStatus }) => {
+  const stages = [
+    { key: "Pending", label: "Pending", icon: "⏳" },
+    { key: "Accepted", label: "Accepted", icon: "✔️" },
+    { key: "Processing", label: "Processing", icon: "⚙️" },
+    { key: "OutForDelivery", label: "Out For Delivery", icon: "🚚" },
+    { key: "Delivered", label: "Delivered", icon: "📦" },
+  ];
+
+  const isCancelled = ["CancelledByUser", "CancelledByPharmacy"].includes(currentStatus);
+  const currentIndex = stages.findIndex(s => s.key === currentStatus);
+
+  return (
+    <div className="w-full mt-4 mb-2 px-2">
+      <div className="flex items-center justify-between relative">
+        {/* الخلفية الرمادي */}
+        <div className="absolute top-3 left-0 h-[2px] w-full bg-gray-300 -z-10" />
+
+        {/* الخط الأخضر أو رمادي */}
+        <div
+          className={`absolute top-3 left-0 h-[2px] transition-all duration-700`}
+          style={{
+            width: `${isCancelled ? 100 : (currentIndex / (stages.length - 1)) * 100}%`,
+            backgroundColor: isCancelled ? "red" : "#22c55e", // أحمر إذا ملغى، أخضر إذا طبيعي
+          }}
+        />
+
+        {stages.map((stage, index) => {
+          const completed = index <= currentIndex && !isCancelled;
+          const isCurrent = index === currentIndex && !isCancelled;
+
+          return (
+            <div key={stage.key} className="flex flex-col items-center relative">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-lg 
+                transition-all duration-500 transform ${
+                  isCancelled
+                    ? "bg-red-500 text-white"
+                    : completed
+                    ? "bg-green-500 text-white scale-110"
+                    : "bg-white border-2 border-gray-400 text-gray-400"
+                } ${isCurrent && !isCancelled ? "animate-pulse" : ""}`}
+              >
+                {stage.icon}
+              </div>
+
+              <p className={`text-xs mt-2 text-center font-medium ${isCancelled ? "text-red-600" : ""}`}>
+                {stage.label}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      {isCancelled && (
+        <p className="text-sm text-red-600 mt-2 font-semibold">
+          This order has been cancelled.
+        </p>
+      )}
+    </div>
+  );
+};
+
+  // ================================================================
+
   // ================= UI =================
   return (
     <section className="min-h-screen bg-[#F3F4F6] p-10">
@@ -118,11 +184,13 @@ export default function Orders() {
                   </div>
                 </div>
 
-                {/* ===== Order Details ===== */}
+                {/* ===== Order Details (أضفت الـ Stepper هنا فقط) ===== */}
                 {showMoreOrders[order.id] && (
                   <div className="mt-4">
+                    <OrderStatusStepper currentStatus={order.status} />
+
                     {order.orderItems?.length > 0 ? (
-                      <ul className="list-disc list-inside">
+                      <ul className="list-disc list-inside mt-4">
                         {order.orderItems.map((item, i) => (
                           <li key={i}>
                             {getMedicineName(item.medicineID)} – Qty:{" "}
