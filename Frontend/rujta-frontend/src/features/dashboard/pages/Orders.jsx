@@ -3,7 +3,6 @@ import {
   Search,
   Filter,
   Download,
-  Edit,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -33,37 +32,22 @@ export default function Orders() {
   const [filterCustomer, setFilterCustomer] = useState("");
   const [filterDate, setFilterDate] = useState("");
 
+  // ✅ Fetch orders on mount
   useEffect(() => {
     fetchPharmacy();
   }, [fetchPharmacy]);
 
-useEffect(() => {
-  const interval = setInterval(() => {
-    if (document.visibilityState === "visible") {
-      fetchPharmacy();
-    }
-  }, 20000);
-
-  return () => clearInterval(interval);
-}, [fetchPharmacy]);
-
-
+  // ✅ Error handling
   useEffect(() => {
     if (error) {
       const errorMessage =
         error?.message ||
         (typeof error === "string" ? error : "An unexpected error occurred");
       toast.error(errorMessage);
-      if (
-        errorMessage.includes("modified by another user") ||
-        errorMessage.includes("concurrency conflicts")
-      ) {
-        toast.info("Refreshing the page automatically...");
-        fetchPharmacy();
-      }
     }
-  }, [error, fetchPharmacy]);
+  }, [error]);
 
+  // ✅ Filter orders
   const filtered = useMemo(() => {
     let list = [...orders];
 
@@ -73,18 +57,19 @@ useEffect(() => {
         (o) =>
           o.userName?.toLowerCase().includes(s) ||
           o.pharmacyName?.toLowerCase().includes(s) ||
-          o.id?.toString().includes(s),
+          o.id?.toString().includes(s)
       );
     }
+
     if (filterOrderId)
       list = list.filter((o) => o.id?.toString().includes(filterOrderId));
     if (filterCustomer)
       list = list.filter((o) =>
-        o.userName?.toLowerCase().includes(filterCustomer.toLowerCase()),
+        o.userName?.toLowerCase().includes(filterCustomer.toLowerCase())
       );
     if (filterDate)
       list = list.filter(
-        (o) => new Date(o.orderDate).toLocaleDateString("en-CA") === filterDate,
+        (o) => new Date(o.orderDate).toLocaleDateString("en-CA") === filterDate
       );
 
     return list;
@@ -111,6 +96,7 @@ useEffect(() => {
     }
   };
 
+  // ✅ Export filtered orders to CSV
   const handleExport = () => {
     const rows = [
       ["Order ID", "User", "Pharmacy", "Date", "Total", "Status"],
@@ -137,27 +123,18 @@ useEffect(() => {
     URL.revokeObjectURL(url);
   };
 
-  const handlePrevPage = () => {
-    if (page > 1) setPage(page - 1);
-  };
+  // ✅ Pagination
+  const handlePrevPage = () => page > 1 && setPage(page - 1);
+  const handleNextPage = () => page < totalPages && setPage(page + 1);
+  const handlePageClick = (p) => setPage(p);
 
-  const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
-  };
-
-  const handlePageClick = (p) => {
-    setPage(p);
-  };
-
-  const handleMutation = async (
-    mutationFn,
-    id,
-    refreshFn,
-    successMessagePrefix,
-  ) => {
-    const res = await mutationFn(id, refreshFn);
+  // ✅ Mutation wrapper
+  const handleMutation = async (mutationFn, id, successMessagePrefix) => {
+    const res = await mutationFn(id);
     if (res?.success) {
       toast.success(res.message || `${successMessagePrefix} successfully`);
+    } else {
+      toast.error(res?.message);
     }
   };
 
@@ -174,13 +151,15 @@ useEffect(() => {
           title="Pending Orders"
           value={
             orders.filter((o) =>
-              ["Pending", "Accepted", "Processing"].includes(o.status),
+              ["Pending", "Accepted", "Processing"].includes(o.status)
             ).length
           }
         />
         <StatCard
           title="Cancelled Orders"
-          value={orders.filter((o) => o.status?.startsWith("Cancelled")).length}
+          value={orders.filter((o) =>
+            o.status?.startsWith("Cancelled")
+          ).length}
         />
       </div>
 
@@ -281,7 +260,7 @@ useEffect(() => {
                   <td className="px-6 py-4 text-center">
                     <span
                       className={`px-3 py-1 rounded-full text-xs ${statusStyle(
-                        o.status,
+                        o.status
                       )}`}
                     >
                       {o.status}
@@ -292,12 +271,7 @@ useEffect(() => {
                       <button
                         disabled={loading}
                         onClick={() =>
-                          handleMutation(
-                            accept,
-                            o.id,
-                            fetchPharmacy,
-                            "Order accepted",
-                          )
+                          handleMutation(accept, o.id, "Order accepted")
                         }
                         className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200"
                       >
@@ -308,12 +282,7 @@ useEffect(() => {
                       <button
                         disabled={loading}
                         onClick={() =>
-                          handleMutation(
-                            process,
-                            o.id,
-                            fetchPharmacy,
-                            "Order processed",
-                          )
+                          handleMutation(process, o.id, "Order processed")
                         }
                         className="px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
                       >
@@ -327,8 +296,7 @@ useEffect(() => {
                           handleMutation(
                             outForDelivery,
                             o.id,
-                            fetchPharmacy,
-                            "Order out for delivery",
+                            "Order out for delivery"
                           )
                         }
                         className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200"
@@ -340,12 +308,7 @@ useEffect(() => {
                       <button
                         disabled={loading}
                         onClick={() =>
-                          handleMutation(
-                            deliver,
-                            o.id,
-                            fetchPharmacy,
-                            "Order delivered",
-                          )
+                          handleMutation(deliver, o.id, "Order delivered")
                         }
                         className="px-3 py-1 text-xs rounded-full bg-green-200 text-green-800 hover:bg-green-300"
                       >
@@ -360,8 +323,7 @@ useEffect(() => {
                             handleMutation(
                               cancelByPharmacy,
                               o.id,
-                              fetchPharmacy,
-                              "Order cancelled",
+                              "Order cancelled"
                             )
                           }
                           className="px-3 py-1 text-xs rounded-full bg-red-100 text-red-600 hover:bg-red-200"
@@ -377,7 +339,7 @@ useEffect(() => {
         </table>
       </div>
 
-      {/* pagination */}
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-4">
           <button

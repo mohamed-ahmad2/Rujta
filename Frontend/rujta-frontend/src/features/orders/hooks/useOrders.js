@@ -1,4 +1,3 @@
-// src/features/orders/hook/useOrders.js
 import { useState, useCallback } from "react";
 import {
   getAllOrders,
@@ -17,6 +16,8 @@ import {
   cancelOrderByPharmacy,
 } from "../api/ordersApi";
 
+import { useOrdersSignalR } from "./useOrdersSignalR";
+
 export const useOrders = () => {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -24,21 +25,10 @@ export const useOrders = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchAll = useCallback(async () => fetchOrders(getAllOrders), []);
-  const fetchUser = useCallback(async () => fetchOrders(getUserOrders), []);
-  const fetchPharmacy = useCallback(
-    async () => fetchOrders(getPharmacyOrders),
-    []
-  );
+  // 🔥 Activate SignalR real-time updates
+  useOrdersSignalR(setOrders);
 
-  const fetchById = useCallback(
-    async (id) => fetchSingle(getOrderById, id, setSelectedOrder),
-    []
-  );
-  const fetchDetailsById = useCallback(
-    async (id) => fetchSingle(getOrderDetails, id, setDetails),
-    []
-  );
+  /* ================= FETCH ================= */
 
   const fetchOrders = async (fetchFn) => {
     setLoading(true);
@@ -70,32 +60,29 @@ export const useOrders = () => {
     }
   };
 
-  const create = async (data, refreshFn = fetchUser) =>
-    runMutation(createOrder, data, refreshFn);
-  const update = async (id, data, refreshFn = fetchUser) =>
-    runMutation(() => updateOrder(id, data), null, refreshFn);
-  const remove = async (id, refreshFn = fetchUser) =>
-    runMutation(() => deleteOrder(id), null, refreshFn);
+  const fetchAll = useCallback(() => fetchOrders(getAllOrders), []);
+  const fetchUser = useCallback(() => fetchOrders(getUserOrders), []);
+  const fetchPharmacy = useCallback(() => fetchOrders(getPharmacyOrders), []);
 
-  const accept = (id, refreshFn = fetchUser) =>
-    runMutation(() => acceptOrder(id), null, refreshFn);
-  const process = (id, refreshFn = fetchUser) =>
-    runMutation(() => processOrder(id), null, refreshFn);
-  const _outForDelivery = (id, refreshFn = fetchUser) =>
-    runMutation(() => outForDelivery(id), null, refreshFn);
-  const deliver = (id, refreshFn = fetchUser) =>
-    runMutation(() => markAsDelivered(id), null, refreshFn);
-  const cancelByUser = (id, refreshFn = fetchUser) =>
-    runMutation(() => cancelOrderByUser(id), null, refreshFn);
-  const cancelByPharmacy = (id, refreshFn = fetchPharmacy) =>
-    runMutation(() => cancelOrderByPharmacy(id), null, refreshFn);
+  const fetchById = useCallback(
+    (id) => fetchSingle(getOrderById, id, setSelectedOrder),
+    []
+  );
 
-  const runMutation = async (fn, data = null, refreshFn) => {
+  const fetchDetailsById = useCallback(
+    (id) => fetchSingle(getOrderDetails, id, setDetails),
+    []
+  );
+
+  /* ================= MUTATIONS ================= */
+
+  const runMutation = async (fn, data = null) => {
     setLoading(true);
     setError(null);
     try {
       const res = data ? await fn(data) : await fn();
-      if (refreshFn) await refreshFn();
+      // ❌ No manual refresh
+      // SignalR will update state automatically
       return res?.data || null;
     } catch (err) {
       setError(err.response?.data || err.message);
@@ -104,6 +91,24 @@ export const useOrders = () => {
       setLoading(false);
     }
   };
+
+  const create = (data) => runMutation(createOrder, data);
+  const update = (id, data) => runMutation(() => updateOrder(id, data));
+  const remove = (id) => runMutation(() => deleteOrder(id));
+
+  const accept = (id) => runMutation(() => acceptOrder(id));
+  const process = (id) => runMutation(() => processOrder(id));
+  const outForDeliveryMutation = (id) =>
+    runMutation(() => outForDelivery(id));
+  const deliver = (id) => runMutation(() => markAsDelivered(id));
+
+  const cancelByUser = (id) =>
+    runMutation(() => cancelOrderByUser(id));
+
+  const cancelByPharmacy = (id) =>
+    runMutation(() => cancelOrderByPharmacy(id));
+
+  /* ================= RETURN ================= */
 
   return {
     orders,
@@ -124,7 +129,7 @@ export const useOrders = () => {
 
     accept,
     process,
-    outForDelivery: _outForDelivery,
+    outForDelivery: outForDeliveryMutation,
     deliver,
     cancelByUser,
     cancelByPharmacy,
