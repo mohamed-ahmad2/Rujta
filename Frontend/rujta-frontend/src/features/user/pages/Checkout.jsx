@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
 import { useOrders } from "../../orders/hooks/useOrders";
 import { useAuth } from "../../auth/hooks/useAuth";
-import useAddress from "../../address/hook/useAddress"; // Assuming the hook is in this path based on the provided useAddress.js
+import useAddress from "../../address/hook/useAddress";
 import apiClient from "../../../shared/api/apiClient";
+
 const Checkout = () => {
   const [cart, setCart] = useState([]);
   const { pharmacies, loading, error, fetchPharmacies } = usePharmacies();
@@ -16,9 +17,10 @@ const Checkout = () => {
     fetchUserAddresses,
     create: createAddress,
   } = useAddress();
-  const [pharmaciesRange, setPharmaciesRange] = useState(5); // Starting with 5 as requested, not 0
+
+  const [pharmaciesRange, setPharmaciesRange] = useState(5);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
-  const [showAddressSelection, setShowAddressSelection] = useState(true); // New state to show address form first
+  const [showAddressSelection, setShowAddressSelection] = useState(true);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [newAddressForm, setNewAddressForm] = useState({
@@ -32,11 +34,11 @@ const Checkout = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
-  const [selectedPharmacies, setSelectedPharmacies] = useState([]); // New state for selected pharmacies
-  // Show location prompt if needed
+  const [selectedPharmacies, setSelectedPharmacies] = useState([]);
+  const [creatingOrder, setCreatingOrder] = useState(false);
+
   useEffect(() => {
-    const errorMessage =
-      typeof error === "string" ? error : error?.message || "";
+    const errorMessage = typeof error === "string" ? error : error?.message || "";
     if (
       errorMessage.includes("User location not set") ||
       errorMessage.includes("location not set")
@@ -44,14 +46,15 @@ const Checkout = () => {
       setShowLocationPrompt(true);
     }
   }, [error]);
-  // Load cart from localStorage and fetch user addresses
+
   useEffect(() => {
     if (!user) return;
     const key = `cart_${user.email}`;
     const stored = JSON.parse(localStorage.getItem(key)) || [];
     setCart(stored);
-    fetchUserAddresses(); // Fetch user's addresses on load
+    fetchUserAddresses();
   }, [user]);
+
   const handleSetLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -66,24 +69,26 @@ const Checkout = () => {
         },
         (geoErr) => {
           console.error("Geolocation error:", geoErr);
-        },
+        }
       );
     }
   };
+
   const handleNewAddressChange = (e) => {
     const { name, value } = e.target;
     setNewAddressForm((prev) => ({ ...prev, [name]: value }));
   };
+
   const handleAddNewAddress = async () => {
     try {
       await createAddress(newAddressForm);
-      await fetchUserAddresses(); // Refresh addresses after adding new one
+      await fetchUserAddresses();
       setShowNewAddressForm(false);
     } catch (err) {
       console.error("Failed to add new address:", err);
     }
   };
-  // New function to confirm address and fetch pharmacies
+
   const handleConfirmAddress = async () => {
     if (!selectedAddressId) {
       alert("Please select a delivery address!");
@@ -94,12 +99,13 @@ const Checkout = () => {
         id: item.id,
         quantity: item.quantity,
       }));
-      await fetchPharmacies(dtoItems, selectedAddressId, pharmaciesRange); // Fetch pharmacies with selected address
+      await fetchPharmacies(dtoItems, selectedAddressId, pharmaciesRange);
     }
-    setShowAddressSelection(false); // Hide address selection and show pharmacies
+    setShowAddressSelection(false);
   };
+
   const handleExpandRange = async () => {
-    const newRange = pharmaciesRange + 5; // Adding +5 each time as per the button label
+    const newRange = pharmaciesRange + 5;
     setPharmaciesRange(newRange);
     if (!selectedAddressId || cart.length === 0) return;
     const dtoItems = cart.map((item) => ({
@@ -108,15 +114,15 @@ const Checkout = () => {
     }));
     await fetchPharmacies(dtoItems, selectedAddressId, newRange);
   };
-  // Toggle pharmacy selection
+
   const handleTogglePharmacy = (pharmacyId) => {
     setSelectedPharmacies((prev) =>
       prev.includes(pharmacyId)
         ? prev.filter((id) => id !== pharmacyId)
-        : [...prev, pharmacyId],
+        : [...prev, pharmacyId]
     );
   };
-  // Modified to handle multiple orders in one go
+
   const handleConfirmOrders = async () => {
     if (!cart || cart.length === 0) {
       alert("Cart is empty!");
@@ -130,20 +136,26 @@ const Checkout = () => {
       alert("No pharmacies selected!");
       return;
     }
+
+    setCreatingOrder(true);
+
     const orderDtos = [];
     for (const pharmacyId of selectedPharmacies) {
       const selectedPharmacy = pharmacies.find(
-        (p) => p.pharmacyId === pharmacyId,
+        (p) => p.pharmacyId === pharmacyId
       );
       if (!selectedPharmacy) continue;
+
       const availableItems = selectedPharmacy.foundMedicines.filter(
-        (m) => m.isQuantityEnough,
+        (m) => m.isQuantityEnough
       );
       if (availableItems.length === 0) continue;
+
       const orderItems = availableItems.map((m) => ({
         MedicineID: m.medicineId,
         Quantity: m.requestedQuantity,
       }));
+
       const orderDto = {
         PharmacyID: pharmacyId,
         DeliveryAddressId: selectedAddressId,
@@ -151,26 +163,32 @@ const Checkout = () => {
       };
       orderDtos.push(orderDto);
     }
+
     if (orderDtos.length === 0) {
       alert("No valid orders to create!");
+      setCreatingOrder(false);
       return;
     }
+
     console.log("Creating orders with DTOs:", orderDtos);
+
     try {
       const results = await create(orderDtos);
       console.log("Create orders result:", results);
+
       if (results && results.length > 0) {
         alert(`Successfully created ${results.length} order(s)!`);
-        // Remove ordered items from cart (aggregate across all orders)
+
         const orderedIdsSet = new Set();
         orderDtos.forEach((dto) => {
           dto.OrderItems.forEach((item) => orderedIdsSet.add(item.MedicineID));
         });
+
         const updatedCart = cart.filter((item) => !orderedIdsSet.has(item.id));
         setCart(updatedCart);
         const key = `cart_${user.email}`;
         localStorage.setItem(key, JSON.stringify(updatedCart));
-        // Clear selections
+
         setSelectedPharmacies([]);
       } else {
         alert("Failed to create orders!");
@@ -178,20 +196,26 @@ const Checkout = () => {
     } catch (err) {
       console.error("Error while creating orders:", err);
       alert("Failed to create orders! See console for details.");
+    } finally {
+      setCreatingOrder(false);
     }
   };
-const handlePaymentConfirm = async () => {
-  if (paymentMethod === "Cash") {
+
+  const handlePaymentConfirm = async () => {
     setShowPaymentModal(false);
-    setTimeout(() => {
-      handleConfirmOrders();
-    }, 0);
-  } else {
-    // Online Payment
-    window.location.href = `/user/payment`; // بدون pharmacyId
-  }
-};
+
+    if (paymentMethod === "Cash") {
+      await handleConfirmOrders();
+    } else {
+      // Online Payment
+      // If you want to create orders before redirect, uncomment next line:
+      // await handleConfirmOrders();
+      window.location.href = `/user/payment`;
+    }
+  };
+
   const errorMessage = typeof error === "string" ? error : error?.message || "";
+
   return (
     <div className="w-screen h-screen p-6 bg-gray-100 flex justify-center items-center">
       <div className="w-[1150px] h-[700px] bg-white shadow-xl rounded-3xl overflow-hidden flex">
@@ -205,6 +229,7 @@ const handlePaymentConfirm = async () => {
             }}
           ></div>
         </div>
+
         {/* RIGHT SIDE */}
         <div className="w-1/2 h-full p-8 overflow-y-auto bg-white">
           <div className="flex items-center justify-between mb-6">
@@ -212,6 +237,7 @@ const handlePaymentConfirm = async () => {
               Pharmacy search & ranking
             </h1>
           </div>
+
           {showLocationPrompt && (
             <div className="mb-6">
               <p className="text-yellow-600 mb-2">
@@ -225,18 +251,20 @@ const handlePaymentConfirm = async () => {
               </button>
             </div>
           )}
+
           {showAddressSelection ? (
-            // Show address selection form first
             <div className="bg-white p-8 rounded-2xl w-full shadow-2xl max-h-[80vh] overflow-y-auto">
               <h2 className="text-2xl font-bold mb-6 text-gray-800">
                 Select Delivery Address
               </h2>
+
               {addressesLoading && (
                 <p className="text-gray-600 mb-4">Loading addresses...</p>
               )}
               {addressesError && (
                 <p className="text-red-500 mb-4">{addressesError}</p>
               )}
+
               {!showNewAddressForm ? (
                 <div className="flex flex-col gap-4 mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -257,11 +285,13 @@ const handlePaymentConfirm = async () => {
                       </option>
                     ))}
                   </select>
+
                   {addresses.length === 0 && (
                     <p className="text-gray-600">
                       No addresses found. Please add a new one.
                     </p>
                   )}
+
                   <button
                     onClick={() => setShowNewAddressForm(true)}
                     className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition mt-2"
@@ -323,6 +353,7 @@ const handlePaymentConfirm = async () => {
                       className="border border-gray-300 p-2 rounded-lg w-full focus:border-secondary focus:ring-1 focus:ring-secondary transition"
                     />
                   </div>
+
                   <label className="flex items-center gap-2 text-sm text-gray-700">
                     <input
                       type="checkbox"
@@ -338,6 +369,7 @@ const handlePaymentConfirm = async () => {
                     />
                     Set as Default
                   </label>
+
                   <button
                     onClick={handleAddNewAddress}
                     className="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-600 transition mt-2"
@@ -346,6 +378,7 @@ const handlePaymentConfirm = async () => {
                   </button>
                 </div>
               )}
+
               <div className="flex justify-end gap-4 mt-6">
                 <button
                   onClick={() => setShowAddressSelection(false)}
@@ -365,16 +398,17 @@ const handlePaymentConfirm = async () => {
               </div>
             </div>
           ) : (
-            // Show pharmacies after address selection
             <>
               {loading && <p>Loading pharmacies...</p>}
               {errorMessage && (
                 <p className="text-red-500 mb-4">{errorMessage}</p>
               )}
+
               <div className="space-y-6">
                 {pharmacies.map((p, i) => {
                   const isExpanded = expandedPharmacies[p.pharmacyId] || false;
                   const isSelected = selectedPharmacies.includes(p.pharmacyId);
+
                   return (
                     <div
                       key={p.pharmacyId}
@@ -416,10 +450,9 @@ const handlePaymentConfirm = async () => {
                               }
                               className="text-secondary hover:text-secondary-dark hover:underline text-sm font-medium mb-2 transition-colors"
                             >
-                              {isExpanded
-                                ? "Hide Details"
-                                : "Show More Details"}
+                              {isExpanded ? "Hide Details" : "Show More Details"}
                             </button>
+
                             {isExpanded && (
                               <>
                                 <p className="text-sm font-medium mt-3">
@@ -432,13 +465,8 @@ const handlePaymentConfirm = async () => {
                                       colorClass = "text-purple-600";
                                     }
                                     return (
-                                      <li
-                                        key={m.medicineId}
-                                        className={colorClass}
-                                      >
-                                        {m.medicineName} – Requested:{" "}
-                                        {m.requestedQuantity}, Available:{" "}
-                                        {m.availableQuantity}
+                                      <li key={m.medicineId} className={colorClass}>
+                                        {m.medicineName} – Requested: {m.requestedQuantity}, Available: {m.availableQuantity}
                                         {!m.isQuantityEnough && " (Not enough)"}
                                       </li>
                                     );
@@ -450,8 +478,7 @@ const handlePaymentConfirm = async () => {
                                 <ul className="list-disc pl-5 text-sm text-red-600">
                                   {p.notFoundMedicines.map((m) => (
                                     <li key={m.medicineId}>
-                                      {m.medicineName} – Requested:{" "}
-                                      {m.requestedQuantity}
+                                      {m.medicineName} – Requested: {m.requestedQuantity}
                                     </li>
                                   ))}
                                 </ul>
@@ -459,94 +486,101 @@ const handlePaymentConfirm = async () => {
                             )}
                           </div>
                         </div>
+
                         <button
-                              onClick={() => {
-                                setSelectedPharmacyForPayment(p.pharmacyId);
-                                setSelectedPharmacies([p.pharmacyId]);
-                                setShowPaymentModal(true);
-                              }}
-                              className="bg-secondary text-white px-5 py-2 rounded-xl font-medium"
-                            >
-                              Order
-                            </button>
+                          onClick={() => {
+                            setSelectedPharmacyForPayment(p.pharmacyId);
+                            setSelectedPharmacies([p.pharmacyId]);
+                            setShowPaymentModal(true);
+                          }}
+                          className="bg-secondary text-white px-5 py-2 rounded-xl font-medium"
+                        >
+                          Order
+                        </button>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              {/* Moved the Expand button to the bottom, after the pharmacies list, for better UX (e.g., user sees results first then expands if needed). Adjusted shape to rounded-lg for a softer look, increased padding for better touch target. */}
+
               <div className="flex justify-center mt-6 gap-4">
                 <button
                   onClick={handleExpandRange}
-                  disabled={loading || showAddressSelection}
-                  className={`px-6 py-3 rounded-lg font-medium transition
-                    ${
-                      loading || showAddressSelection
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-secondary text-white hover:bg-secondary-dark"
-                    }`}
+                  disabled={loading || showAddressSelection || creatingOrder}
+                  className={`px-6 py-3 rounded-lg font-medium transition ${
+                    loading || showAddressSelection || creatingOrder
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-secondary text-white hover:bg-secondary-dark"
+                  }`}
                 >
                   Expand (+5)
                 </button>
+
                 <button
                   onClick={() => setShowPaymentModal(true)}
-                  disabled={loading || selectedPharmacies.length === 0}
-                  className={`px-6 py-3 rounded-lg font-medium transition
-                    ${
-                      loading || selectedPharmacies.length === 0
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-secondary text-white hover:bg-secondary-dark"
-                    }`}
+                  disabled={loading || selectedPharmacies.length === 0 || creatingOrder}
+                  className={`px-6 py-3 rounded-lg font-medium transition ${
+                    loading || selectedPharmacies.length === 0 || creatingOrder
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-secondary text-white hover:bg-secondary-dark"
+                  }`}
                 >
-                  Order Selected ({selectedPharmacies.length})
+                  {creatingOrder
+                    ? "Processing..."
+                    : `Order Selected (${selectedPharmacies.length})`}
                 </button>
               </div>
             </>
           )}
         </div>
       </div>
+
       {showPaymentModal && (
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-    <div className="bg-white w-[400px] p-6 rounded-2xl shadow-xl">
-      <h2 className="text-xl font-semibold mb-4">Select Payment Method</h2>
-      <div className="flex flex-col gap-3">
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            value="Cash"
-            checked={paymentMethod === "Cash"}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-          />
-          Cash on Delivery
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            value="Online"
-            checked={paymentMethod === "Online"}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-          />
-          Online Payment (Visa / Paymob)
-        </label>
-      </div>
-      <div className="flex justify-end gap-3 mt-6">
-        <button
-          onClick={() => setShowPaymentModal(false)}
-          className="px-4 py-2 bg-gray-300 rounded-lg"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handlePaymentConfirm}
-          className="px-4 py-2 bg-secondary text-white rounded-lg"
-        >
-          Continue
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+          <div className="bg-white w-[400px] p-6 rounded-2xl shadow-xl">
+            <h2 className="text-xl font-semibold mb-4">Select Payment Method</h2>
+            <div className="flex flex-col gap-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  value="Cash"
+                  checked={paymentMethod === "Cash"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                />
+                Cash on Delivery
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  value="Online"
+                  checked={paymentMethod === "Online"}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                />
+                Online Payment (Visa / Paymob)
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="px-4 py-2 bg-gray-300 rounded-lg"
+                disabled={creatingOrder}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePaymentConfirm}
+                className="px-4 py-2 bg-secondary text-white rounded-lg"
+                disabled={creatingOrder}
+              >
+                {creatingOrder ? "Processing..." : "Continue"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
 export default Checkout;

@@ -40,7 +40,7 @@ apiClient.interceptors.response.use(
             "Authorization"
           ] = `Bearer ${newAccessToken}`;
 
-          // تحديث الهيدر للطلب الحالي
+          // تحديث الهيدر للطلب الحاليازاي اجس
           originalRequest.headers[
             "Authorization"
           ] = `Bearer ${newAccessToken}`;
