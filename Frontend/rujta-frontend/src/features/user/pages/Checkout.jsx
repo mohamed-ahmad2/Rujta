@@ -4,7 +4,7 @@ import { useOrders } from "../../orders/hooks/useOrders";
 import { useAuth } from "../../auth/hooks/useAuth";
 import useAddress from "../../address/hook/useAddress"; // Assuming the hook is in this path based on the provided useAddress.js
 import apiClient from "../../../shared/api/apiClient";
-
+import PharmacyMap from "../components/PharmacyMap";
 const Checkout = () => {
   const [cart, setCart] = useState([]);
   const { pharmacies, loading, error, fetchPharmacies } = usePharmacies();
@@ -30,6 +30,7 @@ const Checkout = () => {
     City: "",
     Governorate: "",
     IsDefault: false,
+    
   });
 
   const [expandedPharmacies, setExpandedPharmacies] = useState({});
@@ -56,6 +57,17 @@ const Checkout = () => {
 
     fetchUserAddresses(); // Fetch user's addresses on load
   }, [user]);
+
+
+  const [selectedPharmacy, setSelectedPharmacy] = useState(null);
+
+
+
+  const userLocation =
+  user?.latitude && user?.longitude
+    ? { lat: user.latitude, lng: user.longitude }
+    : null;
+
 
   const handleSetLocation = () => {
     if (navigator.geolocation) {
@@ -189,18 +201,30 @@ const Checkout = () => {
 
   const errorMessage = typeof error === "string" ? error : error?.message || "";
 
+  const minPricesByMedicine = {};
+pharmacies.forEach((pharmacy) => {
+  pharmacy.foundMedicines.forEach((m) => {
+    if (!minPricesByMedicine[m.medicineId] || m.price < minPricesByMedicine[m.medicineId]) {
+      minPricesByMedicine[m.medicineId] = m.price;
+    }
+  });
+});
+
+
   return (
     <div className="w-screen h-screen p-6 bg-gray-100 flex justify-center items-center">
       <div className="w-[1150px] h-[700px] bg-white shadow-xl rounded-3xl overflow-hidden flex">
         {/* LEFT SIDE */}
         <div className="w-1/2 h-full relative">
-          <div
-            className="absolute inset-0 bg-cover bg-center brightness-95"
-            style={{
-              backgroundImage:
-                "url('https://static1.makeuseofimages.com/wordpress/wp-content/uploads/2023/05/google-maps-icon-on-map.jpg')",
-            }}
-          ></div>
+         <div className="absolute inset-0">
+  <PharmacyMap
+  userLocation={userLocation}
+  pharmacies={pharmacies}
+  selectedPharmacy={selectedPharmacy}
+/>
+
+</div>
+
         </div>
 
         {/* RIGHT SIDE */}
@@ -385,9 +409,16 @@ const Checkout = () => {
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="text-lg font-semibold">
-                            {i + 1}. {p.name}
-                          </p>
+                          <p className="text-lg font-semibold flex items-center gap-2">
+  {i + 1}. {p.name}
+
+  {i === 0 && (
+    <span className="text-green-600 text-sm font-semibold">
+      ⭐ Best Choice
+    </span>
+  )}
+</p>
+
                           <p className="text-gray-500 text-sm">
                             Lat: {p.latitude.toFixed(4)}, Lng:{" "}
                             {p.longitude.toFixed(4)}, Distance:{" "}
@@ -414,48 +445,56 @@ const Checkout = () => {
                           >
                             {isExpanded ? "Hide Details" : "Show More Details"}
                           </button>
-                          {isExpanded && (
-                            <>
-                              <p className="text-sm font-medium mt-3">
-                                Found Medicines:
-                              </p>
-                              <ul className="list-disc pl-5 text-sm">
-                                {p.foundMedicines.map((m) => {
-                                  let colorClass = "text-green-600";
+                          
+                         {isExpanded && (
+  <>
+    <p className="text-sm font-medium mt-3">Found Medicines:</p>
+    <ul className="list-disc pl-5 text-sm">
+  {p.foundMedicines.map((m) => {
+    const colorClass = "text-green-600"; // اللون الأساسي للأدوية
+    const isCheapest = m.price === minPricesByMedicine[m.medicineId];
+    const priceText = m.price ? `$${m.price.toFixed(2)}` : "";
+    const specialOrderText = !m.isQuantityEnough ? " (Special Order)" : "";
 
-                                  if (!m.isQuantityEnough) {
-                                    colorClass = "text-purple-600";
-                                  }
+    return (
+      <li key={m.medicineId} className={colorClass}>
+        {m.medicineName} – Requested: {m.requestedQuantity}, Available: {m.availableQuantity}
+        {priceText && (
+          <span className="ml-1 text-gray-800 font-medium">
+            , Price: {priceText}
+          </span>
+        )}
+        {isCheapest && (
+          <span className="ml-1 text-yellow-400 font-bold">⭐ Cheapest</span>
+        )}
+        {specialOrderText}
+      </li>
+    );
+  })}
+</ul>
 
-                                  return (
-                                    <li
-                                      key={m.medicineId}
-                                      className={colorClass}
-                                    >
-                                      {m.medicineName} – Requested:{" "}
-                                      {m.requestedQuantity}, Available:{" "}
-                                      {m.availableQuantity}
-                                      {!m.isQuantityEnough && " (Not enough)"}
-                                    </li>
-                                  );
-                                })}
-                              </ul>
 
-                              <p className="text-sm font-medium mt-3">
-                                Not Found Medicines:
-                              </p>
-                              <ul className="list-disc pl-5 text-sm text-red-600">
-                                {p.notFoundMedicines.map((m) => (
-                                  <li key={m.medicineId}>
-                                    {m.medicineName} – Requested:{" "}
-                                    {m.requestedQuantity}
-                                  </li>
-                                ))}
-                              </ul>
+    <p className="text-sm font-medium mt-3">Not Found Medicines:</p>
+    <ul className="list-disc pl-5 text-sm text-red-600">
+      {p.notFoundMedicines.map((m) => (
+        <li key={m.medicineId}>
+          {m.medicineName} – Requested: {m.requestedQuantity} (Special Order)
+        </li>
+      ))}
+    </ul>
+  </>
+)}
 
-                            </>
-                          )}
+
                         </div>
+                        
+                        <button
+  onClick={() => setSelectedPharmacy(p)}
+  className="bg-gray-200 text-gray-800 px-3 py-1 rounded-lg font-medium hover:bg-gray-300 transition ml-2"
+>
+  Show Route
+</button>
+
 
                         <button
                           onClick={() => handleConfirmOrder(p.pharmacyId)}

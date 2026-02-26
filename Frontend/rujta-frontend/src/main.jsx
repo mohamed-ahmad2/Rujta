@@ -4,6 +4,11 @@ import { BrowserRouter } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google"; 
 import "./index.css";
 import App from "./App.jsx";
+import "./leafletFix";
+import "leaflet/dist/leaflet.css";
+
+
+
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
