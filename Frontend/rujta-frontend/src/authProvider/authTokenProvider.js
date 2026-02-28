@@ -2,6 +2,10 @@ let listeners = [];
 
 export const subscribeTokenChange = (callback) => {
   listeners.push(callback);
+
+  return () => {
+    listeners = listeners.filter((cb) => cb !== callback);
+  };
 };
 
 export const getAccessToken = () => {
@@ -10,10 +14,13 @@ export const getAccessToken = () => {
 
 export const setAccessToken = (token) => {
   localStorage.setItem("accessToken", token);
-  // notify all subscribers
   listeners.forEach((cb) => cb(token));
 };
 
-export const removeAccessToken = () => {
+// ⭐ IMPORTANT FIX
+export const removeAccessToken = async () => {
   localStorage.removeItem("accessToken");
+
+  // wait ALL cleanup listeners
+  await Promise.all(listeners.map((cb) => Promise.resolve(cb(null))));
 };

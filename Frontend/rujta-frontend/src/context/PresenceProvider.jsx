@@ -1,17 +1,58 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { PresenceContext } from "./PresenceContext";
 import * as signalR from "@microsoft/signalr";
 import { useAuth } from "../features/auth/hooks/useAuth";
-import { getAccessToken } from "../authProvider/authTokenProvider";
+import {
+  getAccessToken,
+  subscribeTokenChange,
+} from "../authProvider/authTokenProvider";
 
 export const PresenceProvider = ({ children }) => {
   const { user, loading } = useAuth();
+
   const [connection, setConnection] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
 
-  // Function to start SignalR connection
+  const connectionRef = useRef(null);
+
+  useEffect(() => {
+    connectionRef.current = connection;
+  }, [connection]);
+
+  // ================= CLEANUP =================
+  const cleanupConnection = useCallback(async () => {
+    const conn = connectionRef.current;
+    if (!conn) return;
+
+    try {
+      console.log("Stopping SignalR presence connection...");
+      conn.off();
+      await conn.stop();
+
+      console.log("✅ SignalR presence disconnected");
+    } catch (err) {
+      console.error("SignalR stop error:", err);
+    }
+
+    setConnection(null);
+    setOnlineUsers([]);
+  }, []);
+
+  // logout listener
+  useEffect(() => {
+    const unsubscribe = subscribeTokenChange(async (token) => {
+      if (token === null) {
+        await cleanupConnection();
+      }
+    });
+
+    return unsubscribe;
+  }, [cleanupConnection]);
+
+  // ================= START =================
   const startHubConnection = useCallback(async () => {
     if (!user || loading) return;
+
     const role = user.role;
     if (role !== "Pharmacist" && role !== "PharmacyAdmin") return;
 
@@ -20,70 +61,32 @@ export const PresenceProvider = ({ children }) => {
         accessTokenFactory: () => getAccessToken(),
         withCredentials: true,
       })
-      .withAutomaticReconnect([0, 2000, 5000, 10000]) // reconnect intervals
+      .withAutomaticReconnect([0, 2000, 5000, 10000])
       .build();
 
-    // Handlers for online/offline events (for PharmacyAdmin)
     if (role === "PharmacyAdmin") {
-      hubConnection.on("PharmacistOnline", (userId) => {
-        setOnlineUsers((prev) => [...prev, userId]);
-      });
-      hubConnection.on("PharmacistOffline", (userId) => {
-        setOnlineUsers((prev) => prev.filter((id) => id !== userId));
-      });
+      hubConnection.on("PharmacistOnline", (userId) =>
+        setOnlineUsers((prev) =>
+          prev.includes(userId) ? prev : [...prev, userId],
+        ),
+      );
+
+      hubConnection.on("PharmacistOffline", (userId) =>
+        setOnlineUsers((prev) => prev.filter((id) => id !== userId)),
+      );
     }
 
-    // Function to attempt start with retry for 429
-    const tryStart = async () => {
-      try {
-        await hubConnection.start();
-        console.log("SignalR presence connected");
+    await hubConnection.start();
 
-        // Notify backend that current user is online
-        if (role === "Pharmacist") {
-          console.log("Pharmacist SignalR connection established");
-        }
-      } catch (err) {
-        if (err.statusCode === 429) {
-          console.warn("Too many requests, retrying in 5s...");
-          setTimeout(tryStart, 5000);
-        } else {
-          console.error("SignalR presence connection error:", err);
-        }
-      }
-    };
+    console.log("✅ SignalR presence connected");
 
-    tryStart();
     setConnection(hubConnection);
-
-    return hubConnection;
   }, [user, loading]);
 
-  // Start connection when user logs in
   useEffect(() => {
-    if (!user || loading) return;
-
-    let hubConn;
-    startHubConnection().then((conn) => {
-      hubConn = conn;
-    });
-
-    // Cleanup on logout / unmount
-    return () => {
-      if (hubConn) {
-        // Stop connection and remove events
-        hubConn.off();
-        hubConn
-          .stop()
-          .then(() => console.log("SignalR presence disconnected"))
-          .catch((err) =>
-            console.error("Error stopping SignalR connection:", err),
-          );
-        setConnection(null);
-        setOnlineUsers([]);
-      }
-    };
-  }, [user, loading, startHubConnection]);
+    startHubConnection();
+    return cleanupConnection;
+  }, [startHubConnection, cleanupConnection]);
 
   return (
     <PresenceContext.Provider value={{ connection, onlineUsers }}>

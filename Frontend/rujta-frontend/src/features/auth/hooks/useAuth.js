@@ -101,19 +101,20 @@ export const useAuth = () => {
 
   // Logout
   const handleLogout = async () => {
-    try {
-      setUser(null);
-      setTokenExp(null);
-      await logout();
-      delete apiClient.defaults.headers.common["Authorization"];
-      removeAccessToken();
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
-    } catch (err) {
-      console.error("Logout failed", err);
-    }
-  };
+  try {
+    setUser(null);
+    setTokenExp(null);
+
+    await logout();
+
+    delete apiClient.defaults.headers.common["Authorization"];
+
+    await removeAccessToken();
+
+  } catch (err) {
+    console.error("Logout failed", err);
+  }
+};
 
   // Google login
   const handleGoogleLogin = useCallback(async (IdToken) => {
