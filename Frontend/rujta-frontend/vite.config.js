@@ -15,6 +15,11 @@ export default defineConfig({
       cert: fs.readFileSync(path.resolve(__dirname, "certs/cert.pem")),
     },
     port: 5173,
+    hmr: {
+      protocol: "wss",
+      host: "localhost",
+      port: 5173,
+    },
     proxy: {
       "/api": {
         target:"https://localhost:7065",
@@ -29,6 +34,12 @@ export default defineConfig({
             }
           });
         },
+      },
+      "/hubs": {
+        target: "https://localhost:7065",
+        changeOrigin: true,
+        secure: false,
+        ws: true,
       },
     },
   },
