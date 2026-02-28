@@ -2,7 +2,7 @@
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
-    public interface IInventoryRepository : IGenericRepository<InventoryItem>
+    public interface IInventoryRepository : IGenericRepository<InventoryItem, int>
     {
         Task<IEnumerable<InventoryItem>> GetByPharmacyAsync(
             int pharmacyId,

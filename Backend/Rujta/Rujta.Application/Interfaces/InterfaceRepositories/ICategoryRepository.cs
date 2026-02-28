@@ -2,7 +2,7 @@
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
-    public interface ICategoryRepository : IGenericRepository<Category>
+    public interface ICategoryRepository : IGenericRepository<Category, int>
     {
     }
 }

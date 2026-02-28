@@ -3,7 +3,7 @@ using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
-    public interface IUserRepository : IGenericRepository<User>
+    public interface IUserRepository : IGenericRepository<User, Guid>
     {
         Task<UserProfileDto?> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default);
 

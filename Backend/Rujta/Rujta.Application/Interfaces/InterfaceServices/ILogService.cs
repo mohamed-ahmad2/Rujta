@@ -9,7 +9,7 @@ using Rujta.Application.Interfaces.InterfaceServices.IGenericS;
 
 namespace Rujta.Application.Interfaces.InterfaceServices
 {
-    public interface ILogService : IGenericService<LogDto>
+    public interface ILogService : IGenericService<LogDto ,int>
     {
         Task AddLogAsync(string user, string action, CancellationToken cancellationToken = default);
         Task<IEnumerable<LogDto>> GetPagedAsync(int page = 1, int pageSize = 50, CancellationToken cancellationToken = default);
