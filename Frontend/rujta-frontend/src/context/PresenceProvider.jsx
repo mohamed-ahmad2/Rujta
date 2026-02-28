@@ -1,28 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { PresenceContext } from "./PresenceContext";
-import { getAccessToken } from "../authProvider/authTokenProvider";
 import * as signalR from "@microsoft/signalr";
 import { useAuth } from "../features/auth/hooks/useAuth";
+import { getAccessToken } from "../authProvider/authTokenProvider";
 
 export const PresenceProvider = ({ children }) => {
   const { user, loading } = useAuth();
   const [connection, setConnection] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
 
-  useEffect(() => {
-    // إذا لسة البيانات تتحمل أو لا يوجد user لا نفعل الاتصال
-    if (loading || !user) {
-      // لو في اتصال مفتوح سابق، اغلقه فورًا عند logout
-      if (connection) {
-        connection
-          .stop()
-          .catch((err) => console.error("Error stopping SignalR:", err));
-        setConnection(null);
-        setOnlineUsers([]);
-      }
-      return;
-    }
-
+  // Function to start SignalR connection
+  const startHubConnection = useCallback(async () => {
+    if (!user || loading) return;
     const role = user.role;
     if (role !== "Pharmacist" && role !== "PharmacyAdmin") return;
 
@@ -31,25 +20,10 @@ export const PresenceProvider = ({ children }) => {
         accessTokenFactory: () => getAccessToken(),
         withCredentials: true,
       })
-      .withAutomaticReconnect([0, 2000, 5000, 10000])
+      .withAutomaticReconnect([0, 2000, 5000, 10000]) // reconnect intervals
       .build();
 
-    const startHubConnection = async () => {
-      try {
-        await hubConnection.start();
-        console.log("SignalR presence connected");
-      } catch (err) {
-        if (err.statusCode === 429) {
-          console.warn("Too many requests, retrying in 5 seconds...");
-          setTimeout(startHubConnection, 5000);
-        } else {
-          console.error("SignalR presence connection error:", err);
-        }
-      }
-    };
-
-    startHubConnection();
-
+    // Handlers for online/offline events (for PharmacyAdmin)
     if (role === "PharmacyAdmin") {
       hubConnection.on("PharmacistOnline", (userId) => {
         setOnlineUsers((prev) => [...prev, userId]);
@@ -59,17 +33,57 @@ export const PresenceProvider = ({ children }) => {
       });
     }
 
+    // Function to attempt start with retry for 429
+    const tryStart = async () => {
+      try {
+        await hubConnection.start();
+        console.log("SignalR presence connected");
+
+        // Notify backend that current user is online
+        if (role === "Pharmacist") {
+          console.log("Pharmacist SignalR connection established");
+        }
+      } catch (err) {
+        if (err.statusCode === 429) {
+          console.warn("Too many requests, retrying in 5s...");
+          setTimeout(tryStart, 5000);
+        } else {
+          console.error("SignalR presence connection error:", err);
+        }
+      }
+    };
+
+    tryStart();
     setConnection(hubConnection);
 
-    // Cleanup عند logout أو تغيير user
-    return () => {
-      hubConnection
-        .stop()
-        .catch((err) => console.error("Error stopping SignalR:", err));
-      setConnection(null);
-      setOnlineUsers([]);
-    };
+    return hubConnection;
   }, [user, loading]);
+
+  // Start connection when user logs in
+  useEffect(() => {
+    if (!user || loading) return;
+
+    let hubConn;
+    startHubConnection().then((conn) => {
+      hubConn = conn;
+    });
+
+    // Cleanup on logout / unmount
+    return () => {
+      if (hubConn) {
+        // Stop connection and remove events
+        hubConn.off();
+        hubConn
+          .stop()
+          .then(() => console.log("SignalR presence disconnected"))
+          .catch((err) =>
+            console.error("Error stopping SignalR connection:", err),
+          );
+        setConnection(null);
+        setOnlineUsers([]);
+      }
+    };
+  }, [user, loading, startHubConnection]);
 
   return (
     <PresenceContext.Provider value={{ connection, onlineUsers }}>
