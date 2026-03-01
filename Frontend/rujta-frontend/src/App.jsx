@@ -6,6 +6,8 @@ import FloatingCartButton from "./features/user/components/FloatingCartButton";
 import CartDrawerUser from "./features/user/components/CartDrawer";
 import Splash from "./features/splash/splash";
 
+import { PresenceProvider } from "./context/PresenceProvider";
+
 const App = () => {
   const { user, loading } = useAuth();
 
@@ -33,7 +35,7 @@ const App = () => {
   }, [user, loading]);
 
   const handleFinish = () => {
-    // Splash 
+    // Splash
     localStorage.setItem("seenSplash_global", "true");
 
     if (user?.email) {
@@ -80,7 +82,7 @@ const App = () => {
   }
 
   return (
-    <>
+    <PresenceProvider>
       <AppRoutes
         cart={cart}
         setCart={setCart}
@@ -94,12 +96,8 @@ const App = () => {
         !isAuthPage &&
         !isResetPage &&
         !isDashboard && (
-          <FloatingCartButton
-            cart={cart}
-            onClick={() => setIsCartOpen(true)}
-          />
-        )
-        }
+          <FloatingCartButton cart={cart} onClick={() => setIsCartOpen(true)} />
+        )}
 
       {/* Cart Drawer */}
       {user && (
@@ -110,7 +108,7 @@ const App = () => {
           onClose={() => setIsCartOpen(false)}
         />
       )}
-    </>
+    </PresenceProvider>
   );
 };
 

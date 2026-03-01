@@ -107,6 +107,8 @@ namespace Rujta.API
 
             app.UseCors("AllowReactApp");
 
+            app.UseWebSockets();
+
             app.UseRateLimiter();
 
             app.UseAuthentication();

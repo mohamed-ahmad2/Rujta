@@ -1,4 +1,5 @@
 import axios from "axios";
+import { setAccessToken } from "../../authProvider/authTokenProvider";
 
 export const apiClient = axios.create({
   baseURL: "/api",
@@ -11,7 +12,7 @@ apiClient.interceptors.request.use(
     console.log("Outgoing request headers:", request.headers);
     return request;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 /* ================= RESPONSE INTERCEPTOR ================= */
@@ -25,25 +26,21 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // refresh token (بدون apiClient عشان ما يدخلش loop)
         const refreshResponse = await axios.post(
           "/api/auth/refresh-token",
           null,
-          { withCredentials: true }
+          { withCredentials: true },
         );
 
         const newAccessToken = refreshResponse.data?.accessToken;
 
         if (newAccessToken) {
-          // تحديث الهيدر الافتراضي
-          apiClient.defaults.headers.common[
-            "Authorization"
-          ] = `Bearer ${newAccessToken}`;
+          setAccessToken(newAccessToken);
 
-          // تحديث الهيدر للطلب الحاليازاي اجس
-          originalRequest.headers[
-            "Authorization"
-          ] = `Bearer ${newAccessToken}`;
+          apiClient.defaults.headers.common["Authorization"] =
+            `Bearer ${newAccessToken}`;
+
+          originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
         }
 
         return apiClient(originalRequest);
@@ -53,11 +50,8 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Error موحد
-    return Promise.reject(
-      error.response?.data || { message: "Network error" }
-    );
-  }
+    return Promise.reject(error.response?.data || { message: "Network error" });
+  },
 );
 
 export default apiClient;
