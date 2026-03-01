@@ -4,7 +4,7 @@ using Rujta.Application.Interfaces.InterfaceRepositories;
 
 namespace Rujta.Infrastructure.Repositories
 {
-    public class PharmacyRepo : GenericRepository<Pharmacy>, IPharmacyRepository
+    public class PharmacyRepo : GenericRepository<Pharmacy, int>, IPharmacyRepository
     {
         public PharmacyRepo(AppDbContext context) : base(context) { }
 

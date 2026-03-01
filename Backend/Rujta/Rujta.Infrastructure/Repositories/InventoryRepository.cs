@@ -1,6 +1,6 @@
 ﻿namespace Rujta.Infrastructure.Repositories
 {
-    public class InventoryRepository : GenericRepository<InventoryItem>, IInventoryRepository
+    public class InventoryRepository : GenericRepository<InventoryItem,int>, IInventoryRepository
     {
         
 

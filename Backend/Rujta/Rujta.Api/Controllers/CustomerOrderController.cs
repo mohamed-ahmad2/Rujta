@@ -1,46 +1,109 @@
-﻿using Microsoft.AspNetCore.RateLimiting;
+﻿using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using Rujta.Application.DTOs;
+using Rujta.Application.Interfaces.InterfaceServices;
 
 namespace Rujta.API.Controllers
 {
     [ApiController]
-    [Route("api/pharmacies/{pharmacyId}/customers")]
-    [EnableRateLimiting("Fixed")]
-    public class CustomerOrdersController : ControllerBase
+    [Route("api/pharmacies/{pharmacyId:int}/customers")]
+    public class CustomersController : ControllerBase
     {
         private readonly ICustomerOrderService _service;
 
-        public CustomerOrdersController(ICustomerOrderService service)
+        public CustomersController(ICustomerOrderService service)
         {
             _service = service;
         }
 
-        [HttpPost("order")]
-        public async Task<IActionResult> CreateOrder([FromBody] CreateCustomerOrderRequest request,CancellationToken cancellationToken)
+        // GET: api/pharmacies/1/customers
+        [HttpGet]
+        public async Task<IActionResult> GetAll(int pharmacyId)
         {
-            request.PharmacyId = GetCurrentPharmacyId();
-
-            var result = await _service
-                .CreateCustomerOrderAsync(request, cancellationToken);
-
+            var result = await _service.GetAllCustomersAsync();
             return Ok(result);
         }
 
-        [HttpGet("check")]
-        public async Task<IActionResult> CheckCustomer([FromQuery] string phoneNumber,CancellationToken cancellationToken)
+        // GET: api/pharmacies/1/customers/5
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(int pharmacyId, Guid id)
         {
-            int pharmacyId = GetCurrentPharmacyId();
+            var customer = await _service.GetCustomerByIdAsync(id);
+            if (customer == null)
+                return NotFound();
+
+            return Ok(customer);
+        }
+
+        // POST: api/pharmacies/1/customers
+        [HttpPost]
+        public async Task<IActionResult> Create(
+            int pharmacyId,
+            [FromBody] CreateCustomerDto dto)
+        {
+            dto.PharmacyId = pharmacyId;
+
+            var result = await _service.CreateCustomerAsync(dto);
+            return Ok(result);
+        }
+
+        // PUT: api/pharmacies/1/customers/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(
+            int pharmacyId,
+            Guid id,
+            [FromBody] UpdateCustomerDto dto)
+        {
+            var updated = await _service.UpdateCustomerAsync(id, dto);
+
+            if (updated == null)
+                return NotFound();
+
+            return Ok(updated);
+        }
+
+        // DELETE: api/pharmacies/1/customers/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int pharmacyId, Guid id)
+        {
+            var deleted = await _service.DeleteCustomerAsync(id);
+
+            if (!deleted)
+                return NotFound();
+
+            return NoContent();
+        }
+
+        // GET: api/pharmacies/1/customers/stats
+        [HttpGet("stats")]
+        public async Task<IActionResult> Stats(int pharmacyId)
+        {
+            var stats = await _service.GetCustomerStatsAsync();
+            return Ok(stats);
+        }
+
+        // POST: api/pharmacies/1/customers/order
+        [HttpPost("order")]
+        public async Task<IActionResult> CreateOrder(
+            int pharmacyId,
+            [FromBody] CreateCustomerOrderRequest request,
+            CancellationToken cancellationToken)
+        {
+            request.PharmacyId = pharmacyId;
+
+            var result = await _service.CreateCustomerOrderAsync(request, cancellationToken);
+            return Ok(result);
+        }
+
+        // GET: api/pharmacies/1/customers/check?phoneNumber=010...
+        [HttpGet("check")]
+        public async Task<IActionResult> CheckCustomer(
+            int pharmacyId,
+            [FromQuery] string phoneNumber,
+            CancellationToken cancellationToken)
+        {
             var result = await _service.CheckCustomerByPhoneAsync(pharmacyId, phoneNumber, cancellationToken);
             return Ok(result);
-        }
-
-        private int GetCurrentPharmacyId()
-        {
-            var claim = User.FindFirstValue("PharmacyId");
-
-            if (string.IsNullOrWhiteSpace(claim) || !int.TryParse(claim, out var pharmacyId))
-                throw new UnauthorizedAccessException("Invalid PharmacyId claim.");
-
-            return pharmacyId;
         }
     }
 }

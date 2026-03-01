@@ -2,7 +2,7 @@
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
-    public interface IDeviceRepository : IGenericRepository<Device>
+    public interface IDeviceRepository : IGenericRepository<Device ,string >
     {
         Task<Device?> GetByDeviceIdAsync(string deviceId);
     }

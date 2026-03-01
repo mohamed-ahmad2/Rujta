@@ -1,305 +1,329 @@
-// src/dashboard/pages/Customers.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Plus, Trash2, Edit, Search, X } from "lucide-react";
+import { useCustomers } from "../../customerOrders/hook/useCustomerOrders";
 import CustomersCard from "../components/CustomersCard";
-import {
-  MoreVertical,
-  Search,
-  Plus,
-  Filter,
-  Download,
-  Eye,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { useSpring, animated } from "@react-spring/web";
 
-const initialCustomers = [
-  { id: "#CUS001", name: "John Smith", email: "john.smith@example.com", phone: "123-456-7890", orders: 15, spend: "$2,500", lastOrder: "27-11-2024" },
-  { id: "#CUS002", name: "Emily Davis", email: "emily.davis@example.com", phone: "234-567-8901", orders: 10, spend: "$1,800", lastOrder: "26-11-2024" },
-  { id: "#CUS003", name: "Michael Johnson", email: "michael.j@example.com", phone: "345-678-9012", orders: 8, spend: "$2,500", lastOrder: "25-11-2024" },
-  { id: "#CUS004", name: "Sarah Lee", email: "sarah.lee@example.com", phone: "456-789-0123", orders: 5, spend: "$600", lastOrder: "24-11-2024" },
-  { id: "#CUS005", name: "Andrew Miller", email: "andrew.miller@example.com", phone: "567-890-1234", orders: 12, spend: "$2,100", lastOrder: "23-11-2024" },
-  { id: "#CUS006", name: "Sophia Wilson", email: "sophia.wilson@example.com", phone: "678-901-2345", orders: 9, spend: "$1,450", lastOrder: "22-11-2024" },
-  { id: "#CUS007", name: "Olivia Taylor", email: "olivia.taylor@example.com", phone: "890-123-4567", orders: 15, spend: "$3,200", lastOrder: "20-11-2024" },
-  { id: "#CUS008", name: "Ethan White", email: "ethan.white@example.com", phone: "123-456-7890", orders: 5, spend: "$750", lastOrder: "17-11-2024" },
-  { id: "#CUS009", name: "Mia Harris", email: "mia.harris@example.com", phone: "123-456-7890", orders: 15, spend: "$2,500", lastOrder: "18-11-2024" },
-];
-
-function AddCustomerModal({ open, onClose, onSave }) {
-  const [form, setForm] = useState({
-    id: "#CUS" + String(Math.floor(100 + Math.random() * 899)).padStart(3, "0"),
-    name: "",
-    email: "",
-    phone: "",
-    orders: "",
-    spend: "",
-    lastOrder: new Date().toLocaleDateString("en-GB").replace(/\//g, "-"),
-  });
-
-  useEffect(() => {
-    if (open) {
-      setForm({
-        id: "#CUS" + String(Math.floor(100 + Math.random() * 899)).padStart(3, "0"),
-        name: "",
-        email: "",
-        phone: "",
-        orders: "",
-        spend: "",
-        lastOrder: new Date().toLocaleDateString("en-GB").replace(/\//g, "-"),
-      });
-    }
-  }, [open]);
-
-  const update = (k, v) => setForm((s) => ({ ...s, [k]: v }));
-  const submit = (e) => {
-    e.preventDefault();
-    if (!form.name || !form.email) return alert("Please fill name and email.");
-    onSave({
-      ...form,
-      orders: Number(form.orders) || 0,
-      spend: form.spend || "$0",
-    });
-  };
-
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Add New Customer</h3>
-          <button onClick={onClose} className="text-gray-500">✕</button>
-        </div>
-
-        <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Full name" className="border px-3 py-2 rounded-lg w-full" />
-            <input value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="Email" className="border px-3 py-2 rounded-lg w-full" />
-            <input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="Phone" className="border px-3 py-2 rounded-lg w-full" />
-            <input value={form.orders} onChange={(e) => update("orders", e.target.value)} placeholder="Orders placed (number)" className="border px-3 py-2 rounded-lg w-full" />
-            <input value={form.spend} onChange={(e) => update("spend", e.target.value)} placeholder="Total spend (e.g. $2,500)" className="border px-3 py-2 rounded-lg w-full" />
-            <input value={form.lastOrder} onChange={(e) => update("lastOrder", e.target.value)} placeholder="dd-mm-yyyy" className="border px-3 py-2 rounded-lg w-full" />
-            <input value={form.id} readOnly className="border px-3 py-2 rounded-lg w-full bg-gray-50 col-span-1 sm:col-span-2" />
-          </div>
-
-          <div className="flex items-center justify-end gap-3">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border">Cancel</button>
-            <button type="submit" className="px-4 py-2 rounded-lg bg-secondary text-white">Save Customer</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
+// Toast component
+const Toast = ({ type, message, onClose }) => (
+  <div
+    className={`fixed top-6 right-6 px-4 py-3 rounded-lg shadow-lg text-white z-50 animate-fadeIn ${
+      type === "success" ? "bg-green-600" : "bg-red-600"
+    }`}
+  >
+    {message}
+    <button onClick={onClose} className="ml-4 font-bold">
+      <X size={16} />
+    </button>
+  </div>
+);
 
 export default function Customers() {
-  const [customers, setCustomers] = useState(initialCustomers);
-  const [loading, setLoading] = useState(false);
-  const [q, setQ] = useState("");
-  const [page, setPage] = useState(1);
-  const perPage = 9;
-  const [openModal, setOpenModal] = useState(false);
+  const pharmacyId = 1; // replace with logged-in pharmacy id
+  const {
+    customers,
+    stats,
+    loading,
+    addCustomer,
+    editCustomer,
+    removeCustomer,
+    searchByPhone,
+    refetch,
+  } = useCustomers(pharmacyId);
 
-  // Filters
-  const [showFilters, setShowFilters] = useState(false);
-  const [filterId, setFilterId] = useState("");
-  const [filterName, setFilterName] = useState("");
-  const [filterEmail, setFilterEmail] = useState("");
-  const [filterPhone, setFilterPhone] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [searchPhone, setSearchPhone] = useState("");
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
+  const [notification, setNotification] = useState(null);
+  const [form, setForm] = useState({ name: "", email: "", phoneNumber: "" });
 
+  // Sync filteredCustomers with backend data
   useEffect(() => {
-    let mounted = true;
-    async function load() {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/customers");
-        if (!res.ok) throw new Error("no api");
-        const data = await res.json();
-        if (mounted) setCustomers(data);
-      } catch {}
-      finally { if (mounted) setLoading(false); }
-    }
-    load();
-    return () => (mounted = false);
-  }, []);
+    setFilteredCustomers(customers);
+  }, [customers]);
 
-  const filtered = useMemo(() => {
-    let list = [...customers];
-    if (q.trim()) {
-      const s = q.toLowerCase();
-      list = list.filter(
-        (c) =>
-          c.name?.toLowerCase().includes(s) ||
-          c.id?.toLowerCase().includes(s) ||
-          c.email?.toLowerCase().includes(s) ||
-          c.phone?.toLowerCase().includes(s)
-      );
-    }
-    if (filterId) list = list.filter((c) => c.id.toLowerCase().includes(filterId.toLowerCase()));
-    if (filterName) list = list.filter((c) => c.name.toLowerCase().includes(filterName.toLowerCase()));
-    if (filterEmail) list = list.filter((c) => c.email.toLowerCase().includes(filterEmail.toLowerCase()));
-    if (filterPhone) list = list.filter((c) => c.phone.toLowerCase().includes(filterPhone.toLowerCase()));
-    return list;
-  }, [customers, q, filterId, filterName, filterEmail, filterPhone]);
+  // Animate stats numbers
+  const totalAnim = useSpring({ number: stats.totalCustomers, from: { number: 0 } });
+  const newAnim = useSpring({ number: stats.newCustomers, from: { number: 0 } });
+  const returningAnim = useSpring({ number: stats.returningCustomers, from: { number: 0 } });
 
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / perPage));
-  const pageData = filtered.slice((page - 1) * perPage, page * perPage);
+  // Input handler
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleAdd = async (newCustomer) => {
+  // Open Add Modal
+  const openAdd = () => {
+    setEditing(null);
+    setForm({ name: "", email: "", phoneNumber: "" });
+    setModalOpen(true);
+  };
+
+  // Open Edit Modal
+  const openEdit = (customer) => {
+    setEditing({ id: customer.id });
+    setForm({
+      name: customer.name,
+      email: customer.email,
+      phoneNumber: customer.phoneNumber,
+    });
+    setModalOpen(true);
+  };
+
+  // Submit Add/Edit
+  const handleSubmit = async () => {
+    const payload = {
+      Name: form.name,
+      PhoneNumber: form.phoneNumber,
+      Email: form.email || "",
+      PharmacyId: pharmacyId,
+    };
     try {
-      const res = await fetch("/api/customers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newCustomer),
+      if (editing) await editCustomer(editing.id, payload);
+      else await addCustomer(payload);
+      setModalOpen(false);
+      await refetch();
+      setNotification({
+        type: "success",
+        message: editing ? "Customer updated" : "Customer added",
       });
-      if (res.ok) {
-        const saved = await res.json();
-        setCustomers((p) => [saved, ...p]);
-      } else { setCustomers((p) => [newCustomer, ...p]); }
-    } catch { setCustomers((p) => [newCustomer, ...p]); }
-    setOpenModal(false);
-    setPage(1);
+    } catch (err) {
+      console.error("Submit error:", err);
+      setNotification({ type: "error", message: "Failed to submit customer data" });
+    }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Delete this customer?")) return;
+  // Open Delete Modal
+  const confirmDelete = (customer) => {
+    setDeleteTarget(customer);
+    setDeleteModalOpen(true);
+  };
+
+  // Delete customer
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      const res = await fetch(`/api/customers/${id.replace("#CUS", "")}`, { method: "DELETE" });
-      setCustomers((p) => p.filter((c) => c.id !== id));
-    } catch { setCustomers((p) => p.filter((c) => c.id !== id)); }
+      await removeCustomer(deleteTarget.id);
+      await refetch();
+      setNotification({ type: "success", message: "Customer deleted successfully" });
+    } catch (err) {
+      console.error("Delete error:", err);
+      setNotification({ type: "error", message: "Failed to delete customer" });
+    } finally {
+      setDeleteModalOpen(false);
+      setDeleteTarget(null);
+    }
   };
 
-  const handleExport = () => {
-    const rows = [
-      ["Customer ID", "Name", "Email", "Phone", "Orders", "Total Spend", "Last Order Date"],
-      ...filtered.map((c) => [c.id, c.name, c.email, c.phone, c.orders, c.spend, c.lastOrder]),
-    ];
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "customers-export.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  // Search by phone
+  const handleSearch = async () => {
+    if (!searchPhone) {
+      setFilteredCustomers(customers);
+      return;
+    }
+    try {
+      const res = await searchByPhone(searchPhone);
+      if (res.data.exists) {
+        const matched = customers.filter((c) =>
+          c.phoneNumber.includes(searchPhone)
+        );
+        setFilteredCustomers(matched);
+        setNotification({ type: "success", message: "Customer found" });
+      } else {
+        setFilteredCustomers([]);
+        setNotification({ type: "error", message: "Customer not found" });
+      }
+    } catch (err) {
+      console.error("Search error:", err);
+      setNotification({ type: "error", message: "Error searching customer" });
+    }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Top Stats */}
+    <div className="p-6 space-y-8 max-w-7xl mx-auto relative">
+      {/* Notification */}
+      {notification && (
+        <Toast
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
+      )}
+
+      {/* Animated Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <CustomersCard title="Total Customers" value="12,500" sub="Since last week" percent="+ 8%" variant="green"/>
-        <CustomersCard title="New Customers" value="120" sub="Since last week" percent="+ 5.4%"/>
-        <CustomersCard title="Returning Customers" value="65%" sub="Since last week" percent="+ 2.4%"/>
+        <CustomersCard
+          title="Total Customers"
+          value={<animated.span>{totalAnim.number.to((n) => n.toFixed(0))}</animated.span>}
+        />
+        <CustomersCard
+          title="New Customers"
+          value={<animated.span>{newAnim.number.to((n) => n.toFixed(0))}</animated.span>}
+        />
+        <CustomersCard
+          title="Returning Customers"
+          value={<animated.span>{returningAnim.number.to((n) => n.toFixed(0))}</animated.span>}
+        />
       </div>
 
-      {/* Toolbar */}
-      <div className="bg-white p-4 rounded-2xl shadow border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3 bg-gray-100 px-3 py-2 rounded-full w-full md:w-1/3">
-          <Search size={16} className="text-gray-400" />
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+        <div className="flex gap-2 w-full sm:w-auto">
           <input
-            className="bg-transparent outline-none w-full text-sm"
-            placeholder="Search customers..."
-            value={q}
-            onChange={(e) => { setQ(e.target.value); setPage(1); }}
+            type="text"
+            placeholder="Search by phone..."
+            value={searchPhone}
+            onChange={(e) => setSearchPhone(e.target.value)}
+            className="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-        </div>
-
-        <div className="flex items-center gap-3 relative">
-          <button onClick={() => setOpenModal(true)} className="flex items-center gap-2 bg-secondary px-4 py-2 rounded-full font-medium text-white">
-            <Plus size={16} /> Add New Customer
+          <button
+            onClick={handleSearch}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-1 hover:bg-blue-700 transition"
+          >
+            <Search size={16} /> Search
           </button>
-
-          <div className="hidden sm:flex items-center gap-2 relative">
-            <button className="px-3 py-2 rounded-full border flex items-center gap-2 text-sm" onClick={() => setShowFilters((s) => !s)}>
-              <Filter size={16} /> Filters
-            </button>
-
-            {showFilters && (
-              <div className="absolute right-0 top-full mt-2 p-4 bg-white shadow-lg rounded-xl border w-64 z-50">
-                <div className="flex flex-col gap-2">
-                  <input value={filterId} onChange={(e) => setFilterId(e.target.value)} placeholder="Filter by Customer ID" className="border px-3 py-2 rounded-lg w-full text-sm"/>
-                  <input value={filterName} onChange={(e) => setFilterName(e.target.value)} placeholder="Filter by Name" className="border px-3 py-2 rounded-lg w-full text-sm"/>
-                  <input value={filterEmail} onChange={(e) => setFilterEmail(e.target.value)} placeholder="Filter by Email" className="border px-3 py-2 rounded-lg w-full text-sm"/>
-                  <input value={filterPhone} onChange={(e) => setFilterPhone(e.target.value)} placeholder="Filter by Phone" className="border px-3 py-2 rounded-lg w-full text-sm"/>
-
-                  <div className="flex gap-2 mt-2">
-                    <button onClick={() => setShowFilters(false)} className="flex-1 px-4 py-2 rounded-lg border">Cancel</button>
-                    <button onClick={() => { setPage(1); setShowFilters(false); }} className="flex-1 px-4 py-2 rounded-lg bg-secondary text-white">Apply</button>
-                  </div>
-
-                  <button onClick={() => { setFilterId(""); setFilterName(""); setFilterEmail(""); setFilterPhone(""); setPage(1); }} className="mt-1 px-4 py-2 rounded-lg border text-sm w-full">Clear Filters</button>
-                </div>
-              </div>
-            )}
-
-            <button className="px-3 py-2 rounded-full border flex items-center gap-2 text-sm" onClick={handleExport}>
-              <Download size={16} /> Export
-            </button>
-            <div className="px-3 py-2 rounded-full border text-sm">This Month <MoreVertical size={14} /></div>
-          </div>
+          <button
+            onClick={() => {
+              setSearchPhone("");
+              setFilteredCustomers(customers);
+            }}
+            className="bg-gray-200 px-3 py-2 rounded-lg hover:bg-gray-300 transition"
+          >
+            Clear
+          </button>
         </div>
+        <button
+          onClick={openAdd}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition"
+        >
+          <Plus size={16} /> Add Customer
+        </button>
       </div>
 
-      {/* Table */}
-      <div className="bg-white p-4 rounded-2xl shadow border overflow-x-auto">
-        <table className="w-full min-w-[900px]">
-          <thead>
-            <tr className="text-left text-sm text-gray-500">
-              <th className="py-3 px-2">Customer ID</th>
-              <th className="py-3 px-2">Customer Name</th>
-              <th className="py-3 px-2">Email</th>
-              <th className="py-3 px-2">Phone</th>
-              <th className="py-3 px-2">Orders Placed</th>
-              <th className="py-3 px-2">Total Spend</th>
-              <th className="py-3 px-2">Last Order Date</th>
-              <th className="py-3 px-2">Action</th>
+      {/* Customers Table */}
+      <div className="bg-white rounded-xl shadow overflow-hidden">
+        <table className="w-full table-auto">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-6 py-3 text-left text-gray-600 uppercase tracking-wider">Name</th>
+              <th className="px-6 py-3 text-left text-gray-600 uppercase tracking-wider">Email</th>
+              <th className="px-6 py-3 text-left text-gray-600 uppercase tracking-wider">Phone</th>
+              <th className="px-6 py-3 text-center text-gray-600 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {loading ? <tr><td colSpan={8} className="p-4 text-center">Loading...</td></tr>
-            : pageData.length === 0 ? <tr><td colSpan={8} className="p-4 text-center">No customers found</td></tr>
-            : pageData.map((c) => (
-              <tr key={c.id} className="border-t hover:bg-gray-50">
-                <td className="py-3 px-2 font-medium text-secondary">{c.id}</td>
-                <td className="py-3 px-2">{c.name}</td>
-                <td className="py-3 px-2 text-blue-600">{c.email}</td>
-                <td className="py-3 px-2">{c.phone}</td>
-                <td className="py-3 px-2">{c.orders}</td>
-                <td className="py-3 px-2">{c.spend}</td>
-                <td className="py-3 px-2">{c.lastOrder}</td>
-                <td className="py-3 px-2 text-gray-600">
-                  <div className="flex items-center gap-3">
-                    <Eye size={18} className="cursor-pointer hover:text-green-600" />
-                    <Edit size={18} className="cursor-pointer hover:text-blue-600" />
-                    <button onClick={() => handleDelete(c.id)}><Trash2 size={18} className="cursor-pointer hover:text-red-600" /></button>
-                  </div>
+            {loading && (
+              <tr>
+                <td colSpan="4" className="text-center py-6 text-gray-500">
+                  Loading...
                 </td>
               </tr>
-            ))}
+            )}
+            {!loading && filteredCustomers.length === 0 && (
+              <tr>
+                <td colSpan="4" className="text-center py-6 text-gray-500">
+                  No customers found
+                </td>
+              </tr>
+            )}
+            {!loading &&
+              filteredCustomers.map((c) => (
+                <tr key={c.id} className="hover:bg-gray-50 transition">
+                  <td className="px-6 py-4">{c.name}</td>
+                  <td className="px-6 py-4">{c.email}</td>
+                  <td className="px-6 py-4">{c.phoneNumber}</td>
+                  <td className="px-6 py-4 flex justify-center gap-3">
+                    <button onClick={() => openEdit(c)} className="text-blue-600 hover:text-blue-800">
+                      <Edit size={18} />
+                    </button>
+                    <button onClick={() => confirmDelete(c)} className="text-red-600 hover:text-red-800">
+                      <Trash2 size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
           </tbody>
         </table>
+      </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-sm text-gray-500">Showing {pageData.length} of {total}</div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setPage(1)} disabled={page === 1} className="px-3 py-1 rounded-md bg-white border text-sm">First</button>
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <button key={i} onClick={() => setPage(i + 1)} className={`px-3 py-1 rounded-md text-sm ${page === i + 1 ? "bg-secondary text-white" : "bg-white border"}`}>{i + 1}</button>
-            ))}
-            <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-3 py-1 rounded-md bg-white border text-sm">Last</button>
+      {/* Add/Edit Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-md p-6 rounded-xl shadow-lg relative animate-fadeIn">
+            <button
+              onClick={() => setModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+            >
+              <X size={20} />
+            </button>
+            <h2 className="text-xl font-semibold mb-4">{editing ? "Edit Customer" : "Add Customer"}</h2>
+            <div className="space-y-3">
+              <input
+                name="name"
+                placeholder="Name"
+                value={form.name}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                name="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                name="phoneNumber"
+                placeholder="Phone Number"
+                value={form.phoneNumber}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => setModalOpen(false)}
+                className="px-4 py-2 rounded-lg border hover:bg-gray-100 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+              >
+                {editing ? "Update" : "Add"}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Decorative image */}
-      <div className="hidden lg:block">
-        <img src={"/mnt/data/d79c4d60-31fb-49ec-83d1-7e49b87cab5e.png"} alt="customers-hero" className="w-full rounded-2xl shadow mt-2" />
-      </div>
-
-      {/* Add Modal */}
-      <AddCustomerModal open={openModal} onClose={() => setOpenModal(false)} onSave={handleAdd} />
+      {/* Delete Modal */}
+      {deleteModalOpen && deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-sm p-6 rounded-xl shadow-lg animate-fadeIn">
+            <h3 className="text-lg font-semibold mb-4">Delete Customer</h3>
+            <p className="mb-6">
+              Are you sure you want to delete <strong>{deleteTarget.name}</strong>?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteModalOpen(false)}
+                className="px-4 py-2 rounded-lg border hover:bg-gray-100 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
