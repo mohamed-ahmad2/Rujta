@@ -16,5 +16,6 @@ namespace Rujta.Application.Interfaces.InterfaceServices.IOrder
         Task<(bool success, string message)> OutForDeliveryAsync(int id, int pharmacyId, CancellationToken cancellationToken = default);
         Task<(bool success, string message)> MarkAsDeliveredAsync(int id, int pharmacyId, CancellationToken cancellationToken = default);
         Task<IEnumerable<OrderDto>> GetPharmacyOrdersAsync(int pharmacyId,CancellationToken cancellationToken = default);
+        Task<bool> CanAccessOrderAsync(int orderId,string? userId,string? pharmacyId);
     }
 }

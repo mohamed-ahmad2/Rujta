@@ -72,8 +72,12 @@ namespace Rujta.Application.Services.OrderS
 
                 order.TotalPrice = totalPrice;
 
+                await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+
                 await _unitOfWork.Orders.AddAsync(order, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
 
                 _logger.LogInformation("Order {OrderId} created successfully for UserId {UserId}", order.Id.ToString(), userId.ToString());
 
@@ -81,7 +85,8 @@ namespace Rujta.Application.Services.OrderS
                 orderDto.UserName = appUser.Name;
                 orderDto.PharmacyName = pharmacy.Name;
 
-                await _notificationService.NotifyStatusChangedAsync(createOrderDto.PharmacyID, orderDto.Id, OrderStatus.Pending);
+                await _notificationService.NotifyNewOrderAsync(createOrderDto.PharmacyID, orderDto.Id);
+                await _notificationService.NotifyOrderItemChangedAsync(order.Id);
 
                 return orderDto;
             }
@@ -104,15 +109,21 @@ namespace Rujta.Application.Services.OrderS
                     if (order == null)
                         return (false, OrderMessages.OrderNotFound);
 
+                    if (order.PharmacyId != pharmacyId)
+                        return (false, "Unauthorized pharmacy access");
+
                     if (!CanChangeStatus(order.Status, newStatus))
                         return (false, OrderMessages.InvalidStateTransition);
+
+                    if (order.Status == newStatus)
+                        return (true, "Already updated");
 
                     order.Status = newStatus;
 
 
                     await _unitOfWork.SaveAsync(cancellationToken);
 
-                    await SafeNotifyAsync(pharmacyId, id, newStatus);
+                    await SafeNotifyAsync(order, newStatus);
 
                     return (true, newStatus switch
                     {
@@ -148,15 +159,18 @@ namespace Rujta.Application.Services.OrderS
             return (false, "Maximum retries exceeded due to concurrency conflicts.");
         }
 
-        private async Task SafeNotifyAsync(int pharmacyId, int orderId, OrderStatus status)
+        private async Task SafeNotifyAsync(Order order, OrderStatus status)
         {
             try
             {
-                await _notificationService.NotifyStatusChangedAsync(pharmacyId, orderId, status);
+                if (order.UserId == null)
+                    throw new InvalidOperationException("Order user is missing");
+
+                await _notificationService.NotifyStatusChangedAsync(order.PharmacyId, order.UserId.ToString()!, order.Id, status);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Notification failed for Order {OrderId}", orderId);
+                _logger.LogError(ex, "Notification failed for Order {OrderId}", order.Id);
             }
         }
 
@@ -193,6 +207,9 @@ namespace Rujta.Application.Services.OrderS
                 if (order == null)
                     return (false, OrderMessages.OrderNotFound);
 
+                if (order.PharmacyId != pharmacyId)
+                    return (false, "Unauthorized pharmacy access");
+
                 if (!CanChangeStatus(order.Status, OrderStatus.Delivered))
                     return (false, OrderMessages.InvalidStateTransition);
 
@@ -223,8 +240,10 @@ namespace Rujta.Application.Services.OrderS
                 try
                 {
                     await _unitOfWork.SaveAsync(cancellationToken);
-                    await _notificationService.NotifyStatusChangedAsync(pharmacyId, id, OrderStatus.Delivered);
                     await transaction.CommitAsync(cancellationToken);
+
+                    await SafeNotifyDeliveredAsync(order);
+
                     return (true, OrderMessages.OrderMarkAsDelivered);
                 }
                 catch (DbUpdateConcurrencyException)
@@ -239,6 +258,27 @@ namespace Rujta.Application.Services.OrderS
                 await transaction.RollbackAsync(cancellationToken);
                 _logger.LogError(ex, "Error delivering Order {OrderId}", id);
                 return (false, "An unexpected error occurred");
+            }
+        }
+
+        private async Task SafeNotifyDeliveredAsync(Order order)
+        {
+            try
+            {
+                if (order.UserId == null)
+                    throw new InvalidOperationException("Order user is missing");
+
+                await _notificationService.NotifyStatusChangedAsync(
+                    order.PharmacyId,
+                    order.UserId.ToString()!,
+                    order.Id,
+                    OrderStatus.Delivered);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Delivery notification failed for Order {OrderId}",
+                    order.Id);
             }
         }
 
@@ -349,6 +389,8 @@ namespace Rujta.Application.Services.OrderS
                 await _unitOfWork.Orders.UpdateAsync(order, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
+                await _notificationService.NotifyOrderUpdatedAsync(order.PharmacyId, order.Id);
+
                 _logger.LogInformation("Order {OrderId} updated successfully", id);
             }
             catch (Exception ex)
@@ -401,6 +443,19 @@ namespace Rujta.Application.Services.OrderS
                 _logger.LogError(ex,"Failed to fetch orders for Pharmacy {PharmacyId}",pharmacyId);
                 throw new InvalidOperationException($"An error occurred while fetching orders for Pharmacy {pharmacyId}.",ex);
             }
+        }
+
+        public async Task<bool> CanAccessOrderAsync(int orderId,string? userId, string? pharmacyId)
+        {
+            var order =
+                await _unitOfWork.Orders.GetByIdAsync(orderId);
+
+            if (order == null)
+                return false;
+
+            return
+                order.UserId.ToString() == userId ||
+                order.PharmacyId.ToString() == pharmacyId;
         }
 
 

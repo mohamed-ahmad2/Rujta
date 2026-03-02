@@ -13,13 +13,11 @@ namespace Rujta.Api.Controllers
     {
         private readonly IOrderService _orderService;
         private readonly ILogService _logService;
-        private readonly UserManager<ApplicationUser> _userManager;
 
-        public OrdersController(IOrderService orderService, ILogService logService, UserManager<ApplicationUser> userManager)
+        public OrdersController(IOrderService orderService, ILogService logService)
         {
             _orderService = orderService;
             _logService = logService;
-            _userManager = userManager;
         }
 
         private string GetUser() => User.Identity?.Name ?? LogConstants.UnknownUser;
@@ -30,23 +28,19 @@ namespace Rujta.Api.Controllers
         {
             try
             {
-                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var userIdClaim = User.FindFirstValue("domainPersonId");
                 if (userIdClaim == null)
                     return Unauthorized(ApiMessages.UnauthorizedAccess);
 
                 var userGuid = Guid.Parse(userIdClaim);
 
-                var appUser = await _userManager.FindByIdAsync(userGuid.ToString());
-                if (appUser == null)
-                    return Unauthorized(ApiMessages.UnauthorizedAccess);
-
                 var results = new List<OrderDto>();
 
                 foreach (var dto in orders)
                 {
-                    var order = await _orderService.CreateOrderAsync(dto, appUser.DomainPersonId);
+                    var order = await _orderService.CreateOrderAsync(dto, userGuid);
                     results.Add(order);
-                    await _logService.AddLogAsync(GetUser(), $"Order {order.Id} created successfully for UserId {appUser.DomainPersonId}");
+                    await _logService.AddLogAsync(GetUser(), $"Order {order.Id} created successfully for UserId {userIdClaim}");
                 }
 
                 return Ok(results);
