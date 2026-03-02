@@ -7,7 +7,7 @@ import CartDrawerUser from "./features/user/components/CartDrawer";
 import Splash from "./features/splash/splash";
 
 import { PresenceProvider } from "./context/PresenceProvider";
-
+import { OrdersProvider } from "./context/OrdersProvider";
 const App = () => {
   const { user, loading } = useAuth();
 
@@ -82,7 +82,8 @@ const App = () => {
   }
 
   return (
-    <PresenceProvider>
+    <PresenceProvider>  
+       <OrdersProvider>
       <AppRoutes
         cart={cart}
         setCart={setCart}
@@ -108,6 +109,7 @@ const App = () => {
           onClose={() => setIsCartOpen(false)}
         />
       )}
+       </OrdersProvider>
     </PresenceProvider>
   );
 };
