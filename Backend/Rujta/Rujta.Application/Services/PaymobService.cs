@@ -6,7 +6,7 @@ using System.Text.Json;
 using System;
 
 namespace Rujta.Application.Services
-{
+{/*
     public class PaymobService(
         IConfiguration _configuration,
         HttpClient _httpClient,
@@ -170,4 +170,5 @@ namespace Rujta.Application.Services
             }
         }
     }
+    */
 }

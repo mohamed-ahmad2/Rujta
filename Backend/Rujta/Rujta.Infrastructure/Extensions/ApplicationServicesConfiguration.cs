@@ -49,7 +49,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddHttpClient<IGeocodingService, GeocodingService>();
             services.AddScoped<IPharmacistManagementService, PharmacistManagementService>();
             services.AddSingleton<IMedicineAutocompleteIndex, MedicineAutocompleteIndex>();
-            services.AddHttpClient<IPaymobService, PaymobService>();
+         //   services.AddHttpClient<IPaymobService, PaymobService>();
 
             services.AddSingleton<IUserPresenceService, InMemoryUserPresenceService>();
 

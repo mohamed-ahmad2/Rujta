@@ -16,17 +16,12 @@ import {
   cancelOrderByPharmacy,
 } from "../api/ordersApi";
 
-import { useOrdersSignalR } from "./useOrdersSignalR";
-
 export const useOrders = () => {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // 🔥 Activate SignalR real-time updates
-  useOrdersSignalR(setOrders);
 
   /* ================= FETCH ================= */
 
@@ -63,16 +58,8 @@ export const useOrders = () => {
   const fetchAll = useCallback(() => fetchOrders(getAllOrders), []);
   const fetchUser = useCallback(() => fetchOrders(getUserOrders), []);
   const fetchPharmacy = useCallback(() => fetchOrders(getPharmacyOrders), []);
-
-  const fetchById = useCallback(
-    (id) => fetchSingle(getOrderById, id, setSelectedOrder),
-    []
-  );
-
-  const fetchDetailsById = useCallback(
-    (id) => fetchSingle(getOrderDetails, id, setDetails),
-    []
-  );
+  const fetchById = useCallback((id) => fetchSingle(getOrderById, id, setSelectedOrder), []);
+  const fetchDetailsById = useCallback((id) => fetchSingle(getOrderDetails, id, setDetails), []);
 
   /* ================= MUTATIONS ================= */
 
@@ -81,8 +68,6 @@ export const useOrders = () => {
     setError(null);
     try {
       const res = data ? await fn(data) : await fn();
-      // ❌ No manual refresh
-      // SignalR will update state automatically
       return res?.data || null;
     } catch (err) {
       setError(err.response?.data || err.message);
@@ -91,22 +76,6 @@ export const useOrders = () => {
       setLoading(false);
     }
   };
-
-  const create = (data) => runMutation(createOrder, data);
-  const update = (id, data) => runMutation(() => updateOrder(id, data));
-  const remove = (id) => runMutation(() => deleteOrder(id));
-
-  const accept = (id) => runMutation(() => acceptOrder(id));
-  const process = (id) => runMutation(() => processOrder(id));
-  const outForDeliveryMutation = (id) =>
-    runMutation(() => outForDelivery(id));
-  const deliver = (id) => runMutation(() => markAsDelivered(id));
-
-  const cancelByUser = (id) =>
-    runMutation(() => cancelOrderByUser(id));
-
-  const cancelByPharmacy = (id) =>
-    runMutation(() => cancelOrderByPharmacy(id));
 
   /* ================= RETURN ================= */
 
@@ -123,15 +92,15 @@ export const useOrders = () => {
     fetchById,
     fetchDetailsById,
 
-    create,
-    update,
-    remove,
+    create: (data) => runMutation(createOrder, data),
+    update: (id, data) => runMutation(() => updateOrder(id, data)),
+    remove: (id) => runMutation(() => deleteOrder(id)),
 
-    accept,
-    process,
-    outForDelivery: outForDeliveryMutation,
-    deliver,
-    cancelByUser,
-    cancelByPharmacy,
+    accept: (id) => runMutation(() => acceptOrder(id)),
+    process: (id) => runMutation(() => processOrder(id)),
+    outForDelivery: (id) => runMutation(() => outForDelivery(id)),
+    deliver: (id) => runMutation(() => markAsDelivered(id)),
+    cancelByUser: (id) => runMutation(() => cancelOrderByUser(id)),
+    cancelByPharmacy: (id) => runMutation(() => cancelOrderByPharmacy(id)),
   };
 };
