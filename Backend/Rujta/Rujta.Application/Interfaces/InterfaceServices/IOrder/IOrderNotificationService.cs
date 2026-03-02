@@ -2,6 +2,16 @@
 {
     public interface IOrderNotificationService
     {
-        Task NotifyStatusChangedAsync(int pharmacyId, int orderId, OrderStatus orderStatus);
+        Task NotifyNewOrderAsync(int pharmacyId, int orderId);
+
+        Task NotifyOrderUpdatedAsync(int pharmacyId, int orderId);
+
+        Task NotifyStatusChangedAsync(
+            int pharmacyId,
+            string userId,
+            int orderId,
+            OrderStatus status);
+
+        Task NotifyOrderItemChangedAsync(int orderId);
     }
 }
