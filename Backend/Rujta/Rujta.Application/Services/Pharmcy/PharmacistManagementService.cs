@@ -33,7 +33,7 @@ namespace Rujta.Application.Services.Pharmcy
             return result;
         }
 
-        public async Task<PharmacistDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<PharmacistDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var cacheKey = $"Pharmacist_{id}";
 
@@ -60,7 +60,7 @@ namespace Rujta.Application.Services.Pharmcy
                 _cache.Remove($"Pharmacists_Manager_{dto.ManagerID}");
         }
 
-        public async Task UpdateAsync(int id, PharmacistDto dto, CancellationToken cancellationToken = default)
+        public async Task UpdateAsync(Guid id, PharmacistDto dto, CancellationToken cancellationToken = default)
         {
             var entity = await _uow.Pharmacists.GetByIdAsync(id, cancellationToken);
             if (entity == null)
@@ -76,7 +76,7 @@ namespace Rujta.Application.Services.Pharmcy
                 _cache.Remove($"Pharmacists_Manager_{dto.ManagerID}");
         }
 
-        public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
+        public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var entity = await _uow.Pharmacists.GetByIdAsync(id, cancellationToken);
             if (entity == null)

@@ -4,7 +4,7 @@ using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Interfaces.InterfaceServices.IOrder
 {
-    public interface IOrderService : IGenericService<OrderDto>
+    public interface IOrderService : IGenericService<OrderDto, int>
     {
         Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto, Guid userId, CancellationToken cancellationToken = default);
         Task<IEnumerable<List<OrderDto>>> GetUserOrdersGroupedAsync(Guid userId, CancellationToken cancellationToken = default);

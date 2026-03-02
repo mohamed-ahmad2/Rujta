@@ -4,7 +4,7 @@ using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
-    public interface IPharmacyRepository : IGenericRepository<Pharmacy>
+    public interface IPharmacyRepository : IGenericRepository<Pharmacy, int>
     {
         Task<IEnumerable<Pharmacy>> GetAllPharmacies(CancellationToken cancellationToken = default);
 
