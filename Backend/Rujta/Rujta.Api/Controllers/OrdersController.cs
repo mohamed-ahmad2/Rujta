@@ -207,11 +207,11 @@ namespace Rujta.Api.Controllers
             if (!Guid.TryParse(domainPersonIdClaim, out var domainPersonId))
                 return BadRequest("Invalid DomainPersonId in token.");
 
-            var orders = await _orderService.GetUserOrdersAsync(domainPersonId, cancellationToken);
+            var groupedOrders = await _orderService.GetUserOrdersGroupedAsync(domainPersonId, cancellationToken);
 
             await _logService.AddLogAsync(GetUser(), "Fetched orders for user with DomainPersonId");
 
-            return Ok(orders);
+            return Ok(groupedOrders);
         }
 
 

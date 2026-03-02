@@ -282,20 +282,43 @@ namespace Rujta.Application.Services.OrderS
             }
         }
 
-        public async Task<IEnumerable<OrderDto>> GetUserOrdersAsync(Guid userId, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<List<OrderDto>>> GetUserOrdersGroupedAsync(Guid userId, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                _logger.LogInformation("Fetching orders for User {UserId}", userId);
+            var orders = await _unitOfWork.Orders.GetOrdersByUserIdAsync(userId, cancellationToken);
+            var orderDtos = _mapper.Map<IEnumerable<OrderDto>>(orders);
 
-                var orders = await _unitOfWork.Orders.GetOrdersByUserIdAsync(userId, cancellationToken);
-                return _mapper.Map<IEnumerable<OrderDto>>(orders);
-            }
-            catch (Exception ex)
+            // ترتيب حسب OrderDate
+            var sorted = orderDtos.OrderBy(o => o.OrderDate).ToList();
+            var groups = new List<List<OrderDto>>();
+            var currentGroup = new List<OrderDto>();
+
+            foreach (var order in sorted)
             {
-                _logger.LogError(ex, "Failed to get orders for User {UserId}", userId);
-                throw new InvalidOperationException($"An error occurred while fetching orders for User {userId}.", ex);
+                if (currentGroup.Count == 0)
+                {
+                    currentGroup.Add(order);
+                }
+                else
+                {
+                    var prevOrder = currentGroup.Last();
+                    var diffMinutes = (order.OrderDate - prevOrder.OrderDate).TotalMinutes;
+
+                    if (diffMinutes <= 1)
+                    {
+                        currentGroup.Add(order);
+                    }
+                    else
+                    {
+                        groups.Add(new List<OrderDto>(currentGroup));
+                        currentGroup.Clear();
+                        currentGroup.Add(order);
+                    }
+                }
             }
+
+            if (currentGroup.Count > 0) groups.Add(currentGroup);
+
+            return groups;
         }
 
 
