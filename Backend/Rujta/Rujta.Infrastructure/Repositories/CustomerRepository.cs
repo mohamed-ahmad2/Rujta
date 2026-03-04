@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Repositories
 {
-    public class CustomerRepository : GenericRepository<Customer>, ICustomerRepository
+    public class CustomerRepository : GenericRepository<Customer,Guid>, ICustomerRepository
     {
         public CustomerRepository(AppDbContext context) : base(context)
         {}

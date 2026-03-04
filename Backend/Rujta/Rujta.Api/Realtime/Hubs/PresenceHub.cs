@@ -18,7 +18,7 @@ namespace Rujta.API.Realtime.Hubs
 
         public override async Task OnConnectedAsync()
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = Context.User?.FindFirst("domainPersonId")?.Value;
             var role = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
             var pharmacyId = Context.User?.FindFirst("PharmacyId")?.Value;
 
@@ -40,7 +40,7 @@ namespace Rujta.API.Realtime.Hubs
 
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = Context.User?.FindFirst("domainPersonId")?.Value;
             var role = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
             var pharmacyId = Context.User?.FindFirst("PharmacyId")?.Value;
 

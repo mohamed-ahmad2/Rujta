@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Rujta.Infrastructure.Repositories
 {
-    public class LogRepository : GenericRepository<Log>, ILogRepository
+    public class LogRepository : GenericRepository<Log, int>, ILogRepository
     {
         public LogRepository(AppDbContext context) : base(context)
         {}

@@ -8,7 +8,7 @@ using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
-    public interface ILogRepository : IGenericRepository<Log>
+    public interface ILogRepository : IGenericRepository<Log, int>
     {
         IQueryable<Log> Query();  
     }

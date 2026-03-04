@@ -1,6 +1,6 @@
 ﻿namespace Rujta.Infrastructure.Repositories
 {
-    public class MedicineRepository : GenericRepository<Medicine>, IMedicineRepository
+    public class MedicineRepository : GenericRepository<Medicine, int>, IMedicineRepository
     {
 
 

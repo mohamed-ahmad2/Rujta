@@ -12,6 +12,11 @@ import {
 import apiClient from "../../../shared/api/apiClient";
 import jwt_decode from "jwt-decode";
 
+import {
+  setAccessToken,
+  removeAccessToken,
+} from "../../../authProvider/authTokenProvider";
+
 export const useAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -39,10 +44,15 @@ export const useAuth = () => {
     const response = await login({ email, password });
     setUser({ email: response.email, role: response.role });
     if (response.accessToken) {
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.accessToken}`;
+      setAccessToken(response.accessToken);
+      apiClient.defaults.headers.common["Authorization"] =
+        `Bearer ${response.accessToken}`;
       updateTokenExp(response.accessToken);
       localStorage.setItem("token", response.accessToken);
     }
+    setTimeout(() => {
+      window.location.reload();
+    }, 60);
     return response;
   };
 
@@ -50,7 +60,10 @@ export const useAuth = () => {
   const handleRegister = async (dto) => {
     try {
       await registerUser(dto);
-      const loginResponse = await login({ email: dto.email, password: dto.createPassword });
+      const loginResponse = await login({
+        email: dto.email,
+        password: dto.createPassword,
+      });
       const loggedUser = {
         email: loginResponse?.email ?? dto.email,
         role: loginResponse?.role ?? "User",
@@ -58,42 +71,50 @@ export const useAuth = () => {
       setUser(loggedUser);
 
       if (loginResponse.accessToken) {
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${loginResponse.accessToken}`;
+        apiClient.defaults.headers.common["Authorization"] =
+          `Bearer ${loginResponse.accessToken}`;
         updateTokenExp(loginResponse.accessToken);
       }
       return loggedUser;
     } catch (error) {
-      console.error("Registration or login failed:", error.response?.data || error.message);
+      console.error(
+        "Registration or login failed:",
+        error.response?.data || error.message,
+      );
       throw error;
     }
   };
 
   // Register pharmacy staff (Pharmacist) - Admin only
-const handleRegisterStaff = async (dto) => {
-  try {
-    const response = await registerStaff(dto);
-    return response;
-  } catch (error) {
-    console.error(
-      "Register staff failed:",
-      error.response?.data || error.message
-    );
-    throw error;
-  }
-};
-
+  const handleRegisterStaff = async (dto) => {
+    try {
+      const response = await registerStaff(dto);
+      return response;
+    } catch (error) {
+      console.error(
+        "Register staff failed:",
+        error.response?.data || error.message,
+      );
+      throw error;
+    }
+  };
 
   // Logout
   const handleLogout = async () => {
-    try {
-      await logout();
-      setUser(null);
-      setTokenExp(null);
-      delete apiClient.defaults.headers.common['Authorization'];
-    } catch (err) {
-      console.error("Logout failed", err);
-    }
-  };
+  try {
+    setUser(null);
+    setTokenExp(null);
+
+    await logout();
+
+    delete apiClient.defaults.headers.common["Authorization"];
+
+    await removeAccessToken();
+
+  } catch (err) {
+    console.error("Logout failed", err);
+  }
+};
 
   // Google login
   const handleGoogleLogin = useCallback(async (IdToken) => {
@@ -104,14 +125,20 @@ const handleRegisterStaff = async (dto) => {
         const { accessToken, email, role } = response;
         setUser({ email, role });
         if (accessToken) {
-          apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+          apiClient.defaults.headers.common["Authorization"] =
+            `Bearer ${accessToken}`;
           updateTokenExp(accessToken);
         }
-
       }
+      setTimeout(() => {
+        window.location.reload();
+      }, 50);
       return response;
     } catch (error) {
-      console.error("Google login failed:", error.response?.data || error.message);
+      console.error(
+        "Google login failed:",
+        error.response?.data || error.message,
+      );
       throw error;
     }
   }, []);
@@ -126,12 +153,14 @@ const handleRegisterStaff = async (dto) => {
   // Refresh access token periodically
   const refreshToken = useCallback(async () => {
     try {
-      const response = await apiClient.post("/auth/refresh-token", null, { withCredentials: true });
+      const response = await apiClient.post("/auth/refresh-token", null, {
+        withCredentials: true,
+      });
       if (response.data?.accessToken) {
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.accessToken}`;
+        apiClient.defaults.headers.common["Authorization"] =
+          `Bearer ${response.data.accessToken}`;
         updateTokenExp(response.data.accessToken);
       }
-
     } catch (err) {
       console.error("Proactive refresh failed", err);
       handleLogout();

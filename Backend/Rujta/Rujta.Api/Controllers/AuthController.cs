@@ -379,9 +379,6 @@ namespace Rujta.API.Controllers
             }
         }
 
-
-
-
         public record MeResponse(string Email, string Role);
     public record EmailResponse(string Email);
 }

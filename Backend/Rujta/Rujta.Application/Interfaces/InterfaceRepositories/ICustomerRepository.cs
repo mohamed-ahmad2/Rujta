@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
-    public interface ICustomerRepository : IGenericRepository<Customer>
+    public interface ICustomerRepository : IGenericRepository<Customer,Guid>
     {
         Task<Customer?> GetByPhoneAsync(string phoneNumber, int pharmacyId);
         Task<IEnumerable<Order>> GetCustomerOrdersAsync(Guid customerId);
