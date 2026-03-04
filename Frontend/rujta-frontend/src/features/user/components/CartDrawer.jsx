@@ -1,10 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { IoMdClose } from "react-icons/io";
 import { FaPlus, FaMinus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import audio from "../../../assets/audio.wav";
 
 const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
   const navigate = useNavigate();
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+
+  const clickSound = new Audio(audio);
 
   // Increase quantity
   const handleIncrease = (id) => {
@@ -34,8 +38,15 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
 
   // Handle Checkout
   const handleCheckout = () => {
-    onClose();
-    navigate("/user/Checkout");
+    if (isCheckingOut) return; // يمنع الدوس تاني
+
+    setIsCheckingOut(true);
+    clickSound.play(); // تشغيل الصوت
+
+    setTimeout(() => {
+      onClose();
+      navigate("/user/Checkout");
+    }, 400);
   };
 
   return (
@@ -110,9 +121,17 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
 
           <button
             onClick={handleCheckout}
-            className="w-full bg-gradient-to-r from-secondary to-secondary text-white py-2.5 rounded-md font-semibold hover:opacity-90 transition-all duration-300"
+            disabled={isCheckingOut}
+            className={`w-full bg-gradient-to-r from-secondary to-secondary 
+                        text-white py-2.5 rounded-md font-semibold 
+                        transition-all duration-300
+                        ${
+                          isCheckingOut
+                            ? "scale-95 opacity-70 cursor-not-allowed"
+                            : "hover:scale-105 active:scale-95 hover:opacity-90"
+                        }`}
           >
-            Checkout
+            {isCheckingOut ? "Processing..." : "Checkout"}
           </button>
         </div>
       )}

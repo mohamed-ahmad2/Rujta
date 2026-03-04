@@ -39,6 +39,14 @@ import Sales from "../features/dashboard/pages/Sales";
 import Logs from "../features/dashboard/pages/Logs";
 import Ads from "../features/dashboard/pages/Ads";
 
+
+/* ================= DashboardSuperAdmin ================= */
+import DashboardLayoutSuberAdmin from "../features/dashboardAdmin/components/layouts/DashboardLayout";
+import Overview from "../features/dashboardAdmin/pages/Overview";
+import Pharmacies from "../features/dashboardAdmin/pages/Pharmacies";
+import Reports from "../features/dashboardAdmin/pages/Reports";
+import SettingsAdmin from "../features/dashboardAdmin/pages/Settings";
+
 /* ================= Notifications ================= */
 import NotificationsPage from "../features/notifications/pages/NotificationsPage";
 

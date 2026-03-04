@@ -10,6 +10,9 @@ import { useAuth } from "../../auth/hooks/useAuth";
 import { useSearchMedicines } from "../../medicines/hook/useSearchMedicines";
 import { useOrders } from "../../orders/hooks/useOrders";
 import { useNotifications } from "../../notifications/hook/useNotifications";
+import { IoQrCodeOutline } from "react-icons/io5"; // أيقونة QR / Scanner
+
+
 const Navbar = ({ cart, setCart, onCartClick }) => {
   const [query, setQuery] = useState("");
   const [incompleteOrdersCount, setIncompleteOrdersCount] = useState(0);
@@ -115,6 +118,10 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
       console.error("Logout failed:", err);
     }
   };
+  // وظيفة فتح صفحة المسح
+const openScanner = () => {
+  navigate("/user/scan-prescription"); // الرابط اللي هيتفتح للـ Scanner
+};
 
   return (
     <div className="sticky top-0 z-50 shadow-md bg-white text-gray-800">
@@ -176,7 +183,13 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
           </div>
 
           {/* Right Icons */}
-          <div className="flex items-center gap-4 md:gap-6 mt-2 md:mt-0">
+<div className="flex items-center gap-4 md:gap-6 mt-2 md:mt-0">
+  
+  {/* Scanner */}
+  <IoQrCodeOutline
+    className="text-2xl text-gray-600 cursor-pointer hover:text-secondary"
+    onClick={openScanner}
+  />
             {/* Cart */}
             <div className="relative cursor-pointer" onClick={onCartClick}>
               <FaCartShopping className="text-2xl text-secondary" />

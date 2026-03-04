@@ -4,6 +4,7 @@ import { useOrders } from "../../orders/hooks/useOrders";
 import { useAuth } from "../../auth/hooks/useAuth";
 import useAddress from "../../address/hook/useAddress";
 import apiClient from "../../../shared/api/apiClient";
+import PharmacyMap from "../components/PharmacyMap";
 
 const Checkout = () => {
   const [cart, setCart] = useState([]);
@@ -36,6 +37,11 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [selectedPharmacies, setSelectedPharmacies] = useState([]);
   const [creatingOrder, setCreatingOrder] = useState(false);
+   const [userLocation, setUserLocation] = useState(null);
+
+   const [routeToPharmacy, setRouteToPharmacy] = useState(null);
+
+   const [selectedMedicines, setSelectedMedicines] = useState({});
 
   useEffect(() => {
     const errorMessage = typeof error === "string" ? error : error?.message || "";
@@ -55,6 +61,38 @@ const Checkout = () => {
     fetchUserAddresses();
   }, [user]);
 
+
+    useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+        },
+        (err) => console.error("Geolocation error:", err)
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    const errorMessage = typeof error === "string" ? error : error?.message || "";
+    if (
+      errorMessage.includes("User location not set") ||
+      errorMessage.includes("location not set")
+    ) {
+      setShowLocationPrompt(true);
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (!user) return;
+    const key = `cart_${user.email}`;
+    const stored = JSON.parse(localStorage.getItem(key)) || [];
+    setCart(stored);
+    fetchUserAddresses();
+  }, [user]);
+
+
   const handleSetLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -73,7 +111,7 @@ const Checkout = () => {
       );
     }
   };
-
+   
   const handleNewAddressChange = (e) => {
     const { name, value } = e.target;
     setNewAddressForm((prev) => ({ ...prev, [name]: value }));
@@ -122,6 +160,21 @@ const Checkout = () => {
         : [...prev, pharmacyId]
     );
   };
+  const handleToggleMedicine = (pharmacyId, medicineId) => {
+  setSelectedMedicines((prev) => {
+    const pharmacyMeds = prev[pharmacyId] || [];
+
+    const updated = pharmacyMeds.includes(medicineId)
+      ? pharmacyMeds.filter((id) => id !== medicineId)
+      : [...pharmacyMeds, medicineId];
+
+    return {
+      ...prev,
+      [pharmacyId]: updated,
+    };
+  });
+};
+  
 
   const handleConfirmOrders = async () => {
     if (!cart || cart.length === 0) {
@@ -146,12 +199,17 @@ const Checkout = () => {
       );
       if (!selectedPharmacy) continue;
 
-      const availableItems = selectedPharmacy.foundMedicines.filter(
-        (m) => m.isQuantityEnough
-      );
-      if (availableItems.length === 0) continue;
+      const selectedMedicineIds = selectedMedicines[pharmacyId] || [];
 
-      const orderItems = availableItems.map((m) => ({
+const selectedItems = selectedPharmacy.foundMedicines.filter(
+  (m) =>
+    selectedMedicineIds.includes(m.medicineId) &&
+    m.isQuantityEnough
+);
+
+      if (selectedItems.length === 0) continue;
+
+      const orderItems = selectedItems.map((m) => ({
         MedicineID: m.medicineId,
         Quantity: m.requestedQuantity,
       }));
@@ -213,23 +271,46 @@ const Checkout = () => {
       window.location.href = `/user/payment`;
     }
   };
+  // عند الضغط على زرار Order
+const handleOrderClick = (pharmacy) => {
+  setSelectedPharmacyForPayment(pharmacy); // لتتبع الصيدلية المختارة
+  if (userLocation) {
+    setRouteToPharmacy({
+      from: userLocation,
+      to: {
+         latitude: pharmacy.latitude,
+          longitude: pharmacy.longitude,
+         },
+    });
+  }
+  setSelectedPharmacies([pharmacy.pharmacyId]);
+  setShowPaymentModal(true);
+};
 
   const errorMessage = typeof error === "string" ? error : error?.message || "";
 
   return (
-    <div className="w-screen h-screen p-6 bg-gray-100 flex justify-center items-center">
-      <div className="w-[1150px] h-[700px] bg-white shadow-xl rounded-3xl overflow-hidden flex">
-        {/* LEFT SIDE */}
-        <div className="w-1/2 h-full relative">
-          <div
-            className="absolute inset-0 bg-cover bg-center brightness-95"
-            style={{
-              backgroundImage:
-                "url('https://static1.makeuseofimages.com/wordpress/wp-content/uploads/2023/05/google-maps-icon-on-map.jpg')",
-            }}
-          ></div>
-        </div>
+    <div>
 
+    <div className="w-screen min-h-screen overflow-y-auto p-6 bg-gray-100 flex justify-center items-center">
+      <div className="w-[1150px] h-[700px] bg-white shadow-xl rounded-3xl  flex">
+       {/* LEFT SIDE */}
+        <div className="w-1/2 h-full relative">
+          <div className="absolute inset-0">
+            {userLocation ? (
+              <PharmacyMap
+  userLocation={userLocation} // موقعك
+  pharmacies={pharmacies}   // كل الصيدليات
+  selectedPharmacy={selectedPharmacyForPayment} // الصيدلية المختارة
+  route={routeToPharmacy}   // المسار اللي هيظهر
+/>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-500">Waiting for location...</p>
+              </div>
+            )}
+          </div>
+        </div>
         {/* RIGHT SIDE */}
         <div className="w-1/2 h-full p-8 overflow-y-auto bg-white">
           <div className="flex items-center justify-between mb-6">
@@ -466,9 +547,22 @@ const Checkout = () => {
                                     }
                                     return (
                                       <li key={m.medicineId} className={colorClass}>
-                                        {m.medicineName} – Requested: {m.requestedQuantity}, Available: {m.availableQuantity}
-                                        {!m.isQuantityEnough && " (Not enough)"}
-                                      </li>
+  <input
+    type="checkbox"
+    checked={
+      selectedMedicines[p.pharmacyId]?.includes(m.medicineId) || false
+    }
+    onChange={() =>
+      handleToggleMedicine(p.pharmacyId, m.medicineId)
+    }
+    className="mr-2"
+  />
+
+  {m.medicineName} – Requested: {m.requestedQuantity}, 
+  Available: {m.availableQuantity}
+
+  {!m.isQuantityEnough && " (Not enough)"}
+</li>
                                     );
                                   })}
                                 </ul>
@@ -488,11 +582,7 @@ const Checkout = () => {
                         </div>
 
                         <button
-                          onClick={() => {
-                            setSelectedPharmacyForPayment(p.pharmacyId);
-                            setSelectedPharmacies([p.pharmacyId]);
-                            setShowPaymentModal(true);
-                          }}
+                         onClick={() => handleOrderClick(p)}
                           className="bg-secondary text-white px-5 py-2 rounded-xl font-medium"
                         >
                           Order
@@ -535,9 +625,12 @@ const Checkout = () => {
         </div>
       </div>
 
-      {showPaymentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-          <div className="bg-white w-[400px] p-6 rounded-2xl shadow-xl">
+     
+    </div>
+
+          {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[9999]">
+          <div className="bg-white w-full max-w-md mx-4 p-6 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-semibold mb-4">Select Payment Method</h2>
             <div className="flex flex-col gap-3">
               <label className="flex items-center gap-2">
@@ -580,6 +673,9 @@ const Checkout = () => {
         </div>
       )}
     </div>
+
+   
+
   );
 };
 
