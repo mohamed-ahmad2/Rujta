@@ -78,22 +78,25 @@ export const OrdersProvider = ({ children }) => {
       setOrders((prev) => [order, ...prev]);
     });
 
-    hubConnection.on("OrderUpdated", (updatedOrder) => {
-      console.log("✏️ OrderUpdated event:", updatedOrder);
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === updatedOrder.id ? updatedOrder : o
-        )
-      );
-    });
+   hubConnection.on("OrderCreated", (order) => {
+  if (!order?.id) return; // ignore invalid orders
+  console.log("📦 OrderCreated event:", order);
+  setOrders((prev) => [order, ...prev]);
+});
 
-    hubConnection.on("OrderDeleted", (orderId) => {
-      console.log("🗑 OrderDeleted event:", orderId);
-      setOrders((prev) =>
-        prev.filter((o) => o.id !== orderId)
-      );
-    });
+hubConnection.on("OrderUpdated", (updatedOrder) => {
+  if (!updatedOrder?.id) return; // ignore invalid orders
+  console.log("✏️ OrderUpdated event:", updatedOrder);
+  setOrders((prev) =>
+    prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
+  );
+});
 
+hubConnection.on("OrderDeleted", (orderId) => {
+  if (!orderId) return;
+  console.log("🗑 OrderDeleted event:", orderId);
+  setOrders((prev) => prev.filter((o) => o.id !== orderId));
+});
     hubConnection.onclose((err) => {
       console.log("🔴 Orders connection closed:", err);
     });

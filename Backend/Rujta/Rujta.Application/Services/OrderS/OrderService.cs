@@ -3,7 +3,7 @@ using Rujta.Application.Interfaces.InterfaceServices.IOrder;
 
 namespace Rujta.Application.Services.OrderS
 {
-    public class OrderService(IUnitOfWork _unitOfWork,IMapper _mapper,ILogger<OrderService> _logger, IOrderNotificationService _notificationService) : IOrderService
+    public class OrderService(IUnitOfWork _unitOfWork, IMapper _mapper, ILogger<OrderService> _logger, IOrderNotificationService _notificationService) : IOrderService
     {
         public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto, Guid userId, CancellationToken cancellationToken = default)
         {
@@ -19,13 +19,13 @@ namespace Rujta.Application.Services.OrderS
 
                 if (!createOrderDto.DeliveryAddressId.HasValue)
                     throw new InvalidOperationException("Delivery address ID is required.");
-                
+
 
                 var address = await _unitOfWork.Address.GetByIdAsync(createOrderDto.DeliveryAddressId.Value, cancellationToken);
 
                 if (address == null)
                     throw new InvalidOperationException("The delivery address does not exist.");
-                
+
 
                 string street = address.Street ?? "";
                 string buildingNo = address.BuildingNo ?? "";
@@ -451,11 +451,11 @@ namespace Rujta.Application.Services.OrderS
 
         }
 
-        public async Task<IEnumerable<OrderDto>> GetPharmacyOrdersAsync(int pharmacyId,CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<OrderDto>> GetPharmacyOrdersAsync(int pharmacyId, CancellationToken cancellationToken = default)
         {
             try
             {
-                _logger.LogInformation("Fetching orders for Pharmacy {PharmacyId}",pharmacyId);
+                _logger.LogInformation("Fetching orders for Pharmacy {PharmacyId}", pharmacyId);
 
                 var orders = await _unitOfWork.Orders.GetOrdersByPharmacyIdAsync(pharmacyId, cancellationToken);
 
@@ -463,12 +463,12 @@ namespace Rujta.Application.Services.OrderS
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,"Failed to fetch orders for Pharmacy {PharmacyId}",pharmacyId);
-                throw new InvalidOperationException($"An error occurred while fetching orders for Pharmacy {pharmacyId}.",ex);
+                _logger.LogError(ex, "Failed to fetch orders for Pharmacy {PharmacyId}", pharmacyId);
+                throw new InvalidOperationException($"An error occurred while fetching orders for Pharmacy {pharmacyId}.", ex);
             }
         }
 
-        public async Task<bool> CanAccessOrderAsync(int orderId,string? userId, string? pharmacyId)
+        public async Task<bool> CanAccessOrderAsync(int orderId, string? userId, string? pharmacyId)
         {
             var order =
                 await _unitOfWork.Orders.GetByIdAsync(orderId);
