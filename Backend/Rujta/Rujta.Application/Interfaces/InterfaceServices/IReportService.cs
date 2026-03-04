@@ -6,10 +6,9 @@ namespace Rujta.Application.Interfaces.InterfaceServices
 {
     public interface IReportService
     {
+        // بدل Guid adminId خليه int pharmacyId
         Task<PharmacyReportDto> GetPharmacyReportAsync(
-            Guid adminId,
+            int pharmacyId,
             CancellationToken cancellationToken = default);
     }
-
 }
-

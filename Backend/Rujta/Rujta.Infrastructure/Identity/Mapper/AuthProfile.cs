@@ -64,6 +64,11 @@ namespace Rujta.Infrastructure.Identity.Mapper
                 .ForMember(dest => dest.Salary, opt => opt.Ignore()) 
                 .ForMember(dest => dest.ManagerId, opt => opt.Ignore())
                 .ForMember(dest => dest.Manager, opt => opt.Ignore());
+
+            CreateMap<RegisterByAdminDto, Admin>()
+    .ForMember(dest => dest.Id, opt => opt.Ignore())
+    .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(_ => DateTime.UtcNow));
+
         }
     }
 }

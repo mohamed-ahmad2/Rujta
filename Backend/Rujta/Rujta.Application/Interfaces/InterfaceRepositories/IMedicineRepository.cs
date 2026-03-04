@@ -7,5 +7,6 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
  
         Task<IEnumerable<Medicine>> GetExpiredMedicinesAsync( CancellationToken cancellationToken = default);
         Task<IEnumerable<Medicine>> GetExpiringSoonMedicinesAsync(int days = 30, CancellationToken cancellationToken = default);
+        Task<List<Medicine>> GetByNamesAsync(IEnumerable<string> names, CancellationToken cancellationToken = default);
     }
 }

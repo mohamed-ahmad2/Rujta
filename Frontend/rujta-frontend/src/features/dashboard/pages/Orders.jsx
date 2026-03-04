@@ -3,17 +3,18 @@ import {
   Search,
   Filter,
   Download,
-  Edit,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 import StatCard from "../components/OrderCard";
 import { useOrders } from "../../orders/hooks/useOrders";
+import { toast } from "react-toastify";
 
 export default function Orders() {
   const {
     orders,
     loading,
+    error,
     fetchPharmacy,
     accept,
     process,
@@ -31,10 +32,22 @@ export default function Orders() {
   const [filterCustomer, setFilterCustomer] = useState("");
   const [filterDate, setFilterDate] = useState("");
 
+  // ✅ Fetch orders on mount
   useEffect(() => {
     fetchPharmacy();
   }, [fetchPharmacy]);
 
+  // ✅ Error handling
+  useEffect(() => {
+    if (error) {
+      const errorMessage =
+        error?.message ||
+        (typeof error === "string" ? error : "An unexpected error occurred");
+      toast.error(errorMessage);
+    }
+  }, [error]);
+
+  // ✅ Filter orders
   const filtered = useMemo(() => {
     let list = [...orders];
 
@@ -47,6 +60,7 @@ export default function Orders() {
           o.id?.toString().includes(s)
       );
     }
+
     if (filterOrderId)
       list = list.filter((o) => o.id?.toString().includes(filterOrderId));
     if (filterCustomer)
@@ -82,6 +96,7 @@ export default function Orders() {
     }
   };
 
+  // ✅ Export filtered orders to CSV
   const handleExport = () => {
     const rows = [
       ["Order ID", "User", "Pharmacy", "Date", "Total", "Status"],
@@ -108,16 +123,19 @@ export default function Orders() {
     URL.revokeObjectURL(url);
   };
 
-  const handlePrevPage = () => {
-    if (page > 1) setPage(page - 1);
-  };
+  // ✅ Pagination
+  const handlePrevPage = () => page > 1 && setPage(page - 1);
+  const handleNextPage = () => page < totalPages && setPage(page + 1);
+  const handlePageClick = (p) => setPage(p);
 
-  const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
-  };
-
-  const handlePageClick = (p) => {
-    setPage(p);
+  // ✅ Mutation wrapper
+  const handleMutation = async (mutationFn, id, successMessagePrefix) => {
+    const res = await mutationFn(id);
+    if (res?.success) {
+      toast.success(res.message || `${successMessagePrefix} successfully`);
+    } else {
+      toast.error(res?.message);
+    }
   };
 
   return (
@@ -139,7 +157,9 @@ export default function Orders() {
         />
         <StatCard
           title="Cancelled Orders"
-          value={orders.filter((o) => o.status?.startsWith("Cancelled")).length}
+          value={orders.filter((o) =>
+            o.status?.startsWith("Cancelled")
+          ).length}
         />
       </div>
 
@@ -250,7 +270,9 @@ export default function Orders() {
                     {o.status === "Pending" && (
                       <button
                         disabled={loading}
-                        onClick={() => accept(o.id, fetchPharmacy)}
+                        onClick={() =>
+                          handleMutation(accept, o.id, "Order accepted")
+                        }
                         className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200"
                       >
                         Accept
@@ -259,7 +281,9 @@ export default function Orders() {
                     {o.status === "Accepted" && (
                       <button
                         disabled={loading}
-                        onClick={() => process(o.id, fetchPharmacy)}
+                        onClick={() =>
+                          handleMutation(process, o.id, "Order processed")
+                        }
                         className="px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
                       >
                         Process
@@ -268,7 +292,13 @@ export default function Orders() {
                     {o.status === "Processing" && (
                       <button
                         disabled={loading}
-                        onClick={() => outForDelivery(o.id, fetchPharmacy)}
+                        onClick={() =>
+                          handleMutation(
+                            outForDelivery,
+                            o.id,
+                            "Order out for delivery"
+                          )
+                        }
                         className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200"
                       >
                         Out For Delivery
@@ -277,7 +307,9 @@ export default function Orders() {
                     {o.status === "OutForDelivery" && (
                       <button
                         disabled={loading}
-                        onClick={() => deliver(o.id, fetchPharmacy)}
+                        onClick={() =>
+                          handleMutation(deliver, o.id, "Order delivered")
+                        }
                         className="px-3 py-1 text-xs rounded-full bg-green-200 text-green-800 hover:bg-green-300"
                       >
                         Delivered
@@ -287,7 +319,13 @@ export default function Orders() {
                       !o.status?.startsWith("Cancelled") && (
                         <button
                           disabled={loading}
-                          onClick={() => cancelByPharmacy(o.id)}
+                          onClick={() =>
+                            handleMutation(
+                              cancelByPharmacy,
+                              o.id,
+                              "Order cancelled"
+                            )
+                          }
                           className="px-3 py-1 text-xs rounded-full bg-red-100 text-red-600 hover:bg-red-200"
                         >
                           Cancel
@@ -301,7 +339,7 @@ export default function Orders() {
         </table>
       </div>
 
-      {/* pagination */}
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-4">
           <button

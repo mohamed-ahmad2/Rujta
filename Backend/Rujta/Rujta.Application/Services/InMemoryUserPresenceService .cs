@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
-using Rujta.Domain.Interfaces;
+﻿using Rujta.Domain.Interfaces;
 using System.Collections.Concurrent;
 
 namespace Rujta.Application.Services

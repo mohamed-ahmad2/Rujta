@@ -1,5 +1,4 @@
 ﻿using FluentValidation;
-using Rujta.Application.DTOs;
 
 namespace Rujta.Application.Validation
 {

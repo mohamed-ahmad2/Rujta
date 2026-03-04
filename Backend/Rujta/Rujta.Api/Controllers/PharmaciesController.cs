@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
+using Rujta.Application.Services.Pharmcy;
 
 namespace Rujta.API.Controllers
 {
@@ -9,10 +11,14 @@ namespace Rujta.API.Controllers
     public class PharmaciesController : ControllerBase
     {
         private readonly PharmacyDistanceService _distanceService;
+        private readonly IPharmacyRepository _pharmacyRepo;
 
-        public PharmaciesController(PharmacyDistanceService distanceService)
+        public PharmaciesController(
+            PharmacyDistanceService distanceService,
+            IPharmacyRepository pharmacyRepo)   
         {
             _distanceService = distanceService;
+            _pharmacyRepo = pharmacyRepo;
         }
 
         [HttpGet("nearest-routed")]
@@ -23,8 +29,8 @@ namespace Rujta.API.Controllers
             string mode = "car",
             int topK = 5)
         {
-            
-            var result = await _distanceService.GetNearestPharmaciesRouted(userLat, userLon, mode, topK);
+            var result = await _distanceService
+                .GetNearestPharmaciesRouted(userLat, userLon, mode, topK);
 
             return Ok(result.Select(r => new
             {
@@ -35,5 +41,45 @@ namespace Rujta.API.Controllers
                 mode
             }));
         }
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<IActionResult> GetAllPharmacies()
+        {
+            var pharmacies = await _pharmacyRepo.GetAllPharmacies();
+            return Ok(pharmacies);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("{pharmacyId}/medicine/{medicineId}/stock")]
+        public async Task<IActionResult> GetMedicineStock(int pharmacyId, int medicineId)
+        {
+            var stock = await _pharmacyRepo.GetMedicineStockAsync(pharmacyId, medicineId);
+            return Ok(new { PharmacyId = pharmacyId, MedicineId = medicineId, Stock = stock });
+        }
+
+        [AllowAnonymous]
+        [HttpGet("{pharmacyId}/medicines")]
+        public async Task<IActionResult> GetAllMedicines(int pharmacyId)
+        {
+            var medicines = await _pharmacyRepo
+                .GetAllMedicinesByPharmacyAsync(pharmacyId);
+
+            var result = medicines.Select(m => new MedicineDto
+            {
+                Id = m.Id,
+                Name = m.Name,
+                Description = m.Description,
+                Dosage = m.Dosage,
+                Price = m.Price,
+                ExpiryDate = m.ExpiryDate,
+                CompanyName = m.CompanyName,
+                CategoryId = m.CategoryId,
+                ActiveIngredient = m.ActiveIngredient,
+                ImageUrl = m.ImageUrl
+            });
+
+            return Ok(result);
+        }
+
     }
 }

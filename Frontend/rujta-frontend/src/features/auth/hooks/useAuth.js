@@ -41,6 +41,7 @@ export const useAuth = () => {
     if (response.accessToken) {
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.accessToken}`;
       updateTokenExp(response.accessToken);
+      localStorage.setItem("token", response.accessToken);
     }
     return response;
   };

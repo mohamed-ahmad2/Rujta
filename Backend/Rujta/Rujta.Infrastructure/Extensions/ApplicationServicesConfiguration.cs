@@ -1,4 +1,12 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Rujta.Application.Interfaces.InterfaceServices.IGeocoding;
+using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
+using Rujta.Application.Interfaces.InterfaceServices.IOrder;
+using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
+using Rujta.Application.Services.Geocoding;
+using Rujta.Application.Services.MedicineS;
+using Rujta.Application.Services.OrderS;
+using Rujta.Application.Services.Pharmcy;
 using Rujta.Domain.Interfaces;
 using Rujta.Infrastructure.Identity.Services.Auth;
 
@@ -40,6 +48,9 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IUserService, UserService>();
             services.AddHttpClient<IGeocodingService, GeocodingService>();
             services.AddScoped<IPharmacistManagementService, PharmacistManagementService>();
+            services.AddSingleton<IMedicineAutocompleteIndex, MedicineAutocompleteIndex>();
+
+
             services.AddSingleton<IUserPresenceService, InMemoryUserPresenceService>();
 
             services.AddMemoryCache();

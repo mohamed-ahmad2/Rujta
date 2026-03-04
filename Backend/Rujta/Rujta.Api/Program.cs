@@ -1,10 +1,5 @@
-using Polly;
-using Rujta.API.Hubs;
-using Rujta.Application.MappingProfiles;
-using Rujta.Domain.Hubs;
-using Rujta.Infrastructure.Extensions;
-using Rujta.Infrastructure.Firebase;
-using System.Text.Json.Serialization;
+using Rujta.Application.Interfaces;
+using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 
 namespace Rujta.API
 {
@@ -50,8 +45,13 @@ namespace Rujta.API
 
             // Application Services
             builder.Services.AddApplicationServices(builder.Configuration);
+            builder.Services.AddScoped<IOrderNotificationService, OrderNotificationService>();
 
             builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
+            builder.Services.AddScoped<IReportService, ReportService>();
+            builder.Services.AddScoped<ISuperAdminService, SuperAdminService>();
+
+
 
             // Firebase Initialization
             try
@@ -114,6 +114,7 @@ namespace Rujta.API
 
             app.MapHub<PresenceHub>("/hubs/presence");
             app.MapHub<NotificationHub>("/notificationHub");
+            app.MapHub<OrderHub>("/hubs/orders");
 
             app.MapControllers();
 
@@ -126,6 +127,16 @@ namespace Rujta.API
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
                 await IdentitySeeder.SeedRolesAsync(roleManager);
             }
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                var autocomplete = scope.ServiceProvider.GetRequiredService<IMedicineAutocompleteIndex>();
+
+                var medicines = await unitOfWork.Medicines.GetAllAsync();
+                autocomplete.Build(medicines.Select(m => m.Name!));
+            }
+
 
             await app.RunAsync();
         }

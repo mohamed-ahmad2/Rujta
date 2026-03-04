@@ -10,6 +10,6 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
         Task<IEnumerable<Order>> GetAllWithItemsAsync(CancellationToken cancellationToken = default);
         Task<IEnumerable<Order>> GetOrdersByPharmacyIdAsync(int pharmacyId,CancellationToken cancellationToken = default);
         Task<IEnumerable<Order>> GetOrdersByCustomerAsync(Guid customerId);
-
+        Task<List<int>> GetUserPurchasedMedicineIdsAsync(Guid userId,CancellationToken cancellationToken = default);
     }
 }

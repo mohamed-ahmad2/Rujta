@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
+using Rujta.Application.Interfaces.InterfaceServices.IGeocoding;
 
 namespace Rujta.Application.Services
 {

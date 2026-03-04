@@ -22,6 +22,8 @@ import ProductsUser from "../features/user/components/Products";
 import Profile from "../features/user/pages/Profile";
 import Ordersuser from "../features/user/pages/Orders";
 import Checkout from "../features/user/pages/Checkout";
+import PharmacyDetails from "../features/user/pages/PharmacyDetails";
+import Payment from "../features/user/pages/Payment";
 
 /* ================= Medicines ================= */
 import MedicineDetails from "../features/medicines/pages/MedicineDetails";
@@ -38,8 +40,8 @@ import Logs from "../features/dashboard/pages/Logs";
 import Ads from "../features/dashboard/pages/Ads";
 
 
-/* ================= DashboardAdmin ================= */
-import DashboardLayoutAdmin from "../features/dashboardAdmin/components/layouts/DashboardLayout";
+/* ================= DashboardSuperAdmin ================= */
+import DashboardLayoutSuberAdmin from "../features/dashboardAdmin/components/layouts/DashboardLayout";
 import Overview from "../features/dashboardAdmin/pages/Overview";
 import Pharmacies from "../features/dashboardAdmin/pages/Pharmacies";
 import Reports from "../features/dashboardAdmin/pages/Reports";
@@ -97,33 +99,36 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
     <Route path="/reset-password" element={<ResetPasswordPage />} />
 
     {/* ========= User ========= */}
-    <Route
-      path="/user"
-      element={
-        <ProtectedRoute>
-          <UserLayout
-            cart={cart}
-            setCart={setCart}
-            isCartOpen={isCartOpen}
-            setIsCartOpen={setIsCartOpen}
-          />
-        </ProtectedRoute>
-      }
-    >
-      <Route
-        index
-        element={
-          <>
-            <HeroUser />
-            <ProductsUser cart={cart} setCart={setCart} />
-          </>
-        }
+<Route
+  path="/user"
+  element={
+    <ProtectedRoute>
+      <UserLayout
+        cart={cart}
+        setCart={setCart}
+        isCartOpen={isCartOpen}
+        setIsCartOpen={setIsCartOpen}
       />
-      <Route path="orders" element={<Ordersuser />} />
-      <Route path="profile" element={<Profile />} />
-      <Route path="checkout" element={<Checkout />} />
-      <Route path="notifications" element={<NotificationsPage />} />
-    </Route>
+    </ProtectedRoute>
+  }
+>
+  <Route
+    index
+    element={
+      <>
+        <HeroUser />
+        <ProductsUser cart={cart} setCart={setCart} />
+      </>
+    }
+  />
+  <Route path="orders" element={<Ordersuser />} />
+  <Route path="profile" element={<Profile />} />
+  <Route path="checkout" element={<Checkout />} />
+  <Route path="notifications" element={<NotificationsPage />} />
+  <Route path="payment" element={<Payment />} />  {/* هنا صفحة الدفع */}
+  <Route path="pharmacy/:id" element={<PharmacyDetails />} />
+</Route>
+
 
     {/* ========= Medicines ========= */}
     <Route
