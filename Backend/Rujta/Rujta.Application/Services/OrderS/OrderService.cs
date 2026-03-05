@@ -98,7 +98,7 @@ namespace Rujta.Application.Services.OrderS
             }
         }
 
-        private async Task<(bool success, string message)> SafeUpdateOrderAsync(int id, int pharmacyId, OrderStatus newStatus, CancellationToken cancellationToken = default, int maxRetries = 3)
+        private async Task<(bool success, string message)> SafeUpdateOrderAsync(int id, int pharmacyId, OrderStatus newStatus, CancellationToken cancellationToken = default, int maxRetries = 3, bool isUser = false)
         {
             int retryCount = 0;
             while (retryCount < maxRetries)
@@ -109,8 +109,9 @@ namespace Rujta.Application.Services.OrderS
                     if (order == null)
                         return (false, OrderMessages.OrderNotFound);
 
-                    if (order.PharmacyId != pharmacyId)
-                        return (false, "Unauthorized pharmacy access");
+                    if (!isUser && order.PharmacyId != pharmacyId)
+                            return (false, "Unauthorized pharmacy access");
+                    
 
                     if (!CanChangeStatus(order.Status, newStatus))
                         return (false, OrderMessages.InvalidStateTransition);
@@ -179,8 +180,8 @@ namespace Rujta.Application.Services.OrderS
            SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.Accepted, cancellationToken);
 
 
-        public Task<(bool success, string message)> CancelOrderByUserAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>
-            SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.CancelledByUser, cancellationToken);
+        public Task<(bool success, string message)> CancelOrderByUserAsync(int id, CancellationToken cancellationToken = default) =>
+            SafeUpdateOrderAsync(id, 0, OrderStatus.CancelledByUser, cancellationToken, isUser: true);
 
 
         public Task<(bool success, string message)> CancelOrderByPharmacyAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>

@@ -2,9 +2,6 @@
 using Rujta.Application.Constants;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 using Rujta.Domain.Enums;
 
 namespace Rujta.Api.Controllers
@@ -60,9 +57,6 @@ namespace Rujta.Api.Controllers
                     var order = await _orderService.CreateOrderAsync(dto, userGuid);
                     results.Add(order);
                     await _logService.AddLogAsync(GetUser(), $"Order {order.Id} created successfully for UserId {userIdClaim}");
-
-                    // إشعار SignalR للـ Pharmacy
-                    await _orderNotificationService.NotifyNewOrderAsync(order.PharmacyID, order.Id);
                 }
 
                 return Ok(results);
@@ -223,15 +217,12 @@ namespace Rujta.Api.Controllers
         [HttpPut("{id:int}/cancel/user")]
         public async Task<IActionResult> CancelByUser(int id, CancellationToken cancellationToken)
         {
-            var pharmacyId = GetCurrentPharmacyId();
-            var result = await _orderService.CancelOrderByUserAsync(id, pharmacyId, cancellationToken);
+
+            var result = await _orderService.CancelOrderByUserAsync(id, cancellationToken);
 
             if (result.success)
-            {
                 await _logService.AddLogAsync(GetUser(), $"User cancelled order ID={id}");
-                var userId = GetDomainPersonId();
-                await _orderNotificationService.NotifyStatusChangedAsync(pharmacyId, userId, id, OrderStatus.CancelledByUser);
-            }
+            
 
             return result.success ? Ok(result) : BadRequest(result);
         }

@@ -8,7 +8,7 @@ import apiClient from "../../../shared/api/apiClient";
 const Checkout = () => {
   const [cart, setCart] = useState([]);
   const { pharmacies, loading, error, fetchPharmacies } = usePharmacies();
-  const { create } = useOrders();
+  const { fetchUser } = useOrders();
   const { user } = useAuth();
   const {
     addresses,
@@ -32,13 +32,15 @@ const Checkout = () => {
   });
   const [expandedPharmacies, setExpandedPharmacies] = useState({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] = useState(null);
+  const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] =
+    useState(null);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [selectedPharmacies, setSelectedPharmacies] = useState([]);
   const [creatingOrder, setCreatingOrder] = useState(false);
 
   useEffect(() => {
-    const errorMessage = typeof error === "string" ? error : error?.message || "";
+    const errorMessage =
+      typeof error === "string" ? error : error?.message || "";
     if (
       errorMessage.includes("User location not set") ||
       errorMessage.includes("location not set")
@@ -69,7 +71,7 @@ const Checkout = () => {
         },
         (geoErr) => {
           console.error("Geolocation error:", geoErr);
-        }
+        },
       );
     }
   };
@@ -119,7 +121,7 @@ const Checkout = () => {
     setSelectedPharmacies((prev) =>
       prev.includes(pharmacyId)
         ? prev.filter((id) => id !== pharmacyId)
-        : [...prev, pharmacyId]
+        : [...prev, pharmacyId],
     );
   };
 
@@ -142,12 +144,12 @@ const Checkout = () => {
     const orderDtos = [];
     for (const pharmacyId of selectedPharmacies) {
       const selectedPharmacy = pharmacies.find(
-        (p) => p.pharmacyId === pharmacyId
+        (p) => p.pharmacyId === pharmacyId,
       );
       if (!selectedPharmacy) continue;
 
       const availableItems = selectedPharmacy.foundMedicines.filter(
-        (m) => m.isQuantityEnough
+        (m) => m.isQuantityEnough,
       );
       if (availableItems.length === 0) continue;
 
@@ -173,7 +175,8 @@ const Checkout = () => {
     console.log("Creating orders with DTOs:", orderDtos);
 
     try {
-      const results = await create(orderDtos);
+      const response = await apiClient.post("/orders", orderDtos);
+      const results = response.data;
       console.log("Create orders result:", results);
 
       if (results && results.length > 0) {
@@ -190,6 +193,7 @@ const Checkout = () => {
         localStorage.setItem(key, JSON.stringify(updatedCart));
 
         setSelectedPharmacies([]);
+        await fetchUser(); // Refresh orders in context
       } else {
         alert("Failed to create orders!");
       }
@@ -450,7 +454,9 @@ const Checkout = () => {
                               }
                               className="text-secondary hover:text-secondary-dark hover:underline text-sm font-medium mb-2 transition-colors"
                             >
-                              {isExpanded ? "Hide Details" : "Show More Details"}
+                              {isExpanded
+                                ? "Hide Details"
+                                : "Show More Details"}
                             </button>
 
                             {isExpanded && (
@@ -465,8 +471,13 @@ const Checkout = () => {
                                       colorClass = "text-purple-600";
                                     }
                                     return (
-                                      <li key={m.medicineId} className={colorClass}>
-                                        {m.medicineName} – Requested: {m.requestedQuantity}, Available: {m.availableQuantity}
+                                      <li
+                                        key={m.medicineId}
+                                        className={colorClass}
+                                      >
+                                        {m.medicineName} – Requested:{" "}
+                                        {m.requestedQuantity}, Available:{" "}
+                                        {m.availableQuantity}
                                         {!m.isQuantityEnough && " (Not enough)"}
                                       </li>
                                     );
@@ -478,7 +489,8 @@ const Checkout = () => {
                                 <ul className="list-disc pl-5 text-sm text-red-600">
                                   {p.notFoundMedicines.map((m) => (
                                     <li key={m.medicineId}>
-                                      {m.medicineName} – Requested: {m.requestedQuantity}
+                                      {m.medicineName} – Requested:{" "}
+                                      {m.requestedQuantity}
                                     </li>
                                   ))}
                                 </ul>
@@ -518,7 +530,9 @@ const Checkout = () => {
 
                 <button
                   onClick={() => setShowPaymentModal(true)}
-                  disabled={loading || selectedPharmacies.length === 0 || creatingOrder}
+                  disabled={
+                    loading || selectedPharmacies.length === 0 || creatingOrder
+                  }
                   className={`px-6 py-3 rounded-lg font-medium transition ${
                     loading || selectedPharmacies.length === 0 || creatingOrder
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -538,7 +552,9 @@ const Checkout = () => {
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
           <div className="bg-white w-[400px] p-6 rounded-2xl shadow-xl">
-            <h2 className="text-xl font-semibold mb-4">Select Payment Method</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Select Payment Method
+            </h2>
             <div className="flex flex-col gap-3">
               <label className="flex items-center gap-2">
                 <input
