@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Rujta.Domain.Hubs;
 
-
 namespace Rujta.Infrastructure.Services
 {
     public class NotificationService : INotificationService
@@ -9,13 +8,19 @@ namespace Rujta.Infrastructure.Services
         private readonly INotificationRepository _repo;
         private readonly IHubContext<NotificationHub> _hubContext;
 
-        public NotificationService(INotificationRepository repo, IHubContext<NotificationHub> hubContext)
+        public NotificationService(
+            INotificationRepository repo,
+            IHubContext<NotificationHub> hubContext)
         {
             _repo = repo;
             _hubContext = hubContext;
         }
 
-        public async Task SendNotificationAsync(string userId, string title, string message, string? payload = null)
+        public async Task SendNotificationAsync(
+            string userId,
+            string title,
+            string message,
+            string? payload = null)
         {
             var notification = new Notification
             {
@@ -29,9 +34,18 @@ namespace Rujta.Infrastructure.Services
 
             await _repo.AddNotificationAsync(notification);
 
-            // Push to SignalR clients
-            await _hubContext.Clients.User(userId)
-                .SendAsync("ReceiveNotification", title, message, payload);
+            var dto = new NotificationDto
+            {
+                Id = notification.Id,
+                Title = title,
+                Message = message,
+                Payload = payload,
+                CreatedAt = notification.CreatedAt,
+                IsRead = false
+            };
+
+            await _hubContext.Clients.Group(userId)
+     .SendAsync("ReceiveNotification", dto);
         }
 
         public async Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(string userId)
@@ -49,9 +63,14 @@ namespace Rujta.Infrastructure.Services
             });
         }
 
-        public async Task MarkAsReadAsync(int notificationId)
+        public async Task MarkAsReadAsync(int notificationId, string userId)
         {
-            await _repo.MarkAsReadAsync(notificationId);
+            await _repo.MarkAsReadAsync(notificationId, userId);
+        }
+
+        public async Task<int> GetUnreadCountAsync(string userId)
+        {
+            return await _repo.GetUnreadCountAsync(userId);
         }
     }
 }

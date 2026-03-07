@@ -1,40 +1,43 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using System.Security.Claims;
 
 namespace Rujta.Domain.Hubs
 {
     public class NotificationHub : Hub
     {
-        private static readonly Dictionary<string, string> OnlineUsers = new();
-
-        public override Task OnConnectedAsync()
+        public override async Task OnConnectedAsync()
         {
-            var userId = Context.GetHttpContext()?.Request.Query["userId"].ToString();
-            if (!string.IsNullOrEmpty(userId))
+            // خذ الـ userId مباشرة من JWT claim
+            var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
             {
-                OnlineUsers[userId] = Context.ConnectionId;
+                // لو مش موجود الـ claim افصل الاتصال
+                await Clients.Caller.SendAsync("Error", "User context missing.");
+                Context.Abort();
+                return;
             }
 
-            return base.OnConnectedAsync();
+
+            string userId = userIdClaim.Value;
+
+            // أضف الاتصال للجروب الخاص بالـ user
+            Console.WriteLine($"Connected: {Context.ConnectionId}");
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, userId);
+
+            await base.OnConnectedAsync();
         }
 
-        public override Task OnDisconnectedAsync(Exception? exception)
+        public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var user = OnlineUsers.FirstOrDefault(x => x.Value == Context.ConnectionId);
-            if (!string.IsNullOrEmpty(user.Key))
+            var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null)
             {
-                OnlineUsers.Remove(user.Key);
+                string userId = userIdClaim.Value;
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, userId);
             }
 
-            return base.OnDisconnectedAsync(exception);
-        }
-
-        public async Task SendNotificationToUser(string userId, string title, string message)
-        {
-            if (OnlineUsers.TryGetValue(userId, out var connId))
-            {
-                await Clients.Client(connId).SendAsync("ReceiveNotification", title, message);
-            }
+            await base.OnDisconnectedAsync(exception);
         }
     }
 }
-

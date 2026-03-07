@@ -1,13 +1,25 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿// OrderNotificationService.cs
+using Microsoft.AspNetCore.SignalR;
+using Rujta.Domain.Hubs;
 using Rujta.Domain.Enums;
 
-namespace Rujta.API.Realtime.NotificationsOrders
+
+namespace Rujta.Infrastructure.Services
 {
-    public class OrderNotificationService(IHubContext<OrderHub> _hub) : IOrderNotificationService
+    public class OrderNotificationService : IOrderNotificationService
     {
-        public async Task NotifyStatusChangedAsync(int pharmacyId, int orderId, OrderStatus orderStatus)
+        private readonly IHubContext<NotificationHub> _hub;
+
+        public OrderNotificationService(IHubContext<NotificationHub> hub)
         {
-            await _hub.Clients.Group($"Pharmacy-{pharmacyId}").SendAsync("OrderStatusChanged", orderId, orderStatus);
+            _hub = hub;
+        }
+
+        public async Task NotifyStatusChangedAsync(Guid userId, int orderId, OrderStatus orderStatus)
+        {
+            // إرسال Notification مباشرة للمستخدم بناءً على الـ Guid
+            await _hub.Clients.Group(userId.ToString())
+                .SendAsync("OrderStatusChanged", orderId, orderStatus);
         }
     }
 }

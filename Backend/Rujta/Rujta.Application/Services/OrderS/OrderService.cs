@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Rujta.Application.Interfaces.InterfaceServices.IOrder;
+using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Services.OrderS
 {
@@ -81,8 +82,7 @@ namespace Rujta.Application.Services.OrderS
                 orderDto.UserName = appUser.Name;
                 orderDto.PharmacyName = pharmacy.Name;
 
-                await _notificationService.NotifyStatusChangedAsync(createOrderDto.PharmacyID, orderDto.Id, OrderStatus.Pending);
-
+                await SafeNotifyAsync(order.UserId, orderDto.Id, OrderStatus.Pending);
                 return orderDto;
             }
             catch (Exception ex)
@@ -112,8 +112,7 @@ namespace Rujta.Application.Services.OrderS
 
                     await _unitOfWork.SaveAsync(cancellationToken);
 
-                    await SafeNotifyAsync(pharmacyId, id, newStatus);
-
+                    await SafeNotifyAsync(order.UserId, id, OrderStatus.Delivered);
                     return (true, newStatus switch
                     {
                         OrderStatus.Accepted => OrderMessages.OrderAccepted,
@@ -148,11 +147,18 @@ namespace Rujta.Application.Services.OrderS
             return (false, "Maximum retries exceeded due to concurrency conflicts.");
         }
 
-        private async Task SafeNotifyAsync(int pharmacyId, int orderId, OrderStatus status)
+        private async Task SafeNotifyAsync(Guid? userId, int orderId, OrderStatus status)
         {
             try
             {
-                await _notificationService.NotifyStatusChangedAsync(pharmacyId, orderId, status);
+                if (!userId.HasValue)
+                    return;
+
+                await _notificationService.NotifyStatusChangedAsync(
+                    userId.Value,
+                    orderId,
+                    status
+                );
             }
             catch (Exception ex)
             {
@@ -223,7 +229,7 @@ namespace Rujta.Application.Services.OrderS
                 try
                 {
                     await _unitOfWork.SaveAsync(cancellationToken);
-                    await _notificationService.NotifyStatusChangedAsync(pharmacyId, id, OrderStatus.Delivered);
+                    await SafeNotifyAsync(order.UserId, id, OrderStatus.Delivered);
                     await transaction.CommitAsync(cancellationToken);
                     return (true, OrderMessages.OrderMarkAsDelivered);
                 }
@@ -418,4 +424,4 @@ namespace Rujta.Application.Services.OrderS
             };
         }
     }
-}
+    }

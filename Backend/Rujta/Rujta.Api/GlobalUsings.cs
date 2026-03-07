@@ -10,7 +10,6 @@ global using Microsoft.AspNetCore.Mvc;
 global using Rujta.Application.DTOs;
 global using Polly;
 global using Rujta.API.Realtime.Hubs;
-global using Rujta.API.Realtime.NotificationsOrders;
 global using Rujta.Application.Interfaces.InterfaceServices.IOrder;
 global using Rujta.Application.MappingProfiles;
 global using Rujta.Application.Services.OrderS;
