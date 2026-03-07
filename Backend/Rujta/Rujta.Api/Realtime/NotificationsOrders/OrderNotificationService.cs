@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿// OrderNotificationService.cs
+using Microsoft.AspNetCore.SignalR;
+using Rujta.Domain.Hubs;
 using Rujta.Domain.Enums;
 
-namespace Rujta.API.Realtime.NotificationsOrders
+
+namespace Rujta.Infrastructure.Services
 {
     public class OrderNotificationService
         : IOrderNotificationService
@@ -10,6 +13,7 @@ namespace Rujta.API.Realtime.NotificationsOrders
 
         public OrderNotificationService(
             IHubContext<OrderHub> hub)
+
         {
             _hub = hub;
         }
@@ -71,6 +75,7 @@ namespace Rujta.API.Realtime.NotificationsOrders
                 .SendAsync(
                     "OrderItemChanged",
                     orderId);
+
         }
     }
 }

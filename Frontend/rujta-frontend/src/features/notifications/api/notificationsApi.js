@@ -10,9 +10,13 @@ export const markNotificationAsRead = (id) => {
   return apiClient.put(`/notification/${id}/read`);
 };
 
-// ================= Create Test Notification (DEV) =================
-export const createTestNotification = (message) => {
-  return apiClient.post("/notification/test", message, {
-    headers: { "Content-Type": "application/json" },
-  });
+// ================= Create Test Notification =================
+export const createTestNotification = (title, message) => {
+  return apiClient.post(
+    "/notification/test",
+    { title, message },
+    {
+      headers: { "Content-Type": "application/json" },
+    }
+  );
 };

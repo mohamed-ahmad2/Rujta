@@ -1,18 +1,28 @@
 import React from "react";
 import { useNotifications } from "../hook/useNotifications";
 
-
 const NotificationsPage = () => {
-  const { notifications, loading, markAsRead } = useNotifications();
+  const {
+    notifications,
+    loading,
+    markAsRead,
+    sendTestNotification,
+  } = useNotifications();
 
   if (loading) {
     return <div className="p-6">Loading notifications...</div>;
   }
 
   return (
-    
     <div className="container mx-auto p-6 max-w-3xl">
       <h1 className="text-2xl font-bold mb-4">Notifications</h1>
+
+      <button
+        onClick={sendTestNotification}
+        className="mb-4 px-4 py-2 bg-blue-600 text-white rounded"
+      >
+        Send Test Notification
+      </button>
 
       {notifications.length === 0 && (
         <p className="text-gray-500">No notifications yet.</p>

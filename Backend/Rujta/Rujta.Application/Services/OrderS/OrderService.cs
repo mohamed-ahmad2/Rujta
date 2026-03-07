@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Rujta.Application.Interfaces.InterfaceServices.IOrder;
+using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Services.OrderS
 {
@@ -88,6 +89,7 @@ namespace Rujta.Application.Services.OrderS
                 await _notificationService.NotifyNewOrderAsync(createOrderDto.PharmacyID, orderDto.Id);
                 await _notificationService.NotifyOrderItemChangedAsync(order.Id);
 
+
                 return orderDto;
             }
             catch (Exception ex)
@@ -168,6 +170,7 @@ namespace Rujta.Application.Services.OrderS
                     throw new InvalidOperationException("Order user is missing");
 
                 await _notificationService.NotifyStatusChangedAsync(order.PharmacyId, order.UserId.ToString()!, order.Id, status);
+
             }
             catch (Exception ex)
             {
@@ -241,6 +244,7 @@ namespace Rujta.Application.Services.OrderS
                 try
                 {
                     await _unitOfWork.SaveAsync(cancellationToken);
+
                     await transaction.CommitAsync(cancellationToken);
 
                     await SafeNotifyDeliveredAsync(order);
@@ -498,3 +502,4 @@ namespace Rujta.Application.Services.OrderS
         }
     }
 }
+
