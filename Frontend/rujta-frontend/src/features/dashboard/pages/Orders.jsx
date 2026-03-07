@@ -130,11 +130,19 @@ export default function Orders() {
 
   // ✅ Mutation wrapper
 const handleMutation = async (mutationFn, id, successMessagePrefix) => {
-  const res = await mutationFn(id); // use the mutation from useOrders
-  if (res?.success) {
-    toast.success(res.message || `${successMessagePrefix} successfully`);
-  } else {
-    toast.error(res?.message || "Something went wrong");
+  try {
+    const res = await mutationFn(id);
+
+    if (res?.success) {
+      toast.success(res.message || `${successMessagePrefix} successfully`);
+
+      // 🔥 إعادة جلب الطلبات
+      await fetchPharmacy();
+    } else {
+      toast.error(res?.message || "Something went wrong");
+    }
+  } catch (err) {
+    toast.error("Operation failed");
   }
 };
 

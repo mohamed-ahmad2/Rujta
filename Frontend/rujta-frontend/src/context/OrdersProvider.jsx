@@ -3,18 +3,13 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 import { OrdersContext } from "./OrdersContext";
 import { useAuth } from "../features/auth/hooks/useAuth";
-import {
-  getAccessToken,
-  subscribeTokenChange,
-} from "../authProvider/authTokenProvider";
+import { getAccessToken, subscribeTokenChange } from "../authProvider/authTokenProvider";
 import { getOrderById } from "../features/orders/api/ordersApi";
 
 export const OrdersProvider = ({ children }) => {
   const { user, loading } = useAuth();
-
   const [connection, setConnection] = useState(null);
   const [orders, setOrders] = useState([]);
-
   const connectionRef = useRef(null);
 
   useEffect(() => {
@@ -39,7 +34,7 @@ export const OrdersProvider = ({ children }) => {
     setOrders([]);
   }, []);
 
-  // logout listener
+  // Logout listener
   useEffect(() => {
     const unsubscribe = subscribeTokenChange(async (token) => {
       console.log("🔄 Token changed:", token);
@@ -51,7 +46,7 @@ export const OrdersProvider = ({ children }) => {
     return unsubscribe;
   }, [cleanupConnection]);
 
-  // ================= START =================
+  // ================= START SIGNALR =================
   const startHubConnection = useCallback(async () => {
     if (!user || loading) {
       console.log("⏳ User not loaded yet, skipping SignalR start...");
@@ -61,23 +56,26 @@ export const OrdersProvider = ({ children }) => {
     const token = getAccessToken();
     console.log("🔑 Access token:", token);
 
-    if (!token) {
-      console.warn("⚠️ No access token found, SignalR will fail!");
-    }
-
     const hubConnection = new signalR.HubConnectionBuilder()
       .withUrl("/hubs/orders", {
-        accessTokenFactory: () => {
-          const t = getAccessToken();
-          console.log("📡 SignalR accessTokenFactory called:", t);
-          return t;
-        },
+        accessTokenFactory: () => getAccessToken(),
         withCredentials: true,
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .build();
 
-    // 🔥 Server Events (matched to backend OrderNotificationService)
+    // ===== Status mapping =====
+    const statusMap = {
+      0: "Pending",
+      1: "Accepted",
+      2: "Processing",
+      3: "OutForDelivery",
+      4: "Delivered",
+      5: "CancelledByUser",
+      6:"CancelledByPharmacy" 
+    };
+
+    // ===== Server events =====
     hubConnection.on("NewOrderReceived", async (orderId) => {
       console.log("📦 NewOrderReceived event:", orderId);
       try {
@@ -85,7 +83,7 @@ export const OrdersProvider = ({ children }) => {
         setOrders((prev) => [res.data, ...prev]);
       } catch (err) {
         console.error("Failed to fetch new order:", err);
-        setOrders((prev) => [...prev, { id: orderId, status: "Pending" }]); // Fallback placeholder
+        setOrders((prev) => [...prev, { id: orderId, status: "Pending" }]);
       }
     });
 
@@ -98,28 +96,31 @@ export const OrdersProvider = ({ children }) => {
         console.error("Failed to fetch updated order:", err);
       }
     });
+hubConnection.on("OrderStatusChanged", (orderId, status) => {
+  console.log("🔄 OrderStatusChanged event:", orderId, status);
 
-    hubConnection.on("OrderStatusChanged", (orderId, status) => {
-      console.log("🔄 OrderStatusChanged event:", orderId, status);
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status } : o)),
-      );
-    });
-
+  setOrders(prev =>
+    prev.map(o =>
+      o.id === orderId
+        ? { ...o, status: statusMap[status] || status } // clone للكائن مع تحديث status مباشرة
+        : o
+    )
+  );
+});
     hubConnection.on("OrderItemChanged", async (orderId) => {
       console.log("🔄 OrderItemChanged event:", orderId);
       try {
         const res = await getOrderById(orderId);
         if (res.data) {
           setOrders((prev) =>
-            prev.map((o) => (o.id === orderId ? res.data : o)),
+            prev.map((o) => (o.id === orderId ? res.data : o))
           );
         } else {
           setOrders((prev) => prev.filter((o) => o.id !== orderId));
         }
       } catch (err) {
         console.error("Failed to fetch changed order:", err);
-        setOrders((prev) => prev.filter((o) => o.id !== orderId)); // Assume deletion on error
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
       }
     });
 
@@ -132,11 +133,6 @@ export const OrdersProvider = ({ children }) => {
       await hubConnection.start();
       console.log("✅ SignalR orders connected");
       setConnection(hubConnection);
-
-      // Backend handles adding to User- and Pharmacy- groups in OnConnectedAsync
-      // No need to invoke JoinGroup here
-
-      // To join specific order group, call hubConnection.invoke("JoinOrder", orderId) in relevant components (e.g., order details page)
     } catch (err) {
       console.error("❌ Orders SignalR start failed:", err);
     }
