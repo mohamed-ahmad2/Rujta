@@ -5,6 +5,7 @@ import { useLocation } from "react-router-dom";
 import FloatingCartButton from "./features/user/components/FloatingCartButton";
 import CartDrawerUser from "./features/user/components/CartDrawer";
 import Splash from "./features/splash/splash";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { PresenceProvider } from "./context/PresenceProvider";
 import { OrdersProvider } from "./context/OrdersProvider";
@@ -112,6 +113,9 @@ const App = () => {
             onClose={() => setIsCartOpen(false)}
           />
         )}
+
+        {/* Vercel Speed Insights */}
+        <SpeedInsights />
       </OrdersProvider>
     </PresenceProvider>
   );
