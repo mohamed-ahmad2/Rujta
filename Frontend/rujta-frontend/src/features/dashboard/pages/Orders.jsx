@@ -129,14 +129,22 @@ export default function Orders() {
   const handlePageClick = (p) => setPage(p);
 
   // ✅ Mutation wrapper
-  const handleMutation = async (mutationFn, id, successMessagePrefix) => {
+const handleMutation = async (mutationFn, id, successMessagePrefix) => {
+  try {
     const res = await mutationFn(id);
+
     if (res?.success) {
       toast.success(res.message || `${successMessagePrefix} successfully`);
+
+      // 🔥 إعادة جلب الطلبات
+      await fetchPharmacy();
     } else {
-      toast.error(res?.message);
+      toast.error(res?.message || "Something went wrong");
     }
-  };
+  } catch (err) {
+    toast.error("Operation failed");
+  }
+};
 
   return (
     <div className="space-y-6">
@@ -268,15 +276,16 @@ export default function Orders() {
                   </td>
                   <td className="px-6 py-4 text-center space-x-2">
                     {o.status === "Pending" && (
-                      <button
-                        disabled={loading}
-                        onClick={() =>
-                          handleMutation(accept, o.id, "Order accepted")
-                        }
-                        className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200"
-                      >
-                        Accept
-                      </button>
+                            <button
+                            type="button"
+                            disabled={loading}
+                            onClick={() =>
+                              handleMutation(accept, o.id, "Order accepted")
+                            }
+                            className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200"
+                          >
+                            Accept
+                          </button>
                     )}
                     {o.status === "Accepted" && (
                       <button

@@ -82,34 +82,37 @@ const App = () => {
   }
 
   return (
-    <PresenceProvider>  
-       <OrdersProvider>
-      <AppRoutes
-        cart={cart}
-        setCart={setCart}
-        isCartOpen={isCartOpen}
-        setIsCartOpen={setIsCartOpen}
-      />
-
-      {/* Floating Cart Button */}
-      {user &&
-        !isLandingPage &&
-        !isAuthPage &&
-        !isResetPage &&
-        !isDashboard && (
-          <FloatingCartButton cart={cart} onClick={() => setIsCartOpen(true)} />
-        )}
-
-      {/* Cart Drawer */}
-      {user && (
-        <CartDrawerUser
+    <PresenceProvider>
+      <OrdersProvider>
+        <AppRoutes
           cart={cart}
           setCart={setCart}
-          isOpen={isCartOpen}
-          onClose={() => setIsCartOpen(false)}
+          isCartOpen={isCartOpen}
+          setIsCartOpen={setIsCartOpen}
         />
-      )}
-       </OrdersProvider>
+
+        {/* Floating Cart Button */}
+        {user &&
+          !isLandingPage &&
+          !isAuthPage &&
+          !isResetPage &&
+          !isDashboard && (
+            <FloatingCartButton
+              cart={cart}
+              onClick={() => setIsCartOpen(true)}
+            />
+          )}
+
+        {/* Cart Drawer */}
+        {user && (
+          <CartDrawerUser
+            cart={cart}
+            setCart={setCart}
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+          />
+        )}
+      </OrdersProvider>
     </PresenceProvider>
   );
 };

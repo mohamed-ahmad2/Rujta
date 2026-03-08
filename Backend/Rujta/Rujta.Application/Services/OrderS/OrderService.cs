@@ -3,7 +3,7 @@ using Rujta.Application.Interfaces.InterfaceServices.IOrder;
 
 namespace Rujta.Application.Services.OrderS
 {
-    public class OrderService(IUnitOfWork _unitOfWork,IMapper _mapper,ILogger<OrderService> _logger, IOrderNotificationService _notificationService) : IOrderService
+    public class OrderService(IUnitOfWork _unitOfWork, IMapper _mapper, ILogger<OrderService> _logger, IOrderNotificationService _notificationService) : IOrderService
     {
         public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto, Guid userId, CancellationToken cancellationToken = default)
         {
@@ -19,13 +19,13 @@ namespace Rujta.Application.Services.OrderS
 
                 if (!createOrderDto.DeliveryAddressId.HasValue)
                     throw new InvalidOperationException("Delivery address ID is required.");
-                
+
 
                 var address = await _unitOfWork.Address.GetByIdAsync(createOrderDto.DeliveryAddressId.Value, cancellationToken);
 
                 if (address == null)
                     throw new InvalidOperationException("The delivery address does not exist.");
-                
+
 
                 string street = address.Street ?? "";
                 string buildingNo = address.BuildingNo ?? "";
@@ -98,7 +98,7 @@ namespace Rujta.Application.Services.OrderS
             }
         }
 
-        private async Task<(bool success, string message)> SafeUpdateOrderAsync(int id, int pharmacyId, OrderStatus newStatus, CancellationToken cancellationToken = default, int maxRetries = 3)
+        private async Task<(bool success, string message)> SafeUpdateOrderAsync(int id, int pharmacyId, OrderStatus newStatus, CancellationToken cancellationToken = default, int maxRetries = 3, bool isUser = false)
         {
             int retryCount = 0;
             while (retryCount < maxRetries)
@@ -109,8 +109,9 @@ namespace Rujta.Application.Services.OrderS
                     if (order == null)
                         return (false, OrderMessages.OrderNotFound);
 
-                    if (order.PharmacyId != pharmacyId)
-                        return (false, "Unauthorized pharmacy access");
+                    if (!isUser && order.PharmacyId != pharmacyId)
+                            return (false, "Unauthorized pharmacy access");
+                    
 
                     if (!CanChangeStatus(order.Status, newStatus))
                         return (false, OrderMessages.InvalidStateTransition);
@@ -179,8 +180,8 @@ namespace Rujta.Application.Services.OrderS
            SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.Accepted, cancellationToken);
 
 
-        public Task<(bool success, string message)> CancelOrderByUserAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>
-            SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.CancelledByUser, cancellationToken);
+        public Task<(bool success, string message)> CancelOrderByUserAsync(int id, CancellationToken cancellationToken = default) =>
+            SafeUpdateOrderAsync(id, 0, OrderStatus.CancelledByUser, cancellationToken, isUser: true);
 
 
         public Task<(bool success, string message)> CancelOrderByPharmacyAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>
@@ -451,11 +452,11 @@ namespace Rujta.Application.Services.OrderS
 
         }
 
-        public async Task<IEnumerable<OrderDto>> GetPharmacyOrdersAsync(int pharmacyId,CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<OrderDto>> GetPharmacyOrdersAsync(int pharmacyId, CancellationToken cancellationToken = default)
         {
             try
             {
-                _logger.LogInformation("Fetching orders for Pharmacy {PharmacyId}",pharmacyId);
+                _logger.LogInformation("Fetching orders for Pharmacy {PharmacyId}", pharmacyId);
 
                 var orders = await _unitOfWork.Orders.GetOrdersByPharmacyIdAsync(pharmacyId, cancellationToken);
 
@@ -463,12 +464,12 @@ namespace Rujta.Application.Services.OrderS
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,"Failed to fetch orders for Pharmacy {PharmacyId}",pharmacyId);
-                throw new InvalidOperationException($"An error occurred while fetching orders for Pharmacy {pharmacyId}.",ex);
+                _logger.LogError(ex, "Failed to fetch orders for Pharmacy {PharmacyId}", pharmacyId);
+                throw new InvalidOperationException($"An error occurred while fetching orders for Pharmacy {pharmacyId}.", ex);
             }
         }
 
-        public async Task<bool> CanAccessOrderAsync(int orderId,string? userId, string? pharmacyId)
+        public async Task<bool> CanAccessOrderAsync(int orderId, string? userId, string? pharmacyId)
         {
             var order =
                 await _unitOfWork.Orders.GetByIdAsync(orderId);

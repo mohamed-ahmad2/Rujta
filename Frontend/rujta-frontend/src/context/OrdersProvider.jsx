@@ -1,15 +1,15 @@
+// src/context/OrdersProvider.jsx
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 import { OrdersContext } from "./OrdersContext";
 import { useAuth } from "../features/auth/hooks/useAuth";
 import { getAccessToken, subscribeTokenChange } from "../authProvider/authTokenProvider";
+import { getOrderById } from "../features/orders/api/ordersApi";
 
 export const OrdersProvider = ({ children }) => {
   const { user, loading } = useAuth();
-
   const [connection, setConnection] = useState(null);
   const [orders, setOrders] = useState([]);
-
   const connectionRef = useRef(null);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export const OrdersProvider = ({ children }) => {
     setOrders([]);
   }, []);
 
-  // logout listener
+  // Logout listener
   useEffect(() => {
     const unsubscribe = subscribeTokenChange(async (token) => {
       console.log("🔄 Token changed:", token);
@@ -46,7 +46,7 @@ export const OrdersProvider = ({ children }) => {
     return unsubscribe;
   }, [cleanupConnection]);
 
-  // ================= START =================
+  // ================= START SIGNALR =================
   const startHubConnection = useCallback(async () => {
     if (!user || loading) {
       console.log("⏳ User not loaded yet, skipping SignalR start...");
@@ -56,42 +56,72 @@ export const OrdersProvider = ({ children }) => {
     const token = getAccessToken();
     console.log("🔑 Access token:", token);
 
-    if (!token) {
-      console.warn("⚠️ No access token found, SignalR will fail!");
-    }
-
     const hubConnection = new signalR.HubConnectionBuilder()
       .withUrl("/hubs/orders", {
-        accessTokenFactory: () => {
-          const t = getAccessToken();
-          console.log("📡 SignalR accessTokenFactory called:", t);
-          return t;
-        },
+        accessTokenFactory: () => getAccessToken(),
         withCredentials: true,
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .build();
 
-    // 🔥 Server Events
-    hubConnection.on("OrderCreated", (order) => {
-      console.log("📦 OrderCreated event:", order);
-      setOrders((prev) => [order, ...prev]);
+    // ===== Status mapping =====
+    const statusMap = {
+      0: "Pending",
+      1: "Accepted",
+      2: "Processing",
+      3: "OutForDelivery",
+      4: "Delivered",
+      5: "CancelledByUser",
+      6:"CancelledByPharmacy" 
+    };
+
+    // ===== Server events =====
+    hubConnection.on("NewOrderReceived", async (orderId) => {
+      console.log("📦 NewOrderReceived event:", orderId);
+      try {
+        const res = await getOrderById(orderId);
+        setOrders((prev) => [res.data, ...prev]);
+      } catch (err) {
+        console.error("Failed to fetch new order:", err);
+        setOrders((prev) => [...prev, { id: orderId, status: "Pending" }]);
+      }
     });
 
-    hubConnection.on("OrderUpdated", (updatedOrder) => {
-      console.log("✏️ OrderUpdated event:", updatedOrder);
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === updatedOrder.id ? updatedOrder : o
-        )
-      );
+    hubConnection.on("OrderUpdated", async (orderId) => {
+      console.log("✏️ OrderUpdated event:", orderId);
+      try {
+        const res = await getOrderById(orderId);
+        setOrders((prev) => prev.map((o) => (o.id === orderId ? res.data : o)));
+      } catch (err) {
+        console.error("Failed to fetch updated order:", err);
+      }
     });
+hubConnection.on("OrderStatusChanged", (orderId, status) => {
+  console.log("🔄 OrderStatusChanged event:", orderId, status);
 
-    hubConnection.on("OrderDeleted", (orderId) => {
-      console.log("🗑 OrderDeleted event:", orderId);
-      setOrders((prev) =>
-        prev.filter((o) => o.id !== orderId)
-      );
+  setOrders(prev =>
+    prev.map(o =>
+      o.id === orderId
+        ? { ...o, status: statusMap[status] || status } // clone للكائن مع تحديث status مباشرة
+        : o
+    )
+  );
+});
+    hubConnection.on("OrderItemChanged", async (orderId) => {
+      console.log("🔄 OrderItemChanged event:", orderId);
+      try {
+        const res = await getOrderById(orderId);
+        if (res.data) {
+          setOrders((prev) =>
+            prev.map((o) => (o.id === orderId ? res.data : o))
+          );
+        } else {
+          setOrders((prev) => prev.filter((o) => o.id !== orderId));
+        }
+      } catch (err) {
+        console.error("Failed to fetch changed order:", err);
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      }
     });
 
     hubConnection.onclose((err) => {
