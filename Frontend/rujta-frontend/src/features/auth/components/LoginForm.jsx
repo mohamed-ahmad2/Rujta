@@ -1,31 +1,30 @@
 import { motion } from "framer-motion";
 import { Mail, Lock } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { auth, provider } from "../../../../firebase";
 import { signInWithPopup } from "firebase/auth";
 import { FcGoogle } from "react-icons/fc";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
-const LoginForm = ({ email, setEmail, password, setPassword, onLogin, error, loading }) => {
+
+const LoginForm = ({ email, setEmail, password, setPassword, onLogin, error, loading ,isSignUp, setIsSignUp}) => {
   const navigate = useNavigate();
   const { handleForgotPassword } = useAuth();
+  const { googleFirebaseLogin } = useGoogleAuth();
 
-const { googleFirebaseLogin } = useGoogleAuth();
-
- const handleForgotPasswordClick = async () => {
-  if (!email) return alert("Please enter your email first");
-  try {
-    const res = await handleForgotPassword(email);
-    if (res.message === "OTP sent to your email.") {
-      navigate(`/reset-password?email=${encodeURIComponent(email)}`);
-    } else {
-      alert(res.message);
+  const handleForgotPasswordClick = async () => {
+    if (!email) return alert("Please enter your email first");
+    try {
+      const res = await handleForgotPassword(email);
+      if (res.message === "OTP sent to your email.") {
+        navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+      } else {
+        alert(res.message);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Something went wrong.");
     }
-  } catch (err) {
-    alert(err.response?.data?.message || "Something went wrong.");
-  }
-  
-};
+  };
 
   return (
     <motion.div className="w-full max-w-md">
@@ -90,17 +89,28 @@ const { googleFirebaseLogin } = useGoogleAuth();
       </form>
 
       {/* Social Login Buttons */}
-   <div className="flex flex-col space-y-3 mt-4">
- <button
-  type="button"
-  onClick={googleFirebaseLogin}
-  className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl shadow-md bg-white border border-gray-200 hover:shadow-lg transition-shadow duration-200"
->
-  <FcGoogle className="w-6 h-6" />
-  <span className="text-gray-700 font-medium">Continue with Google</span>
-</button>
-</div>
+      <div className="flex flex-col space-y-3 mt-4">
+        <button
+          type="button"
+          onClick={googleFirebaseLogin}
+          className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl shadow-md bg-white border border-gray-200 hover:shadow-lg transition-shadow duration-200"
+        >
+          <FcGoogle className="w-6 h-6" />
+          <span className="text-gray-700 font-medium">Continue with Google</span>
+        </button>
+      </div>
 
+      {/* Sign Up Link */}
+<div className="text-center mt-6 text-lg">
+  <span className="text-muted-foreground">Don't have an account? </span>
+  <button
+    type="button"
+    onClick={() => setIsSignUp(true)} // Toggle to Register form
+    className="text-secondary font-semibold hover:underline"
+  >
+    Sign Up
+  </button>
+</div>
     </motion.div>
   );
 };

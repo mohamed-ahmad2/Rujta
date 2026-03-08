@@ -1,21 +1,20 @@
 import React from "react";
 import HeroImg from "../../../assets/HeroImg.png";
 import { useNavigate } from "react-router-dom";
-import HowItWorks from "./HowItWorks";
 
 const Hero = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="overflow-hidden">
-      <div className="container grid grid-col-1 md:grid-col-2 min-h-[650px] relative bg-page">
+    <section className="overflow-hidden bg-page">
+      <div className="container mx-auto grid grid-cols-1 md:grid-cols-2 min-h-[650px] relative px-4 md:px-0">
 
         {/* Brand Info */}
-        <div className="flex flex-col justify-center py-14 md:py-0 animate-fade-in-up">
+        <div className="flex flex-col justify-center py-10 md:py-0 animate-fade-in-up">
           <div className="text-center md:text-left space-y-6">
 
             {/* Heading */}
-            <div className="text-4xl lg:text-6xl font-bold leading-relaxed xl:leading-normal relative">
+            <div className="text-3xl sm:text-4xl lg:text-6xl font-bold leading-snug xl:leading-normal relative">
               <h2 className="animate-slide-up delay-100">
                 <span className="text-secondary relative inline-block">
                   Read
@@ -39,7 +38,7 @@ const Hero = () => {
             </div>
 
             {/* Description */}
-            <div className="text-3xl xl:max-w-[500px] space-y-1 animate-fade-in delay-500">
+            <div className="text-xl sm:text-2xl xl:max-w-[500px] space-y-1 animate-fade-in delay-500">
               <p>Upload your handwritten prescription</p>
               <p>or medicine list, and let our smart</p>
               <p>system help pharmacists process it</p>
@@ -48,9 +47,9 @@ const Hero = () => {
           </div>
 
           {/* Button section */}
-          <div className="flex justify-center gap-8 md:justify-start !mt-4">
+          <div className="flex justify-center gap-6 md:justify-start mt-6">
             <button
-              className="primary-btn flex items-center gap-4 mt-10 text-2xl md:text-3xl 
+              className="primary-btn flex items-center gap-4 text-xl sm:text-2xl md:text-3xl 
               transition-all duration-300 ease-in-out 
               hover:scale-105 hover:shadow-xl active:scale-95"
               onClick={() => navigate("/how-it-works")}
@@ -61,13 +60,11 @@ const Hero = () => {
         </div>
 
         {/* Hero Image */}
-        <div className="flex justify-center md:justify-end items-center relative">
+        <div className="flex justify-center md:justify-end items-center relative mt-6 md:mt-0">
           <img
             src={HeroImg}
             alt="Hero"
-            className="w-[80%] md:w-[60%] lg:w-[50%] object-contain 
-            translate-y-[-60px] md:translate-y-[-80px] lg:translate-y-[-550px]
-            animate-float transition-transform duration-500"
+            className="w-full max-w-[350px] sm:max-w-[400px] md:max-w-[450px] lg:max-w-[500px] object-contain animate-float transition-transform duration-500"
           />
         </div>
       </div>
@@ -112,9 +109,9 @@ const Hero = () => {
         }
 
         @keyframes float {
-          0% { transform: translateY(-550px); }
-          50% { transform: translateY(-535px); }
-          100% { transform: translateY(-550px); }
+          0% { transform: translateY(-30px); }
+          50% { transform: translateY(-20px); }
+          100% { transform: translateY(-30px); }
         }
       `}</style>
     </section>
