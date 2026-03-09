@@ -79,31 +79,14 @@ namespace Rujta.Infrastructure.Extensions
             // HttpClient services
             services.AddHttpClient<MedicineDataImportService>();
 
-            services.AddSingleton<IOfflineGeocodingService>(sp =>
-            {
-                var configuration = sp.GetRequiredService<IConfiguration>();
-                var relativePath = configuration["Routing:PbfFilePath"]
-                                   ?? throw new InvalidOperationException("Routing:PbfFilePath is missing in configuration.");
+            // للـ PBF file
+            var pbfPath = Path.Combine(AppContext.BaseDirectory, "Maps", "egypt-251026.osm.pbf");
+            if (!File.Exists(pbfPath))
+                throw new FileNotFoundException($"PBF file not found at {pbfPath}");
+            services.AddSingleton<IOfflineGeocodingService>(sp => new OfflineGeocodingService(pbfPath));
 
-                var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-                var solutionRoot = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\..\")); // جذر المشروع
-                var absolutePath = Path.Combine(solutionRoot, relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-
-                if (!File.Exists(absolutePath))
-                    throw new FileNotFoundException($"PBF file not found at {absolutePath}");
-
-                return new OfflineGeocodingService(absolutePath);
-            });
-
-
-
-
-            var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            var solutionRoot = Path.GetFullPath(Path.Combine(baseDirectory, @"..\..\..\..\"));
-            var routerDbRelativePath = configuration["Routing:RouterDbRelativePath"]
-                ?? throw new InvalidOperationException("Routing:RouterDbRelativePath is missing in configuration.");
-            var routerDbPath = Path.Combine(solutionRoot, routerDbRelativePath);
-
+            // للـ RouterDb
+            var routerDbPath = Path.Combine(AppContext.BaseDirectory, "Maps", "egypt.routerdb");
             if (!File.Exists(routerDbPath))
             {
                 Console.WriteLine("RouterDb not found. Attempting to build it...");
@@ -111,10 +94,8 @@ namespace Rujta.Infrastructure.Extensions
                 if (!built || !File.Exists(routerDbPath))
                     throw new InvalidOperationException($"Routing:RouterDb file could not be created at {routerDbPath}");
             }
-
             services.AddSingleton<ItineroRoutingService>(sp =>
                 new ItineroRoutingService(routerDbPath, sp.GetRequiredService<ILogger<ItineroRoutingService>>()));
-
             return services;
         }
     }
