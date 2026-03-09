@@ -131,11 +131,15 @@ export const AuthPage = () => {
         <div className="relative bg-white/80 backdrop-blur-glass rounded-3xl shadow-glass overflow-hidden min-h-[700px]">
           <div className="relative flex flex-col md:flex-row min-h-[700px]">
             {/* Form Section */}
-            <motion.div
-              animate={{ x: isSignUp ? ["0%", "100%"] : ["100%", "0%"] }}
-              transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
-              className="w-full md:w-1/2 flex items-center justify-center p-8 md:p-12 z-20 order-2 md:order-1"
-            >
+          <motion.div
+  animate={{
+    x: typeof window !== "undefined" && window.innerWidth >= 768
+      ? (isSignUp ? "100%" : "0%")
+      : "0%"
+  }}
+  transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
+  className="w-full md:w-1/2 flex items-center justify-center p-8 md:p-12 z-20 order-2 md:order-1"
+>
               <AnimatePresence mode="wait">
                 {!isSignUp ? (
                   <LoginForm

@@ -18,9 +18,8 @@ export const RegisterForm = ({
   onRegister,
   error,
   loading,
-   isSignUp,       // add this
-  setIsSignUp,  
-}) => {
+  toggleForm
+})=> {
   return (
     <motion.div className="w-full max-w-md">
       {/* Header */}
@@ -28,7 +27,7 @@ export const RegisterForm = ({
         <motion.div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-primary mb-4">
           <User className="w-8 h-8 text-white" />
         </motion.div>
-        <h2 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-3">
+       <h2 className="text-3xl md:text-5xl font-bold ...">
           Create Account
         </h2>
         <p className="text-muted-foreground text-lg">Join us and start your journey</p>
@@ -120,12 +119,12 @@ export const RegisterForm = ({
 <div className="text-center mt-6 text-lg">
   <span className="text-muted-foreground">Already have an account? </span>
   <button
-    type="button"
-    onClick={() => setIsSignUp(false)} // Toggle to Login form
-    className="text-secondary font-semibold hover:underline"
-  >
-    Login
-  </button>
+  type="button"
+  onClick={toggleForm}
+  className="text-secondary font-semibold hover:underline"
+>
+  Login
+</button>
 </div>
     </motion.div>
   );

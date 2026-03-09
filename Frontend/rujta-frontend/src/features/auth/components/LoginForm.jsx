@@ -7,7 +7,16 @@ import { signInWithPopup } from "firebase/auth";
 import { FcGoogle } from "react-icons/fc";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 
-const LoginForm = ({ email, setEmail, password, setPassword, onLogin, error, loading ,isSignUp, setIsSignUp}) => {
+const LoginForm = ({
+  email,
+  setEmail,
+  password,
+  setPassword,
+  onLogin,
+  error,
+  loading,
+  toggleForm
+}) => {
   const navigate = useNavigate();
   const { handleForgotPassword } = useAuth();
   const { googleFirebaseLogin } = useGoogleAuth();
@@ -33,7 +42,7 @@ const LoginForm = ({ email, setEmail, password, setPassword, onLogin, error, loa
         <motion.div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-primary mb-4">
           <Mail className="w-8 h-8 text-white" />
         </motion.div>
-        <h2 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-3">
+      <h2 className="text-3xl md:text-5xl font-bold ...">
           Welcome Back
         </h2>
         <p className="text-muted-foreground text-lg"> to continue your journey</p>
@@ -104,12 +113,12 @@ const LoginForm = ({ email, setEmail, password, setPassword, onLogin, error, loa
 <div className="text-center mt-6 text-lg">
   <span className="text-muted-foreground">Don't have an account? </span>
   <button
-    type="button"
-    onClick={() => setIsSignUp(true)} // Toggle to Register form
-    className="text-secondary font-semibold hover:underline"
-  >
-    Sign Up
-  </button>
+  type="button"
+  onClick={toggleForm}
+  className="text-secondary font-semibold hover:underline"
+>
+  Sign Up
+</button>
 </div>
     </motion.div>
   );
