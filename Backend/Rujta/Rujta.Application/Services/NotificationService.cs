@@ -18,9 +18,10 @@ namespace Rujta.Infrastructure.Services
         private readonly INotificationPublisher _publisher;
         private readonly ILogger<NotificationService> _logger;
 
-        // Queue داخلي لمعالجة الرسائل
         private readonly ConcurrentQueue<(string userId, NotificationDto dto)> _notificationQueue = new();
         private readonly SemaphoreSlim _queueSemaphore = new(1, 1);
+
+        private readonly CancellationTokenSource _cts = new();
 
         public NotificationService(
             INotificationRepository repo,
@@ -31,8 +32,7 @@ namespace Rujta.Infrastructure.Services
             _publisher = publisher;
             _logger = logger;
 
-            // تشغيل الـ background loop لمعالجة الرسائل المعلقة
-            _ = ProcessQueueLoopAsync();
+            _ = ProcessQueueLoopAsync(_cts.Token);
         }
 
         public async Task SendNotificationAsync(
@@ -43,7 +43,6 @@ namespace Rujta.Infrastructure.Services
         {
             try
             {
-                // إنشاء الإشعار وتخزينه في DB
                 var notification = new Notification
                 {
                     UserId = userId,
@@ -66,7 +65,6 @@ namespace Rujta.Infrastructure.Services
                     IsRead = false
                 };
 
-                // ضع الرسالة في queue لإرسالها لاحقًا
                 _notificationQueue.Enqueue((userId, dto));
             }
             catch (Exception ex)
@@ -75,9 +73,9 @@ namespace Rujta.Infrastructure.Services
             }
         }
 
-        private async Task ProcessQueueLoopAsync()
+        private async Task ProcessQueueLoopAsync(CancellationToken token)
         {
-            while (true)
+            while (!token.IsCancellationRequested)
             {
                 try
                 {
@@ -88,13 +86,13 @@ namespace Rujta.Infrastructure.Services
                     _logger.LogError(ex, "Error processing notification queue");
                 }
 
-                await Task.Delay(2000); // محاولة إرسال أي إشعارات كل 2 ثانية
+                await Task.Delay(2000, token);
             }
         }
 
         private async Task ProcessQueueAsync()
         {
-            if (!_queueSemaphore.Wait(0)) return; // تأكد أن ما فيش أكثر من عملية معالجة واحدة
+            if (!_queueSemaphore.Wait(0)) return;
 
             try
             {
@@ -108,8 +106,13 @@ namespace Rujta.Infrastructure.Services
                         try
                         {
                             await _publisher.PublishAsync(item.userId, item.dto);
+
                             sent = true;
-                            _logger.LogInformation("Notification {NotificationId} sent to User {UserId}", item.dto.Id, item.userId);
+
+                            _logger.LogInformation(
+                                "Notification {NotificationId} sent to User {UserId}",
+                                item.dto.Id,
+                                item.userId);
                         }
                         catch
                         {
@@ -120,8 +123,11 @@ namespace Rujta.Infrastructure.Services
 
                     if (!sent)
                     {
-                        // إعادة وضع الرسالة في queue إذا فشل الإرسال بعد كل المحاولات
-                        _logger.LogWarning("Notification {NotificationId} could not be sent to User {UserId}, retrying later", item.dto.Id, item.userId);
+                        _logger.LogWarning(
+                            "Notification {NotificationId} could not be sent to User {UserId}, retrying later",
+                            item.dto.Id,
+                            item.userId);
+
                         _notificationQueue.Enqueue(item);
                     }
                 }
@@ -135,6 +141,7 @@ namespace Rujta.Infrastructure.Services
         public async Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(string userId)
         {
             var notifications = await _repo.GetUserNotificationsAsync(userId);
+
             return notifications.Select(n => new NotificationDto
             {
                 Id = n.Id,
@@ -154,6 +161,11 @@ namespace Rujta.Infrastructure.Services
         public async Task<int> GetUnreadCountAsync(string userId)
         {
             return await _repo.GetUnreadCountAsync(userId);
+        }
+
+        public void Stop()
+        {
+            _cts.Cancel();
         }
     }
 }
