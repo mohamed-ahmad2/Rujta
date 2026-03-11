@@ -1,8 +1,10 @@
-﻿using Rujta.Application.Interfaces;
+﻿using Microsoft.AspNetCore.SignalR;
+using Rujta.API.Realtime.Services;
+using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
-using Microsoft.AspNetCore.SignalR;
-using System.Text.Json.Serialization;
+using Rujta.Application.Notifications;
 using Rujta.Infrastructure.Services;
+using System.Text.Json.Serialization;
 
 namespace Rujta.API
 {
@@ -42,11 +44,15 @@ namespace Rujta.API
             // CORS
             builder.Services.AddCustomCors();
 
+
+
             // FluentValidation
             builder.Services.AddCustomFluentValidation();
 
             // Application Services
             builder.Services.AddApplicationServices(builder.Configuration);
+            builder.Services.AddScoped<INotificationPublisher, SignalRNotificationPublisher>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IOrderNotificationService, OrderNotificationService>();
             builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
             builder.Services.AddScoped<IReportService, ReportService>();

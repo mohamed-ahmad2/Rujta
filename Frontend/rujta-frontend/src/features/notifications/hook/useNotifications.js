@@ -1,18 +1,19 @@
-import { useEffect, useState, useCallback } from "react";
+// src/features/notification/hook/useNotifications.jsx
+import { useEffect, useState, useCallback, useContext } from "react";
 import {
   getMyNotifications,
   markNotificationAsRead,
   createTestNotification,
 } from "../api/notificationsApi";
-import { startNotificationConnection } from "../../../shared/signalr/notificationConnection";
-import { useAuth } from "../../auth/hooks/useAuth"; // استيراد useAuth
+import { NotificationContext } from "../../../context/NotificationContext";
+import { useAuth } from "../../auth/hooks/useAuth";
 
 export const useNotifications = () => {
-  const { user } = useAuth(); // هنا بناخد user
-  const [notifications, setNotifications] = useState([]);
+  const { user } = useAuth();
+  const { connection, notifications, setNotifications } = useContext(NotificationContext);
   const [loading, setLoading] = useState(false);
 
-  const userId = user?.id || localStorage.getItem("userId"); // fallback للـ localStorage
+  const userId = user?.id || localStorage.getItem("userId");
 
   // ================= Fetch =================
   const fetchNotifications = useCallback(async () => {
@@ -20,16 +21,16 @@ export const useNotifications = () => {
     setLoading(true);
     try {
       const res = await getMyNotifications();
-      setNotifications(res.data);
+      setNotifications(res.data || []);
     } catch (err) {
       console.error("Failed to fetch notifications", err);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, setNotifications]);
 
   // ================= Mark As Read =================
-  const markAsRead = async (id) => {
+  const markAsRead = useCallback(async (id) => {
     try {
       await markNotificationAsRead(id);
       setNotifications((prev) =>
@@ -38,36 +39,43 @@ export const useNotifications = () => {
     } catch (err) {
       console.error("Failed to mark notification as read", err);
     }
-  };
+  }, [setNotifications]);
 
-  // ================= SignalR Setup =================
+  // ================= SignalR Event =================
   useEffect(() => {
-    if (!userId) return;
+    if (!connection) return;
 
-    let connection;
-    const connect = async () => {
-      connection = await startNotificationConnection(userId);
-
-      connection.on("ReceiveNotification", (dto) => {
-        const newNotification = {
-          id: dto.id || Date.now(),
-          title: dto.title || dto.message,
-          message: dto.message,
-          isRead: false,
-        };
-        setNotifications((prev) => [newNotification, ...prev]);
-      });
+    const handleNewNotification = (dto) => {
+      const newNotification = {
+        id: dto.id || Date.now(),
+        title: dto.title || dto.message,
+        message: dto.message,
+        isRead: false,
+      };
+      setNotifications((prev) => [newNotification, ...prev]);
     };
 
-    connect();
+    const handleUpdatedNotification = (dto) => {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === dto.id ? { ...n, ...dto } : n))
+      );
+    };
+
+    // إزالة أي handlers قديمة قبل إضافة جديدة
+    connection.off("NewNotification");
+    connection.off("NotificationUpdated");
+
+    connection.on("NewNotification", handleNewNotification);
+    connection.on("NotificationUpdated", handleUpdatedNotification);
 
     return () => {
-      if (connection) connection.stop();
+      connection.off("NewNotification", handleNewNotification);
+      connection.off("NotificationUpdated", handleUpdatedNotification);
     };
-  }, [userId]);
+  }, [connection, setNotifications]);
 
   // ================= Test Notification =================
-  const sendTestNotification = async () => {
+  const sendTestNotification = useCallback(async () => {
     if (!userId) return;
     try {
       await createTestNotification("Test Notification", "This is a test.");
@@ -75,10 +83,11 @@ export const useNotifications = () => {
     } catch (err) {
       console.error("Failed to send test notification", err);
     }
-  };
+  }, [userId, fetchNotifications]);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
+  // ================= INITIAL FETCH =================
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);

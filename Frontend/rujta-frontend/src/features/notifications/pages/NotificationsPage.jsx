@@ -6,7 +6,7 @@ const NotificationsPage = () => {
     notifications,
     loading,
     markAsRead,
-    sendTestNotification,
+    
   } = useNotifications();
 
   if (loading) {
@@ -17,15 +17,8 @@ const NotificationsPage = () => {
     <div className="container mx-auto p-6 max-w-3xl">
       <h1 className="text-2xl font-bold mb-4">Notifications</h1>
 
-      <button
-        onClick={sendTestNotification}
-        className="mb-4 px-4 py-2 bg-blue-600 text-white rounded"
-      >
-        Send Test Notification
-      </button>
-
       {notifications.length === 0 && (
-        <p className="text-gray-500">No notifications yet.</p>
+        <p className="text-gray-500">No notifications yet....</p>
       )}
 
       <div className="space-y-3">

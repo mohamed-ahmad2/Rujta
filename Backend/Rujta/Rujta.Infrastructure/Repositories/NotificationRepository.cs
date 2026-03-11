@@ -50,5 +50,10 @@ namespace Rujta.Infrastructure.Repositories
                     n.UserId == userId &&
                     !n.IsRead);
         }
+        public async Task<Notification?> GetByIdAsync(int id)
+        {
+            return await _context.Notifications
+                .FirstOrDefaultAsync(n => n.Id == id);
+        }
     }
 }

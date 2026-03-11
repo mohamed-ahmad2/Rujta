@@ -15,7 +15,6 @@ namespace Rujta.Api.Controllers
     {
         private readonly INotificationService _notificationService;
         private readonly ILogService _logService;
-        private object _hubContext;
 
         public NotificationController(
             INotificationService notificationService,

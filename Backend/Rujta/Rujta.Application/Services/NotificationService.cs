@@ -1,19 +1,38 @@
-﻿using Microsoft.AspNetCore.SignalR;
-using Rujta.Domain.Hubs;
+﻿using Microsoft.Extensions.Logging;
+using Rujta.Application.DTOs;
+using Rujta.Application.Interfaces.InterfaceServices;
+using Rujta.Application.Notifications;
+using Rujta.Domain.Entities;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Services
 {
     public class NotificationService : INotificationService
     {
         private readonly INotificationRepository _repo;
-        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly INotificationPublisher _publisher;
+        private readonly ILogger<NotificationService> _logger;
+
+        // Queue داخلي لمعالجة الرسائل
+        private readonly ConcurrentQueue<(string userId, NotificationDto dto)> _notificationQueue = new();
+        private readonly SemaphoreSlim _queueSemaphore = new(1, 1);
 
         public NotificationService(
             INotificationRepository repo,
-            IHubContext<NotificationHub> hubContext)
+            INotificationPublisher publisher,
+            ILogger<NotificationService> logger)
         {
             _repo = repo;
-            _hubContext = hubContext;
+            _publisher = publisher;
+            _logger = logger;
+
+            // تشغيل الـ background loop لمعالجة الرسائل المعلقة
+            _ = ProcessQueueLoopAsync();
         }
 
         public async Task SendNotificationAsync(
@@ -22,44 +41,108 @@ namespace Rujta.Infrastructure.Services
             string message,
             string? payload = null)
         {
-            var notification = new Notification
+            try
             {
-                UserId = userId,
-                Title = title,
-                Message = message,
-                Payload = payload,
-                CreatedAt = DateTime.UtcNow,
-                IsRead = false
-            };
+                // إنشاء الإشعار وتخزينه في DB
+                var notification = new Notification
+                {
+                    UserId = userId,
+                    Title = title,
+                    Message = message,
+                    Payload = payload,
+                    CreatedAt = DateTime.UtcNow,
+                    IsRead = false
+                };
 
-            await _repo.AddNotificationAsync(notification);
+                await _repo.AddNotificationAsync(notification);
 
-            var dto = new NotificationDto
+                var dto = new NotificationDto
+                {
+                    Id = notification.Id,
+                    Title = title,
+                    Message = message,
+                    Payload = payload,
+                    CreatedAt = notification.CreatedAt,
+                    IsRead = false
+                };
+
+                // ضع الرسالة في queue لإرسالها لاحقًا
+                _notificationQueue.Enqueue((userId, dto));
+            }
+            catch (Exception ex)
             {
-                Id = notification.Id,
-                Title = title,
-                Message = message,
-                Payload = payload,
-                CreatedAt = notification.CreatedAt,
-                IsRead = false
-            };
+                _logger.LogError(ex, "Failed to queue notification for User {UserId}", userId);
+            }
+        }
 
-            await _hubContext.Clients.Group(userId)
-     .SendAsync("ReceiveNotification", dto);
+        private async Task ProcessQueueLoopAsync()
+        {
+            while (true)
+            {
+                try
+                {
+                    await ProcessQueueAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing notification queue");
+                }
+
+                await Task.Delay(2000); // محاولة إرسال أي إشعارات كل 2 ثانية
+            }
+        }
+
+        private async Task ProcessQueueAsync()
+        {
+            if (!_queueSemaphore.Wait(0)) return; // تأكد أن ما فيش أكثر من عملية معالجة واحدة
+
+            try
+            {
+                while (_notificationQueue.TryDequeue(out var item))
+                {
+                    int retries = 0;
+                    bool sent = false;
+
+                    while (!sent && retries < 5)
+                    {
+                        try
+                        {
+                            await _publisher.PublishAsync(item.userId, item.dto);
+                            sent = true;
+                            _logger.LogInformation("Notification {NotificationId} sent to User {UserId}", item.dto.Id, item.userId);
+                        }
+                        catch
+                        {
+                            retries++;
+                            await Task.Delay(200 * retries);
+                        }
+                    }
+
+                    if (!sent)
+                    {
+                        // إعادة وضع الرسالة في queue إذا فشل الإرسال بعد كل المحاولات
+                        _logger.LogWarning("Notification {NotificationId} could not be sent to User {UserId}, retrying later", item.dto.Id, item.userId);
+                        _notificationQueue.Enqueue(item);
+                    }
+                }
+            }
+            finally
+            {
+                _queueSemaphore.Release();
+            }
         }
 
         public async Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(string userId)
         {
             var notifications = await _repo.GetUserNotificationsAsync(userId);
-
             return notifications.Select(n => new NotificationDto
             {
                 Id = n.Id,
                 Title = n.Title,
                 Message = n.Message,
-                IsRead = n.IsRead,
+                Payload = n.Payload,
                 CreatedAt = n.CreatedAt,
-                Payload = n.Payload
+                IsRead = n.IsRead
             });
         }
 

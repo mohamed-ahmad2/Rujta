@@ -13,7 +13,6 @@ global using Rujta.API.Realtime.Hubs;
 global using Rujta.Application.Interfaces.InterfaceServices.IOrder;
 global using Rujta.Application.MappingProfiles;
 global using Rujta.Application.Services.OrderS;
-global using Rujta.Domain.Hubs;
 global using Rujta.Infrastructure.Extensions;
 global using Rujta.Infrastructure.Firebase;
 global using Rujta.Infrastructure.Identity.Services;

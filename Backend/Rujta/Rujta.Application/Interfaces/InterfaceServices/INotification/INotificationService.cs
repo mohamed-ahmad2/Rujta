@@ -20,5 +20,7 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task MarkAsReadAsync(int notificationId, string userId);
 
         Task<int> GetUnreadCountAsync(string userId);
+
+
     }
 }

@@ -2,6 +2,7 @@ import apiClient from "../../../shared/api/apiClient";
 
 // ================= Get My Notifications =================
 export const getMyNotifications = () => {
+  // لاحظ إننا صححنا ال-route عشان ي match مع controller
   return apiClient.get("/notification");
 };
 
