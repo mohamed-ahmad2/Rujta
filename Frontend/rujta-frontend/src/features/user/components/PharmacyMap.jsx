@@ -1,8 +1,14 @@
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Polyline,
+  useMap,
+} from "react-leaflet";
 import { useEffect } from "react";
 import L from "leaflet";
 
-// Icons مخصصة
 const greenIcon = new L.Icon({
   iconUrl: "https://maps.gstatic.com/mapfiles/ms2/micons/green.png",
   iconSize: [32, 32],
@@ -13,7 +19,11 @@ const redIcon = new L.Icon({
   iconSize: [32, 32],
 });
 
-// Component لتحريك الخريطة عند اختيار صيدلية
+const blueIcon = new L.Icon({
+  iconUrl: "https://maps.gstatic.com/mapfiles/ms2/micons/blue.png",
+  iconSize: [32, 32],
+});
+
 const MapUpdater = ({ center }) => {
   const map = useMap();
   useEffect(() => {
@@ -22,48 +32,123 @@ const MapUpdater = ({ center }) => {
   return null;
 };
 
-const PharmacyMap = ({ userLocation, pharmacies, selectedPharmacy, route }) => {
-  const defaultLocation = { lat: 30.0444, lng: 31.2357 }; // القاهرة
+// === PharmacyBoundsUpdater - يظهر كل الصيدليات + العنوان ===
+const PharmacyBoundsUpdater = ({
+  pharmacies,
+  userLocation,
+  selectedPharmacy,
+  route,
+  deliveryAddressLocation,
+}) => {
+  const map = useMap();
+
+  useEffect(() => {
+    // لو فيه صيدلية مختارة أو route → نسيب الـ RouteBoundsUpdater يشتغل
+    if (selectedPharmacy || route) return;
+
+    if (!pharmacies || pharmacies.length === 0) return;
+
+    const bounds = L.latLngBounds(
+      pharmacies.map((p) => [p.latitude, p.longitude]),
+    );
+
+    if (userLocation) bounds.extend([userLocation.lat, userLocation.lng]);
+    if (deliveryAddressLocation) {
+      bounds.extend([deliveryAddressLocation.lat, deliveryAddressLocation.lng]);
+    }
+
+    map.fitBounds(bounds, { padding: [60, 60] });
+  }, [
+    pharmacies,
+    userLocation,
+    selectedPharmacy,
+    route,
+    deliveryAddressLocation,
+    map,
+  ]);
+
+  return null;
+};
+
+const RouteBoundsUpdater = ({ route }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!route) return;
+    if (!route.from || !route.to) return;
+
+    const bounds = L.latLngBounds(
+      [route.from.lat, route.from.lng],
+      [route.to.latitude, route.to.longitude],
+    );
+
+    map.fitBounds(bounds, { padding: [60, 60] });
+  }, [route]);
+
+  return null;
+};
+
+const PharmacyMap = ({
+  userLocation,
+  pharmacies,
+  selectedPharmacy,
+  route,
+  deliveryAddressLocation,
+  deliveryAddress, // ← لعرض نص العنوان في الـ popup
+}) => {
+  const defaultLocation = { lat: 30.0444, lng: 31.2357 };
 
   const center = selectedPharmacy
     ? [selectedPharmacy.latitude, selectedPharmacy.longitude]
-    : [userLocation?.lat ?? defaultLocation.lat, userLocation?.lng ?? defaultLocation.lng];
-
-  // === RouteBoundsUpdater ===
-  const RouteBoundsUpdater = ({ route }) => {
-    const map = useMap();
-
-    useEffect(() => {
-      if (!route) return;
-      if (!route.from || !route.to) return;
-
-      const bounds = L.latLngBounds(
-        [route.from.lat, route.from.lng],
-        [route.to.latitude, route.to.longitude]
-      );
-
-      map.fitBounds(bounds, { padding: [60, 60] });
-    }, [route]);
-
-    return null;
-  };
+    : [
+        userLocation?.lat ?? defaultLocation.lat,
+        userLocation?.lng ?? defaultLocation.lng,
+      ];
 
   return (
     <div style={{ height: "100%", width: "100%" }}>
-      <MapContainer center={center} zoom={15} style={{ height: "100%", width: "100%" }}>
+      <MapContainer
+        center={center}
+        zoom={15}
+        style={{ height: "100%", width: "100%" }}
+      >
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
+          attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         <MapUpdater center={center} />
 
-        {/* Marker الخاص بموقع المستخدم */}
+        <PharmacyBoundsUpdater
+          pharmacies={pharmacies}
+          userLocation={userLocation}
+          selectedPharmacy={selectedPharmacy}
+          route={route}
+          deliveryAddressLocation={deliveryAddressLocation}
+        />
+
         {userLocation && (
           <Marker position={[userLocation.lat, userLocation.lng]} />
         )}
 
-        {/* Markers الخاصة بالصيدليات */}
+        {/* العلامة الزرقاء للعنوان المختار */}
+        {deliveryAddressLocation && (
+          <Marker
+            position={[
+              deliveryAddressLocation.lat,
+              deliveryAddressLocation.lng,
+            ]}
+            icon={blueIcon}
+          >
+            <Popup>
+              <strong>📍 My Delivery Address</strong>
+              <br />
+              {deliveryAddress?.street}, {deliveryAddress?.buildingNo},{" "}
+              {deliveryAddress?.city}, {deliveryAddress?.governorate}
+            </Popup>
+          </Marker>
+        )}
+
         {pharmacies.map((p, index) => (
           <Marker
             key={p.pharmacyId}
@@ -71,7 +156,9 @@ const PharmacyMap = ({ userLocation, pharmacies, selectedPharmacy, route }) => {
             icon={index === 0 ? greenIcon : redIcon}
           >
             <Popup>
-              <strong>#{index + 1} {p.name}</strong>
+              <strong>
+                #{index + 1} {p.name}
+              </strong>
               <br />
               Distance: {p.distanceKm.toFixed(2)} km
               {index === 0 && <div>⭐ Best Choice</div>}
@@ -79,7 +166,6 @@ const PharmacyMap = ({ userLocation, pharmacies, selectedPharmacy, route }) => {
           </Marker>
         ))}
 
-        {/* رسم المسار + Zoom على المسار */}
         {route && (
           <>
             <Polyline
@@ -90,11 +176,9 @@ const PharmacyMap = ({ userLocation, pharmacies, selectedPharmacy, route }) => {
               color="blue"
               weight={4}
             />
-
             <RouteBoundsUpdater route={route} />
           </>
         )}
-
       </MapContainer>
     </div>
   );

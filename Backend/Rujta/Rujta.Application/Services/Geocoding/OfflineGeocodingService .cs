@@ -7,9 +7,12 @@
         private readonly List<string> _uniqueCities;
         private readonly ConcurrentDictionary<string, (double Latitude, double Longitude)> _cache;
         private readonly JaroWinkler _jw;
+        private readonly IGeocodingService _onlineGeocodingService;
 
-        public OfflineGeocodingService(string pbfFilePath)
+        public OfflineGeocodingService(string pbfFilePath, IGeocodingService onlineGeocodingService)
         {
+            _onlineGeocodingService = onlineGeocodingService ?? throw new ArgumentNullException(nameof(onlineGeocodingService));
+
             _nodesByGovCity = LoadAndIndexAddressesFromPbf(pbfFilePath);
 
             _uniqueGovernorates = _nodesByGovCity.Keys
@@ -66,16 +69,21 @@
             return index;
         }
 
-        public Task<(double Latitude, double Longitude)> GetCoordinatesAsync(
+        public async Task<(double Latitude, double Longitude)> GetCoordinatesAsync(
             string street, string? buildingNo, string? city, string? governorate)
         {
-            street = NormalizeString(street?.Trim() ?? "");
-            buildingNo = NormalizeString(buildingNo?.Trim());
-            city = NormalizeString(city?.Trim());
-            governorate = NormalizeString(governorate?.Trim());
+            string rawStreet = street?.Trim() ?? "";
+            string rawBuildingNo = buildingNo?.Trim() ?? "";
+            string rawCity = city?.Trim() ?? "";
+            string rawGovernorate = governorate?.Trim() ?? "";
+
+            street = NormalizeString(rawStreet);
+            buildingNo = NormalizeString(rawBuildingNo);
+            city = NormalizeString(rawCity);
+            governorate = NormalizeString(rawGovernorate);
 
             if (string.IsNullOrEmpty(street))
-                return Task.FromResult((0.0, 0.0));
+                return (0.0, 0.0);
 
             if (!string.IsNullOrEmpty(governorate))
             {
@@ -97,7 +105,27 @@
 
             string cacheKey = $"{street}|{buildingNo}|{city}|{governorate}";
             if (_cache.TryGetValue(cacheKey, out var cached))
-                return Task.FromResult(cached);
+                return cached;
+
+            string fullAddress = BuildFullAddress(rawStreet, rawBuildingNo, rawCity, rawGovernorate);
+
+            try
+            {
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                var onlineResult = await _onlineGeocodingService.GetCoordinatesAsync(fullAddress, timeoutCts.Token);
+
+                _cache[cacheKey] = onlineResult;
+                return onlineResult;
+            }
+            catch (Exception ex) when (
+                ex is HttpRequestException ||
+                ex is OperationCanceledException ||
+                ex is TaskCanceledException ||
+                (ex is InvalidOperationException && ex.Message.Contains("Unable to geocode")))
+            {
+                //Unable to geocode
+            }
+
 
             var indexKey = $"{governorate?.ToLowerInvariant()}|{city?.ToLowerInvariant()}";
             if (!_nodesByGovCity.TryGetValue(indexKey, out var filteredNodes) || filteredNodes == null || !filteredNodes.Any())
@@ -125,8 +153,19 @@
                 result = (bestMatch.Node.Latitude, bestMatch.Node.Longitude);
 
             _cache[cacheKey] = result;
+            return result;
+        }
 
-            return Task.FromResult(result);
+        private static string BuildFullAddress(string street, string? buildingNo, string? city, string? governorate)
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrEmpty(buildingNo)) parts.Add(buildingNo);
+            if (!string.IsNullOrEmpty(street)) parts.Add(street);
+            if (!string.IsNullOrEmpty(city)) parts.Add(city);
+            if (!string.IsNullOrEmpty(governorate)) parts.Add(governorate);
+            parts.Add("Egypt");
+
+            return string.Join(", ", parts);
         }
 
         private (string Match, double Score) FindBestMatch(string input, IEnumerable<string> candidates)
