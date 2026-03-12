@@ -9,6 +9,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { PresenceProvider } from "./context/PresenceProvider";
 import { OrdersProvider } from "./context/OrdersProvider";
+import { NotificationProvider } from "./context/NotificationProvider";
 const App = () => {
   const { user, loading } = useAuth();
 
@@ -85,6 +86,7 @@ const App = () => {
   return (
     <PresenceProvider>
       <OrdersProvider>
+        <NotificationProvider>
         <AppRoutes
           cart={cart}
           setCart={setCart}
@@ -116,6 +118,7 @@ const App = () => {
 
         {/* Vercel Speed Insights */}
         <SpeedInsights />
+        </NotificationProvider>
       </OrdersProvider>
     </PresenceProvider>
   );

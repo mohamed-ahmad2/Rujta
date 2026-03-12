@@ -28,14 +28,32 @@ namespace Rujta.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task MarkAsReadAsync(int notificationId)
+        public async Task MarkAsReadAsync(int notificationId, string userId)
         {
-            var notif = await _context.Notifications.FindAsync(notificationId);
-            if (notif != null)
-            {
-                notif.IsRead = true;
-                await _context.SaveChangesAsync();
-            }
+            var notification = await _context.Notifications
+                .FirstOrDefaultAsync(n =>
+                    n.Id == notificationId &&
+                    n.UserId == userId);
+
+            if (notification == null)
+                return;
+
+            notification.IsRead = true;
+
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<int> GetUnreadCountAsync(string userId)
+        {
+            return await _context.Notifications
+                .CountAsync(n =>
+                    n.UserId == userId &&
+                    !n.IsRead);
+        }
+        public async Task<Notification?> GetByIdAsync(int id)
+        {
+            return await _context.Notifications
+                .FirstOrDefaultAsync(n => n.Id == id);
         }
     }
 }
