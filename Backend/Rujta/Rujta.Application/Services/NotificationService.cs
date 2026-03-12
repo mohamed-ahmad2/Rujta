@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Services
 {
-    public class NotificationService : INotificationService
+    public class NotificationService : INotificationService, IDisposable
     {
         private readonly INotificationRepository _repo;
         private readonly INotificationPublisher _publisher;
@@ -166,6 +166,13 @@ namespace Rujta.Infrastructure.Services
         public void Stop()
         {
             _cts.Cancel();
+        }
+
+        public void Dispose()
+        {
+            _cts.Cancel();
+            _cts.Dispose();
+            _queueSemaphore.Dispose();
         }
     }
 }
