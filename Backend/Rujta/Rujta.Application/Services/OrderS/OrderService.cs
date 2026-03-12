@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Rujta.Application.Interfaces.InterfaceServices.IOrder;
+using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Services.OrderS
 {
-    public class OrderService(IUnitOfWork _unitOfWork, IMapper _mapper, ILogger<OrderService> _logger, IOrderNotificationService _notificationService) : IOrderService
+    public class OrderService(IUnitOfWork _unitOfWork, IMapper _mapper, ILogger<OrderService> _logger, IOrderNotificationService _notificationService,INotificationService NotifyService) : IOrderService
     {
         public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto, Guid userId, CancellationToken cancellationToken = default)
         {
@@ -87,7 +88,12 @@ namespace Rujta.Application.Services.OrderS
 
                 await _notificationService.NotifyNewOrderAsync(createOrderDto.PharmacyID, orderDto.Id);
                 await _notificationService.NotifyOrderItemChangedAsync(order.Id);
-
+                await NotifyService.SendNotificationAsync(
+                    userId.ToString(),
+                    "Order Created",
+                    $"Your order #{order.Id} has been created successfully.",
+                    order.Id.ToString()
+                );
                 return orderDto;
             }
             catch (Exception ex)
@@ -125,6 +131,8 @@ namespace Rujta.Application.Services.OrderS
                     await _unitOfWork.SaveAsync(cancellationToken);
 
                     await SafeNotifyAsync(order, newStatus);
+                    await SendOrderStatusNotification(order);
+
 
                     return (true, newStatus switch
                     {
@@ -168,6 +176,7 @@ namespace Rujta.Application.Services.OrderS
                     throw new InvalidOperationException("Order user is missing");
 
                 await _notificationService.NotifyStatusChangedAsync(order.PharmacyId, order.UserId.ToString()!, order.Id, status);
+
             }
             catch (Exception ex)
             {
@@ -176,16 +185,32 @@ namespace Rujta.Application.Services.OrderS
         }
 
 
-        public Task<(bool success, string message)> AcceptOrderAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>
-           SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.Accepted, cancellationToken);
+        public async Task<(bool success, string message)> AcceptOrderAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>
+        
+             await SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.Accepted, cancellationToken);
+
+         
+        
+
 
 
         public Task<(bool success, string message)> CancelOrderByUserAsync(int id, CancellationToken cancellationToken = default) =>
             SafeUpdateOrderAsync(id, 0, OrderStatus.CancelledByUser, cancellationToken, isUser: true);
 
 
-        public Task<(bool success, string message)> CancelOrderByPharmacyAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>
-            SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.CancelledByPharmacy, cancellationToken);
+        public async Task<(bool success, string message)> CancelOrderByPharmacyAsync(
+    int id,
+    int pharmacyId,
+    CancellationToken cancellationToken = default)=>
+        
+             await SafeUpdateOrderAsync(
+                id,
+                pharmacyId,
+                OrderStatus.CancelledByPharmacy,
+                cancellationToken);
+
+           
+        
 
         public Task<(bool success, string message)> ProcessOrderAsync(int id, int pharmacyId, CancellationToken cancellationToken = default) =>
             SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.Processing, cancellationToken);
@@ -241,6 +266,7 @@ namespace Rujta.Application.Services.OrderS
                 try
                 {
                     await _unitOfWork.SaveAsync(cancellationToken);
+
                     await transaction.CommitAsync(cancellationToken);
 
                     await SafeNotifyDeliveredAsync(order);
@@ -496,5 +522,32 @@ namespace Rujta.Application.Services.OrderS
                 _ => false
             };
         }
+
+
+        private async Task SendOrderStatusNotification(Order order)
+        {
+            if (order.UserId == null)
+                return;
+
+            string title = "Order Update";
+            string message = order.Status switch
+            {
+                OrderStatus.Accepted => $"Your order #{order.Id} has been accepted.",
+                OrderStatus.Processing => $"Your order #{order.Id} is being prepared.",
+                OrderStatus.OutForDelivery => $"Your order #{order.Id} is out for delivery.",
+                OrderStatus.Delivered => $"Your order #{order.Id} has been delivered.",
+                OrderStatus.CancelledByUser => $"Your order #{order.Id} was cancelled.",
+                OrderStatus.CancelledByPharmacy => $"Your order #{order.Id} was cancelled by the pharmacy.",
+                _ => $"Your order #{order.Id} status updated."
+            };
+
+            await NotifyService.SendNotificationAsync(
+                order.UserId.ToString(),
+                title,
+                message,
+                order.Id.ToString()
+            );
+        }
     }
 }
+
