@@ -83,7 +83,9 @@ namespace Rujta.Infrastructure.Extensions
             var pbfPath = Path.Combine(AppContext.BaseDirectory, "Maps", "egypt-251026.osm.pbf");
             if (!File.Exists(pbfPath))
                 throw new FileNotFoundException($"PBF file not found at {pbfPath}");
-            services.AddSingleton<IOfflineGeocodingService>(sp => new OfflineGeocodingService(pbfPath));
+
+            services.AddSingleton<IOfflineGeocodingService>(sp =>
+                new OfflineGeocodingService(pbfPath, sp.GetRequiredService<IGeocodingService>()));
 
             // للـ RouterDb
             var routerDbPath = Path.Combine(AppContext.BaseDirectory, "Maps", "egypt.routerdb");
