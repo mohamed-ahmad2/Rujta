@@ -172,6 +172,21 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
               />
             </Route>
 
+            {/* ========= Super Admin Dashboard ========= */}
+<Route
+  path="/superadmin"
+  element={
+    <ProtectedRoute roles={["SuperAdmin"]}>
+      <DashboardLayoutSuberAdmin />
+    </ProtectedRoute>
+  }
+>
+  <Route index element={<Overview />} />
+  <Route path="pharmacies" element={<Pharmacies />} />
+  <Route path="reports" element={<Reports />} />
+  <Route path="settings" element={<SettingsAdmin />} />
+</Route>
+
 
     {/* ========= 404 ========= */}
     <Route path="*" element={<AnimatedErrorPage />} />

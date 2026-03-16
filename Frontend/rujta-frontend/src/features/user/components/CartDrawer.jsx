@@ -4,6 +4,7 @@ import { FaPlus, FaMinus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import audio from "../../../assets/audio.wav";
 
+
 const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -120,19 +121,24 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
           </div>
 
           <button
-            onClick={handleCheckout}
-            disabled={isCheckingOut}
-            className={`w-full bg-gradient-to-r from-secondary to-secondary 
-                        text-white py-2.5 rounded-md font-semibold 
-                        transition-all duration-300
-                        ${
-                          isCheckingOut
-                            ? "scale-95 opacity-70 cursor-not-allowed"
-                            : "hover:scale-105 active:scale-95 hover:opacity-90"
-                        }`}
-          >
-            {isCheckingOut ? "Processing..." : "Checkout"}
-          </button>
+  onClick={handleCheckout}
+  disabled={isCheckingOut}
+  className={`w-full flex items-center justify-center gap-2
+              bg-gradient-to-r from-secondary to-secondary
+              text-white py-2.5 rounded-md font-semibold
+              transition-all duration-300
+              ${
+                isCheckingOut
+                  ? "opacity-80 cursor-not-allowed animate-pulse"
+                  : "hover:scale-105 active:scale-95 hover:opacity-90"
+              }`}
+>
+  {isCheckingOut && (
+    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+  )}
+
+  {isCheckingOut ? "Processing..." : "Checkout"}
+</button>
         </div>
       )}
     </div>

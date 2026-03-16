@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "../../../assets/Logo.png";
 
@@ -8,15 +8,14 @@ import { CiSettings } from "react-icons/ci";
 import { RiLogoutCircleLine } from "react-icons/ri";
 import { MdMenuOpen } from "react-icons/md";
 
-export default function Sidebar() {
-  const [open, setOpen] = useState(true);
+export default function Sidebar({ open, setOpen }) {
   const location = useLocation();
 
   const menu = [
-    { label: "Dashbord", icon: <IoHomeOutline size={22} />, path: "/dashboard/home" },
-    { label: "Pharmacis", icon: <TbMenuOrder size={22} />, path: "/dashboard/orders" },
-    { label: "Reports", icon: <TbReportSearch size={22} />, path: "/dashboard/sales" },
-    { label: "Settings", icon: <CiSettings size={22} />, path: "/dashboard/settings" },
+    { label: "Overview", icon: <IoHomeOutline size={22} />, path: "/superadmin" },
+    { label: "Pharmacies", icon: <TbMenuOrder size={22} />, path: "/superadmin/pharmacies" },
+    { label: "Reports", icon: <TbReportSearch size={22} />, path: "/superadmin/reports" },
+    { label: "Settings", icon: <CiSettings size={22} />, path: "/superadmin/settings" },
   ];
 
   return (
@@ -41,7 +40,7 @@ export default function Sidebar() {
         <MdMenuOpen
           size={32}
           className={`cursor-pointer transition-transform duration-300 ${
-            !open && "rotate-180"
+            !open ? "rotate-180" : ""
           }`}
           onClick={() => setOpen(!open)}
         />
@@ -50,15 +49,19 @@ export default function Sidebar() {
       {/* Menu */}
       <ul className="p-3 space-y-1">
         {menu.map((item) => {
-          const active = location.pathname === item.path;
+          const active = location.pathname.startsWith(item.path);
 
           return (
             <li key={item.label}>
               <Link
                 to={item.path}
                 className={`flex items-center gap-3 p-3 rounded-xl transition-all
-                  ${active ? "bg-white text-black shadow" : "hover:bg-white/20"}
-                  ${!open && "justify-center"}
+                ${
+                  active
+                    ? "bg-white text-black shadow"
+                    : "hover:bg-white/20"
+                }
+                ${!open ? "justify-center" : ""}
                 `}
               >
                 {item.icon}
@@ -73,8 +76,9 @@ export default function Sidebar() {
       <div className="absolute bottom-4 left-0 w-full px-3">
         <Link
           to="/logout"
-          className={`flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 transition-all
-          ${!open && "justify-center"}`}
+          className={`flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 transition-all ${
+            !open ? "justify-center" : ""
+          }`}
         >
           <RiLogoutCircleLine size={22} />
           {open && <span>Logout</span>}

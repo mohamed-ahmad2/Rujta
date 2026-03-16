@@ -20,15 +20,23 @@ export const AuthPage = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const redirectByRole = (role) => {
-  if (role === "Admin") navigate("/admin/dashboard");
+ const redirectByRole = (role) => {
 
- else if (role === "Pharmacist" || role === "PharmacyAdmin") {
-  navigate("/dashboard");
-}
+  if (role === "SuperAdmin") {
+    navigate("/superadmin");
+  }
 
-  else if (role === "User") navigate("/user/");
-  else navigate("/");
+  else if (role === "Pharmacist" || role === "PharmacyAdmin") {
+    navigate("/dashboard");
+  }
+
+  else if (role === "User") {
+    navigate("/user/");
+  }
+
+  else {
+    navigate("/");
+  }
 };
 
   const onLogin = async (e) => {
