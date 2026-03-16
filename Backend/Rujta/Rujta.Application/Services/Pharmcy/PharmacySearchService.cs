@@ -34,17 +34,9 @@ namespace Rujta.Application.Services.Pharmcy
             if (!IsValidOrder(order))
                 return new();
 
-            var medicineIds = order.Items
-                .Select(i => i.MedicineId)
-                .Distinct()
-                .ToList();
-
+            var medicineIds = order.Items.Select(i => i.MedicineId).Distinct().ToList();
             var medicines = await _medicineRepo.FindAsync(m => medicineIds.Contains(m.Id));
-
-            var medicineNames = medicines.ToDictionary(
-                m => m.Id,
-                m => m.Name ?? "Unknown"
-            );
+            var medicineNames = medicines.ToDictionary(m => m.Id, m => m.Name ?? "Unknown");
 
             var nearestPharmacies = await GetNearestPharmaciesSafe(userLat, userLng, topK);
 
@@ -53,7 +45,6 @@ namespace Rujta.Application.Services.Pharmcy
             foreach (var entry in nearestPharmacies)
             {
                 var result = await ProcessPharmacyAsync(entry, order, medicineNames);
-
                 if (result.MatchedDrugs > 0)
                     results.Add(result);
             }
@@ -82,29 +73,18 @@ namespace Rujta.Application.Services.Pharmcy
             return true;
         }
 
-        private async Task<List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes, List<(double lat, double lng)> routeShape)>>
-        GetNearestPharmaciesSafe(double lat, double lng, int topK)
+        private async Task<List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>> GetNearestPharmaciesSafe(
+            double lat, double lng, int topK)
         {
             try
             {
-                return await _distanceService.GetNearestPharmaciesRouted(
-                    lat,
-                    lng,
-                    "car",
-                    topK * 2
-                );
+                return await _distanceService.GetNearestPharmaciesRouted(lat, lng, "car", topK * 2);
             }
             catch
             {
                 var all = await _pharmacyRepo.GetAllPharmacies();
-
                 return all
-                    .Select(p => (
-                        p,
-                        Haversine(lat, lng, p.Latitude, p.Longitude),
-                        0.0,
-                        new List<(double lat, double lng)>()
-                    ))
+                    .Select(p => (p, Haversine(lat, lng, p.Latitude, p.Longitude), 0.0))
                     .OrderBy(x => x.Item2)
                     .Take(topK * 2)
                     .ToList();
@@ -112,9 +92,9 @@ namespace Rujta.Application.Services.Pharmcy
         }
 
         private async Task<PharmacyMatchResultDto> ProcessPharmacyAsync(
-            (Pharmacy pharmacy, double distanceMeters, double durationMinutes, List<(double lat, double lng)> routeShape) entry,
-            ItemDto order,
-            Dictionary<int, string> medicineNames)
+    (Pharmacy pharmacy, double distanceMeters, double durationMinutes) entry,
+    ItemDto order,
+    Dictionary<int, string> medicineNames)
         {
             var pharmacy = entry.pharmacy;
             var distanceKm = entry.distanceMeters / 1000;
@@ -125,37 +105,22 @@ namespace Rujta.Application.Services.Pharmcy
                 _logger,
                 pharmacy.Id,
                 pharmacy.Name,
-                distanceKm
-            );
+                distanceKm);
 
             int matched = 0;
-
             var found = new List<FoundMedicineDto>();
             var notFound = new List<NotFoundMedicineDto>();
 
             foreach (var item in order.Items)
             {
-                int stock = await _pharmacyRepo.GetMedicineStockAsync(
-                    pharmacy.Id,
-                    item.MedicineId
-                );
+                int stock = await _pharmacyRepo.GetMedicineStockAsync(pharmacy.Id, item.MedicineId);
+                PharmacySearchLogger.LogStockCheck(_logger, pharmacy.Id, item, stock);
 
-                PharmacySearchLogger.LogStockCheck(
-                    _logger,
-                    pharmacy.Id,
-                    item,
-                    stock
-                );
-
-                var name = medicineNames.GetValueOrDefault(
-                    item.MedicineId,
-                    "Unknown"
-                );
+                var name = medicineNames.GetValueOrDefault(item.MedicineId, "Unknown");
 
                 if (stock > 0)
                 {
-                    if (stock >= item.Quantity)
-                        matched++;
+                    if (stock >= item.Quantity) matched++;
 
                     found.Add(new FoundMedicineDto
                     {
@@ -183,6 +148,7 @@ namespace Rujta.Application.Services.Pharmcy
                 deliveryFee
             );
 
+            // استدعاء Build بالـ Parameter Object
             return PharmacyMatchResultBuilder.Build(new PharmacyMatchResultParams
             {
                 Pharmacy = pharmacy,
@@ -192,20 +158,14 @@ namespace Rujta.Application.Services.Pharmcy
                 DurationMinutes = entry.durationMinutes,
                 DeliveryFee = deliveryFee,
                 Found = found,
-                NotFound = notFound,
-
-                RouteShape = entry.routeShape
+                NotFound = notFound
             });
         }
 
-        private static double Haversine(
-            double lat1,
-            double lon1,
-            double lat2,
-            double lon2)
+
+        private static double Haversine(double lat1, double lon1, double lat2, double lon2)
         {
             const double R = 6371000;
-
             double dLat = (lat2 - lat1) * Math.PI / 180;
             double dLon = (lon2 - lon1) * Math.PI / 180;
 
@@ -217,5 +177,9 @@ namespace Rujta.Application.Services.Pharmcy
 
             return 2 * R * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
         }
+
+
+
     }
+
 }

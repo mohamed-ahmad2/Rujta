@@ -1,4 +1,5 @@
 using Itinero.Osm.Vehicles;
+using Rujta.Infrastructure.Services;
 
 namespace Rujta.Application.Services.Pharmcy
 {
@@ -30,7 +31,7 @@ namespace Rujta.Application.Services.Pharmcy
         }
 
 
-        public async Task<List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes, List<(double lat, double lng)> routeShape)>>
+        public async Task<List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>>
 GetNearestPharmaciesRouted(double userLat, double userLon, string mode = "car", int topK = 5)
         {
             var allPharmacies = await _pharmacyRepository.GetAllPharmacies();
@@ -52,12 +53,12 @@ GetNearestPharmaciesRouted(double userLat, double userLon, string mode = "car", 
             };
 
 
-            var results = new List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes, List<(double lat, double lng)> routeShape)>();
+            var results = new List<(Pharmacy pharmacy, double distanceMeters, double durationMinutes)>();
             const double TOLERANCE = 1e-6;
 
             foreach (var entry in topCandidates)
             {
-                var (dist, durSeconds, shape) = _itineroService.GetRouteData(
+                var (dist, durSeconds) = _itineroService.GetRouteData(
                     userLat, userLon,
                     entry.Pharmacy.Latitude, entry.Pharmacy.Longitude,
                     profile
@@ -80,17 +81,10 @@ GetNearestPharmaciesRouted(double userLat, double userLon, string mode = "car", 
                     }
                 }
 
-                //shape = new List<(double lat, double lng)>
-                //        {
-                //            (userLat, userLon),
-                //            (entry.Pharmacy.Latitude, entry.Pharmacy.Longitude)
-                //        };
-
                 results.Add((
                     pharmacy: entry.Pharmacy,
                     distanceMeters: dist,
-                    durationMinutes: durSeconds / 60.0,
-                    routeShape: shape
+                    durationMinutes: durSeconds / 60.0
                 ));
             }
 

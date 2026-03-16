@@ -38,50 +38,40 @@ namespace Rujta.Application.Services.Pharmcy
         }
 
         // Returns (distance in meters, duration in seconds)
-        public (double distance, double duration, List<(double lat, double lng)> shape) GetRouteData(
-    double fromLat, double fromLon,
-    double toLat, double toLon,
-    Itinero.Profiles.Profile profile)
+        public (double distance, double duration) GetRouteData(
+     double fromLat, double fromLon,
+     double toLat, double toLon,
+     Itinero.Profiles.Profile profile)
         {
             try
             {
+                // ✅ Check correct profile exists
                 var supportedProfile = _router.Db.GetSupportedProfile(profile.Name);
                 if (supportedProfile == null)
                 {
-                    _logger.LogWarning("Profile '{ProfileName}' not supported.", profile.Name);
-                    return (double.MaxValue, double.MaxValue, new());
+                    _logger.LogWarning("Profile '{ProfileName}' not supported by RouterDb.", profile.Name);
+                    return (double.MaxValue, double.MaxValue);
                 }
 
-                var start = _router.Resolve(
-                    supportedProfile,
+                // ✅ Resolve using selected profile
+                var start = _router.Resolve(supportedProfile,
                     new Coordinate((float)fromLat, (float)fromLon));
+                var end = _router.Resolve(supportedProfile,
+                    new Coordinate((float)toLat, (float)toLon));
 
-                var end = _router.Resolve(
-                    supportedProfile,
-                    new Coordinate((float)toLat, (float)toLon), 200f);
-
+                // ✅ Route using selected profile
                 var route = _router.Calculate(supportedProfile, start, end);
 
-                // Extract route geometry
-                var shape = route.Shape
-                    .Select(p => (
-                        lat: (double)p.Latitude,
-                        lng: (double)p.Longitude))
-                    .ToList();
-
-                return (
-                    route.TotalDistance,
-                    route.TotalTime,
-                    shape
-                );
+                // ✅ TotalTime is already in seconds
+                return (route.TotalDistance, route.TotalTime);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,
-                    "Routing failed from ({FromLat},{FromLon}) to ({ToLat},{ToLon})",
+                    "Routing failed for from ({FromLat},{FromLon}) to ({ToLat},{ToLon})",
                     fromLat, fromLon, toLat, toLon);
 
-                return (double.MaxValue, double.MaxValue, new());
+                return (double.MaxValue, double.MaxValue);
             }
         }
 
