@@ -62,8 +62,9 @@ const PharmacyMap = ({
   selectedPharmacy,
   deliveryAddressLocation,
   deliveryAddress,
+  hoveredPharmacyId,
   selectedPharmacies = [],
-  routeLines = {},
+  routeData = {}, 
 }) => {
   const defaultLocation = { lat: 30.0444, lng: 31.2357 };
   const center = selectedPharmacy
@@ -129,7 +130,7 @@ const PharmacyMap = ({
           </Marker>
         ))}
 
-        {/* ================== REAL ROAD PATHS (يظهر فقط للـ Selected + الأفضل) ================== */}
+        {/* ================== REAL ROAD PATHS ================== */}
         {(deliveryAddressLocation || userLocation) &&
           pharmacies.length > 0 &&
           pharmacies.map((p) => {
@@ -138,27 +139,35 @@ const PharmacyMap = ({
 
             const isTop = pharmacies[0]?.pharmacyId === p.pharmacyId;
             const isSelected = selectedPharmacies.includes(p.pharmacyId);
+            const isHovered = p.pharmacyId === hoveredPharmacyId;
 
-            // يظهر فقط لو مختارة أو أفضل صيدلية
-            if (!isTop && !isSelected) return null;
+            if (!isTop && !isSelected && !isHovered) return null;
 
-            const positions = routeLines[p.pharmacyId];
-            if (!positions) return null;
+            const route = routeData[p.pharmacyId];
+            if (!route?.coordinates) return null;
 
-            let color = "#8B5CF6"; // بنفسجي للـ Selected
-            let weight = 5;
-            let opacity = 0.9;
+            let color = "#9CA3AF";
+            let weight = 3;
+            let opacity = 0.6;
 
             if (isTop) {
-              color = "#10B981"; // أخضر قوي للأفضل
+              color = "#10B981";
               weight = 6;
               opacity = 0.95;
+            } else if (isHovered) {
+              color = "#3B82F6";
+              weight = 7;
+              opacity = 1;
+            } else if (isSelected) {
+              color = "#8B5CF6";
+              weight = 5;
+              opacity = 0.85;
             }
 
             return (
               <Polyline
                 key={`route-${p.pharmacyId}`}
-                positions={positions}
+                positions={route.coordinates}
                 color={color}
                 weight={weight}
                 opacity={opacity}
