@@ -10,6 +10,7 @@
         public double DeliveryFee { get; set; }
         public List<FoundMedicineDto> Found { get; set; }
         public List<NotFoundMedicineDto> NotFound { get; set; }
+        public List<(double lat, double lng)> RouteShape { get; set; } = new();
     }
 
     public static class PharmacyMatchResultBuilder
@@ -38,7 +39,15 @@
                 DeliveryFee = Math.Round(param.DeliveryFee, 2),
 
                 FoundMedicines = param.Found,
-                NotFoundMedicines = param.NotFound
+                NotFoundMedicines = param.NotFound,
+
+                RoutePath = param.RouteShape
+                    .Select(p => new RoutePointDto
+                    {
+                        Lat = p.lat,
+                        Lng = p.lng
+                    })
+                    .ToList()
             };
         }
     }

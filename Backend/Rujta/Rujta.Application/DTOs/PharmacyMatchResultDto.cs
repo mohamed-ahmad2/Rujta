@@ -22,6 +22,7 @@ namespace Rujta.Application.DTOs
         public double EstimatedDurationMinutes { get; set; }
         public double DeliveryFee { get; set; }
 
+        public List<RoutePointDto> RoutePath { get; set; } = new();
 
         public List<FoundMedicineDto> FoundMedicines { get; set; } = new();
         public List<NotFoundMedicineDto> NotFoundMedicines { get; set; } = new();

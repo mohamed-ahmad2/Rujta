@@ -1,10 +1,44 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
 import { useOrders } from "../../orders/hooks/useOrders";
 import { useAuth } from "../../auth/hooks/useAuth";
 import useAddress from "../../address/hook/useAddress";
 import apiClient from "../../../shared/api/apiClient";
 import PharmacyMap from "../components/PharmacyMap";
+
+// دالة فك الـ polyline من OSRM (مسار حقيقي على الشوارع)
+const decodePolyline = (encoded) => {
+  let index = 0;
+  let lat = 0,
+    lng = 0;
+  const coordinates = [];
+
+  while (index < encoded.length) {
+    let shift = 0,
+      result = 0,
+      byte;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+
+    coordinates.push([lat / 1e5, lng / 1e5]);
+  }
+  return coordinates;
+};
 
 const Checkout = () => {
   const [cart, setCart] = useState([]);
@@ -17,7 +51,7 @@ const Checkout = () => {
     error: addressesError,
     fetchUserAddresses,
     create: createAddress,
-    fetchById, // ← مهم جداً لجلب إحداثيات العنوان
+    fetchById,
   } = useAddress();
 
   const [pharmaciesRange, setPharmaciesRange] = useState(5);
@@ -44,10 +78,78 @@ const Checkout = () => {
   const [routeToPharmacy, setRouteToPharmacy] = useState(null);
   const [selectedMedicines, setSelectedMedicines] = useState({});
 
-  // ==================== NEW ====================
+  // ==================== NEW (للمسارات الحقيقية على الشوارع) ====================
   const [deliveryAddressLocation, setDeliveryAddressLocation] = useState(null);
   const [deliveryAddress, setDeliveryAddress] = useState(null);
+  const [hoveredPharmacyId, setHoveredPharmacyId] = useState(null);
+  const [routeLines, setRouteLines] = useState({}); // pharmacyId → array of [lat, lng]
   // ============================================
+
+  // ──────────────────────────────────────────────
+  //  Fetch Real Road Routes from OSRM
+  // ──────────────────────────────────────────────
+  // ──────────────────────────────────────────────
+  //  Fetch Real Road Routes from OSRM (النسخة المُصححة)
+  // ──────────────────────────────────────────────
+  // ──────────────────────────────────────────────
+//  Fetch Real Road Routes from OSRM
+// ──────────────────────────────────────────────
+const fetchRoute = useCallback(
+  async (pharmacy) => {
+    const start = deliveryAddressLocation || userLocation;
+    if (!start || !pharmacy) return;
+
+    // ←←←← غيّرنا الكي إلى بسيط (أفضل وأسرع)
+    const cacheKey = pharmacy.pharmacyId;   // ←←← هنا التعديل
+
+    if (routeLines[cacheKey]) return; // already cached
+
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${pharmacy.longitude},${pharmacy.latitude}?overview=full&geometries=polyline`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.code === "Ok" && data.routes?.[0]) {
+        const encoded = data.routes[0].geometry;
+        const decoded = decodePolyline(encoded);
+        setRouteLines((prev) => ({ ...prev, [cacheKey]: decoded }));  // ←←← هنا التعديل الثاني
+
+        console.log(
+          `✅ Route fetched for pharmacy ${pharmacy.pharmacyId}`,
+        );
+      } else {
+        console.warn("OSRM No route:", data);
+      }
+    } catch (err) {
+      console.error(
+        "OSRM route error for pharmacy",
+        pharmacy.pharmacyId,
+        err,
+      );
+    }
+  },
+  [deliveryAddressLocation, userLocation, routeLines],
+);
+
+  // جلب المسارات للصيدلية الأفضل + المختارة + اللي الماوس فوقها
+  useEffect(() => {
+    if (pharmacies.length === 0) return;
+
+    // أفضل صيدلية (#1)
+    if (pharmacies[0]) fetchRoute(pharmacies[0]);
+
+    // الصيدليات المختارة
+    selectedPharmacies.forEach((id) => {
+      const p = pharmacies.find((ph) => ph.pharmacyId === id);
+      if (p) fetchRoute(p);
+    });
+
+    // الصيدلية اللي الماوس فوقها
+    if (hoveredPharmacyId) {
+      const p = pharmacies.find((ph) => ph.pharmacyId === hoveredPharmacyId);
+      if (p) fetchRoute(p);
+    }
+  }, [pharmacies, selectedPharmacies, hoveredPharmacyId, fetchRoute]);
 
   // ──────────────────────────────────────────────
   //  Effects
@@ -121,7 +223,6 @@ const Checkout = () => {
     }
   };
 
-  // ==================== UPDATED ====================
   const handleConfirmAddress = async () => {
     if (!selectedAddressId) {
       alert("Please select a delivery address!");
@@ -135,7 +236,6 @@ const Checkout = () => {
       await fetchPharmacies(dtoItems, selectedAddressId, pharmaciesRange);
     }
 
-    // جلب العنوان الكامل مع الإحداثيات (latitude & longitude)
     const fullAddress = await fetchById(selectedAddressId);
     if (fullAddress?.latitude && fullAddress?.longitude) {
       setDeliveryAddressLocation({
@@ -147,7 +247,6 @@ const Checkout = () => {
 
     setShowAddressSelection(false);
   };
-  // =================================================
 
   const handleExpandRange = async () => {
     const newRange = pharmaciesRange + 5;
@@ -303,9 +402,11 @@ const Checkout = () => {
               userLocation={userLocation}
               pharmacies={pharmacies}
               selectedPharmacy={selectedPharmacyForPayment}
-              route={routeToPharmacy}
               deliveryAddressLocation={deliveryAddressLocation}
               deliveryAddress={deliveryAddress}
+              hoveredPharmacyId={hoveredPharmacyId}
+              selectedPharmacies={selectedPharmacies}
+              routeLines={routeLines}
             />
           </div>
         </div>
@@ -489,6 +590,8 @@ const Checkout = () => {
                     <div
                       key={p.pharmacyId}
                       className="pb-6 border rounded-2xl p-4 shadow-sm transition"
+                      onMouseEnter={() => setHoveredPharmacyId(p.pharmacyId)}
+                      onMouseLeave={() => setHoveredPharmacyId(null)}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex items-start">
