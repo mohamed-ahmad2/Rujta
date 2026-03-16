@@ -1,10 +1,43 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
 import { useOrders } from "../../orders/hooks/useOrders";
 import { useAuth } from "../../auth/hooks/useAuth";
 import useAddress from "../../address/hook/useAddress";
 import apiClient from "../../../shared/api/apiClient";
 import PharmacyMap from "../components/PharmacyMap";
+// دالة فك الـ polyline من OSRM (مسار حقيقي على الشوارع)
+const decodePolyline = (encoded) => {
+  let index = 0;
+  let lat = 0,
+    lng = 0;
+  const coordinates = [];
+
+  while (index < encoded.length) {
+    let shift = 0,
+      result = 0,
+      byte;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+
+    coordinates.push([lat / 1e5, lng / 1e5]);
+  }
+  return coordinates;
+};
 
 const Checkout = () => {
   const [cart, setCart] = useState([]);
@@ -17,7 +50,7 @@ const Checkout = () => {
     error: addressesError,
     fetchUserAddresses,
     create: createAddress,
-    fetchById, // ← مهم جداً لجلب إحداثيات العنوان
+    fetchById,
   } = useAddress();
 
   const [pharmaciesRange, setPharmaciesRange] = useState(5);
@@ -44,10 +77,78 @@ const Checkout = () => {
   const [routeToPharmacy, setRouteToPharmacy] = useState(null);
   const [selectedMedicines, setSelectedMedicines] = useState({});
 
-  // ==================== NEW ====================
+  // ==================== NEW (للمسارات الحقيقية + المسافة) ====================
   const [deliveryAddressLocation, setDeliveryAddressLocation] = useState(null);
   const [deliveryAddress, setDeliveryAddress] = useState(null);
+  const [hoveredPharmacyId, setHoveredPharmacyId] = useState(null);
+  const [routeData, setRouteData] = useState({}); 
+  // pharmacyId → { coordinates: [], distanceKm: "3.45", durationMin: "12" }
   // ============================================
+
+  // ──────────────────────────────────────────────
+  //  Fetch Real Road Routes + Distance from OSRM
+  // ──────────────────────────────────────────────
+  const fetchRoute = useCallback(
+    async (pharmacy) => {
+      const start = deliveryAddressLocation || userLocation;
+      if (!start || !pharmacy) return;
+
+      const cacheKey = pharmacy.pharmacyId;
+      if (routeData[cacheKey]) return;
+
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${pharmacy.longitude},${pharmacy.latitude}?overview=full&geometries=polyline`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.code === "Ok" && data.routes?.[0]) {
+          const encoded = data.routes[0].geometry;
+          const coordinates = decodePolyline(encoded);
+
+          const distanceKm = (data.routes[0].distance / 1000).toFixed(2);
+          const durationMin = Math.round(data.routes[0].duration / 60);
+
+          setRouteData((prev) => ({
+            ...prev,
+            [cacheKey]: { coordinates, distanceKm, durationMin },
+          }));
+
+          console.log(
+            `✅ Route + Distance for pharmacy ${pharmacy.pharmacyId}: ${distanceKm} km`
+          );
+        } else {
+          console.warn("OSRM No route:", data);
+        }
+      } catch (err) {
+        console.error(
+          "OSRM route error for pharmacy",
+          pharmacy.pharmacyId,
+          err
+        );
+      }
+    },
+    [deliveryAddressLocation, userLocation, routeData]
+  );
+
+  // جلب المسارات للصيدلية الأفضل + المختارة + اللي الماوس فوقها
+  useEffect(() => {
+    if (pharmacies.length === 0) return;
+
+    // أفضل صيدلية (#1)
+    if (pharmacies[0]) fetchRoute(pharmacies[0]);
+
+    // الصيدليات المختارة
+    selectedPharmacies.forEach((id) => {
+      const p = pharmacies.find((ph) => ph.pharmacyId === id);
+      if (p) fetchRoute(p);
+    });
+
+    // الصيدلية اللي الماوس فوقها
+    if (hoveredPharmacyId) {
+      const p = pharmacies.find((ph) => ph.pharmacyId === hoveredPharmacyId);
+      if (p) fetchRoute(p);
+    }
+  }, [pharmacies, selectedPharmacies, hoveredPharmacyId, fetchRoute]);
 
   // ──────────────────────────────────────────────
   //  Effects
@@ -68,7 +169,7 @@ const Checkout = () => {
           const { latitude, longitude } = pos.coords;
           setUserLocation({ lat: latitude, lng: longitude });
         },
-        (err) => console.error("Geolocation error:", err),
+        (err) => console.error("Geolocation error:", err)
       );
     }
   }, []);
@@ -101,7 +202,7 @@ const Checkout = () => {
             console.error("Failed to update location:", updateErr);
           }
         },
-        (geoErr) => console.error("Geolocation error:", geoErr),
+        (geoErr) => console.error("Geolocation error:", geoErr)
       );
     }
   };
@@ -121,7 +222,6 @@ const Checkout = () => {
     }
   };
 
-  // ==================== UPDATED ====================
   const handleConfirmAddress = async () => {
     if (!selectedAddressId) {
       alert("Please select a delivery address!");
@@ -135,7 +235,6 @@ const Checkout = () => {
       await fetchPharmacies(dtoItems, selectedAddressId, pharmaciesRange);
     }
 
-    // جلب العنوان الكامل مع الإحداثيات (latitude & longitude)
     const fullAddress = await fetchById(selectedAddressId);
     if (fullAddress?.latitude && fullAddress?.longitude) {
       setDeliveryAddressLocation({
@@ -147,7 +246,6 @@ const Checkout = () => {
 
     setShowAddressSelection(false);
   };
-  // =================================================
 
   const handleExpandRange = async () => {
     const newRange = pharmaciesRange + 5;
@@ -164,7 +262,7 @@ const Checkout = () => {
     setSelectedPharmacies((prev) =>
       prev.includes(pharmacyId)
         ? prev.filter((id) => id !== pharmacyId)
-        : [...prev, pharmacyId],
+        : [...prev, pharmacyId]
     );
   };
 
@@ -217,13 +315,13 @@ const Checkout = () => {
 
     for (const pharmacyId of selectedPharmacies) {
       const selectedPharmacy = pharmacies.find(
-        (p) => p.pharmacyId === pharmacyId,
+        (p) => p.pharmacyId === pharmacyId
       );
       if (!selectedPharmacy) continue;
 
       const selectedMedicineIds = selectedMedicines[pharmacyId] || [];
       const selectedItems = selectedPharmacy.foundMedicines.filter(
-        (m) => selectedMedicineIds.includes(m.medicineId) && m.isQuantityEnough,
+        (m) => selectedMedicineIds.includes(m.medicineId) && m.isQuantityEnough
       );
 
       if (selectedItems.length === 0) continue;
@@ -242,7 +340,7 @@ const Checkout = () => {
 
     if (orderDtos.length === 0) {
       alert(
-        "No valid orders to create (check selected medicines & quantities)",
+        "No valid orders to create (check selected medicines & quantities)"
       );
       setCreatingOrder(false);
       return;
@@ -303,9 +401,11 @@ const Checkout = () => {
               userLocation={userLocation}
               pharmacies={pharmacies}
               selectedPharmacy={selectedPharmacyForPayment}
-              route={routeToPharmacy}
               deliveryAddressLocation={deliveryAddressLocation}
               deliveryAddress={deliveryAddress}
+              hoveredPharmacyId={hoveredPharmacyId}
+              selectedPharmacies={selectedPharmacies}
+              routeData={routeData}
             />
           </div>
         </div>
@@ -484,11 +584,14 @@ const Checkout = () => {
                 {pharmacies.map((p, i) => {
                   const isExpanded = expandedPharmacies[p.pharmacyId] || false;
                   const isSelected = selectedPharmacies.includes(p.pharmacyId);
+                  const realRoute = routeData[p.pharmacyId];
 
                   return (
                     <div
                       key={p.pharmacyId}
                       className="pb-6 border rounded-2xl p-4 shadow-sm transition"
+                      onMouseEnter={() => setHoveredPharmacyId(p.pharmacyId)}
+                      onMouseLeave={() => setHoveredPharmacyId(null)}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex items-start">
@@ -508,6 +611,15 @@ const Checkout = () => {
                               {p.distanceKm.toFixed(2)} km, Est. Time:{" "}
                               {p.estimatedDurationMinutes.toFixed(0)} min
                             </p>
+
+                            {/* ←←← المسافة الحقيقية من OSRM */}
+                            {realRoute && (
+                              <p className="text-green-600 font-medium text-sm mt-1">
+                                🛣️ Real Road Distance: {realRoute.distanceKm} km • 
+                                Real Time: {realRoute.durationMin} min
+                              </p>
+                            )}
+
                             <p className="text-gray-500 text-sm">
                               Contact: {p.contactNumber}
                             </p>

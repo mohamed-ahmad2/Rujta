@@ -2,13 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-   <link rel="icon" type="image/png" href="/Logo.png" />
+    <link rel="icon" type="image/png" href="/Logo.png" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rujta</title>
-<meta
-  http-equiv="Content-Security-Policy"
-  content="
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
     default-src 'self';
 
     connect-src
@@ -18,7 +18,8 @@
       https://www.googleapis.com
       http://localhost:*
       wss://localhost:7065
-      https://rujta-5fdf6.firebaseapp.com;
+      https://rujta-5fdf6.firebaseapp.com
+      https://router.project-osrm.org;   <!-- ← أضفنا ده -->
 
     script-src
       'self'
@@ -50,17 +51,19 @@
     object-src 'none';
     base-uri 'self';
   "
-/>
-
-
+    />
 
     <!-- Google Platform SDK -->
-   <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
 
     <!-- Facebook SDK -->
     <div id="fb-root"></div>
-    <script async defer crossorigin="anonymous" 
-      src="https://connect.facebook.net/en_US/sdk.js"></script>
+    <script
+      async
+      defer
+      crossorigin="anonymous"
+      src="https://connect.facebook.net/en_US/sdk.js"
+    ></script>
   </head>
   <body>
     <div id="root"></div>

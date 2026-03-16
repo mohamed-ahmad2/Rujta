@@ -27,4 +27,3 @@ namespace Rujta.Application.DTOs
         public List<NotFoundMedicineDto> NotFoundMedicines { get; set; } = new();
     }
 }
-

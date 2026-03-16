@@ -1,7 +1,7 @@
 ﻿using Itinero;
 using Itinero.LocalGeo;
 
-namespace Rujta.Infrastructure.Services
+namespace Rujta.Application.Services.Pharmcy
 {
     public class ItineroRoutingService
     {

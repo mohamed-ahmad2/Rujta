@@ -13,12 +13,10 @@ const greenIcon = new L.Icon({
   iconUrl: "https://maps.gstatic.com/mapfiles/ms2/micons/green.png",
   iconSize: [32, 32],
 });
-
 const redIcon = new L.Icon({
   iconUrl: "https://maps.gstatic.com/mapfiles/ms2/micons/red.png",
   iconSize: [32, 32],
 });
-
 const blueIcon = new L.Icon({
   iconUrl: "https://maps.gstatic.com/mapfiles/ms2/micons/blue.png",
   iconSize: [32, 32],
@@ -32,59 +30,29 @@ const MapUpdater = ({ center }) => {
   return null;
 };
 
-// === PharmacyBoundsUpdater - يظهر كل الصيدليات + العنوان ===
 const PharmacyBoundsUpdater = ({
   pharmacies,
   userLocation,
   selectedPharmacy,
-  route,
   deliveryAddressLocation,
 }) => {
   const map = useMap();
-
   useEffect(() => {
-    // لو فيه صيدلية مختارة أو route → نسيب الـ RouteBoundsUpdater يشتغل
-    if (selectedPharmacy || route) return;
-
-    if (!pharmacies || pharmacies.length === 0) return;
-
+    if (selectedPharmacy || !pharmacies?.length) return;
     const bounds = L.latLngBounds(
       pharmacies.map((p) => [p.latitude, p.longitude]),
     );
-
     if (userLocation) bounds.extend([userLocation.lat, userLocation.lng]);
-    if (deliveryAddressLocation) {
+    if (deliveryAddressLocation)
       bounds.extend([deliveryAddressLocation.lat, deliveryAddressLocation.lng]);
-    }
-
     map.fitBounds(bounds, { padding: [60, 60] });
   }, [
     pharmacies,
     userLocation,
     selectedPharmacy,
-    route,
     deliveryAddressLocation,
     map,
   ]);
-
-  return null;
-};
-
-const RouteBoundsUpdater = ({ route }) => {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!route) return;
-    if (!route.from || !route.to) return;
-
-    const bounds = L.latLngBounds(
-      [route.from.lat, route.from.lng],
-      [route.to.latitude, route.to.longitude],
-    );
-
-    map.fitBounds(bounds, { padding: [60, 60] });
-  }, [route]);
-
   return null;
 };
 
@@ -92,12 +60,13 @@ const PharmacyMap = ({
   userLocation,
   pharmacies,
   selectedPharmacy,
-  route,
   deliveryAddressLocation,
-  deliveryAddress, // ← لعرض نص العنوان في الـ popup
+  deliveryAddress,
+  hoveredPharmacyId,
+  selectedPharmacies = [],
+  routeData = {}, 
 }) => {
   const defaultLocation = { lat: 30.0444, lng: 31.2357 };
-
   const center = selectedPharmacy
     ? [selectedPharmacy.latitude, selectedPharmacy.longitude]
     : [
@@ -116,22 +85,17 @@ const PharmacyMap = ({
           attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-
         <MapUpdater center={center} />
-
         <PharmacyBoundsUpdater
           pharmacies={pharmacies}
           userLocation={userLocation}
           selectedPharmacy={selectedPharmacy}
-          route={route}
           deliveryAddressLocation={deliveryAddressLocation}
         />
 
         {userLocation && (
           <Marker position={[userLocation.lat, userLocation.lng]} />
         )}
-
-        {/* العلامة الزرقاء للعنوان المختار */}
         {deliveryAddressLocation && (
           <Marker
             position={[
@@ -141,7 +105,7 @@ const PharmacyMap = ({
             icon={blueIcon}
           >
             <Popup>
-              <strong>📍 My Delivery Address</strong>
+              📍 My Delivery Address
               <br />
               {deliveryAddress?.street}, {deliveryAddress?.buildingNo},{" "}
               {deliveryAddress?.city}, {deliveryAddress?.governorate}
@@ -166,19 +130,51 @@ const PharmacyMap = ({
           </Marker>
         ))}
 
-        {route && (
-          <>
-            <Polyline
-              positions={[
-                [route.from.lat, route.from.lng],
-                [route.to.latitude, route.to.longitude],
-              ]}
-              color="blue"
-              weight={4}
-            />
-            <RouteBoundsUpdater route={route} />
-          </>
-        )}
+        {/* ================== REAL ROAD PATHS ================== */}
+        {(deliveryAddressLocation || userLocation) &&
+          pharmacies.length > 0 &&
+          pharmacies.map((p) => {
+            const start = deliveryAddressLocation || userLocation;
+            if (!start) return null;
+
+            const isTop = pharmacies[0]?.pharmacyId === p.pharmacyId;
+            const isSelected = selectedPharmacies.includes(p.pharmacyId);
+            const isHovered = p.pharmacyId === hoveredPharmacyId;
+
+            if (!isTop && !isSelected && !isHovered) return null;
+
+            const route = routeData[p.pharmacyId];
+            if (!route?.coordinates) return null;
+
+            let color = "#9CA3AF";
+            let weight = 3;
+            let opacity = 0.6;
+
+            if (isTop) {
+              color = "#10B981";
+              weight = 6;
+              opacity = 0.95;
+            } else if (isHovered) {
+              color = "#3B82F6";
+              weight = 7;
+              opacity = 1;
+            } else if (isSelected) {
+              color = "#8B5CF6";
+              weight = 5;
+              opacity = 0.85;
+            }
+
+            return (
+              <Polyline
+                key={`route-${p.pharmacyId}`}
+                positions={route.coordinates}
+                color={color}
+                weight={weight}
+                opacity={opacity}
+                dashArray={isSelected ? "8, 4" : null}
+              />
+            );
+          })}
       </MapContainer>
     </div>
   );
