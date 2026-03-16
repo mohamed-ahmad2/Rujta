@@ -50,6 +50,8 @@ import SettingsAdmin from "../features/dashboardAdmin/pages/Settings";
 /* ================= Notifications ================= */
 import NotificationsPage from "../features/notifications/pages/NotificationsPage";
 
+
+import ScanPrescription from "../features/prescription/pages/ScanPrescription";
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Routes>
 
@@ -187,7 +189,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Route path="settings" element={<SettingsAdmin />} />
 </Route>
 
-
+<Route path="/user/scan-prescription" element={<ScanPrescription />} />
     {/* ========= 404 ========= */}
     <Route path="*" element={<AnimatedErrorPage />} />
 
