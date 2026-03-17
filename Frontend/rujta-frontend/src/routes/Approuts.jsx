@@ -128,9 +128,14 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Route path="checkout" element={<Checkout />} />
   <Route path="notifications" element={<NotificationsPage />} />
   <Route path="payment" element={<Payment />} />  {/* هنا صفحة الدفع */}
-  <Route path="pharmacy/:id" element={<PharmacyDetails />} />
+  <Route
+  path="pharmacy/:id"
+  element={<PharmacyDetails cart={cart} setCart={setCart} />}
+/>
+  <Route path="/user/scan-prescription" element={<ScanPrescription cart={cart} setCart={setCart}  />} />
+  {/* 🔥 Medicine Details Page - This makes /user/medicine/1 work */}
+  <Route path="medicine/:id" element={<MedicineDetails cart={cart} setCart={setCart} />} />
 </Route>
-
 
     {/* ========= Medicines ========= */}
     <Route
@@ -189,7 +194,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Route path="settings" element={<SettingsAdmin />} />
 </Route>
 
-<Route path="/user/scan-prescription" element={<ScanPrescription />} />
+
     {/* ========= 404 ========= */}
     <Route path="*" element={<AnimatedErrorPage />} />
 

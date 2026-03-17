@@ -1,51 +1,76 @@
 import React, { useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import useMedicines from "../hook/useMedicines";
-import { FaStar, FaShoppingCart } from "react-icons/fa";
-import Navbar from "../../user/components/Navbar"; // Adjust path as needed
+import { FaShoppingCart } from "react-icons/fa";
+import Navbar from "../../user/components/Navbar";
 
 const MedicineDetails = ({ cart, setCart, onCartClick }) => {
   const { id } = useParams();
+  const location = useLocation();
+
   const { medicines, fetchAll, loading, error } = useMedicines();
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
-  const product = medicines.find((m) => m.id === Number(id));
+  // 👇 تحديد هل الصفحة داخل /user ولا لأ
+  const isUserRoute = location.pathname.startsWith("/user");
+  const hasNavbar = !isUserRoute;
+
+  const product = medicines.find((m) => String(m.id) === String(id));
 
   const addToCart = () => {
     setCart((prev) => {
       const existing = prev.find((i) => i.id === product.id);
+
       if (existing) {
         return prev.map((i) =>
-          i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.id === product.id
+            ? { ...i, quantity: i.quantity + 1 }
+            : i
         );
       }
+
       return [...prev, { ...product, quantity: 1 }];
     });
   };
 
   if (loading)
-    return <p className="text-center mt-10 text-gray-500 text-lg animate-pulse">Loading product...</p>;
+    return (
+      <p className="text-center mt-10 text-gray-500 text-lg animate-pulse">
+        Loading product...
+      </p>
+    );
 
   if (error)
-    return <p className="text-center mt-10 text-red-500 text-lg animate-pulse">{error}</p>;
+    return (
+      <p className="text-center mt-10 text-red-500 text-lg animate-pulse">
+        {error}
+      </p>
+    );
 
   if (!product)
-    return <p className="text-center mt-10 text-gray-500 text-lg animate-pulse">Product not found</p>;
+    return (
+      <p className="text-center mt-10 text-gray-500 text-lg animate-pulse">
+        Product not found
+      </p>
+    );
 
   return (
     <>
-      {/* Navbar */}
-      <Navbar cart={cart} onCartClick={onCartClick} />
+      {/* ✅ Navbar يظهر فقط خارج /user */}
+      {hasNavbar && (
+        <Navbar cart={cart} onCartClick={onCartClick} />
+      )}
 
-      {/* Page Content */}
-      <div className="min-h-screen bg-[#F5F5F5] pt-24 pb-12"> {/* pt-24 to offset sticky navbar */}
+      {/* ✅ Page Content */}
+      <div
+        className={`min-h-screen bg-[#F5F5F5] ${
+          hasNavbar ? "pt-24" : "pt-6"
+        } pb-12`}
+      >
         <div className="container mx-auto px-6">
-
-        
-          {/* Product Section */}
           <div className="grid md:grid-cols-2 gap-12 bg-white rounded-3xl p-8 shadow-lg">
             
             {/* Left - Image */}
@@ -55,7 +80,10 @@ const MedicineDetails = ({ cart, setCart, onCartClick }) => {
                   src={product.imageUrl}
                   alt={product.name}
                   className="w-full rounded-xl object-contain transform hover:scale-105 transition-transform duration-500"
-                  onError={(e) => (e.currentTarget.src = "https://via.placeholder.com/400")}
+                  onError={(e) =>
+                    (e.currentTarget.src =
+                      "https://via.placeholder.com/400")
+                  }
                 />
               </div>
             </div>
@@ -63,24 +91,22 @@ const MedicineDetails = ({ cart, setCart, onCartClick }) => {
             {/* Right - Info */}
             <div className="flex flex-col justify-between space-y-6">
               
-              {/* Name & Rating */}
+              {/* Name */}
               <div>
                 <h1 className="text-4xl font-extrabold text-secondary mb-3">
                   {product.name}
                 </h1>
 
-                
                 <p className="text-gray-700 text-lg leading-relaxed">
                   {product.description || "No description available"}
                 </p>
               </div>
 
-              {/* Price & Stock */}
-              <div className="flex flex-col space-y-2">
+              {/* Price */}
+              <div>
                 <span className="text-3xl font-bold text-secondary">
                   {product.price} EGP
                 </span>
-             
               </div>
 
               {/* Add to Cart */}
