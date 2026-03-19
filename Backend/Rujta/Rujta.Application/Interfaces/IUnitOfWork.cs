@@ -20,6 +20,8 @@ namespace Rujta.Application.Interfaces
         ICategoryRepository Categories { get; }
         ICustomerRepository Customers { get; }
 
+        ISuperAdminRepository SuperAdmin { get; }
+
         Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
     }
