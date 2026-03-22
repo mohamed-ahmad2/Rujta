@@ -18,6 +18,8 @@ namespace Rujta.Application.DTOs
             public double Longitude { get; set; }
             public bool IsActive { get; set; }
             public Guid? AdminId { get; set; }
+
+            public double TotalOrders { get; set; } // 🔥 NEW
         }
     }
 
