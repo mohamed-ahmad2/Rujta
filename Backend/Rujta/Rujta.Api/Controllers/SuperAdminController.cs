@@ -83,5 +83,24 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [HttpGet("pharmacies/{pharmacyId:int}/total-orders")]
+        public async Task<IActionResult> GetTotalOrders(int pharmacyId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var totalOrders = await _service.GetPharmacyTotalOrdersAsync(pharmacyId, cancellationToken);
+                return Ok(new { totalOrders });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        [HttpGet("top-pharmacies")]
+        public async Task<IActionResult> GetTopPharmacies([FromQuery] int count = 5, CancellationToken cancellationToken = default)
+        {
+            var result = await _service.GetTopPharmaciesAsync(count, cancellationToken);
+            return Ok(result);
+        }
     }
 }
