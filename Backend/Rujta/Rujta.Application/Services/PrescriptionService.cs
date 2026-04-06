@@ -29,7 +29,15 @@ namespace Rujta.Application.Services
             int pharmacyId,
             CancellationToken cancellationToken = default)
         {
-            var apiKey = _config["Gemini:ApiKey"];
+            var apiKey = Environment.GetEnvironmentVariable("API_KEY");
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                Console.WriteLine("⚠ API_KEY NOT FOUND!");
+            }
+            else
+            {
+                Console.WriteLine($"✅ API_KEY loaded: {apiKey.Substring(0, 5)}...");
+            }
 
             using var ms = new MemoryStream();
             await imageStream.CopyToAsync(ms);

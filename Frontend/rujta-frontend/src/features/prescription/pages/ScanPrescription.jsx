@@ -6,7 +6,7 @@ import { FiUploadCloud } from "react-icons/fi";
 import { MdOutlineDelete } from "react-icons/md";
 import { motion } from "framer-motion";
 
-const DEFAULT_IMAGE = "https://via.placeholder.com/300x200?text=No+Image"; // Change this to your real default image
+const DEFAULT_IMAGE = "https://via.placeholder.com/300x200?text=No+Image"; 
 
 export default function ScanPrescription({ cart, setCart }) {
   const [image, setImage] = useState(null);
@@ -33,6 +33,14 @@ export default function ScanPrescription({ cart, setCart }) {
 
     setImage(file);
     setPreview(URL.createObjectURL(file));
+    setResult(null);
+    setError(null);
+  };
+
+  const removeImage = () => {
+    if (preview) URL.revokeObjectURL(preview);
+    setImage(null);
+    setPreview(null);
     setResult(null);
     setError(null);
   };
@@ -77,8 +85,7 @@ export default function ScanPrescription({ cart, setCart }) {
       if (!res.ok) throw new Error("Failed to process image");
 
       const data = await res.json();
-      setResult(data);
-
+      setResult(data); // Use response directly
     } catch (err) {
       console.error("Upload error:", err);
       setError(err.message || "Error processing prescription. Please try again.");
@@ -86,14 +93,6 @@ export default function ScanPrescription({ cart, setCart }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const removeImage = () => {
-    if (preview) URL.revokeObjectURL(preview);
-    setImage(null);
-    setPreview(null);
-    setResult(null);
-    setError(null);
   };
 
   return (
@@ -109,22 +108,37 @@ export default function ScanPrescription({ cart, setCart }) {
           Take a photo or upload your prescription
         </p>
 
+        {/* Upload + Camera Buttons */}
         {!preview && (
-          <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl p-10 cursor-pointer hover:border-secondary transition">
-            <FiUploadCloud className="text-5xl text-gray-400 mb-3" />
-            <p className="text-gray-600 text-sm text-center">
-              Click or capture a photo of your prescription
-            </p>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleImageChange}
-              className="hidden"
-            />
-          </label>
+          <div className="flex justify-center gap-4 mb-6">
+            {/* Upload from Gallery */}
+            <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:border-secondary transition w-1/2">
+              <FiUploadCloud className="text-4xl text-gray-400 mb-2" />
+              <p className="text-gray-600 text-sm text-center">Upload from Gallery</p>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+            </label>
+
+            {/* Take a Photo */}
+            <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:border-secondary transition w-1/2">
+              <IoCameraOutline className="text-4xl text-gray-400 mb-2" />
+              <p className="text-gray-600 text-sm text-center">Take a Photo</p>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+            </label>
+          </div>
         )}
 
+        {/* Image Preview */}
         {preview && (
           <motion.div
             initial={{ scale: 0.9 }}
@@ -145,6 +159,7 @@ export default function ScanPrescription({ cart, setCart }) {
           </motion.div>
         )}
 
+        {/* Buttons */}
         <div className="flex flex-col gap-3">
           <button
             onClick={handleUpload}
@@ -171,67 +186,80 @@ export default function ScanPrescription({ cart, setCart }) {
         {error && <p className="text-red-500 text-center mt-4 text-sm">{error}</p>}
       </motion.div>
 
-      {/* Medicines Cards Section */}
+      {/* Medicines Section */}
       {result && (
         <div className="w-full max-w-7xl">
-          <h2 className="text-2xl font-bold text-center mb-8 text-gray-800">
-            Found Medicines
-          </h2>
+          {/* Available Medicines */}
+          {result.availableMedicines?.length > 0 && (
+            <>
+              <h2 className="text-2xl font-bold text-center mb-8 text-gray-800">
+                Found Medicines
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {result.availableMedicines.map((med, idx) => {
+                  const medicine = typeof med === "string" 
+                    ? { 
+                        name: med, 
+                        price: 0, 
+                        description: "No description available", 
+                        imageUrl: DEFAULT_IMAGE 
+                      }
+                    : { 
+                        ...med, 
+                        imageUrl: med.imageUrl || DEFAULT_IMAGE 
+                      };
 
-          {result.availableMedicines?.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {result.availableMedicines.map((med, idx) => {
-                const medicine = typeof med === "string" 
-                  ? { 
-                      name: med, 
-                      price: 0, 
-                      description: "No description available", 
-                      imageUrl: DEFAULT_IMAGE 
-                    }
-                  : { 
-                      ...med, 
-                      imageUrl: med.imageUrl || DEFAULT_IMAGE 
-                    };
-
-                return (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                    className="bg-white rounded-3xl shadow-md p-4 flex flex-col justify-between hover:shadow-lg transition-all duration-300"
-                  >
-                    <div className="flex justify-center items-center h-40 bg-[#E8F3E8] rounded-2xl mb-4">
-                      <img
-                        src={medicine.imageUrl}
-                        alt={medicine.name}
-                        className="object-contain h-32"
-                        onError={(e) => (e.currentTarget.src = DEFAULT_IMAGE)}
-                      />
-                    </div>
-
-                    <h3 className="text-lg font-bold text-secondary">{medicine.name}</h3>
-                    <p className="text-gray-500 text-sm mt-1 line-clamp-2">
-                      {medicine.description}
-                    </p>
-                    <p className="text-secondary font-semibold mt-2">
-                      {medicine.price} EGP
-                    </p>
-
-                    <button
-                      onClick={() => addToCart(medicine)}
-                      className="mt-4 bg-secondary text-white py-2 rounded-full w-full hover:bg-green-600 transition"
+                  return (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="bg-white rounded-3xl shadow-md p-4 flex flex-col justify-between hover:shadow-lg transition-all duration-300"
                     >
-                      Add to Cart
-                    </button>
-                  </motion.div>
-                );
-              })}
+                      <div className="flex justify-center items-center h-40 bg-[#E8F3E8] rounded-2xl mb-4">
+                        <img
+                          src={medicine.imageUrl}
+                          alt={medicine.name}
+                          className="object-contain h-32"
+                          onError={(e) => (e.currentTarget.src = DEFAULT_IMAGE)}
+                        />
+                      </div>
+
+                      <h3 className="text-lg font-bold text-secondary">{medicine.name}</h3>
+                      <p className="text-gray-500 text-sm mt-1 line-clamp-2">
+                        {medicine.description}
+                      </p>
+                      <p className="text-secondary font-semibold mt-2">
+                        {medicine.price} EGP
+                      </p>
+
+                      <button
+                        onClick={() => addToCart(medicine)}
+                        className="mt-4 bg-secondary text-white py-2 rounded-full w-full hover:bg-green-600 transition"
+                      >
+                        Add to Cart
+                      </button>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Unavailable Medicines (use backend response directly) */}
+          {result.unavailableMedicines?.length > 0 && (
+            <div className="w-full max-w-3xl mt-12">
+              <h2 className="text-2xl font-bold mb-4 text-red-500 text-center">
+                Unavailable Medicines
+              </h2>
+              <ul className="list-disc list-inside space-y-2 text-gray-700">
+                {result.unavailableMedicines.map((med, idx) => {
+                  const name = typeof med === "string" ? med : med.name;
+                  return <li key={idx} className="text-lg font-medium">{name}</li>;
+                })}
+              </ul>
             </div>
-          ) : (
-            <p className="text-center text-gray-500 text-lg">
-              No medicines were found in this prescription.
-            </p>
           )}
         </div>
       )}
