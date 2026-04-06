@@ -104,19 +104,29 @@ namespace Rujta.Infrastructure.Identity.Services
         // ================= GET ALL PHARMACIES =================
         public async Task<IEnumerable<PharmacyDto>> GetAllPharmaciesAsync(CancellationToken cancellationToken = default)
         {
-            var pharmacies = await _unitOfWork.Pharmacies.GetAllPharmacies(cancellationToken);
+            var pharmacies = await _unitOfWork.Pharmacies.GetAllAsync(cancellationToken);
 
-            return pharmacies.Select(p => new PharmacyDto
+            var result = new List<PharmacyDto>();
+
+            foreach (var p in pharmacies)
             {
-                Id = p.Id,
-                Name = p.Name,
-                Location = p.Location,
-                ContactNumber = p.ContactNumber,
-                Latitude = p.Latitude,
-                Longitude = p.Longitude,
-                IsActive = p.IsActive,
-                AdminId = p.AdminId
-            });
+                var totalOrders = await _unitOfWork.SuperAdmin.GetTotalOrdersAsync(p.Id, cancellationToken);
+
+                result.Add(new PharmacyDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Location = p.Location,
+                    ContactNumber = p.ContactNumber,
+                    Latitude = p.Latitude,
+                    Longitude = p.Longitude,
+                    IsActive = p.IsActive,
+                    AdminId = p.AdminId,
+                    TotalOrders = totalOrders // 🔥 لو ضفتها في DTO
+                });
+            }
+
+            return result;
         }
 
         // ================= GET PHARMACY BY ID =================
@@ -193,6 +203,20 @@ namespace Rujta.Infrastructure.Identity.Services
         private static string GenerateStrongPassword()
         {
             return "Ph@" + Guid.NewGuid().ToString("N")[..8] + "1!";
+        }
+        public async Task<int> GetPharmacyTotalOrdersAsync(int pharmacyId, CancellationToken cancellationToken = default)
+        {
+            var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
+
+            if (pharmacy == null)
+                throw new KeyNotFoundException("Pharmacy not found.");
+
+            return await _unitOfWork.SuperAdmin.GetTotalOrdersAsync(pharmacyId, cancellationToken);
+        }
+        public async Task<List<PharmacyStatsDto>> GetTopPharmaciesAsync(int count, CancellationToken cancellationToken = default)
+        {
+            return await _unitOfWork.SuperAdmin
+                .GetTopPharmaciesAsync(count, cancellationToken);
         }
     }
 }

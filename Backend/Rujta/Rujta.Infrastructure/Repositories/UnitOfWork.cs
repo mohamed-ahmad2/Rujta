@@ -23,6 +23,7 @@ namespace Rujta.Infrastructure.Repositories
         private IPharmacistRepository? _pharmacists;
         private ICategoryRepository? _category;
         private ICustomerRepository? _customers;
+        private ISuperAdminRepository? _superAdminReposatory;
 
 
         public UnitOfWork(AppDbContext context, IServiceProvider serviceProvider)
@@ -48,6 +49,8 @@ namespace Rujta.Infrastructure.Repositories
 
         public IPharmacistRepository Pharmacists => _pharmacists ??= new PharmacistRepository(_context);
         public ICustomerRepository Customers => _customers ??= new CustomerRepository(_context);
+
+        public ISuperAdminRepository SuperAdmin => _superAdminReposatory ??= new SuperAdminReposatory(_context);
 
         // Save changes
         public async Task<int> SaveAsync(CancellationToken cancellationToken = default)
