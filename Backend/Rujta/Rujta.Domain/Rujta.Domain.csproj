@@ -8,8 +8,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
-		<PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="1.2.0" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.9" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="1.2.9" />
 	</ItemGroup>
 
 </Project>

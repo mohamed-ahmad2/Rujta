@@ -2,14 +2,14 @@
 {
     public class PharmacyMatchResultParams
     {
-        public Pharmacy Pharmacy { get; set; }
-        public ItemDto Order { get; set; }
+        public Pharmacy? Pharmacy { get; set; }
+        public ItemDto? Order { get; set; }
         public int Matched { get; set; }
         public double DistanceKm { get; set; }
         public double DurationMinutes { get; set; }
         public double DeliveryFee { get; set; }
-        public List<FoundMedicineDto> Found { get; set; }
-        public List<NotFoundMedicineDto> NotFound { get; set; }
+        public List<FoundMedicineDto>? Found { get; set; }
+        public List<NotFoundMedicineDto>? NotFound { get; set; }
     }
 
     public static class PharmacyMatchResultBuilder

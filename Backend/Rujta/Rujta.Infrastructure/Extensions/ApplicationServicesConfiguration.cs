@@ -17,7 +17,10 @@ namespace Rujta.Infrastructure.Extensions
         public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
         {
             // Mapper
-            services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+            services.AddAutoMapper(cfg =>
+            {
+                cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies());
+            });
 
             // SignalR
             services.AddSignalR();
@@ -79,7 +82,7 @@ namespace Rujta.Infrastructure.Extensions
             // HttpClient services
             services.AddHttpClient<MedicineDataImportService>();
 
-            // للـ PBF file
+
             var pbfPath = Path.Combine(AppContext.BaseDirectory, "Maps", "egypt-251026.osm.pbf");
             if (!File.Exists(pbfPath))
                 throw new FileNotFoundException($"PBF file not found at {pbfPath}");
@@ -87,7 +90,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddSingleton<IOfflineGeocodingService>(sp =>
                 new OfflineGeocodingService(pbfPath, sp.GetRequiredService<IGeocodingService>()));
 
-            // للـ RouterDb
+
             var routerDbPath = Path.Combine(AppContext.BaseDirectory, "Maps", "egypt.routerdb");
             if (!File.Exists(routerDbPath))
             {
