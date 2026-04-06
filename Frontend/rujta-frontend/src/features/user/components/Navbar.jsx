@@ -16,7 +16,6 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
   const [query, setQuery] = useState("");
   const [incompleteOrdersCount, setIncompleteOrdersCount] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [suggestion, setSuggestion] = useState(""); // unused for now (can be removed later)
   const [showResults, setShowResults] = useState(false);
 
   const navigate = useNavigate();
@@ -89,18 +88,24 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
     navigate("/");
   };
 
-  // Handle medicine selection from dropdown (autocomplete + navigate to details)
+  // Handle medicine selection → Navigate to medicine description page
   const handleSelect = (medicine) => {
-    chooseResult(medicine);
-    setQuery(medicine.name || "");
-    setShowResults(false);
-    setSelectedIndex(-1);
+  console.log("Selected medicine:", medicine); // 👈 مهم جدا
 
-    // 🔥 NEW: Navigate directly to Medicine Details page when selecting or pressing Enter
-    navigate(`/user/medicine/${medicine.id}`);
-  };
+  if (!medicine?.id) {
+    console.warn("Medicine has no id!");
+    return;
+  }
 
-  // Keyboard navigation inside dropdown
+  chooseResult(medicine);
+  setQuery(medicine.name || "");
+  setShowResults(false);
+  setSelectedIndex(-1);
+
+  navigate(`/user/medicine/${medicine.id}`);
+};
+
+  // Keyboard navigation
   const handleKeyDown = (e) => {
     if (!showResults || searchResults.length === 0) return;
 
@@ -151,7 +156,7 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
             />
             <IoMdSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-xl" />
 
-            {/* Dropdown Results using useSearchMedicines */}
+            {/* Dropdown Results */}
             {showResults && (
               <div
                 ref={resultsRef}
@@ -164,7 +169,7 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
                 ) : searchResults.length > 0 ? (
                   searchResults.map((medicine, index) => (
                     <div
-                      key={index}
+                      key={medicine.id || index}
                       className={`px-5 py-3.5 cursor-pointer hover:bg-gray-100 transition-colors flex items-center gap-3 text-sm border-b last:border-none ${
                         index === selectedIndex ? "bg-gray-100" : ""
                       }`}
