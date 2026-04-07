@@ -1,10 +1,8 @@
-﻿using Microsoft.AspNetCore.SignalR;
-using Rujta.API.Realtime.Services;
+﻿using Rujta.API.Realtime.Services;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 using Rujta.Application.Notifications;
 using Rujta.Infrastructure.Services;
-using System.Text.Json.Serialization;
 
 namespace Rujta.API
 {
