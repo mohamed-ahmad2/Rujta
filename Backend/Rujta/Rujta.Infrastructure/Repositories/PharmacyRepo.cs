@@ -17,8 +17,9 @@ namespace Rujta.Infrastructure.Repositories
         {
             return await _context.InventoryItems
                 .Where(i => i.PharmacyID == pharmacyId)
-                .Include(i => i.Medicine)   // مهم جدًا
-                .Select(i => i.Medicine)
+                .Include(i => i.Medicine)
+                .Where(i => i.Medicine != null)
+                .Select(i => i.Medicine!)  
                 .Distinct()
                 .ToListAsync();
         }

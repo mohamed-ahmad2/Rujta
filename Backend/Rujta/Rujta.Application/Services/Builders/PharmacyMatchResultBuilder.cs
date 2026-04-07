@@ -19,26 +19,32 @@
             if (param == null)
                 throw new ArgumentNullException(nameof(param));
 
+            var pharmacy = param.Pharmacy ?? throw new ArgumentNullException(nameof(param));
+            var order = param.Order ?? new ItemDto();
+
+            var foundList = param.Found ?? new List<FoundMedicineDto>();
+            var notFoundList = param.NotFound ?? new List<NotFoundMedicineDto>();
+
             return new PharmacyMatchResultDto
             {
-                PharmacyId = param.Pharmacy.Id,
-                Name = param.Pharmacy.Name,
-                Latitude = param.Pharmacy.Latitude,
-                Longitude = param.Pharmacy.Longitude,
-                ContactNumber = param.Pharmacy.ContactNumber ?? string.Empty,
+                PharmacyId = pharmacy.Id,
+                Name = pharmacy.Name ?? string.Empty,
+                Latitude = pharmacy.Latitude,
+                Longitude = pharmacy.Longitude,
+                ContactNumber = pharmacy.ContactNumber ?? string.Empty,
 
                 MatchedDrugs = param.Matched,
-                TotalRequestedDrugs = param.Order.Items.Count,
-                MatchPercentage = param.Order.Items.Count > 0
-                    ? Math.Round(((double)param.Matched / param.Order.Items.Count) * 100, 1)
+                TotalRequestedDrugs = order.Items.Count,
+                MatchPercentage = order.Items.Count > 0
+                    ? Math.Round(((double)param.Matched / order.Items.Count) * 100, 1)
                     : 0,
 
                 DistanceKm = param.DistanceKm,
                 EstimatedDurationMinutes = Math.Round(param.DurationMinutes, 1),
                 DeliveryFee = Math.Round(param.DeliveryFee, 2),
 
-                FoundMedicines = param.Found,
-                NotFoundMedicines = param.NotFound
+                FoundMedicines = foundList,
+                NotFoundMedicines = notFoundList
             };
         }
     }
