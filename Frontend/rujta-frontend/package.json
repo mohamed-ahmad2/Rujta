@@ -4,8 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "backend": "cd ../../Backend/Rujta/Rujta.Api && dotnet run --launch-profile https",
-    "dev": "concurrently \"npm run backend\" \"vite\"",
+    "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -108,14 +108,20 @@ namespace Rujta.API
                 app.UseHsts();
             }
 
+            app.UseStaticFiles();   
             app.UseHttpsRedirection();
+
+            app.UseRouting();
+
+            app.UseRateLimiter();
 
             app.UseCors("AllowReactApp");
 
             app.UseWebSockets();
 
-            app.UseRateLimiter();
+            
 
+            
             app.UseAuthentication();
             app.UseAuthorization();
 
