@@ -9,20 +9,24 @@
 	<ItemGroup>
 		<PackageReference Include="F23.StringSimilarity" Version="7.0.1" />
 		<PackageReference Include="FirebaseAdmin" Version="3.4.0" />
-		<PackageReference Include="FluentValidation" Version="12.1.0" />
+		<PackageReference Include="FluentValidation" Version="12.1.1" />
 		<PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
 		<PackageReference Include="Itinero" Version="1.5.1" />
 		<PackageReference Include="Itinero.IO.Osm" Version="1.5.1" />
-		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.22" />
-		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.22" />
-		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.6" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.22" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.22">
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.25" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.25" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.3">
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		  <PrivateAssets>all</PrivateAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.25" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.25">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.22" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.22">
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.25" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.25">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>

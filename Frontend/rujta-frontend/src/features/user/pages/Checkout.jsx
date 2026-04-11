@@ -81,7 +81,7 @@ const Checkout = () => {
   const [deliveryAddressLocation, setDeliveryAddressLocation] = useState(null);
   const [deliveryAddress, setDeliveryAddress] = useState(null);
   const [hoveredPharmacyId, setHoveredPharmacyId] = useState(null);
-  const [routeData, setRouteData] = useState({}); 
+  const [routeData, setRouteData] = useState({});
   // pharmacyId → { coordinates: [], distanceKm: "3.45", durationMin: "12" }
   // ============================================
 
@@ -114,7 +114,7 @@ const Checkout = () => {
           }));
 
           console.log(
-            `✅ Route + Distance for pharmacy ${pharmacy.pharmacyId}: ${distanceKm} km`
+            `✅ Route + Distance for pharmacy ${pharmacy.pharmacyId}: ${distanceKm} km`,
           );
         } else {
           console.warn("OSRM No route:", data);
@@ -123,11 +123,11 @@ const Checkout = () => {
         console.error(
           "OSRM route error for pharmacy",
           pharmacy.pharmacyId,
-          err
+          err,
         );
       }
     },
-    [deliveryAddressLocation, userLocation, routeData]
+    [deliveryAddressLocation, userLocation, routeData],
   );
 
   // جلب المسارات للصيدلية الأفضل + المختارة + اللي الماوس فوقها
@@ -169,7 +169,7 @@ const Checkout = () => {
           const { latitude, longitude } = pos.coords;
           setUserLocation({ lat: latitude, lng: longitude });
         },
-        (err) => console.error("Geolocation error:", err)
+        (err) => console.error("Geolocation error:", err),
       );
     }
   }, []);
@@ -202,7 +202,7 @@ const Checkout = () => {
             console.error("Failed to update location:", updateErr);
           }
         },
-        (geoErr) => console.error("Geolocation error:", geoErr)
+        (geoErr) => console.error("Geolocation error:", geoErr),
       );
     }
   };
@@ -262,7 +262,7 @@ const Checkout = () => {
     setSelectedPharmacies((prev) =>
       prev.includes(pharmacyId)
         ? prev.filter((id) => id !== pharmacyId)
-        : [...prev, pharmacyId]
+        : [...prev, pharmacyId],
     );
   };
 
@@ -315,13 +315,13 @@ const Checkout = () => {
 
     for (const pharmacyId of selectedPharmacies) {
       const selectedPharmacy = pharmacies.find(
-        (p) => p.pharmacyId === pharmacyId
+        (p) => p.pharmacyId === pharmacyId,
       );
       if (!selectedPharmacy) continue;
 
       const selectedMedicineIds = selectedMedicines[pharmacyId] || [];
       const selectedItems = selectedPharmacy.foundMedicines.filter(
-        (m) => selectedMedicineIds.includes(m.medicineId) && m.isQuantityEnough
+        (m) => selectedMedicineIds.includes(m.medicineId) && m.isQuantityEnough,
       );
 
       if (selectedItems.length === 0) continue;
@@ -340,7 +340,7 @@ const Checkout = () => {
 
     if (orderDtos.length === 0) {
       alert(
-        "No valid orders to create (check selected medicines & quantities)"
+        "No valid orders to create (check selected medicines & quantities)",
       );
       setCreatingOrder(false);
       return;
@@ -615,8 +615,8 @@ const Checkout = () => {
                             {/* ←←← المسافة الحقيقية من OSRM */}
                             {realRoute && (
                               <p className="text-green-600 font-medium text-sm mt-1">
-                                🛣️ Real Road Distance: {realRoute.distanceKm} km • 
-                                Real Time: {realRoute.durationMin} min
+                                🛣️ Real Road Distance: {realRoute.distanceKm} km
+                                • Real Time: {realRoute.durationMin} min
                               </p>
                             )}
 
