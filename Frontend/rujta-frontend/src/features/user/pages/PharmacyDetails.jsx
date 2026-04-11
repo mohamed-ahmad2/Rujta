@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom"; // 👈 أضفنا useNavigate
 import imge1 from "../../../assets/hero/img1.png";
 import { getAllPharmacies, getPharmacyMedicines } from "../../pharmacies/api/pharmaciesApi";
 
@@ -12,6 +12,7 @@ const categoryOptions = [
 
 const PharmacyDetails = ({ cart, setCart }) => {
   const { id } = useParams();
+  const navigate = useNavigate(); // 👈 هنا
   const [pharmacy, setPharmacy] = useState(null);
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +50,11 @@ const PharmacyDetails = ({ cart, setCart }) => {
     fetchPharmacyData();
   }, [id]);
 
+  // ✅ navigation function
+  const goToDetails = (medId) => {
+    navigate(`/user/medicine/${medId}`);
+  };
+
   const handleAddToCart = (product) => {
     if (!setCart) return;
 
@@ -83,6 +89,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
 
   return (
     <div className="container mx-auto py-20">
+      
       {/* Pharmacy Info */}
       <div className="flex flex-col items-center mb-12 animate-fadeIn">
         <div className="w-32 h-32 rounded-full bg-[#E8F3E8] flex items-center justify-center overflow-hidden mb-4 shadow-md hover:shadow-lg transition">
@@ -136,7 +143,8 @@ const PharmacyDetails = ({ cart, setCart }) => {
             return (
               <div
                 key={med.id}
-                className="bg-white rounded-2xl shadow-md border w-[270px]
+                onClick={() => goToDetails(med.id)} // 👈 هنا الكليك
+                className="cursor-pointer bg-white rounded-2xl shadow-md border w-[270px]
                 transform transition-all duration-500
                 hover:-translate-y-3 hover:shadow-2xl hover:scale-[1.03]
                 animate-fadeIn"
@@ -146,14 +154,14 @@ const PharmacyDetails = ({ cart, setCart }) => {
                   <img
                     src={med.imageUrl || imge1}
                     alt={med.name}
-                    className="w-[150px] object-contain cursor-pointer transition-transform duration-500 hover:scale-110"
+                    className="w-[150px] object-contain transition-transform duration-500 hover:scale-110"
                     onError={(e) => (e.currentTarget.src = imge1)}
                   />
                 </div>
 
                 {/* Info */}
                 <div className="p-5 text-center">
-                  <h3 className="text-lg font-bold text-secondary transition-colors duration-300 hover:text-[#7bbf5e]">
+                  <h3 className="text-lg font-bold text-secondary">
                     {med.name}
                   </h3>
 
@@ -167,7 +175,10 @@ const PharmacyDetails = ({ cart, setCart }) => {
 
                   {desc.length > 70 && (
                     <button
-                      onClick={() => toggleExpand(med.id)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // 👈 مهم
+                        toggleExpand(med.id);
+                      }}
                       className="text-secondary text-sm mt-1 font-semibold hover:underline"
                     >
                       {expanded[med.id] ? "Show Less" : "Show More"}
@@ -179,7 +190,10 @@ const PharmacyDetails = ({ cart, setCart }) => {
                   </p>
 
                   <button
-                    onClick={() => handleAddToCart(med)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // 👈 مهم جداً
+                      handleAddToCart(med);
+                    }}
                     className="mt-4 bg-secondary text-white py-2 px-5 rounded-full w-full
                     transition-all duration-300
                     hover:bg-[#7bbf5e] hover:shadow-lg hover:-translate-y-1
