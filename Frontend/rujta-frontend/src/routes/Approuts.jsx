@@ -50,6 +50,8 @@ import SettingsAdmin from "../features/dashboardAdmin/pages/Settings";
 /* ================= Notifications ================= */
 import NotificationsPage from "../features/notifications/pages/NotificationsPage";
 
+
+import ScanPrescription from "../features/prescription/pages/ScanPrescription";
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Routes>
 
@@ -126,9 +128,14 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Route path="checkout" element={<Checkout />} />
   <Route path="notifications" element={<NotificationsPage />} />
   <Route path="payment" element={<Payment />} />  {/* هنا صفحة الدفع */}
-  <Route path="pharmacy/:id" element={<PharmacyDetails />} />
+  <Route
+  path="pharmacy/:id"
+  element={<PharmacyDetails cart={cart} setCart={setCart} />}
+/>
+  <Route path="/user/scan-prescription" element={<ScanPrescription cart={cart} setCart={setCart}  />} />
+  {/* 🔥 Medicine Details Page - This makes /user/medicine/1 work */}
+  <Route path="medicine/:id" element={<MedicineDetails cart={cart} setCart={setCart} />} />
 </Route>
-
 
     {/* ========= Medicines ========= */}
     <Route
