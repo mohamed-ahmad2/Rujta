@@ -21,7 +21,7 @@ name: Build and deploy .NET 8 API to Azure Web App
 
 env:
   AZURE_WEBAPP_NAME: Rujta
-  PROJECT_PATH: ./Backend/Rujta/Rujta.Api/Rujta.Api.csproj
+  PROJECT_PATH: ./Backend/Rujta/Rujta.Api/Rujta.API.csproj
   DOTNET_VERSION: '8.0'
 
 on:
@@ -34,8 +34,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -46,16 +45,10 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-
-      - name: Restore
-        run: dotnet restore ${{ env.PROJECT_PATH }}
-
-      - name: Build
-        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.sln') }}
 
       - name: Publish
-        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -o publish --no-build
+        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -o publish
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -68,8 +61,7 @@ jobs:
     needs: build
 
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: dotnet-app
 
@@ -78,4 +70,4 @@ jobs:
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: .
+          package: publish
