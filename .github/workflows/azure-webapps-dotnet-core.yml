@@ -42,19 +42,19 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Cache NuGet
+      - name: Cache NuGet packages
         uses: actions/cache@v3
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.sln') }}
 
-      - name: Restore
+      - name: Restore dependencies
         run: dotnet restore ${{ env.PROJECT_PATH }}
 
-      - name: Build
+      - name: Build project
         run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
 
-      - name: Publish
+      - name: Publish project
         run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -o publish --no-build
 
       - name: Upload artifact
@@ -73,6 +73,9 @@ jobs:
         with:
           name: dotnet-app
           path: publish
+
+      - name: Verify artifact (debug step)
+        run: ls -R publish
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
