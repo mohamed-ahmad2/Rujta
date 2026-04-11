@@ -10,7 +10,10 @@ const __dirname = path.dirname(__filename);
 export default defineConfig({
   plugins: [react()],
   server: {
-    
+    https: {
+      key: fs.readFileSync(path.resolve(__dirname, "certs/key.pem")),
+      cert: fs.readFileSync(path.resolve(__dirname, "certs/cert.pem")),
+    },
     port: 5173,
     hmr: {
       protocol: "wss",
@@ -19,7 +22,7 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target:"https://rujta.runasp.net",
+        target:"https://localhost:7065",
 
         changeOrigin: true,
         secure: false,
@@ -33,7 +36,7 @@ export default defineConfig({
         },
       },
       "/hubs": {
-        target: "https://rujta.runasp.net",
+        target: "https://localhost:7065",
         changeOrigin: true,
         secure: false,
         ws: true,
