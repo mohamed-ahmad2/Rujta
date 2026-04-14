@@ -110,7 +110,7 @@ export const OrdersProvider = ({ children }) => {
       setOrders((prev) =>
         prev.map((o) =>
           o.id === orderId
-            ? { ...o, status: statusMap[status] || status } // clone للكائن مع تحديث status مباشرة
+            ? { ...o, status: statusMap[status] || status }
             : o,
         ),
       );
