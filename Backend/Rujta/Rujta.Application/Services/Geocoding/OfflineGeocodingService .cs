@@ -8,8 +8,9 @@
         private readonly ConcurrentDictionary<string, (double Latitude, double Longitude)> _cache;
         private readonly JaroWinkler _jw;
         private readonly IGeocodingService _onlineGeocodingService;
+        private readonly ILogger<OfflineGeocodingService> _logger;
 
-        public OfflineGeocodingService(string pbfFilePath, IGeocodingService onlineGeocodingService)
+        public OfflineGeocodingService(string pbfFilePath, IGeocodingService onlineGeocodingService, ILogger<OfflineGeocodingService> logger)
         {
             _onlineGeocodingService = onlineGeocodingService ?? throw new ArgumentNullException(nameof(onlineGeocodingService));
 
@@ -29,6 +30,7 @@
 
             _cache = new ConcurrentDictionary<string, (double, double)>();
             _jw = new JaroWinkler();
+            _logger = logger;
         }
 
         private ConcurrentDictionary<string, List<AddressNode>> LoadAndIndexAddressesFromPbf(string path)
@@ -65,7 +67,7 @@
                 Interlocked.Increment(ref count);
             });
 
-            Console.WriteLine($"Loaded {count} nodes from PBF");
+            _logger.LogInformation("Loaded {Count} address nodes from PBF file: {Path}", count, path);
             return index;
         }
 

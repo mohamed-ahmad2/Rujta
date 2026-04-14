@@ -88,19 +88,32 @@ namespace Rujta.Infrastructure.Extensions
                 throw new FileNotFoundException($"PBF file not found at {pbfPath}");
 
             services.AddSingleton<IOfflineGeocodingService>(sp =>
-                new OfflineGeocodingService(pbfPath, sp.GetRequiredService<IGeocodingService>()));
+                new OfflineGeocodingService(
+                    pbfPath,
+                    sp.GetRequiredService<IGeocodingService>(),
+                    sp.GetRequiredService<ILogger<OfflineGeocodingService>>()
+                ));
 
 
             var routerDbPath = Path.Combine(AppContext.BaseDirectory, "Maps", "egypt.routerdb");
-            if (!File.Exists(routerDbPath))
-            {
-                Console.WriteLine("RouterDb not found. Attempting to build it...");
-                bool built = RouterDbHelper.BuildRouterDb();
-                if (!built || !File.Exists(routerDbPath))
-                    throw new InvalidOperationException($"Routing:RouterDb file could not be created at {routerDbPath}");
-            }
+
             services.AddSingleton<ItineroRoutingService>(sp =>
-                new ItineroRoutingService(routerDbPath, sp.GetRequiredService<ILogger<ItineroRoutingService>>()));
+            {
+                var logger = sp.GetRequiredService<ILogger<ItineroRoutingService>>();
+
+                if (!File.Exists(routerDbPath))
+                {
+                    logger.LogWarning("RouterDb not found at {Path}. Attempting to build it...", routerDbPath);
+
+                    bool built = RouterDbHelper.BuildRouterDb();
+
+                    if (!built || !File.Exists(routerDbPath))
+                        throw new InvalidOperationException($"Routing: RouterDb file could not be created at {routerDbPath}");
+                }
+
+                return new ItineroRoutingService(routerDbPath, logger);
+            });
+
             return services;
         }
     }
