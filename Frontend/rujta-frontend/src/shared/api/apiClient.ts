@@ -28,8 +28,11 @@ apiClient.interceptors.response.use(
       try {
         const refreshResponse = await axios.post(
           "/api/auth/refresh-token",
-          null,
-          { withCredentials: true },
+          {},
+          {
+            withCredentials: true,
+            headers: { "Content-Type": "application/json" },
+          },
         );
 
         const newAccessToken = refreshResponse.data?.accessToken;

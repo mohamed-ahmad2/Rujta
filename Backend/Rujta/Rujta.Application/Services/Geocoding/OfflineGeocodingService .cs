@@ -10,27 +10,34 @@
         private readonly IGeocodingService _onlineGeocodingService;
         private readonly ILogger<OfflineGeocodingService> _logger;
 
-        public OfflineGeocodingService(string pbfFilePath, IGeocodingService onlineGeocodingService, ILogger<OfflineGeocodingService> logger)
+        public OfflineGeocodingService(
+            string pbfFilePath,
+            IGeocodingService onlineGeocodingService,
+            ILogger<OfflineGeocodingService> logger)
         {
             _onlineGeocodingService = onlineGeocodingService ?? throw new ArgumentNullException(nameof(onlineGeocodingService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            _cache = new ConcurrentDictionary<string, (double, double)>();
+            _jw = new JaroWinkler();
 
             _nodesByGovCity = LoadAndIndexAddressesFromPbf(pbfFilePath);
 
             _uniqueGovernorates = _nodesByGovCity.Keys
                 .Select(k => k.Split('|')[0])
                 .Where(g => !string.IsNullOrEmpty(g))
-                .Distinct()
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
             _uniqueCities = _nodesByGovCity.Keys
-                .Select(k => { var parts = k.Split('|'); return parts.Length > 1 ? parts[1] : ""; })
+                .Select(k =>
+                {
+                    var parts = k.Split('|');
+                    return parts.Length > 1 ? parts[1] : "";
+                })
                 .Where(c => !string.IsNullOrEmpty(c))
-                .Distinct()
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
-
-            _cache = new ConcurrentDictionary<string, (double, double)>();
-            _jw = new JaroWinkler();
-            _logger = logger;
         }
 
         private ConcurrentDictionary<string, List<AddressNode>> LoadAndIndexAddressesFromPbf(string path)
@@ -47,9 +54,15 @@
                 .Select(n => new AddressNode
                 {
                     Street = NormalizeString(n.Tags["addr:street"]),
-                    BuildingNo = n.Tags.ContainsKey("addr:housenumber") ? NormalizeString(n.Tags["addr:housenumber"]) : null,
-                    City = n.Tags.ContainsKey("addr:city") ? NormalizeString(n.Tags["addr:city"]) : null,
-                    Governorate = n.Tags.ContainsKey("addr:province") ? NormalizeString(n.Tags["addr:province"]) : null,
+                    BuildingNo = n.Tags.ContainsKey("addr:housenumber")
+                        ? NormalizeString(n.Tags["addr:housenumber"])
+                        : null,
+                    City = n.Tags.ContainsKey("addr:city")
+                        ? NormalizeString(n.Tags["addr:city"])
+                        : null,
+                    Governorate = n.Tags.ContainsKey("addr:province")
+                        ? NormalizeString(n.Tags["addr:province"])
+                        : null,
                     Latitude = n.Latitude!.Value,
                     Longitude = n.Longitude!.Value
                 });
@@ -60,14 +73,17 @@
             {
                 var key = $"{node.Governorate?.ToLowerInvariant()}|{node.City?.ToLowerInvariant()}";
                 var list = index.GetOrAdd(key, _ => new List<AddressNode>());
+
                 lock (list)
                 {
                     list.Add(node);
                 }
+
                 Interlocked.Increment(ref count);
             });
 
             _logger.LogInformation("Loaded {Count} address nodes from PBF file: {Path}", count, path);
+
             return index;
         }
 
@@ -106,6 +122,7 @@
             }
 
             string cacheKey = $"{street}|{buildingNo}|{city}|{governorate}";
+
             if (_cache.TryGetValue(cacheKey, out var cached))
                 return cached;
 
@@ -125,13 +142,17 @@
                 ex is TaskCanceledException ||
                 (ex is InvalidOperationException && ex.Message.Contains("Unable to geocode")))
             {
-                //Unable to geocode
+                _logger.LogWarning("Online geocoding failed for address: {Address}. Falling back to offline.", fullAddress);
             }
 
-
             var indexKey = $"{governorate?.ToLowerInvariant()}|{city?.ToLowerInvariant()}";
-            if (!_nodesByGovCity.TryGetValue(indexKey, out var filteredNodes) || filteredNodes == null || !filteredNodes.Any())
+
+            if (!_nodesByGovCity.TryGetValue(indexKey, out var filteredNodes)
+                || filteredNodes == null
+                || !filteredNodes.Any())
+            {
                 filteredNodes = _nodesByGovCity.Values.SelectMany(v => v).ToList();
+            }
 
             var bestMatch = filteredNodes
                 .AsParallel()

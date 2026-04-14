@@ -88,11 +88,12 @@ namespace Rujta.Infrastructure.Extensions
                 throw new FileNotFoundException($"PBF file not found at {pbfPath}");
 
             services.AddSingleton<IOfflineGeocodingService>(sp =>
-                new OfflineGeocodingService(
-                    pbfPath,
-                    sp.GetRequiredService<IGeocodingService>(),
-                    sp.GetRequiredService<ILogger<OfflineGeocodingService>>()
-                ));
+            {
+                var onlineGeocoding = sp.GetRequiredService<IGeocodingService>();
+                var logger = sp.GetRequiredService<ILogger<OfflineGeocodingService>>();
+
+                return new OfflineGeocodingService(pbfPath, onlineGeocoding, logger);
+            });
 
 
             var routerDbPath = Path.Combine(AppContext.BaseDirectory, "Maps", "egypt.routerdb");
