@@ -1,6 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 namespace Rujta.Infrastructure.Extensions
 {
@@ -53,6 +51,7 @@ namespace Rujta.Infrastructure.Extensions
 
                         if (!string.IsNullOrEmpty(accessToken) &&
                             (path.StartsWithSegments("/hubs/presence") ||
+                             path.StartsWithSegments("/hubs/notifications") ||
                              path.StartsWithSegments("/hubs/orders")))
                         {
                             context.Token = accessToken;

@@ -3,7 +3,10 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 import { OrdersContext } from "./OrdersContext";
 import { useAuth } from "../features/auth/hooks/useAuth";
-import { getAccessToken, subscribeTokenChange } from "../authProvider/authTokenProvider";
+import {
+  getAccessToken,
+  subscribeTokenChange,
+} from "../authProvider/authTokenProvider";
 import { getOrderById } from "../features/orders/api/ordersApi";
 
 export const OrdersProvider = ({ children }) => {
@@ -56,8 +59,13 @@ export const OrdersProvider = ({ children }) => {
     const token = getAccessToken();
     console.log("🔑 Access token:", token);
 
+    const hubUrl =
+      import.meta.env.MODE === "development"
+        ? "/hubs/orders"
+        : "https://rujta.runasp.net/hubs/orders";
+
     const hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl("/hubs/orders", {
+      .withUrl(hubUrl, {
         accessTokenFactory: () => getAccessToken(),
         withCredentials: true,
       })
@@ -72,7 +80,7 @@ export const OrdersProvider = ({ children }) => {
       3: "OutForDelivery",
       4: "Delivered",
       5: "CancelledByUser",
-      6:"CancelledByPharmacy" 
+      6: "CancelledByPharmacy",
     };
 
     // ===== Server events =====
@@ -96,24 +104,24 @@ export const OrdersProvider = ({ children }) => {
         console.error("Failed to fetch updated order:", err);
       }
     });
-hubConnection.on("OrderStatusChanged", (orderId, status) => {
-  console.log("🔄 OrderStatusChanged event:", orderId, status);
+    hubConnection.on("OrderStatusChanged", (orderId, status) => {
+      console.log("🔄 OrderStatusChanged event:", orderId, status);
 
-  setOrders(prev =>
-    prev.map(o =>
-      o.id === orderId
-        ? { ...o, status: statusMap[status] || status } // clone للكائن مع تحديث status مباشرة
-        : o
-    )
-  );
-});
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId
+            ? { ...o, status: statusMap[status] || status } // clone للكائن مع تحديث status مباشرة
+            : o,
+        ),
+      );
+    });
     hubConnection.on("OrderItemChanged", async (orderId) => {
       console.log("🔄 OrderItemChanged event:", orderId);
       try {
         const res = await getOrderById(orderId);
         if (res.data) {
           setOrders((prev) =>
-            prev.map((o) => (o.id === orderId ? res.data : o))
+            prev.map((o) => (o.id === orderId ? res.data : o)),
           );
         } else {
           setOrders((prev) => prev.filter((o) => o.id !== orderId));

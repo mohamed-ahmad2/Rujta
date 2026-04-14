@@ -56,8 +56,13 @@ export const PresenceProvider = ({ children }) => {
     const role = user.role;
     if (role !== "Pharmacist" && role !== "PharmacyAdmin") return;
 
+    const hubUrl =
+      import.meta.env.MODE === "development"
+        ? "/hubs/presence"
+        : "https://rujta.runasp.net/hubs/presence";
+
     const hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl("/hubs/presence", {
+      .withUrl(hubUrl, {
         accessTokenFactory: () => getAccessToken(),
         withCredentials: true,
       })
