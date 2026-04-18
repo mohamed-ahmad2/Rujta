@@ -174,10 +174,6 @@ const PharmacyDetails = ({ cart, setCart }) => {
                     </button>
                   )}
 
-                  <p className="text-lg font-semibold text-secondary mt-3">
-                    {med.price} EGP
-                  </p>
-
                   <button
                     onClick={() => handleAddToCart(med)}
                     className="mt-4 bg-secondary text-white py-2 px-5 rounded-full w-full
