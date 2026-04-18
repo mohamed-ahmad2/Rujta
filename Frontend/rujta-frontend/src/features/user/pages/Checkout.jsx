@@ -5,7 +5,6 @@ import { useAuth } from "../../auth/hooks/useAuth";
 import useAddress from "../../address/hook/useAddress";
 import apiClient from "../../../shared/api/apiClient";
 import PharmacyMap from "../components/PharmacyMap";
-// دالة فك الـ polyline من OSRM (مسار حقيقي على الشوارع)
 const decodePolyline = (encoded) => {
   let index = 0;
   let lat = 0,
@@ -77,17 +76,14 @@ const Checkout = () => {
   const [routeToPharmacy, setRouteToPharmacy] = useState(null);
   const [selectedMedicines, setSelectedMedicines] = useState({});
 
-  // ==================== NEW (للمسارات الحقيقية + المسافة) ====================
   const [deliveryAddressLocation, setDeliveryAddressLocation] = useState(null);
   const [deliveryAddress, setDeliveryAddress] = useState(null);
   const [hoveredPharmacyId, setHoveredPharmacyId] = useState(null);
   const [routeData, setRouteData] = useState({});
-  // pharmacyId → { coordinates: [], distanceKm: "3.45", durationMin: "12" }
-  // ============================================
 
-  // ──────────────────────────────────────────────
-  //  Fetch Real Road Routes + Distance from OSRM
-  // ──────────────────────────────────────────────
+
+  //------------------------------------
+
   const fetchRoute = useCallback(
     async (pharmacy) => {
       const start = deliveryAddressLocation || userLocation;
@@ -130,29 +126,26 @@ const Checkout = () => {
     [deliveryAddressLocation, userLocation, routeData],
   );
 
-  // جلب المسارات للصيدلية الأفضل + المختارة + اللي الماوس فوقها
+  //------------------------------------
+
   useEffect(() => {
     if (pharmacies.length === 0) return;
 
-    // أفضل صيدلية (#1)
+
     if (pharmacies[0]) fetchRoute(pharmacies[0]);
 
-    // الصيدليات المختارة
+
     selectedPharmacies.forEach((id) => {
       const p = pharmacies.find((ph) => ph.pharmacyId === id);
       if (p) fetchRoute(p);
     });
 
-    // الصيدلية اللي الماوس فوقها
     if (hoveredPharmacyId) {
       const p = pharmacies.find((ph) => ph.pharmacyId === hoveredPharmacyId);
       if (p) fetchRoute(p);
     }
   }, [pharmacies, selectedPharmacies, hoveredPharmacyId, fetchRoute]);
 
-  // ──────────────────────────────────────────────
-  //  Effects
-  // ──────────────────────────────────────────────
 
   useEffect(() => {
     if (!user) return;
@@ -185,9 +178,7 @@ const Checkout = () => {
     }
   }, [error]);
 
-  // ──────────────────────────────────────────────
-  //  Handlers
-  // ──────────────────────────────────────────────
+  //------------------------------------
 
   const handleSetLocation = () => {
     if (navigator.geolocation) {
@@ -612,7 +603,6 @@ const Checkout = () => {
                               {p.estimatedDurationMinutes.toFixed(0)} min
                             </p>
 
-                            {/* ←←← المسافة الحقيقية من OSRM */}
                             {realRoute && (
                               <p className="text-green-600 font-medium text-sm mt-1">
                                 🛣️ Real Road Distance: {realRoute.distanceKm} km

@@ -185,8 +185,6 @@ const Products = ({ cart, setCart }) => {
                     </button>
                   )}
 
-                  <p className="text-lg font-semibold text-secondary mt-3">{data.price} EGP</p>
-
                   <button
                     onClick={() => handleAddToCart(data)}
                     className="mt-4 bg-secondary text-white py-2 px-5 rounded-full w-full transform transition-all duration-300 hover:scale-105 hover:shadow-lg"

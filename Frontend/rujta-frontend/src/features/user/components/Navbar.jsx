@@ -2,10 +2,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { IoMdSearch } from "react-icons/io";
 import { FaCartShopping } from "react-icons/fa6";
-import { LuLogOut } from "react-icons/lu";
-import { CgProfile } from "react-icons/cg";
-import { BsBoxSeam } from "react-icons/bs";
-import { IoNotificationsOutline, IoQrCodeOutline } from "react-icons/io5";
+import { FiShoppingCart } from "react-icons/fi";
+import { CgProfile, CgProfile as CgProfileFill } from "react-icons/cg";
+import { LuLogOut, LuLogOut as LuLogOutFill } from "react-icons/lu";
+import { BsBoxSeam, BsBoxSeamFill } from "react-icons/bs";
+import {
+  IoNotificationsOutline,
+  IoNotifications,
+  IoQrCodeOutline,
+} from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { useSearchMedicines } from "../../medicines/hook/useSearchMedicines";
@@ -51,17 +56,14 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
     }
   }, [orders]);
 
-  // Show results only when there is a query and no item has been selected yet
   useEffect(() => {
     setShowResults(query.length > 0 && !selected);
   }, [query, selected]);
 
-  // Reset selected index when results change
   useEffect(() => {
     setSelectedIndex(-1);
   }, [searchResults]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -88,22 +90,21 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
     navigate("/");
   };
 
-  // Handle medicine selection → Navigate to medicine description page
   const handleSelect = (medicine) => {
-  console.log("Selected medicine:", medicine); // 👈 مهم جدا
+    console.log("Selected medicine:", medicine);
 
-  if (!medicine?.id) {
-    console.warn("Medicine has no id!");
-    return;
-  }
+    if (!medicine?.id) {
+      console.warn("Medicine has no id!");
+      return;
+    }
 
-  chooseResult(medicine);
-  setQuery(medicine.name || "");
-  setShowResults(false);
-  setSelectedIndex(-1);
+    chooseResult(medicine);
+    setQuery(medicine.name || "");
+    setShowResults(false);
+    setSelectedIndex(-1);
 
-  navigate(`/user/medicine/${medicine.id}`);
-};
+    navigate(`/user/medicine/${medicine.id}`);
+  };
 
   // Keyboard navigation
   const handleKeyDown = (e) => {
@@ -134,7 +135,9 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
         <div className="flex flex-col md:flex-row items-center justify-between py-4 md:py-5 gap-4 md:gap-0">
           {/* Logo */}
           <div
-            className="text-3xl font-bold text-secondary cursor-pointer"
+            className="text-3xl font-bold text-secondary cursor-pointer 
+             transition-all duration-200 hover:scale-105 
+             hover:tracking-wide hover:opacity-90"
             onClick={() => navigate("/user")}
           >
             Rujta
@@ -191,13 +194,23 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
           <div className="flex items-center gap-4 md:gap-6 mt-2 md:mt-0">
             {/* Scanner */}
             <IoQrCodeOutline
-              className="text-2xl text-gray-600 cursor-pointer hover:text-secondary"
+              className="text-2xl text-gray-600 cursor-pointer hover:text-secondary hover:scale-110 transition-transform duration-200"
               onClick={openScanner}
             />
 
             {/* Cart */}
-            <button onClick={onCartClick} className="relative">
-              <FaCartShopping className="text-2xl text-secondary" />
+            <button
+              onClick={onCartClick}
+              className="relative cursor-pointer hover:scale-110 transition-transform duration-200 group"
+            >
+              <div className="relative w-6 h-6">
+                {/* Outline */}
+                <FiShoppingCart className="absolute inset-0 text-2xl text-gray-600 group-hover:text-secondary transition-all duration-200 opacity-100 group-hover:opacity-0" />
+
+                {/* Filled */}
+                <FaCartShopping className="absolute inset-0 text-2xl text-gray-600 group-hover:text-secondary transition-all duration-200 opacity-0 group-hover:opacity-100" />
+              </div>
+
               {cart.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                   {cart.length}
@@ -208,9 +221,16 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
             {/* Orders */}
             <button
               onClick={() => navigate("/user/orders")}
-              className="relative"
+              className="relative cursor-pointer hover:scale-110 transition-transform duration-200 group"
             >
-              <BsBoxSeam className="text-2xl text-gray-600" />
+              <div className="relative w-6 h-6">
+                {/* Outline */}
+                <BsBoxSeam className="absolute inset-0 text-2xl text-gray-600 group-hover:text-secondary transition-all duration-200 opacity-100 group-hover:opacity-0" />
+
+                {/* Filled */}
+                <BsBoxSeamFill className="absolute inset-0 text-2xl text-gray-600 group-hover:text-secondary transition-all duration-200 opacity-0 group-hover:opacity-100" />
+              </div>
+
               {incompleteOrdersCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                   {incompleteOrdersCount}
@@ -221,9 +241,16 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
             {/* Notifications */}
             <button
               onClick={() => navigate("/user/notifications")}
-              className="relative"
+              className="relative cursor-pointer hover:scale-110 transition-transform duration-200 group"
             >
-              <IoNotificationsOutline className="text-2xl text-gray-600" />
+              <div className="relative w-6 h-6">
+                {/* Outline */}
+                <IoNotificationsOutline className="absolute inset-0 text-2xl text-gray-600 group-hover:text-secondary transition-opacity duration-200 opacity-100 group-hover:opacity-0" />
+
+                {/* Filled */}
+                <IoNotifications className="absolute inset-0 text-2xl text-gray-600 group-hover:text-secondary transition-opacity duration-200 opacity-0 group-hover:opacity-100" />
+              </div>
+
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                   {unreadCount}
@@ -232,13 +259,31 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
             </button>
 
             {/* Profile */}
-            <button onClick={() => navigate("/user/profile")}>
-              <CgProfile className="text-3xl text-gray-600" />
+            <button
+              onClick={() => navigate("/user/profile")}
+              className="relative cursor-pointer hover:scale-110 transition-transform duration-200 group"
+            >
+              <div className="relative w-6 h-6">
+                {/* Outline (default) */}
+                <CgProfile className="absolute inset-0 text-3xl text-gray-600 group-hover:text-secondary transition-opacity duration-200 opacity-100 group-hover:opacity-0" />
+
+                {/* Filled */}
+                <CgProfileFill className="absolute inset-0 text-3xl text-gray-600 group-hover:text-secondary transition-opacity duration-200 opacity-0 group-hover:opacity-100" />
+              </div>
             </button>
 
             {/* Logout */}
-            <button onClick={logoutAndRedirect}>
-              <LuLogOut className="text-2xl text-gray-600 hover:text-red-600" />
+            <button
+              onClick={logoutAndRedirect}
+              className="relative cursor-pointer hover:scale-110 transition-transform duration-200 group"
+            >
+              <div className="relative w-6 h-6">
+                {/* Outline */}
+                <LuLogOut className="absolute inset-0 text-2xl text-gray-600 group-hover:text-red-600 transition-opacity duration-200 opacity-100 group-hover:opacity-0" />
+
+                {/* Filled */}
+                <LuLogOutFill className="absolute inset-0 text-2xl text-gray-600 group-hover:text-red-600 transition-opacity duration-200 opacity-0 group-hover:opacity-100" />
+              </div>
             </button>
           </div>
         </div>
