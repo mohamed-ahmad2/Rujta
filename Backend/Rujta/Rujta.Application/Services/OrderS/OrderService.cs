@@ -104,9 +104,16 @@ namespace Rujta.Application.Services.OrderS
             }
         }
 
-        private async Task<(bool success, string message)> SafeUpdateOrderAsync(int id, int pharmacyId, OrderStatus newStatus, CancellationToken cancellationToken = default, int maxRetries = 3, bool isUser = false)
+        private async Task<(bool success, string message)> SafeUpdateOrderAsync(
+    int id,
+    int pharmacyId,
+    OrderStatus newStatus,
+    CancellationToken cancellationToken = default,
+    int maxRetries = 3,
+    bool isUser = false)
         {
             int retryCount = 0;
+
             while (retryCount < maxRetries)
             {
                 try
@@ -115,49 +122,33 @@ namespace Rujta.Application.Services.OrderS
                     if (order == null)
                         return (false, OrderMessages.OrderNotFound);
 
+                    // Authorization check
                     if (!isUser && order.PharmacyId != pharmacyId)
-                            return (false, "Unauthorized pharmacy access");
-                    
+                        return (false, "Unauthorized pharmacy access");
 
+                    // Validate state transition
                     if (!CanChangeStatus(order.Status, newStatus))
                         return (false, OrderMessages.InvalidStateTransition);
 
+                    // No-op if already in target status
                     if (order.Status == newStatus)
                         return (true, "Already updated");
 
+                    // Perform the update
                     order.Status = newStatus;
-
 
                     await _unitOfWork.SaveAsync(cancellationToken);
 
+                    // Notifications (fire-and-forget style with error handling inside)
                     await SafeNotifyAsync(order, newStatus);
                     await SendOrderStatusNotification(order);
 
-
-                    return (true, newStatus switch
-                    {
-                        OrderStatus.Accepted => OrderMessages.OrderAccepted,
-                        OrderStatus.CancelledByUser => OrderMessages.OrderCancelByUser,
-                        OrderStatus.CancelledByPharmacy => OrderMessages.OrderCancelByPharmacy,
-                        OrderStatus.Processing => OrderMessages.OrderProcessNow,
-                        OrderStatus.OutForDelivery => OrderMessages.OrderOutForDelivery,
-                        OrderStatus.Delivered => OrderMessages.OrderMarkAsDelivered,
-                        _ => "Status updated successfully"
-                    });
+                    return (true, GetSuccessMessage(newStatus));
                 }
-
                 catch (DbUpdateConcurrencyException)
                 {
-                    _logger.LogWarning("Concurrency conflict when updating Order {OrderId}. Retry {RetryCount}", id, retryCount + 1);
-                    retryCount++;
-                    if (retryCount >= maxRetries)
-                    {
-                        return (false, "Order was modified by another user. Please refresh and try again after multiple attempts.");
-                    }
-
-                    await Task.Delay(100 * retryCount, cancellationToken);
+                    return await HandleConcurrencyExceptionAsync(id, retryCount, maxRetries, cancellationToken);
                 }
-
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error updating order {OrderId}", id);
@@ -166,6 +157,38 @@ namespace Rujta.Application.Services.OrderS
             }
 
             return (false, "Maximum retries exceeded due to concurrency conflicts.");
+        }
+
+        private string GetSuccessMessage(OrderStatus status) =>
+    status switch
+    {
+        OrderStatus.Accepted => OrderMessages.OrderAccepted,
+        OrderStatus.CancelledByUser => OrderMessages.OrderCancelByUser,
+        OrderStatus.CancelledByPharmacy => OrderMessages.OrderCancelByPharmacy,
+        OrderStatus.Processing => OrderMessages.OrderProcessNow,
+        OrderStatus.OutForDelivery => OrderMessages.OrderOutForDelivery,
+        OrderStatus.Delivered => OrderMessages.OrderMarkAsDelivered,
+        _ => "Status updated successfully"
+    };
+
+        private async Task<(bool success, string message)> HandleConcurrencyExceptionAsync(
+            int orderId,
+            int retryCount,
+            int maxRetries,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogWarning("Concurrency conflict when updating Order {OrderId}. Retry {RetryCount}",
+                orderId, retryCount + 1);
+
+            retryCount++;
+
+            if (retryCount >= maxRetries)
+            {
+                return (false, "Order was modified by another user. Please refresh and try again after multiple attempts.");
+            }
+
+            await Task.Delay(100 * retryCount, cancellationToken);
+            return (false, string.Empty); // Signal to continue retrying (handled by while loop)
         }
 
         private async Task SafeNotifyAsync(Order order, OrderStatus status)
@@ -542,7 +565,7 @@ namespace Rujta.Application.Services.OrderS
             };
 
             await NotifyService.SendNotificationAsync(
-                order.UserId.ToString(),
+                order.UserId.ToString()!,
                 title,
                 message,
                 order.Id.ToString()

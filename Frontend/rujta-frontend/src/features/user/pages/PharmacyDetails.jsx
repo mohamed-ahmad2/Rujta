@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom"; // 👈 أضفنا useNavigate
+import { useParams, useNavigate } from "react-router-dom";
 import imge1 from "../../../assets/hero/img1.png";
 import { getAllPharmacies, getPharmacyMedicines } from "../../pharmacies/api/pharmaciesApi";
 
@@ -12,7 +12,7 @@ const categoryOptions = [
 
 const PharmacyDetails = ({ cart, setCart }) => {
   const { id } = useParams();
-  const navigate = useNavigate(); // 👈 هنا
+  const navigate = useNavigate();
   const [pharmacy, setPharmacy] = useState(null);
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +50,6 @@ const PharmacyDetails = ({ cart, setCart }) => {
     fetchPharmacyData();
   }, [id]);
 
-  // ✅ navigation function
   const goToDetails = (medId) => {
     navigate(`/user/medicine/${medId}`);
   };
@@ -59,17 +58,28 @@ const PharmacyDetails = ({ cart, setCart }) => {
     if (!setCart) return;
 
     setCart((prevCart = []) => {
-      const existingItem = prevCart.find((item) => item.id === product.id);
+      const existingItem = prevCart.find(
+        (item) => item.id === product.id && item.pharmacyId === pharmacy.id
+      );
+
+      let updatedCart;
 
       if (existingItem) {
-        return prevCart.map((item) =>
-          item.id === product.id
+        updatedCart = prevCart.map((item) =>
+          item.id === product.id && item.pharmacyId === pharmacy.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
+      } else {
+        updatedCart = [
+          ...prevCart,
+          { ...product, pharmacyId: pharmacy.id, quantity: 1 },
+        ];
       }
 
-      return [...prevCart, { ...product, quantity: 1 }];
+      // ✅ Log cart to console after every add
+      console.log("🛒 Cart updated:", updatedCart);
+      return updatedCart;
     });
   };
 
@@ -89,7 +99,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
 
   return (
     <div className="container mx-auto py-20">
-      
+
       {/* Pharmacy Info */}
       <div className="flex flex-col items-center mb-12 animate-fadeIn">
         <div className="w-32 h-32 rounded-full bg-[#E8F3E8] flex items-center justify-center overflow-hidden mb-4 shadow-md hover:shadow-lg transition">
@@ -143,7 +153,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
             return (
               <div
                 key={med.id}
-                onClick={() => goToDetails(med.id)} // 👈 هنا الكليك
+                onClick={() => goToDetails(med.id)}
                 className="cursor-pointer bg-white rounded-2xl shadow-md border w-[270px]
                 transform transition-all duration-500
                 hover:-translate-y-3 hover:shadow-2xl hover:scale-[1.03]
@@ -176,7 +186,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
                   {desc.length > 70 && (
                     <button
                       onClick={(e) => {
-                        e.stopPropagation(); // 👈 مهم
+                        e.stopPropagation();
                         toggleExpand(med.id);
                       }}
                       className="text-secondary text-sm mt-1 font-semibold hover:underline"
@@ -191,7 +201,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
 
                   <button
                     onClick={(e) => {
-                      e.stopPropagation(); // 👈 مهم جداً
+                      e.stopPropagation();
                       handleAddToCart(med);
                     }}
                     className="mt-4 bg-secondary text-white py-2 px-5 rounded-full w-full
@@ -212,7 +222,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
         </p>
       )}
     </div>
-  );
+  );A
 };
 
 export default PharmacyDetails;

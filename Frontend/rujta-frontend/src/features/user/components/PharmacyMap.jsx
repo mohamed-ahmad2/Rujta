@@ -64,7 +64,7 @@ const PharmacyMap = ({
   deliveryAddress,
   hoveredPharmacyId,
   selectedPharmacies = [],
-  routeData = {}, 
+  routeData = {},
 }) => {
   const defaultLocation = { lat: 30.0444, lng: 31.2357 };
   const center = selectedPharmacy

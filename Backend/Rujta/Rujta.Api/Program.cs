@@ -1,10 +1,8 @@
-﻿using Microsoft.AspNetCore.SignalR;
-using Rujta.API.Realtime.Services;
+﻿using Rujta.API.Realtime.Services;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 using Rujta.Application.Notifications;
 using Rujta.Infrastructure.Services;
-using System.Text.Json.Serialization;
 
 namespace Rujta.API
 {
@@ -28,7 +26,10 @@ namespace Rujta.API
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddCustomSwagger();
 
-            builder.Services.AddAutoMapper(typeof(StaffProfile).Assembly);
+            builder.Services.AddAutoMapper(cfg =>
+            {
+                cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies());
+            });
 
             // Database
             builder.Services.AddCustomDatabase(builder.Configuration);
