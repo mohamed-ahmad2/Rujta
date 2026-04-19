@@ -1,6 +1,4 @@
 ﻿using Microsoft.Extensions.Configuration;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 
 namespace Rujta.Application.Services
@@ -9,7 +7,6 @@ namespace Rujta.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        private readonly IConfiguration _config;
         private readonly HttpClient _http;
 
         public PrescriptionService(
@@ -20,7 +17,6 @@ namespace Rujta.Application.Services
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
-            _config = config;
             _http = factory.CreateClient();
         }
 
@@ -32,11 +28,11 @@ namespace Rujta.Application.Services
             var apiKey = Environment.GetEnvironmentVariable("API_KEY");
             if (string.IsNullOrEmpty(apiKey))
             {
-                Console.WriteLine("⚠ API_KEY NOT FOUND!");
+                Console.WriteLine("API_KEY NOT FOUND!");
             }
             else
             {
-                Console.WriteLine($"✅ API_KEY loaded: {apiKey.Substring(0, 5)}...");
+                Console.WriteLine($"API_KEY loaded: {apiKey.Substring(0, 5)}...");
             }
 
             using var ms = new MemoryStream();
@@ -118,10 +114,6 @@ No explanation."
                 medicineNames.Except(medicines.Select(m => m.Name)).ToList();
 
             return result;
-            
-
         }
-
     }
-
 }

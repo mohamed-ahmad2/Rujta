@@ -107,14 +107,28 @@ namespace Rujta.API
                 app.UseExceptionHandler("/api/error");
                 app.UseHsts();
             }
-
+ 
             app.UseHttpsRedirection();
+
+            app.UseRouting();
+
+            app.UseRateLimiter();
 
             app.UseCors("AllowReactApp");
 
             app.UseWebSockets();
 
-            app.UseRateLimiter();
+            app.UseWebSockets(new WebSocketOptions
+            {
+                KeepAliveInterval = TimeSpan.FromSeconds(60),
+                AllowedOrigins =
+                    {
+                        "https://localhost:5173",
+                        "http://localhost:5173",
+                        "https://rujta.vercel.app"
+                    }
+            });
+
 
             app.UseAuthentication();
             app.UseAuthorization();
