@@ -20,8 +20,6 @@ namespace Rujta.API.Controllers
             _adService = adService;
             _logService = logService;
         }
-
-      
         [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPost]
         [HttpPost]
@@ -30,7 +28,7 @@ namespace Rujta.API.Controllers
             if (dto is null)
                 return BadRequest("Ad data cannot be null.");
 
-            // ✅ Read PharmacyId from the JWT token and inject it into the dto
+         
             var pharmacyIdClaim = User.FindFirst("PharmacyId")?.Value;
             if (string.IsNullOrEmpty(pharmacyIdClaim) || !int.TryParse(pharmacyIdClaim, out var pharmacyId))
                 return Unauthorized("PharmacyId claim is missing or invalid in token.");
@@ -45,12 +43,10 @@ namespace Rujta.API.Controllers
             }
             catch (Exception ex)
             {
-                // ✅ Don't call AddLogAsync here — it will also fail and hide the real error
+         
                 return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
             }
         }
-        // ── GET /api/ads ──────────────────────────────────────────────────────
-        /// <summary>All active ads — consumed by the home-page OffersSection.</summary>
         [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<AdDto>>> GetAll(CancellationToken cancellationToken)
@@ -66,9 +62,6 @@ namespace Rujta.API.Controllers
                 return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
             }
         }
-
-        // ── GET /api/ads/pharmacy/{pharmacyId} ────────────────────────────────
-        /// <summary>Active ads for one pharmacy — consumed by PharmacyDetails.</summary>
         [AllowAnonymous]
         [HttpGet("pharmacy/{pharmacyId:int}")]
         public async Task<ActionResult<IEnumerable<AdDto>>> GetByPharmacy(
@@ -86,9 +79,6 @@ namespace Rujta.API.Controllers
                 return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
             }
         }
-
-        // ── DELETE /api/ads/{id} ──────────────────────────────────────────────
-        /// <summary>Soft-delete (sets IsActive = false).</summary>
         [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpDelete("{id:int}")]
         public async Task<ActionResult> Deactivate(int id)
@@ -109,9 +99,6 @@ namespace Rujta.API.Controllers
                 return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
             }
         }
-
-        // ── PATCH /api/ads/{id}/status ────────────────────────────────────────
-        /// <summary>Toggle IsActive flag.</summary>
         [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPatch("{id:int}/status")]
         public async Task<ActionResult> SetStatus(int id, [FromBody] AdStatusDto dto)
@@ -135,9 +122,6 @@ namespace Rujta.API.Controllers
                 return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
             }
         }
-
-        // ── Helpers ───────────────────────────────────────────────────────────
-
         private string GetUser() =>
             User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Name)
             ?? User.Identity?.Name
