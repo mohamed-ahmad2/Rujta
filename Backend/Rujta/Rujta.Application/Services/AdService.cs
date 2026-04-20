@@ -14,9 +14,6 @@ namespace Rujta.Application.Services
         {
             _adRepo = adRepo;
         }
-
-        // ── Create ────────────────────────────────────────────────────────────
-
         public async Task<AdDto> CreateAsync(
             AdDto dto,
             CancellationToken cancellationToken = default)
@@ -25,11 +22,9 @@ namespace Rujta.Application.Services
             entity.CreatedAt = DateTime.UtcNow;
             entity.IsActive = true;
 
-            await _adRepo.AddAsync(entity);           // GenericRepository.AddAsync saves changes
+            await _adRepo.AddAsync(entity);           
             return MapToDto(entity);
         }
-
-        // ── Read ──────────────────────────────────────────────────────────────
 
         public async Task<IEnumerable<AdDto>> GetAllActiveAsync(
             CancellationToken cancellationToken = default)
@@ -45,8 +40,6 @@ namespace Rujta.Application.Services
             var ads = await _adRepo.GetByPharmacyIdAsync(pharmacyId, cancellationToken);
             return ads.Select(MapToDto);
         }
-
-        // ── Delete / Status ───────────────────────────────────────────────────
 
         public async Task DeactivateAsync(
             int id,
@@ -70,8 +63,6 @@ namespace Rujta.Application.Services
 
             await _adRepo.SetStatusAsync(id, isActive, cancellationToken);
         }
-
-        // ── Mapping helpers ───────────────────────────────────────────────────
 
         private static Ad MapToEntity(AdDto dto) => new()
         {
