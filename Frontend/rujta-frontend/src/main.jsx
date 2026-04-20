@@ -1,22 +1,15 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+// src/main.jsx
+import React from "react";
+import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { GoogleOAuthProvider } from "@react-oauth/google"; 
+import { AuthProvider } from "./features/auth/context/AuthContext";
+import App from "./App";
 import "./index.css";
-import App from "./App.jsx";
-import "./leafletFix";
-import "leaflet/dist/leaflet.css";
 
-
-
-
-
-createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <GoogleOAuthProvider clientId="380829317284-4h2j2j5fn2vuhmsidab3b29ddkfueakq.apps.googleusercontent.com">
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </GoogleOAuthProvider>
-  </StrictMode>
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <BrowserRouter>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </BrowserRouter>
 );

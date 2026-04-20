@@ -2,10 +2,11 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   MdCampaign, MdDownload, MdPalette, MdTextFields,
-  MdSearch, MdMedication, MdCategory, MdEdit,
+  MdSearch, MdMedication, MdCategory, MdEdit, MdCheckCircle,
 } from "react-icons/md";
 import { FiCheckCircle } from "react-icons/fi";
 import useMedicines from "../../medicines/hook/useMedicines";
+import useCampaigns from "../../campaigns/hook/useCampaigns";
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
@@ -48,9 +49,8 @@ function loadFont(url) {
 const getImgSrc = (med) =>
   med?.image || med?.imageUrl || med?.img || med?.photo || null;
 
-/** Wrap long text for canvas */
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-  const words = text.split(" ");
+  const words = (text || "").split(" ");
   let line = "";
   for (let n = 0; n < words.length; n++) {
     const testLine = line + words[n] + " ";
@@ -66,27 +66,23 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
   return y;
 }
 
-/** Draw the ad onto canvas */
 function drawCanvas({ canvas, template, adMode, product, category, palette, font, imgEl, customHeadline, customSubtext, customCta }) {
   const ctx = canvas.getContext("2d");
   const W = canvas.width;
   const H = canvas.height;
 
-  // Background
   const grad = ctx.createLinearGradient(0, 0, W, H);
   grad.addColorStop(0, palette.from);
   grad.addColorStop(1, palette.to);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  // Decorative circles
   ctx.globalAlpha = 0.12;
   ctx.fillStyle = palette.accent;
   ctx.beginPath(); ctx.arc(W * 0.82, H * 0.5, 180, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(W * 0.08, H * 0.85, 90, 0, Math.PI * 2); ctx.fill();
   ctx.globalAlpha = 1;
 
-  // Product image (only in medicine mode)
   if (adMode === "medicine" && imgEl) {
     const imgSize = 220;
     const imgX = W - imgSize - 50;
@@ -104,8 +100,10 @@ function drawCanvas({ canvas, template, adMode, product, category, palette, font
   }
 
   const fontName = font.value.split(",")[0].replace(/'/g, "");
+  const headline = customHeadline || (adMode === "medicine" ? product?.name : `${category} Collection`);
+  const subtext  = customSubtext  || (adMode === "medicine" ? (product?.description || "") : `Explore our full range of ${category}`);
+  const ctaLabel = customCta      || (adMode === "category" ? "Shop Category" : "View Product");
 
-  // Badge pill
   const bW = 110, bH = 32, bX = 44, bY = 38;
   ctx.fillStyle = "rgba(255,255,255,0.25)";
   ctx.beginPath(); ctx.roundRect(bX, bY, bW, bH, 20); ctx.fill();
@@ -114,32 +112,21 @@ function drawCanvas({ canvas, template, adMode, product, category, palette, font
   ctx.textAlign = "center";
   ctx.fillText(template.badge, bX + bW / 2, bY + 22);
 
-  // Headline
-  const headline = customHeadline ||
-    (adMode === "medicine" ? product?.name : category ? `${category} Collection` : "Our Products");
   ctx.fillStyle = "#fff";
   ctx.font = `800 46px ${fontName}`;
   ctx.textAlign = "left";
   ctx.fillText(headline, 44, 158);
 
-  // Subtext
-  const subtext = customSubtext ||
-    (adMode === "medicine"
-      ? (product?.tagline || product?.description || "")
-      : (adMode === "category" ? `Explore our full range of ${category || "products"}` : ""));
   ctx.globalAlpha = 0.82;
   ctx.font = `400 19px ${fontName}`;
-  wrapText(ctx, subtext, 44, 198, adMode === "medicine" && imgEl ? W * 0.52 : W - 88, 28);
+  wrapText(ctx, subtext, 44, 198, imgEl ? W * 0.52 : W - 88, 28);
   ctx.globalAlpha = 1;
 
-  // Template label
   ctx.font = `600 16px ${fontName}`;
   ctx.fillStyle = palette.accent;
-  ctx.fillText(`— ${template.name}`, 44, 248);
+  ctx.fillText(`— ${template.name}`, 44, 250);
 
-  // CTA button
-  const ctaLabel = customCta || (adMode === "category" ? "Shop Category" : "View Product");
-  const btnX = 44, btnY = 268, btnW = 200, btnH = 50;
+  const btnX = 44, btnY = 270, btnW = 200, btnH = 50;
   ctx.fillStyle = "rgba(255,255,255,0.95)";
   ctx.beginPath(); ctx.roundRect(btnX, btnY, btnW, btnH, 14); ctx.fill();
   ctx.fillStyle = palette.from;
@@ -147,7 +134,6 @@ function drawCanvas({ canvas, template, adMode, product, category, palette, font
   ctx.textAlign = "center";
   ctx.fillText(ctaLabel, btnX + btnW / 2, btnY + 33);
 
-  // Watermark
   ctx.textAlign = "right";
   ctx.globalAlpha = 0.3;
   ctx.fillStyle = "#fff";
@@ -169,8 +155,7 @@ function SectionHeader({ icon: Icon, label }) {
 
 function ModeTab({ active, onClick, icon: Icon, label, sub }) {
   return (
-    <button
-      onClick={onClick}
+    <button onClick={onClick}
       className={`flex-1 flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 transition-all duration-200
         ${active ? "border-primary bg-primary/5 shadow-sm" : "border-gray-200 hover:border-primary/30"}`}
     >
@@ -181,39 +166,52 @@ function ModeTab({ active, onClick, icon: Icon, label, sub }) {
   );
 }
 
+function Toast({ message, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3500);
+    return () => clearTimeout(t);
+  }, [onClose]);
+  return (
+    <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3
+      bg-white border border-green-200 shadow-2xl rounded-2xl px-5 py-4">
+      <MdCheckCircle size={24} className="text-green-500 flex-shrink-0" />
+      <p className="text-sm font-semibold text-gray-700">{message}</p>
+      <button onClick={onClose} className="ml-2 text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Ads() {
-  const { medicines, loading, error, fetchAll } = useMedicines();
+  const { medicines, loading: medsLoading, error: medsError, fetchAll: fetchMeds } = useMedicines();
+  const { create: createAd } = useCampaigns();
 
-  // Mode: "medicine" | "category"
-  const [adMode,           setAdMode]           = useState("medicine");
-
+  const [adMode,           setAdMode]          = useState("medicine");
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [selectedProduct,  setSelectedProduct]  = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [palette,          setPalette]           = useState(colorPalettes[0]);
-  const [font,             setFont]              = useState(fontOptions[0]);
-  const [query,            setQuery]             = useState("");
-
-  // Custom text fields
+  const [palette,          setPalette]          = useState(colorPalettes[0]);
+  const [font,             setFont]             = useState(fontOptions[0]);
+  const [query,            setQuery]            = useState("");
   const [customHeadline,   setCustomHeadline]   = useState("");
-  const [customSubtext,    setCustomSubtext]     = useState("");
-  const [customCta,        setCustomCta]         = useState("");
+  const [customSubtext,    setCustomSubtext]    = useState("");
+  const [customCta,        setCustomCta]        = useState("");
+  const [pngSaved,         setPngSaved]         = useState(false);
+  const [publishing,       setPublishing]       = useState(false);
+  const [toast,            setToast]            = useState(null);
+  const [publishError,     setPublishError]     = useState(null);
 
-  const [saved,            setSaved]             = useState(false);
   const canvasRef = useRef(null);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { fetchMeds(); }, [fetchMeds]);
   useEffect(() => { fontOptions.forEach(f => loadFont(f.url)); }, []);
 
-  // Unique categories from medicines
   const categories = useMemo(() => {
     const cats = medicines.map(m => m.category).filter(Boolean);
     return [...new Set(cats)].sort();
   }, [medicines]);
 
-  // Filtered medicine list
   const filteredMeds = useMemo(() => {
     const q = query.toLowerCase().trim();
     if (!q) return medicines;
@@ -224,79 +222,108 @@ export default function Ads() {
     );
   }, [medicines, query]);
 
-  const isReady = selectedTemplate && (
-    adMode === "medicine" ? !!selectedProduct : !!selectedCategory
-  );
+  const isReady = selectedTemplate && (adMode === "medicine" ? !!selectedProduct : !!selectedCategory);
 
-  // Derived preview values
   const previewHeadline = customHeadline ||
-    (adMode === "medicine"
-      ? (selectedProduct?.name || "Product Name")
-      : (selectedCategory ? `${selectedCategory} Collection` : "Category Name"));
+    (adMode === "medicine" ? (selectedProduct?.name || "Product Name") : (selectedCategory ? `${selectedCategory} Collection` : "Category Name"));
+  const previewSubtext  = customSubtext  ||
+    (adMode === "medicine" ? (selectedProduct?.description || "Tagline appears here") : (selectedCategory ? `Explore our full range of ${selectedCategory}` : "Subtext appears here"));
+  const previewCta      = customCta || (adMode === "category" ? "Shop Category" : "View Product");
 
-  const previewSubtext = customSubtext ||
-    (adMode === "medicine"
-      ? (selectedProduct?.tagline || selectedProduct?.description || "Tagline appears here")
-      : (selectedCategory ? `Explore our full range of ${selectedCategory}` : "Subtext appears here"));
+  const renderToDataURL = () =>
+    new Promise((resolve) => {
+      const src = adMode === "medicine" ? getImgSrc(selectedProduct) : null;
+      const go = (imgEl) => {
+        drawCanvas({ canvas: canvasRef.current, template: selectedTemplate, adMode, product: selectedProduct, category: selectedCategory, palette, font, imgEl, customHeadline, customSubtext, customCta });
+        resolve(canvasRef.current.toDataURL("image/png"));
+      };
+      if (src) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload  = () => go(img);
+        img.onerror = () => go(null);
+        img.src = src;
+      } else {
+        go(null);
+      }
+    });
 
-  const previewCta = customCta || (adMode === "category" ? "Shop Category" : "View Product");
-
-  // Export PNG
-  const handleSave = () => {
+  const handleDownload = async () => {
     if (!canvasRef.current || !isReady) return;
-
-    const render = (imgEl) => {
-      drawCanvas({
-        canvas: canvasRef.current,
-        template: selectedTemplate,
-        adMode,
-        product: selectedProduct,
-        category: selectedCategory,
-        palette,
-        font,
-        imgEl,
-        customHeadline,
-        customSubtext,
-        customCta,
-      });
-      const name = adMode === "medicine"
-        ? selectedProduct.name.replace(/\s+/g, "-")
-        : selectedCategory.replace(/\s+/g, "-");
-      const link = document.createElement("a");
-      link.download = `ad-${name}-${Date.now()}.png`;
-      link.href = canvasRef.current.toDataURL("image/png");
-      link.click();
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    };
-
-    const src = adMode === "medicine" ? getImgSrc(selectedProduct) : null;
-    if (src) {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload  = () => render(img);
-      img.onerror = () => render(null);
-      img.src = src;
-    } else {
-      render(null);
-    }
+    const dataURL = await renderToDataURL();
+    const link = document.createElement("a");
+    const name = adMode === "medicine" ? selectedProduct.name.replace(/\s+/g, "-") : selectedCategory.replace(/\s+/g, "-");
+    link.download = `ad-${name}-${Date.now()}.png`;
+    link.href = dataURL;
+    link.click();
+    setPngSaved(true);
+    setTimeout(() => setPngSaved(false), 2500);
   };
 
+  const handlePublish = async () => {
+  if (!isReady || publishing) return;
+
+  setPublishing(true);
+  setPublishError(null);
+
+  try {
+    const imageDataUrl = await renderToDataURL();
+
+    const payload = {
+      templateId:   selectedTemplate.id,
+      templateName: selectedTemplate.name,
+      badge:        selectedTemplate.badge,
+      adMode,
+
+      medicineId:   adMode === "medicine" ? selectedProduct?.id : null,
+      medicineName: adMode === "medicine" ? selectedProduct?.name : null,
+      category:     adMode === "category" ? selectedCategory : null,
+
+      headline:     previewHeadline,
+      subtext:      previewSubtext,
+      ctaLabel:     previewCta,
+
+      colorFrom:    palette.from,
+      colorTo:      palette.to,
+      colorAccent:  palette.accent,
+
+      fontLabel:    font.label,
+      fontValue:    font.value,
+
+      imageDataUrl,
+      isActive: true
+    };
+
+    await createAd(payload);
+
+    setToast({ message: "Ad published successfully 🚀" });
+
+  } catch (err) {
+    setPublishError(
+      err?.response?.data?.message ||
+      err?.message ||
+      "Failed to publish"
+    );
+  } finally {
+    setPublishing(false);
+  }
+};
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
 
-      {/* ── Header ── */}
+      {toast && <Toast message={toast.message} onClose={() => setToast(null)} />}
+
       <div className="flex items-center gap-3 pb-3 border-b">
         <MdCampaign size={30} className="text-primary" />
         <div>
           <h1 className="text-2xl font-bold leading-tight">Ad Designer</h1>
-          <p className="text-sm text-gray-400">Create, style, and export pharmacy ads</p>
+          <p className="text-sm text-gray-400">Create, style, and publish pharmacy ads</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
 
-        {/* ══════════ LEFT PANEL ══════════ */}
+        {/* ══ LEFT PANEL ══ */}
         <div className="space-y-7">
 
           {/* 1. Template */}
@@ -306,17 +333,11 @@ export default function Ads() {
               {adTemplates.map(t => {
                 const active = selectedTemplate?.id === t.id;
                 return (
-                  <div
-                    key={t.id}
-                    onClick={() => setSelectedTemplate(t)}
+                  <div key={t.id} onClick={() => setSelectedTemplate(t)}
                     className={`relative cursor-pointer rounded-xl p-4 border-2 transition-all duration-200 select-none
-                      ${active
-                        ? "border-primary bg-primary/5 shadow-md"
-                        : "border-gray-200 hover:border-primary/40 hover:shadow-sm"}`}
+                      ${active ? "border-primary bg-primary/5 shadow-md" : "border-gray-200 hover:border-primary/40 hover:shadow-sm"}`}
                   >
-                    <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary text-white mb-2">
-                      {t.badge}
-                    </span>
+                    <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary text-white mb-2">{t.badge}</span>
                     <p className="font-semibold text-sm leading-tight">{t.name}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5 leading-tight">{t.description}</p>
                     {active && <FiCheckCircle className="absolute top-3 right-3 text-primary" size={16} />}
@@ -326,82 +347,44 @@ export default function Ads() {
             </div>
           </section>
 
-          {/* 2. Ad Mode */}
+          {/* 2. Mode */}
           <section>
             <SectionHeader icon={MdCategory} label="2 · Advertise What?" />
             <div className="flex gap-3">
-              <ModeTab
-                active={adMode === "medicine"}
-                onClick={() => { setAdMode("medicine"); setSelectedCategory(""); }}
-                icon={MdMedication}
-                label="A Medicine"
-                sub="Feature a specific product"
-              />
-              <ModeTab
-                active={adMode === "category"}
-                onClick={() => { setAdMode("category"); setSelectedProduct(null); }}
-                icon={MdCategory}
-                label="A Category"
-                sub="Promote an entire category"
-              />
+              <ModeTab active={adMode === "medicine"} onClick={() => { setAdMode("medicine"); setSelectedCategory(""); }} icon={MdMedication} label="A Medicine" sub="Feature a specific product" />
+              <ModeTab active={adMode === "category"} onClick={() => { setAdMode("category"); setSelectedProduct(null); }} icon={MdCategory} label="A Category" sub="Promote an entire category" />
             </div>
           </section>
 
-          {/* 3. Pick Medicine OR Category */}
+          {/* 3. Pick medicine or category */}
           <section>
             {adMode === "medicine" ? (
               <>
                 <SectionHeader icon={MdMedication} label="3 · Choose Medicine" />
                 <div className="relative mb-3">
                   <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Search by name, category…"
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-gray-200
-                      focus:outline-none focus:border-primary/50 text-sm transition"
-                  />
+                  <input type="text" placeholder="Search by name, category…" value={query} onChange={e => setQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-gray-200 focus:outline-none focus:border-primary/50 text-sm transition" />
                 </div>
-
-                {loading && (
-                  <div className="flex items-center gap-2 text-sm text-gray-400 py-4">
-                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-                    Loading medicines…
-                  </div>
-                )}
-                {error && <p className="text-sm text-red-400 py-2">{error}</p>}
-
-                {!loading && (
+                {medsLoading && <div className="flex items-center gap-2 text-sm text-gray-400 py-4"><span className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />Loading…</div>}
+                {medsError   && <p className="text-sm text-red-400 py-2">{medsError}</p>}
+                {!medsLoading && (
                   <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    {filteredMeds.length === 0 && (
-                      <p className="text-sm text-gray-400 py-6 text-center">No medicines found.</p>
-                    )}
+                    {filteredMeds.length === 0 && <p className="text-sm text-gray-400 py-6 text-center">No medicines found.</p>}
                     {filteredMeds.map(med => {
                       const active = selectedProduct?.id === med.id;
                       const imgSrc = getImgSrc(med);
                       return (
-                        <div
-                          key={med.id}
-                          onClick={() => setSelectedProduct(med)}
+                        <div key={med.id} onClick={() => setSelectedProduct(med)}
                           className={`flex items-center gap-3 cursor-pointer rounded-xl px-3 py-2.5 border-2 transition-all duration-150
-                            ${active
-                              ? "border-primary bg-primary/5"
-                              : "border-gray-200 hover:border-primary/30 hover:bg-gray-50"}`}
+                            ${active ? "border-primary bg-primary/5" : "border-gray-200 hover:border-primary/30 hover:bg-gray-50"}`}
                         >
                           <div className="w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden border border-gray-200">
-                            {imgSrc
-                              ? <img src={imgSrc} alt={med.name} className="w-full h-full object-cover" />
-                              : <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                  <MdMedication size={24} />
-                                </div>
-                            }
+                            {imgSrc ? <img src={imgSrc} alt={med.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><MdMedication size={24} /></div>}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-sm truncate">{med.name}</p>
-                            <p className="text-[11px] text-gray-400 truncate">
-                              {med.category || med.description || "—"}
-                            </p>
+                            <p className="text-[11px] text-gray-400 truncate">{med.category || med.description || "—"}</p>
                           </div>
                           {active && <FiCheckCircle className="text-primary flex-shrink-0" size={18} />}
                         </div>
@@ -413,29 +396,16 @@ export default function Ads() {
             ) : (
               <>
                 <SectionHeader icon={MdCategory} label="3 · Choose Category" />
-                {loading && (
-                  <div className="flex items-center gap-2 text-sm text-gray-400 py-4">
-                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-                    Loading categories…
-                  </div>
-                )}
-                {!loading && categories.length === 0 && (
-                  <p className="text-sm text-gray-400 py-4 text-center">No categories found.</p>
-                )}
+                {medsLoading && <div className="flex items-center gap-2 text-sm text-gray-400 py-4"><span className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />Loading…</div>}
                 <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
                   {categories.map(cat => {
                     const active = selectedCategory === cat;
                     return (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
+                      <button key={cat} onClick={() => setSelectedCategory(cat)}
                         className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all
-                          ${active
-                            ? "border-primary bg-primary/5 text-primary"
-                            : "border-gray-200 text-gray-600 hover:border-primary/40"}`}
+                          ${active ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-600 hover:border-primary/40"}`}
                       >
-                        {active && <FiCheckCircle className="inline mr-1.5 mb-0.5" size={13} />}
-                        {cat}
+                        {active && <FiCheckCircle className="inline mr-1.5 mb-0.5" size={13} />}{cat}
                       </button>
                     );
                   })}
@@ -444,26 +414,19 @@ export default function Ads() {
             )}
           </section>
 
-          {/* 4. Color Palette */}
+          {/* 4. Color */}
           <section>
             <SectionHeader icon={MdPalette} label="4 · Color Theme" />
             <div className="flex flex-wrap gap-2">
               {colorPalettes.map(p => (
-                <button
-                  key={p.label}
-                  title={p.label}
-                  onClick={() => setPalette(p)}
+                <button key={p.label} title={p.label} onClick={() => setPalette(p)}
                   className={`w-9 h-9 rounded-full border-4 transition-all duration-150
-                    ${palette.label === p.label
-                      ? "border-gray-700 scale-110 shadow-md"
-                      : "border-transparent hover:scale-105"}`}
+                    ${palette.label === p.label ? "border-gray-700 scale-110 shadow-md" : "border-transparent hover:scale-105"}`}
                   style={{ background: `linear-gradient(135deg, ${p.from}, ${p.to})` }}
                 />
               ))}
             </div>
-            <p className="text-xs text-gray-400 mt-2">
-              Selected: <span className="font-medium text-gray-600">{palette.label}</span>
-            </p>
+            <p className="text-xs text-gray-400 mt-2">Selected: <span className="font-medium text-gray-600">{palette.label}</span></p>
           </section>
 
           {/* 5. Font */}
@@ -471,17 +434,10 @@ export default function Ads() {
             <SectionHeader icon={MdTextFields} label="5 · Font Style" />
             <div className="grid grid-cols-3 gap-2">
               {fontOptions.map(f => (
-                <button
-                  key={f.label}
-                  onClick={() => setFont(f)}
-                  style={{ fontFamily: f.value }}
+                <button key={f.label} onClick={() => setFont(f)} style={{ fontFamily: f.value }}
                   className={`rounded-xl px-3 py-2.5 border-2 text-sm transition-all
-                    ${font.label === f.label
-                      ? "border-primary bg-primary/5 font-semibold"
-                      : "border-gray-200 hover:border-primary/40"}`}
-                >
-                  {f.label}
-                </button>
+                    ${font.label === f.label ? "border-primary bg-primary/5 font-semibold" : "border-gray-200 hover:border-primary/40"}`}
+                >{f.label}</button>
               ))}
             </div>
           </section>
@@ -492,52 +448,24 @@ export default function Ads() {
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Headline</label>
-                <input
-                  type="text"
-                  placeholder={adMode === "medicine"
-                    ? "e.g. Panadol Extra — Best Pain Relief"
-                    : "e.g. Vitamins & Supplements"}
-                  value={customHeadline}
-                  onChange={e => setCustomHeadline(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200
-                    focus:outline-none focus:border-primary/50 text-sm transition"
-                  maxLength={50}
-                />
+                <input type="text" placeholder="e.g. Best Pain Relief This Season" value={customHeadline} onChange={e => setCustomHeadline(e.target.value)} maxLength={50}
+                  className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:outline-none focus:border-primary/50 text-sm transition" />
                 <p className="text-[10px] text-gray-300 mt-0.5 text-right">{customHeadline.length}/50</p>
               </div>
-
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Subtext / Tagline</label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. Get 20% off this week only — limited stock!"
-                  value={customSubtext}
-                  onChange={e => setCustomSubtext(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200
-                    focus:outline-none focus:border-primary/50 text-sm transition resize-none"
-                  maxLength={120}
-                />
+                <textarea rows={2} placeholder="e.g. Get 20% off this week only!" value={customSubtext} onChange={e => setCustomSubtext(e.target.value)} maxLength={120}
+                  className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:outline-none focus:border-primary/50 text-sm transition resize-none" />
                 <p className="text-[10px] text-gray-300 mt-0.5 text-right">{customSubtext.length}/120</p>
               </div>
-
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Button Text</label>
-                <input
-                  type="text"
-                  placeholder={adMode === "category" ? "e.g. Shop Now" : "e.g. Order Today"}
-                  value={customCta}
-                  onChange={e => setCustomCta(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200
-                    focus:outline-none focus:border-primary/50 text-sm transition"
-                  maxLength={30}
-                />
+                <input type="text" placeholder="e.g. Order Today" value={customCta} onChange={e => setCustomCta(e.target.value)} maxLength={30}
+                  className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:outline-none focus:border-primary/50 text-sm transition" />
               </div>
-
               {(customHeadline || customSubtext || customCta) && (
-                <button
-                  onClick={() => { setCustomHeadline(""); setCustomSubtext(""); setCustomCta(""); }}
-                  className="text-xs text-gray-400 hover:text-red-400 transition underline"
-                >
+                <button onClick={() => { setCustomHeadline(""); setCustomSubtext(""); setCustomCta(""); }}
+                  className="text-xs text-gray-400 hover:text-red-400 transition underline">
                   Clear custom text
                 </button>
               )}
@@ -545,127 +473,68 @@ export default function Ads() {
           </section>
         </div>
 
-        {/* ══════════ RIGHT PANEL ══════════ */}
+        {/* ══ RIGHT PANEL ══ */}
         <div className="space-y-5 sticky top-6">
           <SectionHeader icon={MdCampaign} label="Live Preview & Export" />
 
-          {/* ── Live Preview Card ── */}
-          <div
-            className="relative rounded-2xl overflow-hidden shadow-2xl"
-            style={{
-              background: `linear-gradient(135deg, ${palette.from}, ${palette.to})`,
-              fontFamily: font.value,
-              minHeight: 340,
-              padding: "2rem",
-            }}
+          <div className="relative rounded-2xl overflow-hidden shadow-2xl"
+            style={{ background: `linear-gradient(135deg, ${palette.from}, ${palette.to})`, fontFamily: font.value, minHeight: 340, padding: "2rem" }}
           >
-            {/* Decorative blobs */}
-            <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 pointer-events-none"
-              style={{ background: palette.accent, transform: "translate(30%,-30%)" }} />
-            <div className="absolute bottom-0 left-0 w-44 h-44 rounded-full opacity-10 pointer-events-none"
-              style={{ background: palette.accent, transform: "translate(-30%,30%)" }} />
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 pointer-events-none" style={{ background: palette.accent, transform: "translate(30%,-30%)" }} />
+            <div className="absolute bottom-0 left-0 w-44 h-44 rounded-full opacity-10 pointer-events-none" style={{ background: palette.accent, transform: "translate(-30%,30%)" }} />
 
-            {/* Product image (medicine mode only) */}
             {adMode === "medicine" && selectedProduct && getImgSrc(selectedProduct) && (
-              <div
-                className="absolute right-6 top-1/2 -translate-y-1/2 w-32 h-32 rounded-full overflow-hidden border-4 shadow-2xl"
-                style={{ borderColor: "rgba(255,255,255,0.35)" }}
-              >
-                <img
-                  src={getImgSrc(selectedProduct)}
-                  alt={selectedProduct.name}
-                  className="w-full h-full object-cover"
-                />
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-32 h-32 rounded-full overflow-hidden border-4 shadow-2xl" style={{ borderColor: "rgba(255,255,255,0.35)" }}>
+                <img src={getImgSrc(selectedProduct)} alt={selectedProduct.name} className="w-full h-full object-cover" />
               </div>
             )}
-
-            {/* Category icon placeholder */}
             {adMode === "category" && selectedCategory && (
-              <div
-                className="absolute right-6 top-1/2 -translate-y-1/2 w-32 h-32 rounded-full
-                  flex items-center justify-center shadow-2xl border-4"
-                style={{
-                  background: "rgba(255,255,255,0.15)",
-                  borderColor: "rgba(255,255,255,0.3)",
-                }}
-              >
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-32 h-32 rounded-full flex items-center justify-center shadow-2xl border-4" style={{ background: "rgba(255,255,255,0.15)", borderColor: "rgba(255,255,255,0.3)" }}>
                 <MdCategory size={52} style={{ color: "rgba(255,255,255,0.7)" }} />
               </div>
             )}
 
-            {/* Badge */}
-            <span className="inline-block text-xs font-bold px-3 py-1 rounded-full mb-4"
-              style={{ background: "rgba(255,255,255,0.25)", color: "#fff" }}>
+            <span className="inline-block text-xs font-bold px-3 py-1 rounded-full mb-4" style={{ background: "rgba(255,255,255,0.25)", color: "#fff" }}>
               {selectedTemplate?.badge ?? "BADGE"}
             </span>
-
-            {/* Headline */}
-            <h2
-              className="font-black text-white leading-tight"
-              style={{
-                fontSize: "clamp(1.4rem, 3.5vw, 2.2rem)",
-                maxWidth: "58%",
-              }}
-            >
-              {previewHeadline}
-            </h2>
-
-            {/* Subtext */}
-            <p className="mt-2 text-white/75 text-sm max-w-[58%] leading-snug">
-              {previewSubtext}
-            </p>
-
-            {/* Template label */}
-            <p className="mt-1 text-xs font-semibold" style={{ color: palette.accent }}>
-              — {selectedTemplate?.name ?? "Template"}
-            </p>
-
-            {/* CTA */}
-            <button
-              className="mt-5 px-5 py-2.5 rounded-xl font-bold text-sm hover:scale-105 transition"
-              style={{ background: "#fff", color: palette.from }}
-            >
-              {previewCta}
-            </button>
-
-            {/* Watermark */}
-            <span className="absolute bottom-3 right-4 text-[10px] text-white/20 pointer-events-none">
-              Rujta™
-            </span>
+            <h2 className="font-black text-white leading-tight" style={{ fontSize: "clamp(1.4rem, 3.5vw, 2.2rem)", maxWidth: "58%" }}>{previewHeadline}</h2>
+            <p className="mt-2 text-white/75 text-sm max-w-[58%] leading-snug">{previewSubtext}</p>
+            <p className="mt-1 text-xs font-semibold" style={{ color: palette.accent }}>— {selectedTemplate?.name ?? "Template"}</p>
+            <button className="mt-5 px-5 py-2.5 rounded-xl font-bold text-sm hover:scale-105 transition" style={{ background: "#fff", color: palette.from }}>{previewCta}</button>
+            <span className="absolute bottom-3 right-4 text-[10px] text-white/20 pointer-events-none">Rujta™</span>
           </div>
 
-          {/* Hint when custom text is active */}
           {(customHeadline || customSubtext || customCta) && (
-            <p className="text-xs text-primary/70 flex items-center gap-1">
-              <MdEdit size={13} /> Custom text is active — preview reflects your edits.
-            </p>
+            <p className="text-xs text-primary/70 flex items-center gap-1"><MdEdit size={13} /> Custom text is active.</p>
           )}
 
-          {/* Hidden canvas */}
           <canvas ref={canvasRef} width={900} height={420} className="hidden" />
 
-          {/* ── Buttons ── */}
-          <div className="flex gap-3">
-            <button
-              disabled={!isReady}
-              onClick={handleSave}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-semibold shadow
-                disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 transition"
-            >
-              <MdDownload size={20} />
-              {saved ? "Downloaded!" : "Download PNG"}
-            </button>
+          {publishError && (
+            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">{publishError}</div>
+          )}
 
-            <button className="px-6 py-3 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary/5 transition">
-              Save Draft
+          <div className="flex gap-3 flex-wrap">
+            <button disabled={!isReady || publishing} onClick={handlePublish}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-semibold shadow disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 transition">
+              {publishing
+                ? <><span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> Publishing…</>
+                : <><MdCampaign size={20} /> Publish Ad</>}
+            </button>
+            <button disabled={!isReady} onClick={handleDownload}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-primary text-primary font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/5 transition">
+              <MdDownload size={20} />
+              {pngSaved ? "Downloaded!" : "Download PNG"}
             </button>
           </div>
 
-          {!isReady && (
-            <p className="text-xs text-gray-400">
-              ↑ Pick a template and {adMode === "medicine" ? "a medicine" : "a category"} to enable export.
-            </p>
-          )}
+          {!isReady && <p className="text-xs text-gray-400">↑ Pick a template and {adMode === "medicine" ? "a medicine" : "a category"} to enable.</p>}
+
+          <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 text-xs text-blue-600 space-y-1">
+            <p className="font-semibold">Where will this ad appear?</p>
+            <p>✅ Pharmacy Details page — under that pharmacy's section</p>
+            <p>✅ Home page Offers section — visible to all customers</p>
+          </div>
         </div>
       </div>
     </div>
