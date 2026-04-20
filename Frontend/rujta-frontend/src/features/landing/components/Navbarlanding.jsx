@@ -1,54 +1,9 @@
 import React from "react";
 import Logo from "../../../assets/Logo2.png";
 import { NavbarMenu } from "../../../mockData/data";
-import { MdMenu, MdClose } from "react-icons/md";
+import { MdMenu } from "react-icons/md";
 import { useNavigate, Link } from "react-router-dom";
-
-const ResponsiveMenulanding = ({ open, setOpen }) => {
-  const navigate = useNavigate();
-
-  return (
-    <div
-      className={`fixed top-0 left-0 w-full h-full bg-page z-50 transform transition-transform duration-300 ${
-        open ? "translate-x-0" : "-translate-x-full"
-      }`}
-    >
-      {/* Close Button */}
-      <div className="flex justify-end p-6">
-        <MdClose
-          className="text-4xl cursor-pointer"
-          onClick={() => setOpen(false)}
-        />
-      </div>
-
-      {/* Menu Items */}
-      <ul className="flex flex-col items-center justify-center gap-8 mt-10 text-2xl">
-        {NavbarMenu.map((item) => (
-          <li key={item.id} onClick={() => setOpen(false)}>
-            <Link to={item.link}>{item.title}</Link>
-          </li>
-        ))}
-
-        {/* Login & Signup Buttons */}
-        <div className="flex flex-col gap-4 mt-8">
-          <button
-            onClick={() => { navigate("/auth"); setOpen(false); }}
-            className="hover:bg-secondary text-secondary font-semibold hover:text-white rounded-md border-2 border-secondary px-6 py-2 duration-200"
-          >
-            Login
-          </button>
-
-          <button
-            onClick={() => { navigate("/auth"); setOpen(false); }}
-            className="hover:bg-secondary text-secondary font-semibold hover:text-white rounded-md border-2 border-secondary px-6 py-2 duration-200"
-          >
-            SignUp
-          </button>
-        </div>
-      </ul>
-    </div>
-  );
-};
+import ResponsiveMenulanding from "./ResponsiveMenulanding";
 
 const Navbar = () => {
   const [open, setOpen] = React.useState(false);
@@ -94,17 +49,30 @@ const Navbar = () => {
             </button>
           </div>
 
-          {/* Mobile Menu Icon */}
-          <div className="md:hidden">
+          {/* Mobile: Login + SignUp + Menu Icon */}
+          <div className="md:hidden flex items-center gap-2">
+            <button
+              onClick={() => navigate("/auth")}
+              className="text-secondary font-semibold border-2 border-secondary rounded-md px-3 py-1 text-sm hover:bg-secondary hover:text-white duration-200"
+            >
+              Login
+            </button>
+            <button
+              onClick={() => navigate("/auth")}
+              className="text-secondary font-semibold border-2 border-secondary rounded-md px-3 py-1 text-sm hover:bg-secondary hover:text-white duration-200"
+            >
+              SignUp
+            </button>
             <MdMenu
               className="text-4xl cursor-pointer"
               onClick={() => setOpen(!open)}
             />
           </div>
+
         </div>
       </nav>
 
-      {/* Mobile Sidebar */}
+      {/* Mobile Dropdown Menu */}
       <ResponsiveMenulanding open={open} setOpen={setOpen} />
     </>
   );

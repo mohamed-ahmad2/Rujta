@@ -1,13 +1,20 @@
 import React, { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
 import Sidebar from "../Sidebar";
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const location = useLocation();
+
+  if (
+    location.pathname === "/superadmin" ||
+    location.pathname === "/superadmin/"
+  ) {
+    return <Navigate to="/superadmin/pharmacies" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F6F7F9]">
-
       {/* Sidebar */}
       <aside className="fixed top-0 left-0 h-screen z-40">
         <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
@@ -23,7 +30,6 @@ export default function DashboardLayout() {
           <Outlet />
         </div>
       </div>
-
     </div>
   );
 }

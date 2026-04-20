@@ -77,6 +77,7 @@ const App = () => {
   const isAuthPage = location.pathname.startsWith("/auth");
   const isResetPage = location.pathname === "/reset-password";
   const isDashboard = location.pathname.startsWith("/dashboard");
+  const isSuperAdmin = location.pathname.startsWith("/superadmin");
 
   /* ===== SPLASH FIRST ===== */
   if (showSplash) {
@@ -95,16 +96,17 @@ const App = () => {
         />
 
         {/* Floating Cart Button */}
-        {user &&
-          !isLandingPage &&
-          !isAuthPage &&
-          !isResetPage &&
-          !isDashboard && (
-            <FloatingCartButton
-              cart={cart}
-              onClick={() => setIsCartOpen(true)}
-            />
-          )}
+       {user &&
+  !isLandingPage &&
+  !isAuthPage &&
+  !isResetPage &&
+  !isDashboard &&
+  !isSuperAdmin && (
+    <FloatingCartButton
+      cart={cart}
+      onClick={() => setIsCartOpen(true)}
+    />
+)}
 
         {/* Cart Drawer */}
         {user && (

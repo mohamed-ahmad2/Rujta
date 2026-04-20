@@ -39,17 +39,17 @@ const Settings = lazy(() => import("../features/dashboard/pages/Settings"));
 const Logs = lazy(() => import("../features/dashboard/pages/Logs"));
 const Ads = lazy(() => import("../features/dashboard/pages/Ads"));
 
-// Super Admin Dashboard
+// Super Admin
 const DashboardLayoutSuberAdmin = lazy(() => import("../features/dashboardAdmin/components/layouts/DashboardLayout"));
 const Overview = lazy(() => import("../features/dashboardAdmin/pages/Overview"));
 const Pharmacies = lazy(() => import("../features/dashboardAdmin/pages/Pharmacies"));
 const Reports = lazy(() => import("../features/dashboardAdmin/pages/Reports"));
 const SettingsAdmin = lazy(() => import("../features/dashboardAdmin/pages/Settings"));
 
-// Error & Others
+// Error
 const AnimatedErrorPage = lazy(() => import("../features/Error/AnimatedErrorPage"));
 
-
+/* ================= Page Loader ================= */
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-page">
     <div className="flex flex-col items-center gap-3">
@@ -62,47 +62,36 @@ const PageLoader = () => (
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Suspense fallback={<PageLoader />}>
     <Routes>
-      {/* ========= Error Pages ========= */}
+
+      {/* ========= Error ========= */}
       <Route path="/error" element={<AnimatedErrorPage />} />
       <Route path="*" element={<AnimatedErrorPage />} />
 
       {/* ========= Landing ========= */}
-      <Route
-        path="/"
-        element={
-          <div className="min-h-screen bg-page">
-            <NavbarLanding />
-            <HeroLanding />
-          </div>
-        }
-      />
-      <Route
-        path="/features"
-        element={
-          <div className="min-h-screen bg-page">
-            <NavbarLanding />
-            <Features />
-          </div>
-        }
-      />
-      <Route
-        path="/how-it-works"
-        element={
-          <div className="min-h-screen bg-page">
-            <NavbarLanding />
-            <HowItWorks />
-          </div>
-        }
-      />
-      <Route
-        path="/contact"
-        element={
-          <div className="min-h-screen bg-page">
-            <NavbarLanding />
-            <Contact />
-          </div>
-        }
-      />
+      <Route path="/" element={
+        <div className="min-h-screen bg-page">
+          <NavbarLanding />
+          <HeroLanding />
+        </div>
+      } />
+      <Route path="/features" element={
+        <div className="min-h-screen bg-page">
+          <NavbarLanding />
+          <Features />
+        </div>
+      } />
+      <Route path="/how-it-works" element={
+        <div className="min-h-screen bg-page">
+          <NavbarLanding />
+          <HowItWorks />
+        </div>
+      } />
+      <Route path="/contact" element={
+        <div className="min-h-screen bg-page">
+          <NavbarLanding />
+          <Contact />
+        </div>
+      } />
 
       {/* ========= Auth ========= */}
       <Route path="/auth" element={<AuthPage />} />
@@ -122,15 +111,13 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
           </ProtectedRoute>
         }
       >
-        <Route
-          index
-          element={
-            <>
-              <HeroUser />
-              <ProductsUser cart={cart} setCart={setCart} />
-            </>
-          }
-        />
+        <Route index element={
+          <>
+            <HeroUser />
+            <ProductsUser cart={cart} setCart={setCart} />
+          </>
+        } />
+
         <Route path="orders" element={<Ordersuser />} />
         <Route path="profile" element={<Profile />} />
         <Route path="checkout" element={<Checkout />} />
@@ -141,7 +128,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         <Route path="medicine/:id" element={<MedicineDetails cart={cart} setCart={setCart} />} />
       </Route>
 
-      {/* ========= Medicines (Public) ========= */}
+      {/* ========= Public Medicines ========= */}
       <Route path="/medicines/:id" element={<MedicineDetails cart={cart} setCart={setCart} />} />
 
       {/* ========= Dashboard ========= */}
@@ -169,6 +156,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
             </ProtectedRoute>
           }
         />
+
         <Route
           path="ads"
           element={
@@ -179,7 +167,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         />
       </Route>
 
-      {/* ========= Super Admin Dashboard ========= */}
+      {/* ========= Super Admin ========= */}
       <Route
         path="/superadmin"
         element={
@@ -193,6 +181,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<SettingsAdmin />} />
       </Route>
+
     </Routes>
   </Suspense>
 );
