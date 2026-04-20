@@ -3,6 +3,15 @@ import imge1 from "../../../assets/hero/img1.png";
 import useMedicine from "../../medicines/hook/useMedicines";
 import { useNavigate } from "react-router-dom";
 import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
+import clickSound from "../../../assets/audio.wav";
+
+const audio = new Audio(clickSound);
+audio.volume = 0.4;
+
+const playSound = () => {
+  audio.currentTime = 0;
+  audio.play();
+};
 
 // ========== Categories ==========
 const categoryOptions = [
@@ -61,123 +70,82 @@ const Products = ({ cart, setCart }) => {
     return <p className="text-center text-red-500">{pharmaciesError}</p>;
 
   return (
-    <div className="bg-white py-20">
-      <div className="container mx-auto px-4">
-        {/* ========== MODERN PHARMACY SECTION ========== */}
-        <div className="mb-12 w-full">
-          <h3 className="mb-6 text-center text-xl font-semibold text-secondary">
+    <div className="bg-white py-10 sm:py-14 lg:py-20">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        {/* ========== PHARMACY SECTION ========== */}
+        <div className="mb-10 w-full sm:mb-12">
+          <h3 className="mb-4 text-center text-lg font-semibold text-secondary sm:mb-6 sm:text-xl">
             Choose Your Pharmacy
           </h3>
 
           <div className="relative">
             <div
               id="pharmacy-carousel"
-              className="flex gap-6 overflow-x-auto scroll-smooth px-2 py-4 transition-all duration-500"
-              style={{ scrollbarWidth: "none" }}
+              className="flex gap-3 overflow-x-auto scroll-smooth px-2 py-3 sm:gap-4 sm:py-4 lg:gap-6"
             >
-              <style>
-                {`
-                  #pharmacy-carousel::-webkit-scrollbar { display: none; }
-                `}
-              </style>
-
-              {pharmacies.map((ph) => (
+              {pharmacies.map((ph, i) => (
                 <div
                   key={ph.id}
                   onClick={() => navigate(`/user/pharmacy/${ph.id}`)}
-                  className="w-44 flex-shrink-0 cursor-pointer rounded-3xl border border-gray-200 bg-white p-4 shadow-lg transition-all duration-500 hover:-translate-y-2 hover:scale-105 hover:shadow-2xl"
+                  className="animate-slide-up w-32 flex-shrink-0 cursor-pointer rounded-2xl border border-gray-200 bg-white p-3 shadow-md transition-all duration-300 hover:-translate-y-2 hover:scale-105 hover:shadow-2xl sm:w-40 sm:rounded-3xl sm:p-4 sm:shadow-lg lg:w-44"
+                  style={{ animationDelay: `${i * 0.08}s` }}
                 >
-                  <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-[#E8F3E8]">
+                  <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#E8F3E8] sm:h-24 sm:w-24 lg:h-28 lg:w-28">
                     <img
                       src={imge1}
                       alt={ph.name}
-                      className="h-20 w-20 transform object-contain transition-all duration-500 hover:scale-110"
+                      className="h-14 w-14 object-contain transition-transform duration-300 hover:scale-110 sm:h-16 sm:w-16 lg:h-20 lg:w-20"
                     />
                   </div>
-                  <p className="mb-2 text-center text-lg font-semibold text-secondary">
+
+                  <p className="text-center text-sm font-semibold text-secondary sm:text-base lg:text-lg">
                     {ph.name}
                   </p>
                 </div>
               ))}
             </div>
-
-            {/* Carousel Buttons */}
-            <button
-              onClick={() =>
-                document
-                  .getElementById("pharmacy-carousel")
-                  .scrollBy({ left: -300, behavior: "smooth" })
-              }
-              className="absolute -left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 transform items-center justify-center rounded-full bg-white shadow-md transition-all duration-300 hover:bg-gray-100"
-            >
-              &#8592;
-            </button>
-            <button
-              onClick={() =>
-                document
-                  .getElementById("pharmacy-carousel")
-                  .scrollBy({ left: 300, behavior: "smooth" })
-              }
-              className="absolute -right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 transform items-center justify-center rounded-full bg-white shadow-md transition-all duration-300 hover:bg-gray-100"
-            >
-              &#8594;
-            </button>
           </div>
         </div>
 
         {/* ========== TITLE ========== */}
-        <div className="mb-14 text-center">
-          <h2 className="animate-slide-fade mb-3 text-4xl font-extrabold text-secondary">
+        <div className="animate-fade-in mb-10 text-center sm:mb-12 lg:mb-14">
+          <h2 className="mb-2 text-2xl font-extrabold text-secondary sm:text-3xl lg:text-4xl">
             Top Rated Medicines
           </h2>
-          <p className="animate-slide-fade mx-auto max-w-[600px] text-sm text-gray-600 delay-100">
+          <p className="mx-auto max-w-[600px] text-xs text-gray-600 sm:text-sm">
             Discover our most trusted medicines and healthcare products.
           </p>
         </div>
 
-        {/* ========== CATEGORY BUTTONS ========== */}
-        <div className="mb-8 flex flex-wrap justify-center gap-4">
-          {categoryOptions.map((cat) => (
-            <div
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`cursor-pointer rounded-2xl px-6 py-3 shadow-md transition-all duration-300 ${
-                selectedCategory === cat.id
-                  ? "scale-110 bg-secondary text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {cat.name}
-            </div>
-          ))}
-        </div>
-
         {/* ========== PRODUCTS GRID ========== */}
-        <div className="grid grid-cols-1 justify-items-center gap-10 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredMedicines.map((data) => {
+        <div className="grid grid-cols-2 justify-items-center gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 lg:grid-cols-3 lg:gap-10 xl:grid-cols-4">
+          {filteredMedicines.map((data, i) => {
             const desc = data.description || "No description available";
 
             return (
               <div
                 key={data.id}
-                className="animate-slide-up w-[270px] transform rounded-2xl border bg-white shadow-md transition-all duration-500 hover:-translate-y-2 hover:scale-105 hover:shadow-2xl"
+                className="animate-slide-up w-full max-w-[200px] rounded-2xl border bg-white shadow-md transition-all duration-300 hover:-translate-y-2 hover:scale-105 hover:shadow-2xl sm:max-w-[230px] lg:max-w-[270px]"
+                style={{ animationDelay: `${i * 0.06}s` }}
               >
-                <div className="flex h-[200px] items-center justify-center bg-[#E8F3E8]">
+                {/* Image */}
+                <div className="flex h-[140px] items-center justify-center bg-[#E8F3E8] sm:h-[170px] lg:h-[200px]">
                   <img
                     src={data.imageUrl || imge1}
                     alt={data.name}
                     onClick={() => navigate(`/medicines/${data.id}`)}
-                    className="w-[150px] transform cursor-pointer object-contain transition-all duration-500 hover:scale-110"
+                    className="w-[90px] cursor-pointer object-contain transition-transform duration-300 hover:scale-110 sm:w-[120px] lg:w-[150px]"
                     onError={(e) => (e.currentTarget.src = imge1)}
                   />
                 </div>
 
-                <div className="p-5 text-center">
-                  <h3 className="text-lg font-bold text-secondary">
+                {/* Info */}
+                <div className="p-3 text-center sm:p-4 lg:p-5">
+                  <h3 className="text-sm font-bold text-secondary sm:text-base lg:text-lg">
                     {data.name}
                   </h3>
 
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-xs text-gray-500 sm:text-sm">
                     {expanded[data.id]
                       ? desc
                       : desc.length > 70
@@ -188,15 +156,18 @@ const Products = ({ cart, setCart }) => {
                   {desc.length > 70 && (
                     <button
                       onClick={() => toggleExpand(data.id)}
-                      className="mt-1 text-sm font-semibold text-secondary hover:underline"
+                      className="mt-1 text-xs font-semibold text-secondary hover:underline sm:text-sm"
                     >
                       {expanded[data.id] ? "Show Less" : "Show More"}
                     </button>
                   )}
 
                   <button
-                    onClick={() => handleAddToCart(data)}
-                    className="hover:bg-secondary-dark mt-4 w-full transform rounded-full bg-secondary px-5 py-2 text-white transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                    onClick={() => {
+                      handleAddToCart(data);
+                      playSound();
+                    }}
+                    className="hover:bg-secondary-dark mt-3 w-full rounded-full bg-secondary px-3 py-1.5 text-xs text-white transition-all duration-300 hover:scale-105 hover:shadow-lg sm:mt-4 sm:px-4 sm:py-2 sm:text-sm lg:px-5 lg:text-base"
                   >
                     Add to Cart
                   </button>
@@ -206,28 +177,6 @@ const Products = ({ cart, setCart }) => {
           })}
         </div>
       </div>
-
-      {/* ===== Animations ===== */}
-      <style>
-        {`
-          .animate-slide-up {
-            opacity: 0;
-            transform: translateY(20px);
-            animation: slide-up 0.6s forwards;
-          }
-          .animate-slide-fade {
-            opacity: 0;
-            transform: translateY(10px);
-            animation: slide-up 0.6s forwards;
-          }
-          @keyframes slide-up {
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}
-      </style>
     </div>
   );
 };

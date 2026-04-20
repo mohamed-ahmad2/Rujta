@@ -130,7 +130,7 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white shadow-lg">
+    <nav className="sticky top-0 z-[100] bg-white shadow-lg">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <div className="flex flex-col items-center justify-between gap-4 py-4 md:py-5 lg:flex-row lg:gap-0">
           {/* Logo */}

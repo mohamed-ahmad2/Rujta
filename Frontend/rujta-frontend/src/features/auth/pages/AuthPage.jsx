@@ -16,6 +16,11 @@ export const AuthPage = () => {
   const mode = searchParams.get("mode") || "login";
   const [isSignUp, setIsSignUp] = useState(mode === "signup");
 
+  // ✅ Fix: Detect mobile to disable the x-slide animation
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" && window.innerWidth < 768,
+  );
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -28,6 +33,13 @@ export const AuthPage = () => {
   useEffect(() => {
     setIsSignUp(mode === "signup");
   }, [mode]);
+
+  // ✅ Fix: Track window resize to update isMobile
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const redirectByRole = (role) => {
     if (role === "SuperAdmin") {
@@ -84,7 +96,6 @@ export const AuthPage = () => {
       const role = userData.role || "User";
       redirectByRole(role);
     } catch (err) {
-      // Log detailed error info
       console.error("Registration error:", err);
 
       if (err.response) {
@@ -143,7 +154,8 @@ export const AuthPage = () => {
             {/* Form Section */}
             <motion.div
               animate={{
-                x: isSignUp ? "100%" : "0%",
+                // ✅ Fix: على الموبايل x دايمًا 0 — الـ slide animation للـ desktop بس
+                x: isMobile ? "0%" : isSignUp ? "100%" : "0%",
               }}
               transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
               className="z-20 order-2 flex w-full items-center justify-center p-8 md:order-1 md:w-1/2 md:p-12"

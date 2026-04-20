@@ -4,58 +4,7 @@ import { NavbarMenu } from "../../../mockData/data";
 import { MdMenu, MdClose } from "react-icons/md";
 import { useNavigate, Link } from "react-router-dom";
 
-const ResponsiveMenulanding = ({ open, setOpen }) => {
-  const navigate = useNavigate();
-  const authBtnClass =
-    "rounded-md border-2 border-secondary px-6 py-2 font-semibold text-secondary transition duration-200 hover:bg-secondary hover:text-white";
-  return (
-    <div
-      className={`fixed left-0 top-0 z-50 h-full w-full transform bg-page transition-transform duration-300 ${
-        open ? "translate-x-0" : "-translate-x-full"
-      }`}
-    >
-      {/* Close Button */}
-      <div className="flex justify-end p-6">
-        <MdClose
-          className="cursor-pointer text-4xl"
-          onClick={() => setOpen(false)}
-        />
-      </div>
-
-      {/* Menu Items */}
-      <ul className="mt-10 flex flex-col items-center justify-center gap-8 text-2xl">
-        {NavbarMenu.map((item) => (
-          <li key={item.id} onClick={() => setOpen(false)}>
-            <Link to={item.link}>{item.title}</Link>
-          </li>
-        ))}
-
-        {/* Login & Signup Buttons */}
-        <div className="mt-8 flex flex-col gap-4">
-          <button
-            onClick={() => {
-              navigate("/auth?mode=login");
-              setOpen(false);
-            }}
-            className={authBtnClass}
-          >
-            Login
-          </button>
-
-          <button
-            onClick={() => {
-              navigate("/auth?mode=signup");
-              setOpen(false);
-            }}
-            className={authBtnClass}
-          >
-            SignUp
-          </button>
-        </div>
-      </ul>
-    </div>
-  );
-};
+import ResponsiveMenulanding from "./ResponsiveMenulanding";
 
 const Navbar = () => {
   const [open, setOpen] = React.useState(false);

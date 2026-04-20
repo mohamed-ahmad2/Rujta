@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import imge1 from "../../../assets/hero/img1.png";
-import { getAllPharmacies, getPharmacyMedicines } from "../../pharmacies/api/pharmaciesApi";
+import {
+  getAllPharmacies,
+  getPharmacyMedicines,
+} from "../../pharmacies/api/pharmaciesApi";
 
 const categoryOptions = [
   { id: "All", name: "All" },
@@ -59,7 +62,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
         return prevCart.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
-            : item
+            : item,
         );
       }
 
@@ -74,53 +77,54 @@ const PharmacyDetails = ({ cart, setCart }) => {
   const filteredMedicines = medicines.filter(
     (med) =>
       (selectedCategory === "All" || med.categoryId === selectedCategory) &&
-      med.name.toLowerCase().includes(searchQuery.toLowerCase())
+      med.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  if (loading) return <p className="text-center py-20">Loading...</p>;
-  if (error) return <p className="text-center py-20 text-red-500">{error}</p>;
-  if (!pharmacy) return <p className="text-center py-20">Pharmacy not found.</p>;
+  if (loading) return <p className="py-20 text-center">Loading...</p>;
+  if (error) return <p className="py-20 text-center text-red-500">{error}</p>;
+  if (!pharmacy)
+    return <p className="py-20 text-center">Pharmacy not found.</p>;
 
   return (
-    <div className="container mx-auto py-20">
+    <div className="container mx-auto px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
       {/* Pharmacy Info */}
-      <div className="flex flex-col items-center mb-12 animate-fadeIn">
-        <div className="w-32 h-32 rounded-full bg-[#E8F3E8] flex items-center justify-center overflow-hidden mb-4 shadow-md hover:shadow-lg transition">
+      <div className="animate-fadeIn mb-8 flex flex-col items-center sm:mb-10 lg:mb-12">
+        <div className="mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#E8F3E8] shadow-md transition hover:shadow-lg sm:h-28 sm:w-28 lg:h-32 lg:w-32">
           <img
             src={pharmacy.imageUrl || imge1}
             alt={pharmacy.name || "Pharmacy"}
-            className="w-24 h-24 object-contain transition-transform duration-500 hover:scale-110"
+            className="h-16 w-16 object-contain transition-transform duration-500 hover:scale-110 sm:h-20 sm:w-20 lg:h-24 lg:w-24"
             onError={(e) => (e.currentTarget.src = imge1)}
           />
         </div>
-        <h1 className="text-3xl font-bold text-secondary">
+
+        <h1 className="text-center text-xl font-bold text-secondary sm:text-2xl lg:text-3xl">
           {pharmacy.name}
         </h1>
       </div>
 
       {/* Search */}
-      <div className="flex justify-center mb-6">
+      <div className="mb-5 flex justify-center sm:mb-6">
         <input
           type="text"
           placeholder="Search medicines..."
-          className="w-full max-w-xl rounded-full border border-gray-300 px-5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary shadow-sm transition"
+          className="w-full max-w-md rounded-full border border-gray-300 px-4 py-2 text-sm shadow-sm transition focus:outline-none focus:ring-2 focus:ring-secondary sm:max-w-lg sm:px-5 sm:text-base lg:max-w-xl"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
 
       {/* Categories */}
-      <div className="flex flex-wrap justify-center gap-4 mb-8">
+      <div className="mb-6 flex flex-wrap justify-center gap-2 sm:mb-8 sm:gap-3 lg:gap-4">
         {categoryOptions.map((cat) => (
           <div
             key={cat.id}
             onClick={() => setSelectedCategory(cat.id)}
-            className={`cursor-pointer px-6 py-3 rounded-2xl shadow-md transition-all duration-300
-              ${
-                selectedCategory === cat.id
-                  ? "bg-secondary text-white scale-110"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 hover:scale-105"
-              }`}
+            className={`cursor-pointer rounded-2xl px-4 py-2 text-sm shadow-md transition-all duration-300 sm:px-5 sm:py-2.5 sm:text-base lg:px-6 lg:py-3 ${
+              selectedCategory === cat.id
+                ? "scale-105 bg-secondary text-white sm:scale-110"
+                : "bg-gray-100 text-gray-700 hover:scale-105 hover:bg-gray-200"
+            }`}
           >
             {cat.name}
           </div>
@@ -129,61 +133,55 @@ const PharmacyDetails = ({ cart, setCart }) => {
 
       {/* Medicines */}
       {filteredMedicines.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 justify-items-center">
+        <div className="grid grid-cols-2 justify-items-center gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-10">
           {filteredMedicines.map((med) => {
             const desc = med.description || "No description available";
 
             return (
               <div
                 key={med.id}
-                className="bg-white rounded-2xl shadow-md border w-[270px]
-                transform transition-all duration-500
-                hover:-translate-y-3 hover:shadow-2xl hover:scale-[1.03]
-                animate-fadeIn"
+                className="animate-fadeIn w-full max-w-[200px] transform rounded-2xl border bg-white shadow-md transition-all duration-500 hover:-translate-y-2 hover:scale-[1.03] hover:shadow-2xl sm:max-w-[230px] sm:hover:-translate-y-3 lg:max-w-[270px]"
               >
                 {/* Image */}
-                <div className="bg-[#E8F3E8] flex justify-center items-center h-[200px]">
+                <div className="flex h-[140px] items-center justify-center bg-[#E8F3E8] sm:h-[170px] lg:h-[200px]">
                   <img
                     src={med.imageUrl || imge1}
                     alt={med.name}
-                    className="w-[150px] object-contain cursor-pointer transition-transform duration-500 hover:scale-110"
+                    className="w-[90px] cursor-pointer object-contain transition-transform duration-500 hover:scale-110 sm:w-[120px] lg:w-[150px]"
                     onError={(e) => (e.currentTarget.src = imge1)}
                   />
                 </div>
 
                 {/* Info */}
-                <div className="p-5 text-center">
-                  <h3 className="text-lg font-bold text-secondary transition-colors duration-300 hover:text-[#7bbf5e]">
+                <div className="p-3 text-center sm:p-4 lg:p-5">
+                  <h3 className="text-sm font-bold text-secondary transition-colors duration-300 hover:text-[#7bbf5e] sm:text-base lg:text-lg">
                     {med.name}
                   </h3>
 
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="mt-1 text-xs text-gray-500 sm:text-sm">
                     {expanded[med.id]
                       ? desc
                       : desc.length > 70
-                      ? desc.slice(0, 70) + "..."
-                      : desc}
+                        ? desc.slice(0, 70) + "..."
+                        : desc}
                   </p>
 
                   {desc.length > 70 && (
                     <button
                       onClick={() => toggleExpand(med.id)}
-                      className="text-secondary text-sm mt-1 font-semibold hover:underline"
+                      className="mt-1 text-xs font-semibold text-secondary hover:underline sm:text-sm"
                     >
                       {expanded[med.id] ? "Show Less" : "Show More"}
                     </button>
                   )}
 
-                  <p className="text-lg font-semibold text-secondary mt-3">
+                  <p className="mt-2 text-sm font-semibold text-secondary sm:mt-3 sm:text-base lg:text-lg">
                     {med.price} EGP
                   </p>
 
                   <button
                     onClick={() => handleAddToCart(med)}
-                    className="mt-4 bg-secondary text-white py-2 px-5 rounded-full w-full
-                    transition-all duration-300
-                    hover:bg-[#7bbf5e] hover:shadow-lg hover:-translate-y-1
-                    active:scale-95"
+                    className="mt-3 w-full rounded-full bg-secondary px-3 py-1.5 text-xs text-white transition-all duration-300 hover:-translate-y-1 hover:bg-[#7bbf5e] hover:shadow-lg active:scale-95 sm:mt-4 sm:px-5 sm:py-2 sm:text-sm lg:text-base"
                   >
                     Add to Cart
                   </button>
@@ -193,7 +191,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
           })}
         </div>
       ) : (
-        <p className="text-center text-gray-500 mt-8">
+        <p className="mt-6 text-center text-sm text-gray-500 sm:mt-8 sm:text-base">
           No medicines available in this pharmacy.
         </p>
       )}

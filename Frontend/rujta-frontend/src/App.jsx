@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import AppRoutes from "./routes/Approuts";
-import MainLayout from "./layouts/MainLayout";
 import { useAuth } from "./features/auth/hooks/useAuth";
 import { useLocation } from "react-router-dom";
 import FloatingCartButton from "./features/user/components/FloatingCartButton";
@@ -77,6 +76,7 @@ const App = () => {
   const isAuthPage = location.pathname.startsWith("/auth");
   const isResetPage = location.pathname === "/reset-password";
   const isDashboard = location.pathname.startsWith("/dashboard");
+  const isSuperAdmin = location.pathname.startsWith("/superadmin");
 
   /* ===== SPLASH FIRST ===== */
   if (showSplash) {
@@ -87,20 +87,20 @@ const App = () => {
     <PresenceProvider>
       <OrdersProvider>
         <NotificationProvider>
-          <MainLayout>
-            <AppRoutes
-              cart={cart}
-              setCart={setCart}
-              isCartOpen={isCartOpen}
-              setIsCartOpen={setIsCartOpen}
-            />
-          </MainLayout>
+          <AppRoutes
+            cart={cart}
+            setCart={setCart}
+            isCartOpen={isCartOpen}
+            setIsCartOpen={setIsCartOpen}
+          />
+
           {/* Floating Cart Button */}
           {user &&
             !isLandingPage &&
             !isAuthPage &&
             !isResetPage &&
-            !isDashboard && (
+            !isDashboard &&
+            !isSuperAdmin && (
               <FloatingCartButton
                 cart={cart}
                 onClick={() => setIsCartOpen(true)}
