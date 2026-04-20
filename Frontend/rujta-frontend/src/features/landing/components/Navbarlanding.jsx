@@ -1,7 +1,7 @@
 import React from "react";
 import Logo from "../../../assets/Logo2.png";
 import { NavbarMenu } from "../../../mockData/data";
-import { MdMenu, MdClose } from "react-icons/md";
+import { MdMenu } from "react-icons/md";
 import { useNavigate, Link } from "react-router-dom";
 
 import ResponsiveMenulanding from "./ResponsiveMenulanding";
@@ -64,10 +64,11 @@ const Navbar = () => {
               onClick={() => setOpen(!open)}
             />
           </div>
+
         </div>
       </nav>
 
-      {/* Mobile Sidebar */}
+      {/* Mobile Dropdown Menu */}
       <ResponsiveMenulanding open={open} setOpen={setOpen} />
     </>
   );

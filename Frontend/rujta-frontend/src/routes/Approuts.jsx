@@ -88,7 +88,8 @@ const PageLoader = () => (
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
   <Suspense fallback={<PageLoader />}>
     <Routes>
-      {/* ========= Error Pages ========= */}
+
+      {/* ========= Error ========= */}
       <Route path="/error" element={<AnimatedErrorPage />} />
       <Route path="*" element={<AnimatedErrorPage />} />
 
@@ -141,15 +142,13 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
           </ProtectedRoute>
         }
       >
-        <Route
-          index
-          element={
-            <>
-              <HeroUser />
-              <ProductsUser cart={cart} setCart={setCart} />
-            </>
-          }
-        />
+        <Route index element={
+          <>
+            <HeroUser />
+            <ProductsUser cart={cart} setCart={setCart} />
+          </>
+        } />
+
         <Route path="orders" element={<Ordersuser />} />
         <Route path="profile" element={<Profile />} />
         <Route path="checkout" element={<Checkout />} />
@@ -200,6 +199,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
             </ProtectedRoute>
           }
         />
+
         <Route
           path="ads"
           element={
@@ -210,7 +210,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         />
       </Route>
 
-      {/* ========= Super Admin Dashboard ========= */}
+      {/* ========= Super Admin ========= */}
       <Route
         path="/superadmin"
         element={
@@ -224,6 +224,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<SettingsAdmin />} />
       </Route>
+
     </Routes>
   </Suspense>
 );

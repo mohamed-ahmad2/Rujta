@@ -62,6 +62,7 @@ const Checkout = () => {
   const [showAddressSelection, setShowAddressSelection] = useState(true);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+  const [isConfirmingAddress, setIsConfirmingAddress] = useState(false);
   const [newAddressForm, setNewAddressForm] = useState({
     Street: "",
     BuildingNo: "",
@@ -72,8 +73,7 @@ const Checkout = () => {
 
   const [expandedPharmacies, setExpandedPharmacies] = useState({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] =
-    useState(null);
+  const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [selectedPharmacies, setSelectedPharmacies] = useState([]);
   const [creatingOrder, setCreatingOrder] = useState(false);
@@ -104,7 +104,6 @@ const Checkout = () => {
         if (data.code === "Ok" && data.routes?.[0]) {
           const encoded = data.routes[0].geometry;
           const coordinates = decodePolyline(encoded);
-
           const distanceKm = (data.routes[0].distance / 1000).toFixed(2);
           const durationMin = Math.round(data.routes[0].duration / 60);
 
@@ -112,25 +111,13 @@ const Checkout = () => {
             ...prev,
             [cacheKey]: { coordinates, distanceKm, durationMin },
           }));
-
-          console.log(
-            `✅ Route + Distance for pharmacy ${pharmacy.pharmacyId}: ${distanceKm} km`,
-          );
-        } else {
-          console.warn("OSRM No route:", data);
         }
       } catch (err) {
-        console.error(
-          "OSRM route error for pharmacy",
-          pharmacy.pharmacyId,
-          err,
-        );
+        console.error("OSRM route error for pharmacy", pharmacy.pharmacyId, err);
       }
     },
     [deliveryAddressLocation, userLocation, routeData],
   );
-
-  //------------------------------------
 
   useEffect(() => {
     if (pharmacies.length === 0) return;
@@ -141,7 +128,6 @@ const Checkout = () => {
       const p = pharmacies.find((ph) => ph.pharmacyId === id);
       if (p) fetchRoute(p);
     });
-
     if (hoveredPharmacyId) {
       const p = pharmacies.find((ph) => ph.pharmacyId === hoveredPharmacyId);
       if (p) fetchRoute(p);
@@ -169,17 +155,11 @@ const Checkout = () => {
   }, []);
 
   useEffect(() => {
-    const errorMessage =
-      typeof error === "string" ? error : error?.message || "";
-    if (
-      errorMessage.includes("User location not set") ||
-      errorMessage.includes("location not set")
-    ) {
+    const errorMessage = typeof error === "string" ? error : error?.message || "";
+    if (errorMessage.includes("User location not set") || errorMessage.includes("location not set")) {
       setShowLocationPrompt(true);
     }
   }, [error]);
-
-  //------------------------------------
 
   const handleSetLocation = () => {
     if (navigator.geolocation) {
@@ -219,43 +199,54 @@ const Checkout = () => {
       alert("Please select a delivery address!");
       return;
     }
-    if (cart.length > 0) {
-      const dtoItems = cart.map((item) => ({
-        id: item.id,
-        quantity: item.quantity,
-      }));
-      await fetchPharmacies(dtoItems, selectedAddressId, pharmaciesRange);
+    setIsConfirmingAddress(true);
+    try {
+      if (cart.length > 0) {
+        const dtoItems = cart.map((item) => ({ id: item.id, quantity: item.quantity }));
+        await fetchPharmacies(dtoItems, selectedAddressId, pharmaciesRange);
+      }
+      const fullAddress = await fetchById(selectedAddressId);
+      if (fullAddress?.latitude && fullAddress?.longitude) {
+        setDeliveryAddressLocation({ lat: fullAddress.latitude, lng: fullAddress.longitude });
+        setDeliveryAddress(fullAddress);
+      }
+      setShowAddressSelection(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsConfirmingAddress(false);
     }
-
-    const fullAddress = await fetchById(selectedAddressId);
-    if (fullAddress?.latitude && fullAddress?.longitude) {
-      setDeliveryAddressLocation({
-        lat: fullAddress.latitude,
-        lng: fullAddress.longitude,
-      });
-      setDeliveryAddress(fullAddress);
-    }
-
-    setShowAddressSelection(false);
   };
 
   const handleExpandRange = async () => {
     const newRange = pharmaciesRange + 5;
     setPharmaciesRange(newRange);
     if (!selectedAddressId || cart.length === 0) return;
-    const dtoItems = cart.map((item) => ({
-      id: item.id,
-      quantity: item.quantity,
-    }));
+    const dtoItems = cart.map((item) => ({ id: item.id, quantity: item.quantity }));
     await fetchPharmacies(dtoItems, selectedAddressId, newRange);
   };
 
   const handleTogglePharmacy = (pharmacyId) => {
-    setSelectedPharmacies((prev) =>
-      prev.includes(pharmacyId)
-        ? prev.filter((id) => id !== pharmacyId)
-        : [...prev, pharmacyId],
-    );
+    setSelectedPharmacies((prev) => {
+      const isAlreadySelected = prev.includes(pharmacyId);
+      if (isAlreadySelected) {
+        setSelectedMedicines((prevMeds) => {
+          const updated = { ...prevMeds };
+          delete updated[pharmacyId];
+          return updated;
+        });
+        return prev.filter((id) => id !== pharmacyId);
+      } else {
+        const pharmacy = pharmacies.find((p) => p.pharmacyId === pharmacyId);
+        if (pharmacy) {
+          const allMedicineIds = pharmacy.foundMedicines
+            .filter((m) => m.isQuantityEnough)
+            .map((m) => m.medicineId);
+          setSelectedMedicines((prevMeds) => ({ ...prevMeds, [pharmacyId]: allMedicineIds }));
+        }
+        return [...prev, pharmacyId];
+      }
+    });
   };
 
   const handleToggleMedicine = (pharmacyId, medicineId) => {
@@ -264,76 +255,52 @@ const Checkout = () => {
       const updated = pharmacyMeds.includes(medicineId)
         ? pharmacyMeds.filter((id) => id !== medicineId)
         : [...pharmacyMeds, medicineId];
-      return {
-        ...prev,
-        [pharmacyId]: updated,
-      };
+      return { ...prev, [pharmacyId]: updated };
     });
   };
 
   const handleOrderClick = (pharmacy) => {
     setSelectedPharmacyForPayment(pharmacy);
     setSelectedPharmacies([pharmacy.pharmacyId]);
-
     if (userLocation) {
       setRouteToPharmacy({
         from: userLocation,
-        to: {
-          latitude: pharmacy.latitude,
-          longitude: pharmacy.longitude,
-        },
+        to: { latitude: pharmacy.latitude, longitude: pharmacy.longitude },
       });
     }
-
     setShowPaymentModal(true);
   };
 
   const handleConfirmOrders = async () => {
-    if (cart.length === 0) {
-      alert("Cart is empty!");
-      return;
-    }
-    if (!selectedAddressId) {
-      alert("No delivery address selected!");
-      return;
-    }
-    if (selectedPharmacies.length === 0) {
-      alert("No pharmacies selected!");
-      return;
-    }
+    if (cart.length === 0) { alert("Cart is empty!"); return; }
+    if (!selectedAddressId) { alert("No delivery address selected!"); return; }
+    if (selectedPharmacies.length === 0) { alert("No pharmacies selected!"); return; }
 
     setCreatingOrder(true);
     const orderDtos = [];
 
     for (const pharmacyId of selectedPharmacies) {
-      const selectedPharmacy = pharmacies.find(
-        (p) => p.pharmacyId === pharmacyId,
-      );
+      const selectedPharmacy = pharmacies.find((p) => p.pharmacyId === pharmacyId);
       if (!selectedPharmacy) continue;
 
       const selectedMedicineIds = selectedMedicines[pharmacyId] || [];
       const selectedItems = selectedPharmacy.foundMedicines.filter(
         (m) => selectedMedicineIds.includes(m.medicineId) && m.isQuantityEnough,
       );
-
       if (selectedItems.length === 0) continue;
-
-      const orderItems = selectedItems.map((m) => ({
-        MedicineID: m.medicineId,
-        Quantity: m.requestedQuantity,
-      }));
 
       orderDtos.push({
         PharmacyID: pharmacyId,
         DeliveryAddressId: selectedAddressId,
-        OrderItems: orderItems,
+        OrderItems: selectedItems.map((m) => ({
+          MedicineID: m.medicineId,
+          Quantity: m.requestedQuantity,
+        })),
       });
     }
 
     if (orderDtos.length === 0) {
-      alert(
-        "No valid orders to create (check selected medicines & quantities)",
-      );
+      alert("No valid orders to create (check selected medicines & quantities)");
       setCreatingOrder(false);
       return;
     }
@@ -341,19 +308,13 @@ const Checkout = () => {
     try {
       const response = await apiClient.post("/orders", orderDtos);
       const results = response.data;
-
       if (results && results.length > 0) {
         alert(`Successfully created ${results.length} order(s)!`);
-
         const orderedIdsSet = new Set();
-        orderDtos.forEach((dto) => {
-          dto.OrderItems.forEach((item) => orderedIdsSet.add(item.MedicineID));
-        });
-
+        orderDtos.forEach((dto) => dto.OrderItems.forEach((item) => orderedIdsSet.add(item.MedicineID)));
         const updatedCart = cart.filter((item) => !orderedIdsSet.has(item.id));
         setCart(updatedCart);
         localStorage.setItem(`cart_${user.email}`, JSON.stringify(updatedCart));
-
         setSelectedPharmacies([]);
         setSelectedMedicines({});
         await fetchUser();
@@ -378,10 +339,6 @@ const Checkout = () => {
   };
 
   const errorMessage = typeof error === "string" ? error : error?.message || "";
-
-  // ──────────────────────────────────────────────
-  //  Render
-  // ──────────────────────────────────────────────
 
   return (
     <div className="flex min-h-screen w-screen items-center justify-center bg-gray-100 p-6">
@@ -452,15 +409,13 @@ const Checkout = () => {
                     <option value="">Select an address...</option>
                     {addresses.map((addr) => (
                       <option key={addr.id} value={addr.id}>
-                        {addr.street}, {addr.buildingNo}, {addr.city},{" "}
-                        {addr.governorate} {addr.isDefault ? "(Default)" : ""}
+                        {addr.street}, {addr.buildingNo}, {addr.city}, {addr.governorate}{" "}
+                        {addr.isDefault ? "(Default)" : ""}
                       </option>
                     ))}
                   </select>
                   {addresses.length === 0 && (
-                    <p className="text-gray-600">
-                      No addresses found. Please add a new one.
-                    </p>
+                    <p className="text-gray-600">No addresses found. Please add a new one.</p>
                   )}
                   <button
                     onClick={() => setShowNewAddressForm(true)}
@@ -755,9 +710,7 @@ const Checkout = () => {
                       : "hover:bg-secondary-dark bg-secondary text-white active:scale-95"
                   } `}
                 >
-                  {creatingOrder
-                    ? "Processing..."
-                    : `Order Selected (${selectedPharmacies.length})`}
+                  {creatingOrder ? "Processing..." : `Order Selected (${selectedPharmacies.length})`}
                 </button>
               </div>
             </>

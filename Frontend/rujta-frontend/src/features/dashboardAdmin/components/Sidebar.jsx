@@ -2,9 +2,7 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "../../../assets/Logo.png";
 
-import { IoHomeOutline } from "react-icons/io5";
-import { TbMenuOrder, TbReportSearch } from "react-icons/tb";
-import { CiSettings } from "react-icons/ci";
+import { TbMenuOrder } from "react-icons/tb";
 import { RiLogoutCircleLine } from "react-icons/ri";
 import { MdMenuOpen } from "react-icons/md";
 
@@ -12,10 +10,7 @@ export default function Sidebar({ open, setOpen }) {
   const location = useLocation();
 
   const menu = [
-    { label: "Overview", icon: <IoHomeOutline size={22} />, path: "/superadmin" },
     { label: "Pharmacies", icon: <TbMenuOrder size={22} />, path: "/superadmin/pharmacies" },
-    { label: "Reports", icon: <TbReportSearch size={22} />, path: "/superadmin/reports" },
-    { label: "Settings", icon: <CiSettings size={22} />, path: "/superadmin/settings" },
   ];
 
   return (
@@ -56,11 +51,7 @@ export default function Sidebar({ open, setOpen }) {
               <Link
                 to={item.path}
                 className={`flex items-center gap-3 p-3 rounded-xl transition-all
-                ${
-                  active
-                    ? "bg-white text-black shadow"
-                    : "hover:bg-white/20"
-                }
+                ${active ? "bg-white text-black shadow" : "hover:bg-white/20"}
                 ${!open ? "justify-center" : ""}
                 `}
               >
