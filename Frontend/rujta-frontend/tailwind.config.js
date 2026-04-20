@@ -1,9 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
 
   darkMode: "class",
 
@@ -28,7 +25,10 @@ export default {
       /* ===== COLORS ===== */
       colors: {
         primary: "#000000",
-        secondary: "#9DC873",
+        secondary: {
+          DEFAULT: "#9DC873",
+          dark: "#7EA85A",
+        },
         page: "#F5F5F5",
         pr: "#3C623C",
         accent: "#22D3EE",
@@ -52,23 +52,19 @@ export default {
 
       /* ===== ANIMATIONS ===== */
       keyframes: {
-        moveStars: {
-          "0%": { transform: "translate(0, 0)" },
-          "100%": { transform: "translate(-1000px, 1000px)" },
-        },
-        float: {
-          "0%, 100%": {
-            transform: "translateY(0px) rotate(0deg)",
+        fadeUp: {
+          "0%": {
+            opacity: "0",
+            transform: "translateY(16px)",
           },
-          "50%": {
-            transform: "translateY(-20px) rotate(1.5deg)",
+          "100%": {
+            opacity: "1",
+            transform: "translateY(0)",
           },
         },
       },
-
       animation: {
-        moveStars: "moveStars 100s linear infinite",
-        float: "float 5s ease-in-out infinite",
+        "fade-up": "fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards",
       },
     },
   },

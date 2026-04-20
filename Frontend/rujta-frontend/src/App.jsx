@@ -30,7 +30,6 @@ const App = () => {
       ? localStorage.getItem(`seenSplash_${user.email}`)
       : null;
 
-    // لو Splash اتشاف قبل كده
     if (globalSeen || userSeen) {
       setShowSplash(false);
     }
@@ -77,6 +76,7 @@ const App = () => {
   const isAuthPage = location.pathname.startsWith("/auth");
   const isResetPage = location.pathname === "/reset-password";
   const isDashboard = location.pathname.startsWith("/dashboard");
+  const isSuperAdmin = location.pathname.startsWith("/superadmin");
 
   /* ===== SPLASH FIRST ===== */
   if (showSplash) {
@@ -87,37 +87,38 @@ const App = () => {
     <PresenceProvider>
       <OrdersProvider>
         <NotificationProvider>
-        <AppRoutes
-          cart={cart}
-          setCart={setCart}
-          isCartOpen={isCartOpen}
-          setIsCartOpen={setIsCartOpen}
-        />
+          <AppRoutes
+            cart={cart}
+            setCart={setCart}
+            isCartOpen={isCartOpen}
+            setIsCartOpen={setIsCartOpen}
+          />
 
-        {/* Floating Cart Button */}
-        {user &&
-          !isLandingPage &&
-          !isAuthPage &&
-          !isResetPage &&
-          !isDashboard && (
-            <FloatingCartButton
+          {/* Floating Cart Button */}
+          {user &&
+            !isLandingPage &&
+            !isAuthPage &&
+            !isResetPage &&
+            !isDashboard &&
+            !isSuperAdmin && (
+              <FloatingCartButton
+                cart={cart}
+                onClick={() => setIsCartOpen(true)}
+              />
+            )}
+
+          {/* Cart Drawer */}
+          {user && (
+            <CartDrawerUser
               cart={cart}
-              onClick={() => setIsCartOpen(true)}
+              setCart={setCart}
+              isOpen={isCartOpen}
+              onClose={() => setIsCartOpen(false)}
             />
           )}
 
-        {/* Cart Drawer */}
-        {user && (
-          <CartDrawerUser
-            cart={cart}
-            setCart={setCart}
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-          />
-        )}
-
-        {/* Vercel Speed Insights */}
-        <SpeedInsights />
+          {/* Vercel Speed Insights */}
+          <SpeedInsights />
         </NotificationProvider>
       </OrdersProvider>
     </PresenceProvider>

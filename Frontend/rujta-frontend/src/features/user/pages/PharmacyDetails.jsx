@@ -132,7 +132,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
   const filteredMedicines = medicines.filter(
     (med) =>
       (selectedCategory === "All" || med.categoryId === selectedCategory) &&
-      med.name.toLowerCase().includes(searchQuery.toLowerCase())
+      med.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   // Only last ad
