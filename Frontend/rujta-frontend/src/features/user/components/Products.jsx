@@ -38,7 +38,7 @@ const Products = ({ cart, setCart }) => {
         return prevCart.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
-            : item
+            : item,
         );
       }
       return [...prevCart, { ...product, quantity: 1 }];
@@ -50,30 +50,29 @@ const Products = ({ cart, setCart }) => {
   };
 
   const filteredMedicines = medicines.filter(
-    (med) =>
-      selectedCategory === "All" ||
-      med.categoryId === selectedCategory
+    (med) => selectedCategory === "All" || med.categoryId === selectedCategory,
   );
 
   if (loading) return <p className="text-center">Loading medicines...</p>;
   if (error) return <p className="text-center text-red-500">{error}</p>;
-  if (pharmaciesLoading) return <p className="text-center">Loading pharmacies...</p>;
-  if (pharmaciesError) return <p className="text-center text-red-500">{pharmaciesError}</p>;
+  if (pharmaciesLoading)
+    return <p className="text-center">Loading pharmacies...</p>;
+  if (pharmaciesError)
+    return <p className="text-center text-red-500">{pharmaciesError}</p>;
 
   return (
     <div className="bg-white py-20">
       <div className="container mx-auto px-4">
-
         {/* ========== MODERN PHARMACY SECTION ========== */}
-        <div className="w-full mb-12">
-          <h3 className="text-center text-xl font-semibold text-secondary mb-6">
+        <div className="mb-12 w-full">
+          <h3 className="mb-6 text-center text-xl font-semibold text-secondary">
             Choose Your Pharmacy
           </h3>
 
           <div className="relative">
             <div
               id="pharmacy-carousel"
-              className="flex gap-6 overflow-x-auto py-4 px-2 scroll-smooth transition-all duration-500"
+              className="flex gap-6 overflow-x-auto scroll-smooth px-2 py-4 transition-all duration-500"
               style={{ scrollbarWidth: "none" }}
             >
               <style>
@@ -86,16 +85,16 @@ const Products = ({ cart, setCart }) => {
                 <div
                   key={ph.id}
                   onClick={() => navigate(`/user/pharmacy/${ph.id}`)}
-                  className="flex-shrink-0 w-44 bg-white rounded-3xl p-4 shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer border border-gray-200 hover:-translate-y-2 hover:scale-105"
+                  className="w-44 flex-shrink-0 cursor-pointer rounded-3xl border border-gray-200 bg-white p-4 shadow-lg transition-all duration-500 hover:-translate-y-2 hover:scale-105 hover:shadow-2xl"
                 >
-                  <div className="w-28 h-28 rounded-full bg-[#E8F3E8] flex items-center justify-center overflow-hidden mx-auto mb-4">
+                  <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-[#E8F3E8]">
                     <img
                       src={imge1}
                       alt={ph.name}
-                      className="w-20 h-20 object-contain transform transition-all duration-500 hover:scale-110"
+                      className="h-20 w-20 transform object-contain transition-all duration-500 hover:scale-110"
                     />
                   </div>
-                  <p className="text-center font-semibold text-lg text-secondary mb-2">
+                  <p className="mb-2 text-center text-lg font-semibold text-secondary">
                     {ph.name}
                   </p>
                 </div>
@@ -104,14 +103,22 @@ const Products = ({ cart, setCart }) => {
 
             {/* Carousel Buttons */}
             <button
-              onClick={() => document.getElementById("pharmacy-carousel").scrollBy({ left: -300, behavior: "smooth" })}
-              className="absolute top-1/2 -left-2 transform -translate-y-1/2 bg-white shadow-md rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-100 transition-all duration-300"
+              onClick={() =>
+                document
+                  .getElementById("pharmacy-carousel")
+                  .scrollBy({ left: -300, behavior: "smooth" })
+              }
+              className="absolute -left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 transform items-center justify-center rounded-full bg-white shadow-md transition-all duration-300 hover:bg-gray-100"
             >
               &#8592;
             </button>
             <button
-              onClick={() => document.getElementById("pharmacy-carousel").scrollBy({ left: 300, behavior: "smooth" })}
-              className="absolute top-1/2 -right-2 transform -translate-y-1/2 bg-white shadow-md rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-100 transition-all duration-300"
+              onClick={() =>
+                document
+                  .getElementById("pharmacy-carousel")
+                  .scrollBy({ left: 300, behavior: "smooth" })
+              }
+              className="absolute -right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 transform items-center justify-center rounded-full bg-white shadow-md transition-all duration-300 hover:bg-gray-100"
             >
               &#8594;
             </button>
@@ -119,24 +126,24 @@ const Products = ({ cart, setCart }) => {
         </div>
 
         {/* ========== TITLE ========== */}
-        <div className="text-center mb-14">
-          <h2 className="text-4xl font-extrabold text-secondary mb-3 animate-slide-fade">
+        <div className="mb-14 text-center">
+          <h2 className="animate-slide-fade mb-3 text-4xl font-extrabold text-secondary">
             Top Rated Medicines
           </h2>
-          <p className="text-gray-600 max-w-[600px] mx-auto text-sm animate-slide-fade delay-100">
+          <p className="animate-slide-fade mx-auto max-w-[600px] text-sm text-gray-600 delay-100">
             Discover our most trusted medicines and healthcare products.
           </p>
         </div>
 
         {/* ========== CATEGORY BUTTONS ========== */}
-        <div className="flex flex-wrap justify-center gap-4 mb-8">
+        <div className="mb-8 flex flex-wrap justify-center gap-4">
           {categoryOptions.map((cat) => (
             <div
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`cursor-pointer px-6 py-3 rounded-2xl shadow-md transition-all duration-300 ${
+              className={`cursor-pointer rounded-2xl px-6 py-3 shadow-md transition-all duration-300 ${
                 selectedCategory === cat.id
-                  ? "bg-secondary text-white scale-110"
+                  ? "scale-110 bg-secondary text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
@@ -146,40 +153,42 @@ const Products = ({ cart, setCart }) => {
         </div>
 
         {/* ========== PRODUCTS GRID ========== */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 justify-items-center">
+        <div className="grid grid-cols-1 justify-items-center gap-10 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredMedicines.map((data) => {
             const desc = data.description || "No description available";
 
             return (
               <div
                 key={data.id}
-                className="bg-white rounded-2xl shadow-md border w-[270px] transform transition-all duration-500 hover:-translate-y-2 hover:scale-105 hover:shadow-2xl animate-slide-up"
+                className="animate-slide-up w-[270px] transform rounded-2xl border bg-white shadow-md transition-all duration-500 hover:-translate-y-2 hover:scale-105 hover:shadow-2xl"
               >
-                <div className="bg-[#E8F3E8] flex justify-center items-center h-[200px]">
+                <div className="flex h-[200px] items-center justify-center bg-[#E8F3E8]">
                   <img
                     src={data.imageUrl || imge1}
                     alt={data.name}
                     onClick={() => navigate(`/medicines/${data.id}`)}
-                    className="w-[150px] object-contain cursor-pointer transform transition-all duration-500 hover:scale-110"
+                    className="w-[150px] transform cursor-pointer object-contain transition-all duration-500 hover:scale-110"
                     onError={(e) => (e.currentTarget.src = imge1)}
                   />
                 </div>
 
                 <div className="p-5 text-center">
-                  <h3 className="text-lg font-bold text-secondary">{data.name}</h3>
+                  <h3 className="text-lg font-bold text-secondary">
+                    {data.name}
+                  </h3>
 
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="mt-1 text-sm text-gray-500">
                     {expanded[data.id]
                       ? desc
                       : desc.length > 70
-                      ? desc.slice(0, 70) + "..."
-                      : desc}
+                        ? desc.slice(0, 70) + "..."
+                        : desc}
                   </p>
 
                   {desc.length > 70 && (
                     <button
                       onClick={() => toggleExpand(data.id)}
-                      className="text-secondary text-sm mt-1 font-semibold hover:underline"
+                      className="mt-1 text-sm font-semibold text-secondary hover:underline"
                     >
                       {expanded[data.id] ? "Show Less" : "Show More"}
                     </button>
@@ -187,7 +196,7 @@ const Products = ({ cart, setCart }) => {
 
                   <button
                     onClick={() => handleAddToCart(data)}
-                    className="mt-4 bg-secondary text-white py-2 px-5 rounded-full w-full transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                    className="hover:bg-secondary-dark mt-4 w-full transform rounded-full bg-secondary px-5 py-2 text-white transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   >
                     Add to Cart
                   </button>
@@ -196,7 +205,6 @@ const Products = ({ cart, setCart }) => {
             );
           })}
         </div>
-
       </div>
 
       {/* ===== Animations ===== */}

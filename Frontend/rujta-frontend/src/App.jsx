@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import AppRoutes from "./routes/Approuts";
+import MainLayout from "./layouts/MainLayout";
 import { useAuth } from "./features/auth/hooks/useAuth";
 import { useLocation } from "react-router-dom";
 import FloatingCartButton from "./features/user/components/FloatingCartButton";
@@ -30,7 +31,6 @@ const App = () => {
       ? localStorage.getItem(`seenSplash_${user.email}`)
       : null;
 
-    // لو Splash اتشاف قبل كده
     if (globalSeen || userSeen) {
       setShowSplash(false);
     }
@@ -87,37 +87,38 @@ const App = () => {
     <PresenceProvider>
       <OrdersProvider>
         <NotificationProvider>
-        <AppRoutes
-          cart={cart}
-          setCart={setCart}
-          isCartOpen={isCartOpen}
-          setIsCartOpen={setIsCartOpen}
-        />
-
-        {/* Floating Cart Button */}
-        {user &&
-          !isLandingPage &&
-          !isAuthPage &&
-          !isResetPage &&
-          !isDashboard && (
-            <FloatingCartButton
+          <MainLayout>
+            <AppRoutes
               cart={cart}
-              onClick={() => setIsCartOpen(true)}
+              setCart={setCart}
+              isCartOpen={isCartOpen}
+              setIsCartOpen={setIsCartOpen}
+            />
+          </MainLayout>
+          {/* Floating Cart Button */}
+          {user &&
+            !isLandingPage &&
+            !isAuthPage &&
+            !isResetPage &&
+            !isDashboard && (
+              <FloatingCartButton
+                cart={cart}
+                onClick={() => setIsCartOpen(true)}
+              />
+            )}
+
+          {/* Cart Drawer */}
+          {user && (
+            <CartDrawerUser
+              cart={cart}
+              setCart={setCart}
+              isOpen={isCartOpen}
+              onClose={() => setIsCartOpen(false)}
             />
           )}
 
-        {/* Cart Drawer */}
-        {user && (
-          <CartDrawerUser
-            cart={cart}
-            setCart={setCart}
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-          />
-        )}
-
-        {/* Vercel Speed Insights */}
-        <SpeedInsights />
+          {/* Vercel Speed Insights */}
+          <SpeedInsights />
         </NotificationProvider>
       </OrdersProvider>
     </PresenceProvider>

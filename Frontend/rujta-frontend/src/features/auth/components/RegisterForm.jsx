@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Mail, Lock, User, Phone, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 
 export const RegisterForm = ({
   name,
@@ -18,114 +19,136 @@ export const RegisterForm = ({
   onRegister,
   error,
   loading,
-  toggleForm
-})=> {
+  toggleForm,
+}) => {
+  const [showPassword, setShowPassword] = useState(false);
   return (
     <motion.div className="w-full max-w-md">
       {/* Header */}
-      <div className="text-center mb-10">
-        <motion.div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-primary mb-4">
-          <User className="w-8 h-8 text-white" />
+      <div className="mb-10 text-center">
+        <motion.div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-primary">
+          <User className="h-8 w-8 text-white" />
         </motion.div>
-       <h2 className="text-3xl md:text-5xl font-bold ...">
-          Create Account
-        </h2>
-        <p className="text-muted-foreground text-lg">Join us and start your journey</p>
+        <h2 className="text-3xl font-bold md:text-5xl ...">Create Account</h2>
+        <p className="text-lg text-muted-foreground">
+          Join us and start your journey
+        </p>
       </div>
 
       {/* Register Form */}
       <form onSubmit={onRegister} className="space-y-6">
         <div className="relative">
-          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="Full name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
             required
-            className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+            className="w-full rounded-2xl border-2 border-border py-4 pl-12 pr-4 text-lg outline-none focus:border-primary"
           />
         </div>
+
         <div className="relative">
-          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="email"
             placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
             required
-            className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+            className="w-full rounded-2xl border-2 border-border py-4 pl-12 pr-4 text-lg outline-none focus:border-primary"
           />
         </div>
+
         <div className="relative">
-          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="Phone number"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
+            autoComplete="tel"
             required
-            className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+            className="w-full rounded-2xl border-2 border-border py-4 pl-12 pr-4 text-lg outline-none focus:border-primary"
           />
         </div>
+
         <div className="relative">
-          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <MapPin className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="Location"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
+            autoComplete="address-line1"
             required
-            className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+            className="w-full rounded-2xl border-2 border-border py-4 pl-12 pr-4 text-lg outline-none focus:border-primary"
           />
         </div>
+
         <div className="relative">
-          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="Create password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+            autoComplete="new-password"
+            className="w-full rounded-2xl border-2 border-border py-4 pl-12 pr-12 text-lg outline-none focus:border-primary"
           />
+
+          <button
+            type="button"
+            onClick={() => setShowPassword((p) => !p)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-secondary"
+          >
+            {showPassword ? "🙈" : "👁️"}
+          </button>
         </div>
+
         <div className="relative">
-          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+
           <input
             type="password"
             placeholder="Confirm password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
-            className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+            autoComplete="new-password"
+            className="w-full rounded-2xl border-2 border-border py-4 pl-12 pr-4 text-lg outline-none focus:border-primary"
           />
         </div>
 
-        {error && <p className="text-red-500 text-center">{error}</p>}
+        {error && <p className="text-center text-red-500">{error}</p>}
 
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           disabled={loading}
           type="submit"
-          className="w-full bg-gradient-primary text-white py-4 text-lg rounded-2xl font-semibold"
+          className="w-full rounded-2xl bg-gradient-primary py-4 text-lg font-semibold text-white"
         >
           {loading ? "Creating Account..." : "Sign Up"}
         </motion.button>
       </form>
 
-     {/* Login Link */}
-<div className="text-center mt-6 text-lg">
-  <span className="text-muted-foreground">Already have an account? </span>
-  <button
-  type="button"
-  onClick={toggleForm}
-  className="text-secondary font-semibold hover:underline"
->
-  Login
-</button>
-</div>
+      {/* Login Link */}
+      <div className="mt-6 text-center text-lg">
+        <span className="text-muted-foreground">Already have an account? </span>
+        <button
+          type="button"
+          onClick={toggleForm}
+          className="font-semibold text-secondary hover:underline"
+        >
+          Login
+        </button>
+      </div>
     </motion.div>
   );
 };
