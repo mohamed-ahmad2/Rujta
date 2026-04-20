@@ -110,7 +110,7 @@ const Checkout = () => {
         console.error("OSRM route error for pharmacy", pharmacy.pharmacyId, err);
       }
     },
-    [deliveryAddressLocation, userLocation, routeData]
+    [deliveryAddressLocation, userLocation, routeData],
   );
 
   useEffect(() => {
@@ -141,7 +141,7 @@ const Checkout = () => {
           const { latitude, longitude } = pos.coords;
           setUserLocation({ lat: latitude, lng: longitude });
         },
-        (err) => console.error("Geolocation error:", err)
+        (err) => console.error("Geolocation error:", err),
       );
     }
   }, []);
@@ -166,7 +166,7 @@ const Checkout = () => {
             console.error("Failed to update location:", updateErr);
           }
         },
-        (geoErr) => console.error("Geolocation error:", geoErr)
+        (geoErr) => console.error("Geolocation error:", geoErr),
       );
     }
   };
@@ -277,7 +277,7 @@ const Checkout = () => {
 
       const selectedMedicineIds = selectedMedicines[pharmacyId] || [];
       const selectedItems = selectedPharmacy.foundMedicines.filter(
-        (m) => selectedMedicineIds.includes(m.medicineId) && m.isQuantityEnough
+        (m) => selectedMedicineIds.includes(m.medicineId) && m.isQuantityEnough,
       );
       if (selectedItems.length === 0) continue;
 
@@ -336,7 +336,7 @@ const Checkout = () => {
     <div className="w-full min-h-screen bg-gray-100 flex justify-center items-start lg:items-center p-0 lg:p-6">
       <div className="w-full lg:w-[1150px] min-h-screen lg:min-h-0 bg-white shadow-xl lg:rounded-3xl flex flex-col lg:flex-row">
 
-        {/* MAP — أعلى في الموبايل، يسار في الـ desktop */}
+        {/* MAP */}
         <div className="w-full h-[250px] sm:h-[300px] lg:w-1/2 lg:h-screen lg:sticky lg:top-0 rounded-t-3xl lg:rounded-none lg:rounded-l-3xl overflow-hidden">
           <PharmacyMap
             userLocation={userLocation}
@@ -350,7 +350,7 @@ const Checkout = () => {
           />
         </div>
 
-        {/* CONTENT — تحت في الموبايل، يمين في الـ desktop */}
+        {/* CONTENT */}
         <div className="w-full lg:w-1/2 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-white rounded-b-3xl lg:rounded-none lg:rounded-r-3xl">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-xl sm:text-2xl font-semibold">

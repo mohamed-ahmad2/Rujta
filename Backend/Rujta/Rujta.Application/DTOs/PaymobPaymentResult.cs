@@ -8,9 +8,9 @@ namespace Rujta.Application.DTOs
 {
     public class PaymobPaymentResult
     {
-        public string MerchantOrderId { get; set; }
+        public string? MerchantOrderId { get; set; }
         public int PaymobOrderId { get; set; }
-        public string PaymentToken { get; set; }
-        public string PaymentUrl { get; set; }
+        public string? PaymentToken { get; set; }
+        public string? PaymentUrl { get; set; }
     }
 }

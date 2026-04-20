@@ -35,8 +35,10 @@ apiClient.interceptors.response.use(
       try {
         const refreshResponse = await axios.post(
           "/api/auth/refresh-token",
-          null,
-          { withCredentials: true }
+          {},
+          {
+            withCredentials: true,
+          }
         );
 
         const newAccessToken = refreshResponse.data?.accessToken;
@@ -44,7 +46,7 @@ apiClient.interceptors.response.use(
         if (newAccessToken) {
           setAccessToken(newAccessToken);
 
-          // 👇 مهم
+          // تحديث التوكن في axios default headers
           apiClient.defaults.headers.common["Authorization"] =
             `Bearer ${newAccessToken}`;
 
