@@ -5,31 +5,48 @@ import ProtectedRoute from "../shared/components/ProtectedRoute";
 // ================= Lazy Loaded Components =================
 
 // Landing
-const NavbarLanding = lazy(() => import("../features/landing/components/Navbarlanding"));
-const HeroLanding = lazy(() => import("../features/landing/pages/Herolanding"));
+const LandingLayout = lazy(() => import("../layouts/LandingLayout"));
+const NavbarLanding = lazy(
+  () => import("../features/landing/components/Navbarlanding"),
+);
+
 const Features = lazy(() => import("../features/landing/pages/Features"));
 const HowItWorks = lazy(() => import("../features/landing/pages/HowItWorks"));
 const Contact = lazy(() => import("../features/landing/pages/Contact"));
 
 // Auth
 const AuthPage = lazy(() => import("../features/auth/pages/AuthPage"));
-const ResetPasswordPage = lazy(() => import("../features/auth/pages/ResetPasswordPage"));
+const ResetPasswordPage = lazy(
+  () => import("../features/auth/pages/ResetPasswordPage"),
+);
 
 // User
-const UserLayout = lazy(() => import("../features/user/components/layout/UserLayout"));
+const UserLayout = lazy(
+  () => import("../features/user/components/layout/UserLayout"),
+);
 const HeroUser = lazy(() => import("../features/user/pages/Hero"));
 const ProductsUser = lazy(() => import("../features/user/components/Products"));
 const Profile = lazy(() => import("../features/user/pages/Profile"));
 const Ordersuser = lazy(() => import("../features/user/pages/Orders"));
 const Checkout = lazy(() => import("../features/user/pages/Checkout"));
-const PharmacyDetails = lazy(() => import("../features/user/pages/PharmacyDetails"));
+const PharmacyDetails = lazy(
+  () => import("../features/user/pages/PharmacyDetails"),
+);
 const Payment = lazy(() => import("../features/user/pages/Payment"));
-const MedicineDetails = lazy(() => import("../features/medicines/pages/MedicineDetails"));
-const ScanPrescription = lazy(() => import("../features/prescription/pages/ScanPrescription"));
-const NotificationsPage = lazy(() => import("../features/notifications/pages/NotificationsPage"));
+const MedicineDetails = lazy(
+  () => import("../features/medicines/pages/MedicineDetails"),
+);
+const ScanPrescription = lazy(
+  () => import("../features/prescription/pages/ScanPrescription"),
+);
+const NotificationsPage = lazy(
+  () => import("../features/notifications/pages/NotificationsPage"),
+);
 
 // Dashboard (Pharmacist & PharmacyAdmin)
-const DashboardLayout = lazy(() => import("../features/dashboard/components/layouts/DashboardLayout"));
+const DashboardLayout = lazy(
+  () => import("../features/dashboard/components/layouts/DashboardLayout"),
+);
 const Home = lazy(() => import("../features/dashboard/pages/Home"));
 const Products = lazy(() => import("../features/dashboard/pages/Products"));
 const Orders = lazy(() => import("../features/dashboard/pages/Orders"));
@@ -39,22 +56,31 @@ const Settings = lazy(() => import("../features/dashboard/pages/Settings"));
 const Logs = lazy(() => import("../features/dashboard/pages/Logs"));
 const Ads = lazy(() => import("../features/dashboard/pages/Ads"));
 
-// Super Admin
-const DashboardLayoutSuberAdmin = lazy(() => import("../features/dashboardAdmin/components/layouts/DashboardLayout"));
-const Overview = lazy(() => import("../features/dashboardAdmin/pages/Overview"));
-const Pharmacies = lazy(() => import("../features/dashboardAdmin/pages/Pharmacies"));
+// Super Admin Dashboard
+const DashboardLayoutSuberAdmin = lazy(
+  () => import("../features/dashboardAdmin/components/layouts/DashboardLayout"),
+);
+const Overview = lazy(
+  () => import("../features/dashboardAdmin/pages/Overview"),
+);
+const Pharmacies = lazy(
+  () => import("../features/dashboardAdmin/pages/Pharmacies"),
+);
 const Reports = lazy(() => import("../features/dashboardAdmin/pages/Reports"));
-const SettingsAdmin = lazy(() => import("../features/dashboardAdmin/pages/Settings"));
+const SettingsAdmin = lazy(
+  () => import("../features/dashboardAdmin/pages/Settings"),
+);
 
-// Error
-const AnimatedErrorPage = lazy(() => import("../features/Error/AnimatedErrorPage"));
+// Error & Others
+const AnimatedErrorPage = lazy(
+  () => import("../features/Error/AnimatedErrorPage"),
+);
 
-/* ================= Page Loader ================= */
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-page">
+  <div className="flex min-h-screen items-center justify-center bg-page">
     <div className="flex flex-col items-center gap-3">
-      <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      <p className="text-gray-500 text-sm">Please wait, loading...</p>
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      <p className="text-sm text-gray-500">Please wait, loading...</p>
     </div>
   </div>
 );
@@ -68,30 +94,35 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
       <Route path="*" element={<AnimatedErrorPage />} />
 
       {/* ========= Landing ========= */}
-      <Route path="/" element={
-        <div className="min-h-screen bg-page">
-          <NavbarLanding />
-          <HeroLanding />
-        </div>
-      } />
-      <Route path="/features" element={
-        <div className="min-h-screen bg-page">
-          <NavbarLanding />
-          <Features />
-        </div>
-      } />
-      <Route path="/how-it-works" element={
-        <div className="min-h-screen bg-page">
-          <NavbarLanding />
-          <HowItWorks />
-        </div>
-      } />
-      <Route path="/contact" element={
-        <div className="min-h-screen bg-page">
-          <NavbarLanding />
-          <Contact />
-        </div>
-      } />
+      <Route path="/" element={<LandingLayout />} />
+
+      <Route
+        path="/features"
+        element={
+          <div className="min-h-screen bg-page">
+            <NavbarLanding />
+            <Features />
+          </div>
+        }
+      />
+      <Route
+        path="/how-it-works"
+        element={
+          <div className="min-h-screen bg-page">
+            <NavbarLanding />
+            <HowItWorks />
+          </div>
+        }
+      />
+      <Route
+        path="/contact"
+        element={
+          <div className="min-h-screen bg-page">
+            <NavbarLanding />
+            <Contact />
+          </div>
+        }
+      />
 
       {/* ========= Auth ========= */}
       <Route path="/auth" element={<AuthPage />} />
@@ -123,13 +154,25 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
         <Route path="checkout" element={<Checkout />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="payment" element={<Payment />} />
-        <Route path="pharmacy/:id" element={<PharmacyDetails cart={cart} setCart={setCart} />} />
-        <Route path="scan-prescription" element={<ScanPrescription cart={cart} setCart={setCart} />} />
-        <Route path="medicine/:id" element={<MedicineDetails cart={cart} setCart={setCart} />} />
+        <Route
+          path="pharmacy/:id"
+          element={<PharmacyDetails cart={cart} setCart={setCart} />}
+        />
+        <Route
+          path="scan-prescription"
+          element={<ScanPrescription cart={cart} setCart={setCart} />}
+        />
+        <Route
+          path="medicine/:id"
+          element={<MedicineDetails cart={cart} setCart={setCart} />}
+        />
       </Route>
 
-      {/* ========= Public Medicines ========= */}
-      <Route path="/medicines/:id" element={<MedicineDetails cart={cart} setCart={setCart} />} />
+      {/* ========= Medicines (Public) ========= */}
+      <Route
+        path="/medicines/:id"
+        element={<MedicineDetails cart={cart} setCart={setCart} />}
+      />
 
       {/* ========= Dashboard ========= */}
       <Route

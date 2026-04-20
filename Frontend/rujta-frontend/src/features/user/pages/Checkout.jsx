@@ -5,6 +5,10 @@ import { useAuth } from "../../auth/hooks/useAuth";
 import useAddress from "../../address/hook/useAddress";
 import apiClient from "../../../shared/api/apiClient";
 import PharmacyMap from "../components/PharmacyMap";
+import clickSound from "../../../assets/audio.wav";
+
+const audio = new Audio(clickSound);
+audio.volume = 0.4;
 
 const decodePolyline = (encoded) => {
   let index = 0;
@@ -82,6 +86,8 @@ const Checkout = () => {
   const [hoveredPharmacyId, setHoveredPharmacyId] = useState(null);
   const [routeData, setRouteData] = useState({});
 
+  //------------------------------------
+
   const fetchRoute = useCallback(
     async (pharmacy) => {
       const start = deliveryAddressLocation || userLocation;
@@ -115,7 +121,9 @@ const Checkout = () => {
 
   useEffect(() => {
     if (pharmacies.length === 0) return;
+
     if (pharmacies[0]) fetchRoute(pharmacies[0]);
+
     selectedPharmacies.forEach((id) => {
       const p = pharmacies.find((ph) => ph.pharmacyId === id);
       if (p) fetchRoute(p);
@@ -333,39 +341,40 @@ const Checkout = () => {
   const errorMessage = typeof error === "string" ? error : error?.message || "";
 
   return (
-    <div className="w-full min-h-screen bg-gray-100 flex justify-center items-start lg:items-center p-0 lg:p-6">
-      <div className="w-full lg:w-[1150px] min-h-screen lg:min-h-0 bg-white shadow-xl lg:rounded-3xl flex flex-col lg:flex-row">
-
-        {/* MAP */}
-        <div className="w-full h-[250px] sm:h-[300px] lg:w-1/2 lg:h-screen lg:sticky lg:top-0 rounded-t-3xl lg:rounded-none lg:rounded-l-3xl overflow-hidden">
-          <PharmacyMap
-            userLocation={userLocation}
-            pharmacies={pharmacies}
-            selectedPharmacy={selectedPharmacyForPayment}
-            deliveryAddressLocation={deliveryAddressLocation}
-            deliveryAddress={deliveryAddress}
-            hoveredPharmacyId={hoveredPharmacyId}
-            selectedPharmacies={selectedPharmacies}
-            routeData={routeData}
-          />
+    <div className="flex min-h-screen w-screen items-center justify-center bg-gray-100 p-6">
+      <div className="flex h-[700px] w-[1150px] flex-col rounded-3xl bg-white shadow-xl lg:flex-row">
+        {/* LEFT – MAP */}
+        <div className="relative z-0 h-full w-full overflow-hidden lg:w-1/2">
+          <div className="absolute inset-0 z-0">
+            <PharmacyMap
+              userLocation={userLocation}
+              pharmacies={pharmacies}
+              selectedPharmacy={selectedPharmacyForPayment}
+              deliveryAddressLocation={deliveryAddressLocation}
+              deliveryAddress={deliveryAddress}
+              hoveredPharmacyId={hoveredPharmacyId}
+              selectedPharmacies={selectedPharmacies}
+              routeData={routeData}
+            />
+          </div>
         </div>
 
-        {/* CONTENT */}
-        <div className="w-full lg:w-1/2 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-white rounded-b-3xl lg:rounded-none lg:rounded-r-3xl">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-xl sm:text-2xl font-semibold">
+        {/* RIGHT – CONTENT */}
+        <div className="h-full w-full overflow-y-auto bg-white p-8 lg:w-1/2">
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-2xl font-semibold">
               Pharmacy search & ranking
             </h1>
           </div>
 
           {showLocationPrompt && (
             <div className="mb-6">
-              <p className="text-yellow-600 mb-2">
+              <p className="mb-2 text-yellow-600">
                 Your location is not set. Allow access to set it automatically.
               </p>
               <button
                 onClick={handleSetLocation}
-                className="bg-blue-500 text-white px-5 py-2 rounded-xl font-medium"
+                className="rounded-xl bg-blue-500 px-5 py-2 font-medium text-white"
               >
                 Set My Location
               </button>
@@ -373,23 +382,29 @@ const Checkout = () => {
           )}
 
           {showAddressSelection ? (
-            <div className="bg-white p-4 sm:p-8 rounded-2xl w-full shadow-2xl max-h-[70vh] lg:max-h-[80vh] overflow-y-auto">
-              <h2 className="text-xl sm:text-2xl font-bold mb-6 text-gray-800">
+            <div className="max-h-[80vh] w-full overflow-y-auto rounded-2xl bg-white p-8 shadow-2xl">
+              <h2 className="mb-6 text-2xl font-bold text-gray-800">
                 Select Delivery Address
               </h2>
 
-              {addressesLoading && <p className="text-gray-600 mb-4">Loading addresses...</p>}
-              {addressesError && <p className="text-red-500 mb-4">{addressesError}</p>}
+              {addressesLoading && (
+                <p className="mb-4 text-gray-600">Loading addresses...</p>
+              )}
+              {addressesError && (
+                <p className="mb-4 text-red-500">{addressesError}</p>
+              )}
 
               {!showNewAddressForm ? (
-                <div className="flex flex-col gap-4 mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="mb-6 flex flex-col gap-4">
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
                     Choose an address:
                   </label>
                   <select
                     value={selectedAddressId || ""}
-                    onChange={(e) => setSelectedAddressId(parseInt(e.target.value) || null)}
-                    className="border border-gray-300 p-3 rounded-lg w-full focus:border-secondary focus:ring-1 focus:ring-secondary transition text-gray-800"
+                    onChange={(e) =>
+                      setSelectedAddressId(parseInt(e.target.value) || null)
+                    }
+                    className="w-full rounded-lg border border-gray-300 p-3 text-gray-800 transition focus:border-secondary focus:ring-1 focus:ring-secondary"
                   >
                     <option value="">Select an address...</option>
                     {addresses.map((addr) => (
@@ -404,67 +419,111 @@ const Checkout = () => {
                   )}
                   <button
                     onClick={() => setShowNewAddressForm(true)}
-                    className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 transition mt-2"
+                    className="mt-2 rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-800 transition hover:bg-gray-300"
                   >
                     Add New Address
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-4 mb-6">
-                  {[
-                    { label: "Street", name: "Street", placeholder: "Enter street name" },
-                    { label: "Building No", name: "BuildingNo", placeholder: "Enter building number" },
-                    { label: "City", name: "City", placeholder: "Enter city" },
-                    { label: "Governorate", name: "Governorate", placeholder: "Enter governorate" },
-                  ].map((field) => (
-                    <div key={field.name}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
-                      <input
-                        type="text"
-                        name={field.name}
-                        placeholder={field.placeholder}
-                        value={newAddressForm[field.name]}
-                        onChange={handleNewAddressChange}
-                        className="border border-gray-300 p-2 rounded-lg w-full focus:border-secondary focus:ring-1 focus:ring-secondary transition"
-                      />
-                    </div>
-                  ))}
+                <div className="mb-6 flex flex-col gap-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      Street
+                    </label>
+                    <input
+                      type="text"
+                      name="Street"
+                      placeholder="Enter street name"
+                      value={newAddressForm.Street}
+                      onChange={handleNewAddressChange}
+                      className="w-full rounded-lg border border-gray-300 p-2 transition focus:border-secondary focus:ring-1 focus:ring-secondary"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      Building No
+                    </label>
+                    <input
+                      type="text"
+                      name="BuildingNo"
+                      placeholder="Enter building number"
+                      value={newAddressForm.BuildingNo}
+                      onChange={handleNewAddressChange}
+                      className="w-full rounded-lg border border-gray-300 p-2 transition focus:border-secondary focus:ring-1 focus:ring-secondary"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      name="City"
+                      placeholder="Enter city"
+                      value={newAddressForm.City}
+                      onChange={handleNewAddressChange}
+                      className="w-full rounded-lg border border-gray-300 p-2 transition focus:border-secondary focus:ring-1 focus:ring-secondary"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      Governorate
+                    </label>
+                    <input
+                      type="text"
+                      name="Governorate"
+                      placeholder="Enter governorate"
+                      value={newAddressForm.Governorate}
+                      onChange={handleNewAddressChange}
+                      className="w-full rounded-lg border border-gray-300 p-2 transition focus:border-secondary focus:ring-1 focus:ring-secondary"
+                    />
+                  </div>
                   <label className="flex items-center gap-2 text-sm text-gray-700">
                     <input
                       type="checkbox"
                       name="IsDefault"
                       checked={newAddressForm.IsDefault}
-                      onChange={(e) => setNewAddressForm((prev) => ({ ...prev, IsDefault: e.target.checked }))}
-                      className="h-4 w-4 text-secondary focus:ring-secondary border-gray-300 rounded"
+                      onChange={(e) =>
+                        setNewAddressForm((prev) => ({
+                          ...prev,
+                          IsDefault: e.target.checked,
+                        }))
+                      }
+                      className="h-4 w-4 rounded border-gray-300 text-secondary focus:ring-secondary"
                     />
                     Set as Default
                   </label>
                   <button
                     onClick={handleAddNewAddress}
-                    className="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-600 transition mt-2"
+                    className="mt-2 rounded-lg bg-blue-500 px-4 py-2 font-medium text-white transition hover:bg-blue-600"
                   >
                     Save New Address
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowAddressSelection(false);
+                      window.location.reload();
+                    }}
+                    className="rounded-lg bg-gray-300 px-5 py-2 font-medium text-gray-800 transition hover:bg-gray-400"
+                  >
+                    Cancel
                   </button>
                 </div>
               )}
 
-              <div className="flex justify-end gap-4 mt-6">
-                <button
-                  onClick={() => setShowAddressSelection(false)}
-                  className="px-5 py-2 rounded-lg bg-gray-300 text-gray-800 font-medium hover:bg-gray-400 transition"
-                >
-                  Cancel
-                </button>
+              <div className="mt-6 flex justify-center gap-4">
                 {!showNewAddressForm && (
                   <button
-                    onClick={handleConfirmAddress}
-                    disabled={!selectedAddressId || isConfirmingAddress}
-                    className="px-5 py-2 rounded-lg bg-secondary text-white font-medium hover:bg-secondary-dark transition flex items-center justify-center gap-2 disabled:opacity-50"
+                    onClick={() => {
+                      handleConfirmAddress();
+                      audio.currentTime = 0;
+                      audio.play();
+                    }}
+                    className="hover:bg-secondary-dark rounded-lg bg-secondary px-5 py-2 font-medium text-white transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!selectedAddressId}
                   >
-                    {isConfirmingAddress && (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    )}
-                    {isConfirmingAddress ? "Processing..." : "Confirm Address & Fetch Pharmacies"}
+                    Confirm Address
                   </button>
                 )}
               </div>
@@ -472,7 +531,9 @@ const Checkout = () => {
           ) : (
             <>
               {loading && <p>Loading pharmacies...</p>}
-              {errorMessage && <p className="text-red-500 mb-4">{errorMessage}</p>}
+              {errorMessage && (
+                <p className="mb-4 text-red-500">{errorMessage}</p>
+              )}
 
               <div className="space-y-6">
                 {pharmacies.map((p, i) => {
@@ -483,52 +544,52 @@ const Checkout = () => {
                   return (
                     <div
                       key={p.pharmacyId}
-                      className="pb-6 border rounded-2xl p-4 shadow-sm transition"
+                      className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
                       onMouseEnter={() => setHoveredPharmacyId(p.pharmacyId)}
                       onMouseLeave={() => setHoveredPharmacyId(null)}
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-start flex-1 min-w-0">
+                      <div className="flex flex-col gap-4 md:flex-row md:justify-between">
+                        {/* LEFT SIDE */}
+                        <div className="flex gap-3">
+                          {/* Checkbox */}
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => handleTogglePharmacy(p.pharmacyId)}
-                            className="h-5 w-5 text-secondary focus:ring-secondary border-gray-300 rounded mr-3 mt-1 flex-shrink-0"
+                            className="mt-1 h-5 w-5 rounded border-gray-300 text-secondary focus:ring-secondary"
                           />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-base sm:text-lg font-semibold">
+
+                          {/* Content */}
+                          <div className="space-y-1">
+                            <p className="text-lg font-semibold text-gray-800">
                               {i + 1}. {p.name}
                             </p>
-                            <p className="text-gray-500 text-xs sm:text-sm break-words">
-                              Lat: {p.latitude.toFixed(4)}, Lng: {p.longitude.toFixed(4)}, Distance:{" "}
-                              {p.distanceKm.toFixed(2)} km, Est. Time: {p.estimatedDurationMinutes.toFixed(0)} min
+
+                            {/* Location */}
+                            <p className="text-xs text-gray-500">
+                              📍 {p.distanceKm.toFixed(2)} km • ⏱{" "}
+                              {p.estimatedDurationMinutes.toFixed(0)} min
                             </p>
 
+                            {/* Real Route */}
                             {realRoute && (
-                              <p className="text-green-600 font-medium text-xs sm:text-sm mt-1">
-                                🛣️ Real Road: {realRoute.distanceKm} km • {realRoute.durationMin} min
+                              <p className="text-sm font-medium text-green-600">
+                                🛣️ {realRoute.distanceKm} km •{" "}
+                                {realRoute.durationMin} min
                               </p>
                             )}
 
-                            <p className="text-gray-500 text-xs sm:text-sm">Contact: {p.contactNumber}</p>
-                            <p className="text-sm mt-2">
-                              Matched Drugs: {p.matchedDrugs} / {p.totalRequestedDrugs} (
-                              {p.matchPercentage.toFixed(2)}%)
+                            {/* Contact */}
+                            <p className="text-xs text-gray-500">
+                              📞 {p.contactNumber}
                             </p>
 
-                            {isSelected && (
-                              <p className="text-sm font-semibold text-blue-700 mt-2">
-                                Total:{" "}
-                                {(selectedMedicines[p.pharmacyId] || [])
-                                  .reduce((sum, medId) => {
-                                    const med = p.foundMedicines.find((m) => m.medicineId === medId);
-                                    return sum + (med?.price ?? 0) * (med?.requestedQuantity ?? 0);
-                                  }, 0)
-                                  .toFixed(2)}{" "}
-                                EGP
-                              </p>
-                            )}
+                            {/* Match */}
+                            <p className="text-sm font-medium text-secondary">
+                              Match: {p.matchPercentage.toFixed(0)}%
+                            </p>
 
+                            {/* Expand Button */}
                             <button
                               onClick={() =>
                                 setExpandedPharmacies((prev) => ({
@@ -536,89 +597,118 @@ const Checkout = () => {
                                   [p.pharmacyId]: !isExpanded,
                                 }))
                               }
-                              className="text-secondary hover:underline text-sm font-medium mb-2 transition-colors"
+                              className="hover:text-secondary-dark text-sm font-medium text-secondary transition hover:underline"
                             >
-                              {isExpanded ? "Hide Details" : "Show More Details"}
+                              {isExpanded ? "Hide Details" : "Show Details"}
                             </button>
-
-                            {isExpanded && (
-                              <>
-                                <p className="text-sm font-medium mt-3">Found Medicines:</p>
-                                <ul className="list-disc pl-5 text-sm">
-                                  {p.foundMedicines.map((m) => (
-                                    <li
-                                      key={m.medicineId}
-                                      className={`flex justify-between items-center ${
-                                        m.isQuantityEnough ? "text-green-600" : "text-purple-600"
-                                      }`}
-                                    >
-                                      <div>
-                                        <input
-                                          type="checkbox"
-                                          checked={selectedMedicines[p.pharmacyId]?.includes(m.medicineId) || false}
-                                          onChange={() => handleToggleMedicine(p.pharmacyId, m.medicineId)}
-                                          className="mr-2"
-                                          disabled={!m.isQuantityEnough}
-                                        />
-                                        <span>
-                                          {m.medicineName} – Requested: {m.requestedQuantity}, Available:{" "}
-                                          {m.availableQuantity}
-                                          {!m.isQuantityEnough && " (Not enough)"}
-                                        </span>
-                                      </div>
-                                      <span className="font-bold text-blue-600 ml-2 flex-shrink-0">
-                                        {m.price != null ? `${m.price} EGP` : "--"}
-                                      </span>
-                                    </li>
-                                  ))}
-                                </ul>
-
-                                <p className="text-sm font-medium mt-3">Not Found Medicines:</p>
-                                <ul className="list-disc pl-5 text-sm text-red-600">
-                                  {p.notFoundMedicines.map((m) => (
-                                    <li key={m.medicineId}>
-                                      {m.medicineName} – Requested: {m.requestedQuantity}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </>
-                            )}
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => handleOrderClick(p)}
-                          className="bg-secondary text-white px-3 sm:px-5 py-2 rounded-xl font-medium ml-2 flex-shrink-0 text-sm sm:text-base"
-                        >
-                          Order
-                        </button>
+                        {/* RIGHT SIDE (Order Button) */}
+                        <div className="flex items-start md:items-center">
+                          <button
+                            onClick={() => handleOrderClick(p)}
+                            className="hover:bg-secondary-dark w-full rounded-xl bg-secondary px-5 py-2 font-medium text-white transition-all duration-200 hover:scale-105 active:scale-95 md:w-auto"
+                          >
+                            Order
+                          </button>
+                        </div>
                       </div>
+
+                      {/* EXPANDED SECTION */}
+                      {isExpanded && (
+                        <div className="mt-4 space-y-4 border-t pt-4">
+                          {/* Found */}
+                          <div>
+                            <p className="text-sm font-semibold text-gray-700">
+                              ✅ Found Medicines
+                            </p>
+
+                            <ul className="mt-1 space-y-1 text-sm">
+                              {p.foundMedicines.map((m) => {
+                                const colorClass = m.isQuantityEnough
+                                  ? "text-green-600"
+                                  : "text-purple-600";
+
+                                return (
+                                  <li
+                                    key={m.medicineId}
+                                    className={`flex items-center gap-2 ${colorClass}`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={
+                                        selectedMedicines[
+                                          p.pharmacyId
+                                        ]?.includes(m.medicineId) || false
+                                      }
+                                      onChange={() =>
+                                        handleToggleMedicine(
+                                          p.pharmacyId,
+                                          m.medicineId,
+                                        )
+                                      }
+                                      disabled={!m.isQuantityEnough}
+                                    />
+
+                                    <span>{m.medicineName}</span>
+
+                                    <span className="text-xs text-gray-500">
+                                      ({m.availableQuantity}/
+                                      {m.requestedQuantity})
+                                    </span>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+
+                          {/* Not Found */}
+                          <div>
+                            <p className="text-sm font-semibold text-red-600">
+                              ❌ Not Found
+                            </p>
+
+                            <ul className="mt-1 space-y-1 text-sm text-red-500">
+                              {p.notFoundMedicines.map((m) => (
+                                <li key={m.medicineId}>
+                                  {m.medicineName} ({m.requestedQuantity})
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
-              <div className="flex justify-center mt-6 gap-4">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
+                {/* Expand Button */}
                 <button
                   onClick={handleExpandRange}
                   disabled={loading || showAddressSelection || creatingOrder}
-                  className={`px-4 sm:px-6 py-3 rounded-lg font-medium transition text-sm sm:text-base ${
+                  className={`/* 📱 mobile */ /* 📱➡️ tablet */ /* 💻 desktop */ w-full rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 sm:w-auto sm:px-5 sm:py-2.5 sm:text-base md:px-6 md:py-3 md:text-base ${
                     loading || showAddressSelection || creatingOrder
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-secondary text-white hover:bg-secondary-dark"
-                  }`}
+                      ? "cursor-not-allowed bg-gray-300 text-gray-500"
+                      : "hover:bg-secondary-dark bg-secondary text-white active:scale-95"
+                  } `}
                 >
                   Expand (+5)
                 </button>
 
+                {/* Order Button */}
                 <button
                   onClick={() => setShowPaymentModal(true)}
-                  disabled={loading || selectedPharmacies.length === 0 || creatingOrder}
-                  className={`px-4 sm:px-6 py-3 rounded-lg font-medium transition text-sm sm:text-base ${
+                  disabled={
                     loading || selectedPharmacies.length === 0 || creatingOrder
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-secondary text-white hover:bg-secondary-dark"
-                  }`}
+                  }
+                  className={`w-full rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 sm:w-auto sm:px-5 sm:py-2.5 sm:text-base md:px-6 md:py-3 md:text-base ${
+                    loading || selectedPharmacies.length === 0 || creatingOrder
+                      ? "cursor-not-allowed bg-gray-300 text-gray-500"
+                      : "hover:bg-secondary-dark bg-secondary text-white active:scale-95"
+                  } `}
                 >
                   {creatingOrder ? "Processing..." : `Order Selected (${selectedPharmacies.length})`}
                 </button>
@@ -630,9 +720,12 @@ const Checkout = () => {
 
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[9999] px-4">
-          <div className="bg-white w-full max-w-md p-6 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-semibold mb-4">Select Payment Method</h2>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40">
+          <div className="mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="mb-4 text-xl font-semibold">
+              Select Payment Method
+            </h2>
+
             <div className="flex flex-col gap-3">
               <label className="flex items-center gap-2">
                 <input
@@ -653,17 +746,18 @@ const Checkout = () => {
                 Online Payment (Visa / Paymob)
               </label>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
+
+            <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="px-4 py-2 bg-gray-300 rounded-lg"
+                className="rounded-lg bg-gray-300 px-4 py-2"
                 disabled={creatingOrder}
               >
                 Cancel
               </button>
               <button
                 onClick={handlePaymentConfirm}
-                className="px-4 py-2 bg-secondary text-white rounded-lg"
+                className="rounded-lg bg-secondary px-4 py-2 text-white"
                 disabled={creatingOrder}
               >
                 {creatingOrder ? "Processing..." : "Continue"}

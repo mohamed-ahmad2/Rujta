@@ -3,30 +3,37 @@ import Logo from "../../../assets/Logo2.png";
 import { NavbarMenu } from "../../../mockData/data";
 import { MdMenu } from "react-icons/md";
 import { useNavigate, Link } from "react-router-dom";
+
 import ResponsiveMenulanding from "./ResponsiveMenulanding";
 
 const Navbar = () => {
   const [open, setOpen] = React.useState(false);
   const navigate = useNavigate();
-
+  const authButtonClass =
+    "rounded-md border-2 border-secondary px-6 py-2 font-semibold text-secondary transition duration-200 hover:bg-secondary hover:text-white";
   return (
     <>
       <nav className="bg-page">
-        <div className="container mx-auto flex justify-between items-center py-4 md:py-8 px-4 md:px-0">
-
+        <div className="container mx-auto flex items-center justify-between px-4 py-4 md:px-0 md:py-8">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <img src={Logo} alt="Logo" className="w-12 h-12 sm:w-16 sm:h-16 object-contain" />
-            <p className="font-extrabold text-2xl sm:text-3xl text-secondary">Rujta</p>
+            <img
+              src={Logo}
+              alt="Logo"
+              className="h-12 w-12 object-contain sm:h-16 sm:w-16"
+            />
+            <p className="text-2xl font-extrabold text-secondary sm:text-3xl">
+              Rujta
+            </p>
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-6 ml-10">
+          <div className="ml-10 hidden items-center gap-6 lg:flex">
             {NavbarMenu.map((item) => (
               <Link
                 key={item.id}
                 to={item.link}
-                className="py-1 px-3 hover:text-secondary font-semibold duration-200"
+                className="px-3 py-1 font-semibold duration-200 hover:text-secondary"
               >
                 {item.title}
               </Link>
@@ -34,37 +41,26 @@ const Navbar = () => {
           </div>
 
           {/* Desktop Login/Signup */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden items-center gap-4 lg:flex">
             <button
-              onClick={() => navigate("/auth")}
-              className="hover:bg-secondary text-secondary font-semibold hover:text-white rounded-md border-2 border-secondary px-6 py-2 duration-200"
+              onClick={() => navigate("/auth?mode=login")}
+              className={authButtonClass}
             >
               Login
             </button>
+
             <button
-              onClick={() => navigate("/auth")}
-              className="hover:bg-secondary text-secondary font-semibold hover:text-white rounded-md border-2 border-secondary px-6 py-2 duration-200"
+              onClick={() => navigate("/auth?mode=signup")}
+              className={authButtonClass}
             >
               SignUp
             </button>
           </div>
 
-          {/* Mobile: Login + SignUp + Menu Icon */}
-          <div className="md:hidden flex items-center gap-2">
-            <button
-              onClick={() => navigate("/auth")}
-              className="text-secondary font-semibold border-2 border-secondary rounded-md px-3 py-1 text-sm hover:bg-secondary hover:text-white duration-200"
-            >
-              Login
-            </button>
-            <button
-              onClick={() => navigate("/auth")}
-              className="text-secondary font-semibold border-2 border-secondary rounded-md px-3 py-1 text-sm hover:bg-secondary hover:text-white duration-200"
-            >
-              SignUp
-            </button>
+          {/* Mobile Menu Icon */}
+          <div className="lg:hidden">
             <MdMenu
-              className="text-4xl cursor-pointer"
+              className="cursor-pointer text-4xl"
               onClick={() => setOpen(!open)}
             />
           </div>

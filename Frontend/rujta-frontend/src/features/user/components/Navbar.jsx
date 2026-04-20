@@ -130,26 +130,24 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
   };
 
   return (
-    <nav className="bg-white shadow-lg sticky top-0 z-50">
+    <nav className="sticky top-0 z-[100] bg-white shadow-lg">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row items-center justify-between py-4 md:py-5 gap-4 md:gap-0">
+        <div className="flex flex-col items-center justify-between gap-4 py-4 md:py-5 lg:flex-row lg:gap-0">
           {/* Logo */}
           <div
-            className="text-3xl font-bold text-secondary cursor-pointer 
-             transition-all duration-200 hover:scale-105 
-             hover:tracking-wide hover:opacity-90"
+            className="cursor-pointer text-4xl font-bold text-secondary transition-all duration-200 hover:scale-105 hover:tracking-wide hover:opacity-90 md:text-5xl lg:text-4xl"
             onClick={() => navigate("/user")}
           >
             Rujta
           </div>
 
           {/* Search */}
-          <div className="w-full md:w-1/2 lg:w-1/3 relative">
+          <div className="relative w-full lg:w-1/2">
             <input
               ref={inputRef}
               type="text"
               placeholder="Search medicines..."
-              className="w-full px-5 py-3 border rounded-full"
+              className="w-full rounded-full border px-5 py-3"
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -157,23 +155,23 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
               }}
               onKeyDown={handleKeyDown}
             />
-            <IoMdSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-xl" />
+            <IoMdSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-xl text-gray-500" />
 
             {/* Dropdown Results */}
             {showResults && (
               <div
                 ref={resultsRef}
-                className="absolute mt-2 w-full bg-white border border-gray-200 rounded-2xl shadow-xl max-h-72 overflow-auto z-50"
+                className="absolute z-50 mt-2 max-h-72 w-full overflow-auto rounded-2xl border border-gray-200 bg-white shadow-xl"
               >
                 {searchLoading ? (
-                  <div className="px-5 py-4 text-gray-500 text-sm">
+                  <div className="px-5 py-4 text-sm text-gray-500">
                     Searching...
                   </div>
                 ) : searchResults.length > 0 ? (
                   searchResults.map((medicine, index) => (
                     <div
                       key={medicine.id || index}
-                      className={`px-5 py-3.5 cursor-pointer hover:bg-gray-100 transition-colors flex items-center gap-3 text-sm border-b last:border-none ${
+                      className={`flex cursor-pointer items-center gap-3 border-b px-5 py-3.5 text-sm transition-colors last:border-none hover:bg-gray-100 ${
                         index === selectedIndex ? "bg-gray-100" : ""
                       }`}
                       onClick={() => handleSelect(medicine)}
@@ -182,7 +180,7 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
                     </div>
                   ))
                 ) : (
-                  <div className="px-5 py-4 text-gray-500 text-sm">
+                  <div className="px-5 py-4 text-sm text-gray-500">
                     No results found
                   </div>
                 )}
@@ -191,28 +189,28 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
           </div>
 
           {/* Icons */}
-          <div className="flex items-center gap-4 md:gap-6 mt-2 md:mt-0">
+          <div className="mt-2 flex items-center gap-6 md:mt-0 md:gap-10 lg:gap-6">
             {/* Scanner */}
             <IoQrCodeOutline
-              className="text-2xl text-gray-600 cursor-pointer hover:text-secondary hover:scale-110 transition-transform duration-200"
+              className="cursor-pointer text-2xl text-gray-600 transition-transform duration-200 hover:scale-110 hover:text-secondary"
               onClick={openScanner}
             />
 
             {/* Cart */}
             <button
               onClick={onCartClick}
-              className="relative cursor-pointer hover:scale-110 transition-transform duration-200 group"
+              className="group relative cursor-pointer transition-transform duration-200 hover:scale-110"
             >
-              <div className="relative w-6 h-6">
+              <div className="relative h-6 w-6">
                 {/* Outline */}
-                <FiShoppingCart className="absolute inset-0 text-2xl text-gray-600 group-hover:text-secondary transition-all duration-200 opacity-100 group-hover:opacity-0" />
+                <FiShoppingCart className="absolute inset-0 text-2xl text-gray-600 opacity-100 transition-all duration-200 group-hover:text-secondary group-hover:opacity-0" />
 
                 {/* Filled */}
-                <FaCartShopping className="absolute inset-0 text-2xl text-gray-600 group-hover:text-secondary transition-all duration-200 opacity-0 group-hover:opacity-100" />
+                <FaCartShopping className="absolute inset-0 text-2xl text-gray-600 opacity-0 transition-all duration-200 group-hover:text-secondary group-hover:opacity-100" />
               </div>
 
               {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                   {cart.length}
                 </span>
               )}
@@ -221,18 +219,18 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
             {/* Orders */}
             <button
               onClick={() => navigate("/user/orders")}
-              className="relative cursor-pointer hover:scale-110 transition-transform duration-200 group"
+              className="group relative cursor-pointer transition-transform duration-200 hover:scale-110"
             >
-              <div className="relative w-6 h-6">
+              <div className="relative h-6 w-6">
                 {/* Outline */}
-                <BsBoxSeam className="absolute inset-0 text-2xl text-gray-600 group-hover:text-secondary transition-all duration-200 opacity-100 group-hover:opacity-0" />
+                <BsBoxSeam className="absolute inset-0 text-2xl text-gray-600 opacity-100 transition-all duration-200 group-hover:text-secondary group-hover:opacity-0" />
 
                 {/* Filled */}
-                <BsBoxSeamFill className="absolute inset-0 text-2xl text-gray-600 group-hover:text-secondary transition-all duration-200 opacity-0 group-hover:opacity-100" />
+                <BsBoxSeamFill className="absolute inset-0 text-2xl text-gray-600 opacity-0 transition-all duration-200 group-hover:text-secondary group-hover:opacity-100" />
               </div>
 
               {incompleteOrdersCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                   {incompleteOrdersCount}
                 </span>
               )}
@@ -241,18 +239,18 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
             {/* Notifications */}
             <button
               onClick={() => navigate("/user/notifications")}
-              className="relative cursor-pointer hover:scale-110 transition-transform duration-200 group"
+              className="group relative cursor-pointer transition-transform duration-200 hover:scale-110"
             >
-              <div className="relative w-6 h-6">
+              <div className="relative h-6 w-6">
                 {/* Outline */}
-                <IoNotificationsOutline className="absolute inset-0 text-2xl text-gray-600 group-hover:text-secondary transition-opacity duration-200 opacity-100 group-hover:opacity-0" />
+                <IoNotificationsOutline className="absolute inset-0 text-2xl text-gray-600 opacity-100 transition-opacity duration-200 group-hover:text-secondary group-hover:opacity-0" />
 
                 {/* Filled */}
-                <IoNotifications className="absolute inset-0 text-2xl text-gray-600 group-hover:text-secondary transition-opacity duration-200 opacity-0 group-hover:opacity-100" />
+                <IoNotifications className="absolute inset-0 text-2xl text-gray-600 opacity-0 transition-opacity duration-200 group-hover:text-secondary group-hover:opacity-100" />
               </div>
 
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
                   {unreadCount}
                 </span>
               )}
@@ -261,28 +259,28 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
             {/* Profile */}
             <button
               onClick={() => navigate("/user/profile")}
-              className="relative cursor-pointer hover:scale-110 transition-transform duration-200 group"
+              className="group relative cursor-pointer transition-transform duration-200 hover:scale-110"
             >
-              <div className="relative w-6 h-6">
+              <div className="relative h-6 w-6">
                 {/* Outline (default) */}
-                <CgProfile className="absolute inset-0 text-3xl text-gray-600 group-hover:text-secondary transition-opacity duration-200 opacity-100 group-hover:opacity-0" />
+                <CgProfile className="absolute inset-0 text-3xl text-gray-600 opacity-100 transition-opacity duration-200 group-hover:text-secondary group-hover:opacity-0" />
 
                 {/* Filled */}
-                <CgProfileFill className="absolute inset-0 text-3xl text-gray-600 group-hover:text-secondary transition-opacity duration-200 opacity-0 group-hover:opacity-100" />
+                <CgProfileFill className="absolute inset-0 text-3xl text-gray-600 opacity-0 transition-opacity duration-200 group-hover:text-secondary group-hover:opacity-100" />
               </div>
             </button>
 
             {/* Logout */}
             <button
               onClick={logoutAndRedirect}
-              className="relative cursor-pointer hover:scale-110 transition-transform duration-200 group"
+              className="group relative cursor-pointer transition-transform duration-200 hover:scale-110"
             >
-              <div className="relative w-6 h-6">
+              <div className="relative h-6 w-6">
                 {/* Outline */}
-                <LuLogOut className="absolute inset-0 text-2xl text-gray-600 group-hover:text-red-600 transition-opacity duration-200 opacity-100 group-hover:opacity-0" />
+                <LuLogOut className="absolute inset-0 text-2xl text-gray-600 opacity-100 transition-opacity duration-200 group-hover:text-red-600 group-hover:opacity-0" />
 
                 {/* Filled */}
-                <LuLogOutFill className="absolute inset-0 text-2xl text-gray-600 group-hover:text-red-600 transition-opacity duration-200 opacity-0 group-hover:opacity-100" />
+                <LuLogOutFill className="absolute inset-0 text-2xl text-gray-600 opacity-0 transition-opacity duration-200 group-hover:text-red-600 group-hover:opacity-100" />
               </div>
             </button>
           </div>

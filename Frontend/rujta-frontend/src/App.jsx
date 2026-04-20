@@ -30,7 +30,6 @@ const App = () => {
       ? localStorage.getItem(`seenSplash_${user.email}`)
       : null;
 
-    // لو Splash اتشاف قبل كده
     if (globalSeen || userSeen) {
       setShowSplash(false);
     }
@@ -88,38 +87,38 @@ const App = () => {
     <PresenceProvider>
       <OrdersProvider>
         <NotificationProvider>
-        <AppRoutes
-          cart={cart}
-          setCart={setCart}
-          isCartOpen={isCartOpen}
-          setIsCartOpen={setIsCartOpen}
-        />
-
-        {/* Floating Cart Button */}
-       {user &&
-  !isLandingPage &&
-  !isAuthPage &&
-  !isResetPage &&
-  !isDashboard &&
-  !isSuperAdmin && (
-    <FloatingCartButton
-      cart={cart}
-      onClick={() => setIsCartOpen(true)}
-    />
-)}
-
-        {/* Cart Drawer */}
-        {user && (
-          <CartDrawerUser
+          <AppRoutes
             cart={cart}
             setCart={setCart}
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
+            isCartOpen={isCartOpen}
+            setIsCartOpen={setIsCartOpen}
           />
-        )}
 
-        {/* Vercel Speed Insights */}
-        <SpeedInsights />
+          {/* Floating Cart Button */}
+          {user &&
+            !isLandingPage &&
+            !isAuthPage &&
+            !isResetPage &&
+            !isDashboard &&
+            !isSuperAdmin && (
+              <FloatingCartButton
+                cart={cart}
+                onClick={() => setIsCartOpen(true)}
+              />
+            )}
+
+          {/* Cart Drawer */}
+          {user && (
+            <CartDrawerUser
+              cart={cart}
+              setCart={setCart}
+              isOpen={isCartOpen}
+              onClose={() => setIsCartOpen(false)}
+            />
+          )}
+
+          {/* Vercel Speed Insights */}
+          <SpeedInsights />
         </NotificationProvider>
       </OrdersProvider>
     </PresenceProvider>
