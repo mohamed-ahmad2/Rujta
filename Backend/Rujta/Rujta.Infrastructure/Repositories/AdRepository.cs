@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Data;          // AppDbContext lives here — matches your AddressRepository
+using Rujta.Infrastructure.Data;          
 
 namespace Rujta.Infrastructure.Repositories
 {
@@ -16,7 +16,6 @@ namespace Rujta.Infrastructure.Repositories
             _context = context;
         }
 
-        /// <inheritdoc/>
         public async Task<IEnumerable<Ad>> GetAllActiveAsync(
             CancellationToken cancellationToken = default)
         {
@@ -27,7 +26,6 @@ namespace Rujta.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        /// <inheritdoc/>
         public async Task<IEnumerable<Ad>> GetByPharmacyIdAsync(
             int pharmacyId,
             CancellationToken cancellationToken = default)
@@ -39,7 +37,6 @@ namespace Rujta.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        /// <inheritdoc/>
         public async Task DeactivateAsync(
             int id,
             CancellationToken cancellationToken = default)
@@ -55,7 +52,6 @@ namespace Rujta.Infrastructure.Repositories
             await _context.SaveChangesAsync(cancellationToken);
         }
 
-        /// <inheritdoc/>
         public async Task SetStatusAsync(
             int id,
             bool isActive,
