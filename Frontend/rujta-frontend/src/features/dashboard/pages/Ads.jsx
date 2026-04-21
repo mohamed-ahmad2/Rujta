@@ -293,6 +293,7 @@ export default function Ads() {
 
       isActive: true
     };
+// HI
 
     await createAd(payload);
     setToast({ message: "Ad published successfully 🚀" });
