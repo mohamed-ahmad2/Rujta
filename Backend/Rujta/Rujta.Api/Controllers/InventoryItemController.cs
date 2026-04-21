@@ -29,7 +29,7 @@ namespace Rujta.Api.Controllers
         private bool TryGetPharmacyId(out int pharmacyId)
         {
             pharmacyId = 0;
-            var claim = User.FindFirst("PharmacyID");
+            var claim = User.FindFirst("PharmacyId");
             if (claim == null) return false;
             return int.TryParse(claim.Value, out pharmacyId);
         }
@@ -46,7 +46,7 @@ namespace Rujta.Api.Controllers
         public async Task<ActionResult<InventoryItemDto>> GetById(int id)
         {
             if (!TryGetPharmacyId(out int pharmacyId))
-                return Unauthorized(new { message = "PharmacyID claim missing in JWT." });
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
 
             var item = await _inventoryService.GetByIdAsync(id);
             if (item == null || item.PharmacyID != pharmacyId)
@@ -75,9 +75,9 @@ namespace Rujta.Api.Controllers
         [HttpPut("{id:int}", Name = "UpdateInventoryItem")]
         public async Task<ActionResult> Update(int id, [FromBody] InventoryItemDto dto)
         {
-            // ✅ Fix: استخدام TryGetPharmacyId بدل throw
+            
             if (!TryGetPharmacyId(out int pharmacyId))
-                return Unauthorized(new { message = "PharmacyID claim missing in JWT." });
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
 
             dto.PharmacyID = pharmacyId;
             try
@@ -101,7 +101,7 @@ namespace Rujta.Api.Controllers
         public async Task<ActionResult> Delete(int id)
         {
             if (!TryGetPharmacyId(out int pharmacyId))
-                return Unauthorized(new { message = "PharmacyID claim missing in JWT." });
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
 
             var item = await _inventoryService.GetByIdAsync(id);
             if (item == null || item.PharmacyID != pharmacyId)
@@ -121,7 +121,7 @@ namespace Rujta.Api.Controllers
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetInventoryProducts()
         {
             if (!TryGetPharmacyId(out int pharmacyId))
-                return Unauthorized(new { message = "PharmacyID claim missing in JWT." });
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
 
             var products = await _inventoryService.GetByPharmacyAsync(pharmacyId);
             return Ok(products);
