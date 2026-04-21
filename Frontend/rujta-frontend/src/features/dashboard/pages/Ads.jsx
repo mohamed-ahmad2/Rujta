@@ -267,8 +267,6 @@ export default function Ads() {
   setPublishError(null);
 
   try {
-    const imageDataUrl = await renderToDataURL();
-
     const payload = {
       templateId:   selectedTemplate.id,
       templateName: selectedTemplate.name,
@@ -290,12 +288,13 @@ export default function Ads() {
       fontLabel:    font.label,
       fontValue:    font.value,
 
-      imageDataUrl,
+      // ✅ Save the medicine's actual image URL, not the canvas render
+      medicineImage: adMode === "medicine" ? getImgSrc(selectedProduct) : null,
+
       isActive: true
     };
 
     await createAd(payload);
-
     setToast({ message: "Ad published successfully 🚀" });
 
   } catch (err) {

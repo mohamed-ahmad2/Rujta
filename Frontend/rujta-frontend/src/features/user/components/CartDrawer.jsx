@@ -111,14 +111,7 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
       {/* Footer */}
       {cart.length > 0 && (
         <div className="border-t border-gray-200 dark:border-gray-700 p-5 bg-white dark:bg-gray-900 sticky bottom-0">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-gray-700 dark:text-gray-300 font-semibold">
-              Total:
-            </span>
-            <span className="text-lg font-bold text-primary">
-              {total.toFixed(2)} EGP
-            </span>
-          </div>
+          
 
           <button
   onClick={handleCheckout}

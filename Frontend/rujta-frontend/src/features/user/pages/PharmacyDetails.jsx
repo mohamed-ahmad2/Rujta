@@ -31,15 +31,21 @@ function AdBanner({ ad }) {
       <div className="pointer-events-none absolute bottom-[-40px] right-20 h-20 w-20 rounded-full"
         style={{ background: "rgba(255,255,255,0.06)" }} />
 
-      {/* Medicine image */}
-      {ad.adMode === "medicine" && ad.imageDataUrl && (
-        <img
-          src={ad.imageDataUrl}
-          alt={ad.medicineName}
-          className="absolute right-7 top-1/2 h-20 w-20 -translate-y-1/2 rounded-full object-cover"
-          style={{ border: "3px solid rgba(255,255,255,0.3)" }}
-        />
-      )}
+    {ad.adMode === "medicine" && ad.medicineImage && (
+  <img
+    src={ad.medicineImage}
+    alt={ad.medicineName}
+    className="absolute right-7 top-1/2 -translate-y-1/2 object-contain"
+    style={{
+      width: 130,
+      height: 130,
+      border: "3px solid rgba(255,255,255,0.3)",
+      borderRadius: "50%",
+      background: "rgba(255,255,255,0.15)",
+      padding: 8,
+    }}
+  />
+)}
 
       {/* Badge */}
       <span
@@ -139,7 +145,8 @@ const PharmacyDetails = ({ cart, setCart }) => {
   const lastAd = ads.length > 0
   ? [...ads].sort((a, b) => b.id - a.id)[0]   // or b.createdAt - a.createdAt
   : null;
-
+console.log("adMode:", lastAd?.adMode, "imageDataUrl:", lastAd?.imageDataUrl);
+console.log("Full ad object:", lastAd);
   /* ── Loading / Error states ── */
   if (loading) return (
     <div className="flex items-center justify-center py-32">
@@ -370,10 +377,6 @@ const PharmacyDetails = ({ cart, setCart }) => {
                       className="mt-4 flex items-center justify-between pt-3"
                       style={{ borderTop: "1px solid #e8eee2" }}
                     >
-                      <div>
-                        <span className="text-base font-bold" style={{ color: "#5a8a1f" }}>{med.price}</span>
-                        <span className="ml-1 text-[11px] font-medium text-gray-400">EGP</span>
-                      </div>
 
                       <button
                         onClick={(e) => { e.stopPropagation(); handleAddToCart(med); }}
