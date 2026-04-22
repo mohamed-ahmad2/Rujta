@@ -20,7 +20,7 @@ export default function HomePage() {
       <div className="flex items-center justify-center p-8 sm:p-12 md:p-16">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-transparent sm:h-10 sm:w-10" />
-          <p className="text-sm text-gray-500 sm:text-base">Loading...</p>
+          <p className="text-sm text-gray-500 sm:text-base">Loading report…</p>
         </div>
       </div>
     );
@@ -41,7 +41,6 @@ export default function HomePage() {
       </div>
     );
 
-  // ✅ Safe defaults
   const safe = {
     totalRevenue: report.totalRevenue ?? 0,
     totalOrders: report.totalOrders ?? 0,
@@ -62,7 +61,7 @@ export default function HomePage() {
     value
       ? `
 $${Number(value).toLocaleString()}`
-      : "\$0";
+      : "$0";
 
   return (
     <div className="space-y-4 p-3 sm:space-y-6 sm:p-4 md:space-y-8 md:p-0">
@@ -104,35 +103,41 @@ $${Number(value).toLocaleString()}`
             <h3 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base md:text-lg">
               Revenue (Last 30 Days)
             </h3>
-            <div className="h-48 sm:h-56 md:h-64 lg:h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={safe.dailySales}
-                  margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
-                >
-                  <CartesianGrid stroke="#f3f3f3" vertical={false} />
-                  <XAxis
-                    dataKey="dateLabel"
-                    tick={{ fontSize: 10 }}
-                    interval="preserveStartEnd"
-                  />
 
-                  <Tooltip
-                    formatter={(value) => `
+            {safe.dailySales.length === 0 ? (
+              <div className="flex h-48 items-center justify-center text-sm text-gray-300 sm:h-56 md:h-64 lg:h-[300px]">
+                No sales data yet
+              </div>
+            ) : (
+              <div className="h-48 sm:h-56 md:h-64 lg:h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={safe.dailySales}
+                    margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
+                  >
+                    <CartesianGrid stroke="#f3f3f3" vertical={false} />
+                    <XAxis
+                      dataKey="dateLabel"
+                      tick={{ fontSize: 10 }}
+                      interval="preserveStartEnd"
+                    />
+
+                    <Tooltip
+                      formatter={(value) => `
 $${Number(value).toLocaleString()}`}
-                    contentStyle={{ fontSize: "12px" }}
-                  />
-                  <Bar
-                    dataKey="totalSales"
-                    fill="#9DC873"
-                    radius={[6, 6, 6, 6]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+                      contentStyle={{ fontSize: "12px" }}
+                    />
+                    <Bar
+                      dataKey="totalSales"
+                      fill="#9DC873"
+                      radius={[6, 6, 6, 6]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
 
-          {/* Orders Summary */}
           <div className="rounded-2xl bg-white p-3 shadow sm:p-4 md:p-5 lg:p-6">
             <h3 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base md:text-lg">
               Orders Summary
@@ -172,16 +177,16 @@ $${Number(value).toLocaleString()}`}
           </div>
         </div>
 
-        {/* ===== RIGHT COLUMN ===== */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:gap-6 lg:col-span-4 lg:grid-cols-1">
           {/* Top Selling Products */}
           <div className="rounded-2xl bg-white p-3 shadow-sm sm:p-4 md:p-5 lg:p-6">
             <h3 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base md:text-lg">
               Top Selling Products
             </h3>
+
             {safe.topProducts.length === 0 ? (
               <p className="text-xs text-gray-400 sm:text-sm">
-                No top products
+                No top products yet
               </p>
             ) : (
               <div className="space-y-2 sm:space-y-3">
@@ -212,6 +217,7 @@ $${Number(value).toLocaleString()}`}
             <h3 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base md:text-lg">
               Low Stock Items
             </h3>
+
             {safe.lowStockItems.length === 0 ? (
               <p className="text-xs text-gray-400 sm:text-sm">
                 All items are in stock
