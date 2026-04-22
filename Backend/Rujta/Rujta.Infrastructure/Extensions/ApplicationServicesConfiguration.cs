@@ -55,7 +55,8 @@ namespace Rujta.Infrastructure.Extensions
             //   services.AddHttpClient<IPaymobService, PaymobService>();
             services.AddScoped<IPrescriptionService, PrescriptionService>();
             services.AddSingleton<IUserPresenceService, InMemoryUserPresenceService>();
-
+            services.AddScoped<IAdService, AdService>();
+            services.AddScoped<IAdRepository, AdRepository>();
             services.AddMemoryCache();
 
 

@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import imge1 from "../../../assets/hero/img1.png";
-import {
-  getAllPharmacies,
-  getPharmacyMedicines,
-} from "../../pharmacies/api/pharmaciesApi";
+import { getAllPharmacies, getPharmacyMedicines } from "../../pharmacies/api/pharmaciesApi";
+import useCampaigns from "../../campaigns/hook/useCampaigns";
 
 const categoryOptions = [
   { id: "All", name: "All" },
@@ -13,8 +11,78 @@ const categoryOptions = [
   { id: 3, name: "Allergy & Respiratory" },
 ];
 
+/* ─────────────────────────── Ad Banner ─────────────────────────── */
+function AdBanner({ ad }) {
+  return (
+    <div
+      className="relative cursor-pointer overflow-hidden rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+      style={{
+        background: `linear-gradient(135deg, ${ad.colorFrom}, ${ad.colorTo})`,
+        fontFamily: ad.fontValue || "sans-serif",
+        minHeight: 190,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+      }}
+    >
+      {/* Decorative orbs */}
+      <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full"
+        style={{ background: "rgba(255,255,255,0.15)" }} />
+      <div className="pointer-events-none absolute -bottom-6 -left-5 h-28 w-28 rounded-full"
+        style={{ background: "rgba(255,255,255,0.08)" }} />
+      <div className="pointer-events-none absolute bottom-[-40px] right-20 h-20 w-20 rounded-full"
+        style={{ background: "rgba(255,255,255,0.06)" }} />
+
+    {ad.adMode === "medicine" && ad.medicineImage && (
+  <img
+    src={ad.medicineImage}
+    alt={ad.medicineName}
+    className="absolute right-7 top-1/2 -translate-y-1/2 object-contain"
+    style={{
+      width: 130,
+      height: 130,
+      border: "3px solid rgba(255,255,255,0.3)",
+      borderRadius: "50%",
+      background: "rgba(255,255,255,0.15)",
+      padding: 8,
+    }}
+  />
+)}
+
+      {/* Badge */}
+      <span
+        className="mb-3 inline-block rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white"
+        style={{ background: "rgba(255,255,255,0.22)", letterSpacing: "0.06em" }}
+      >
+        {ad.badge}
+      </span>
+
+      {/* Headline */}
+      <h3
+        className="max-w-[58%] text-xl font-semibold leading-snug text-white"
+        style={{ fontFamily: "'Playfair Display', serif" }}
+      >
+        {ad.headline}
+      </h3>
+      <p className="mt-1.5 max-w-[58%] text-xs leading-relaxed text-white/75">
+        {ad.subtext}
+      </p>
+
+      {/* CTA */}
+      <button
+        className="mt-5 rounded-xl px-5 py-2 text-xs font-semibold transition hover:opacity-90"
+        style={{ background: "rgba(255,255,255,0.95)", color: ad.colorFrom }}
+      >
+        {ad.ctaLabel} →
+      </button>
+    </div>
+  );
+}
+
+/* ─────────────────────────── Main Page ─────────────────────────── */
 const PharmacyDetails = ({ cart, setCart }) => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { ads, fetchByPharmacy } = useCampaigns();
+
   const [pharmacy, setPharmacy] = useState(null);
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,24 +90,20 @@ const PharmacyDetails = ({ cart, setCart }) => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [expanded, setExpanded] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [addedIds, setAddedIds] = useState({});
 
   useEffect(() => {
-    const fetchPharmacyData = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-
         const res = await getAllPharmacies();
-        const foundPharmacy = res.data.find((ph) => ph.id === Number(id));
-
-        if (!foundPharmacy) {
-          setError("Pharmacy not found.");
-          setLoading(false);
-          return;
-        }
-
-        setPharmacy(foundPharmacy);
-
-        const medsRes = await getPharmacyMedicines(foundPharmacy.id);
+        const found = res.data.find((ph) => ph.id === Number(id));
+        if (!found) { setError("Pharmacy not found."); return; }
+        setPharmacy(found);
+        const [medsRes] = await Promise.all([
+          getPharmacyMedicines(found.id),
+          fetchByPharmacy(found.id),
+        ]);
         setMedicines(medsRes.data || []);
       } catch (err) {
         setError("Failed to load pharmacy data.");
@@ -48,30 +112,27 @@ const PharmacyDetails = ({ cart, setCart }) => {
         setLoading(false);
       }
     };
-
-    fetchPharmacyData();
-  }, [id]);
+    fetchData();
+  }, [id, fetchByPharmacy]);
 
   const handleAddToCart = (product) => {
     if (!setCart) return;
-
-    setCart((prevCart = []) => {
-      const existingItem = prevCart.find((item) => item.id === product.id);
-
-      if (existingItem) {
-        return prevCart.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
+    setCart((prev) => {
+      const exists = (prev || []).find(
+        (i) => i.id === product.id && i.pharmacyId === pharmacy.id
+      );
+      if (exists)
+        return prev.map((i) =>
+          i.id === product.id && i.pharmacyId === pharmacy.id
+            ? { ...i, quantity: i.quantity + 1 }
+            : i
         );
-      }
-
-      return [...prevCart, { ...product, quantity: 1 }];
+      return [...(prev || []), { ...product, pharmacyId: pharmacy.id, quantity: 1 }];
     });
-  };
 
-  const toggleExpand = (id) => {
-    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+    // Added feedback
+    setAddedIds((p) => ({ ...p, [product.id]: true }));
+    setTimeout(() => setAddedIds((p) => ({ ...p, [product.id]: false })), 1200);
   };
 
   const filteredMedicines = medicines.filter(
@@ -80,123 +141,281 @@ const PharmacyDetails = ({ cart, setCart }) => {
       med.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  if (loading) return <p className="py-20 text-center">Loading...</p>;
-  if (error) return <p className="py-20 text-center text-red-500">{error}</p>;
-  if (!pharmacy)
-    return <p className="py-20 text-center">Pharmacy not found.</p>;
+  // Only last ad
+  const lastAd = ads.length > 0
+  ? [...ads].sort((a, b) => b.id - a.id)[0]   // or b.createdAt - a.createdAt
+  : null;
+console.log("adMode:", lastAd?.adMode, "imageDataUrl:", lastAd?.imageDataUrl);
+console.log("Full ad object:", lastAd);
+  /* ── Loading / Error states ── */
+  if (loading) return (
+    <div className="flex items-center justify-center py-32">
+      <div className="h-9 w-9 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
+    </div>
+  );
+  if (error) return <p className="py-24 text-center text-red-500">{error}</p>;
+  if (!pharmacy) return <p className="py-24 text-center text-gray-400">Pharmacy not found.</p>;
 
   return (
-    <div className="container mx-auto px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
-      {/* Pharmacy Info */}
-      <div className="animate-fadeIn mb-8 flex flex-col items-center sm:mb-10 lg:mb-12">
-        <div className="mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#E8F3E8] shadow-md transition hover:shadow-lg sm:h-28 sm:w-28 lg:h-32 lg:w-32">
-          <img
-            src={pharmacy.imageUrl || imge1}
-            alt={pharmacy.name || "Pharmacy"}
-            className="h-16 w-16 object-contain transition-transform duration-500 hover:scale-110 sm:h-20 sm:w-20 lg:h-24 lg:w-24"
-            onError={(e) => (e.currentTarget.src = imge1)}
-          />
-        </div>
+    <div
+      className="min-h-screen px-4 py-12"
+      style={{ background: "#f5f8f2", fontFamily: "'DM Sans', sans-serif" }}
+    >
+      <div className="mx-auto max-w-5xl">
 
-        <h1 className="text-center text-xl font-bold text-secondary sm:text-2xl lg:text-3xl">
-          {pharmacy.name}
-        </h1>
-      </div>
-
-      {/* Search */}
-      <div className="mb-5 flex justify-center sm:mb-6">
-        <input
-          type="text"
-          placeholder="Search medicines..."
-          className="w-full max-w-md rounded-full border border-gray-300 px-4 py-2 text-sm shadow-sm transition focus:outline-none focus:ring-2 focus:ring-secondary sm:max-w-lg sm:px-5 sm:text-base lg:max-w-xl"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-
-      {/* Categories */}
-      <div className="mb-6 flex flex-wrap justify-center gap-2 sm:mb-8 sm:gap-3 lg:gap-4">
-        {categoryOptions.map((cat) => (
+        {/* ── Pharmacy Hero ── */}
+        <div
+          className="mb-8 flex items-center gap-5 overflow-hidden rounded-3xl bg-white p-7"
+          style={{
+            border: "1.5px solid #e8eee2",
+            boxShadow: "0 2px 16px rgba(90,138,31,0.07)",
+            position: "relative",
+          }}
+        >
+          {/* Glow accent */}
           <div
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className={`cursor-pointer rounded-2xl px-4 py-2 text-sm shadow-md transition-all duration-300 sm:px-5 sm:py-2.5 sm:text-base lg:px-6 lg:py-3 ${
-              selectedCategory === cat.id
-                ? "scale-105 bg-secondary text-white sm:scale-110"
-                : "bg-gray-100 text-gray-700 hover:scale-105 hover:bg-gray-200"
-            }`}
+            className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(90,138,31,0.08) 0%, transparent 70%)" }}
+          />
+
+          {/* Avatar */}
+          <div
+            className="flex h-[72px] w-[72px] flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl"
+            style={{ background: "#EAF3DE", border: "2px solid rgba(90,138,31,0.15)", boxShadow: "0 4px 16px rgba(90,138,31,0.12)" }}
           >
-            {cat.name}
+            <img
+              src={pharmacy.imageUrl || imge1}
+              alt={pharmacy.name}
+              className="h-12 w-12 object-contain"
+              onError={(e) => (e.currentTarget.src = imge1)}
+            />
           </div>
-        ))}
-      </div>
 
-      {/* Medicines */}
-      {filteredMedicines.length > 0 ? (
-        <div className="grid grid-cols-2 justify-items-center gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 lg:gap-10">
-          {filteredMedicines.map((med) => {
-            const desc = med.description || "No description available";
+          {/* Info */}
+          <div className="flex-1">
+            <h1
+              className="text-2xl font-semibold"
+              style={{ color: "#3e6013", fontFamily: "'Playfair Display', serif", letterSpacing: "-0.3px" }}
+            >
+              {pharmacy.name}
+            </h1>
+            {pharmacy.address && (
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-400">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                {pharmacy.address}
+              </p>
+            )}
+          </div>
 
-            return (
-              <div
-                key={med.id}
-                className="animate-fadeIn w-full max-w-[200px] transform rounded-2xl border bg-white shadow-md transition-all duration-500 hover:-translate-y-2 hover:scale-[1.03] hover:shadow-2xl sm:max-w-[230px] sm:hover:-translate-y-3 lg:max-w-[270px]"
-              >
-                {/* Image */}
-                <div className="flex h-[140px] items-center justify-center bg-[#E8F3E8] sm:h-[170px] lg:h-[200px]">
-                  <img
-                    src={med.imageUrl || imge1}
-                    alt={med.name}
-                    className="w-[90px] cursor-pointer object-contain transition-transform duration-500 hover:scale-110 sm:w-[120px] lg:w-[150px]"
-                    onError={(e) => (e.currentTarget.src = imge1)}
-                  />
-                </div>
-
-                {/* Info */}
-                <div className="p-3 text-center sm:p-4 lg:p-5">
-                  <h3 className="text-sm font-bold text-secondary transition-colors duration-300 hover:text-[#7bbf5e] sm:text-base lg:text-lg">
-                    {med.name}
-                  </h3>
-
-                  <p className="mt-1 text-xs text-gray-500 sm:text-sm">
-                    {expanded[med.id]
-                      ? desc
-                      : desc.length > 70
-                        ? desc.slice(0, 70) + "..."
-                        : desc}
-                  </p>
-
-                  {desc.length > 70 && (
-                    <button
-                      onClick={() => toggleExpand(med.id)}
-                      className="mt-1 text-xs font-semibold text-secondary hover:underline sm:text-sm"
-                    >
-                      {expanded[med.id] ? "Show Less" : "Show More"}
-                    </button>
-                  )}
-
-                  <p className="mt-2 text-sm font-semibold text-secondary sm:mt-3 sm:text-base lg:text-lg">
-                    {med.price} EGP
-                  </p>
-
-                  <button
-                    onClick={() => handleAddToCart(med)}
-                    className="mt-3 w-full rounded-full bg-secondary px-3 py-1.5 text-xs text-white transition-all duration-300 hover:-translate-y-1 hover:bg-[#7bbf5e] hover:shadow-lg active:scale-95 sm:mt-4 sm:px-5 sm:py-2 sm:text-sm lg:text-base"
-                  >
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+          {/* Badge */}
+          <span
+            className="rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-widest"
+            style={{ background: "#EAF3DE", color: "#5a8a1f", border: "1px solid rgba(90,138,31,0.2)" }}
+          >
+            ✓ Verified
+          </span>
         </div>
-      ) : (
-        <p className="mt-6 text-center text-sm text-gray-500 sm:mt-8 sm:text-base">
-          No medicines available in this pharmacy.
-        </p>
-      )}
+
+        {/* ── Last Ad Only ── */}
+        {lastAd && (
+          <div className="mb-8">
+            <p
+              className="mb-3 text-[10px] font-semibold uppercase tracking-widest"
+              style={{ color: "#7a8472" }}
+            >
+              Pharmacy Offers
+            </p>
+            <AdBanner ad={lastAd} />
+          </div>
+        )}
+
+        {/* ── Search + Categories ── */}
+        <div className="mb-7 flex flex-wrap items-center gap-3">
+          {/* Search */}
+          <div className="relative flex-1" style={{ minWidth: 200 }}>
+            <svg
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              width="15" height="15" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search medicines…"
+              className="w-full py-2.5 pl-10 pr-4 text-sm text-gray-700 outline-none transition"
+              style={{
+                background: "#fff",
+                border: "1.5px solid #e8eee2",
+                borderRadius: 14,
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+              onFocus={(e) => { e.target.style.borderColor = "#5a8a1f"; e.target.style.boxShadow = "0 0 0 3px rgba(90,138,31,0.1)"; }}
+              onBlur={(e) => { e.target.style.borderColor = "#e8eee2"; e.target.style.boxShadow = "none"; }}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          {/* Category pills */}
+          <div className="flex flex-wrap gap-2">
+            {categoryOptions.map((cat) => {
+              const active = selectedCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className="text-sm font-medium transition-all duration-200"
+                  style={{
+                    borderRadius: 12,
+                    border: `1.5px solid ${active ? "#5a8a1f" : "#e8eee2"}`,
+                    background: active ? "#5a8a1f" : "#fff",
+                    color: active ? "#fff" : "#7a8472",
+                    padding: "8px 18px",
+                    fontFamily: "'DM Sans', sans-serif",
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!active) {
+                      e.currentTarget.style.borderColor = "#5a8a1f";
+                      e.currentTarget.style.color = "#5a8a1f";
+                      e.currentTarget.style.background = "#EAF3DE";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active) {
+                      e.currentTarget.style.borderColor = "#e8eee2";
+                      e.currentTarget.style.color = "#7a8472";
+                      e.currentTarget.style.background = "#fff";
+                    }
+                  }}
+                >
+                  {cat.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Medicines Grid ── */}
+        {filteredMedicines.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {filteredMedicines.map((med) => {
+              const desc = med.description || "No description available";
+              const isLong = desc.length > 70;
+              const isExpanded = expanded[med.id];
+              const isAdded = addedIds[med.id];
+
+              return (
+                <div
+                  key={med.id}
+                  onClick={() => navigate(`/user/medicine/${med.id}`)}
+                  className="group flex cursor-pointer flex-col overflow-hidden bg-white transition-all duration-300"
+                  style={{
+                    borderRadius: 20,
+                    border: "1.5px solid #e8eee2",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                    e.currentTarget.style.boxShadow = "0 12px 40px rgba(90,138,31,0.13)";
+                    e.currentTarget.style.borderColor = "rgba(90,138,31,0.25)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)";
+                    e.currentTarget.style.borderColor = "#e8eee2";
+                  }}
+                >
+                  {/* Image zone */}
+                  <div
+                    className="flex h-44 items-center justify-center overflow-hidden"
+                    style={{ background: "#EAF3DE", position: "relative" }}
+                  >
+                    <img
+                      src={med.imageUrl || imge1}
+                      alt={med.name}
+                      className="h-28 w-28 object-contain transition-transform duration-500 group-hover:scale-105"
+                      onError={(e) => (e.currentTarget.src = imge1)}
+                    />
+                    {/* Bottom fade */}
+                    <div
+                      className="pointer-events-none absolute bottom-0 left-0 right-0 h-8"
+                      style={{ background: "linear-gradient(to top, rgba(234,243,222,0.6), transparent)" }}
+                    />
+                  </div>
+
+                  {/* Body */}
+                  <div className="flex flex-1 flex-col p-4">
+                    <h3
+                      className="font-semibold"
+                      style={{ color: "#3e6013", fontSize: 15, letterSpacing: "-0.1px" }}
+                    >
+                      {med.name}
+                    </h3>
+                    <p className="mt-1.5 flex-1 text-[12px] leading-relaxed text-gray-400">
+                      {isExpanded || !isLong ? desc : desc.slice(0, 70) + "…"}
+                    </p>
+                    {isLong && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpanded((p) => ({ ...p, [med.id]: !p[med.id] }));
+                        }}
+                        className="mt-1 text-left text-[12px] font-semibold hover:underline"
+                        style={{ color: "#5a8a1f", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        {isExpanded ? "↑ Show Less" : "↓ Show More"}
+                      </button>
+                    )}
+
+                    {/* Footer row */}
+                    <div
+                      className="mt-4 flex items-center justify-between pt-3"
+                      style={{ borderTop: "1px solid #e8eee2" }}
+                    >
+
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleAddToCart(med); }}
+                        className="flex items-center gap-1.5 rounded-xl text-xs font-semibold text-white transition-all duration-200 active:scale-95"
+                        style={{
+                          background: isAdded ? "#3e6013" : "#5a8a1f",
+                          padding: "8px 16px",
+                          border: "none",
+                          cursor: "pointer",
+                          fontFamily: "'DM Sans', sans-serif",
+                        }}
+                      >
+                        {isAdded ? (
+                          "✓ Added"
+                        ) : (
+                          <>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M12 5v14M5 12h14" />
+                            </svg>
+                            Add
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-20 text-center">
+            <div className="mb-3 text-5xl">🔍</div>
+            <p className="text-gray-400">No medicines found.</p>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 };
 
-export default PharmacyDetails;
+export { PharmacyDetails as default };
