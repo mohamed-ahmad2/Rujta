@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   Search,
   Filter,
   Download,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 import StatCard from "../components/OrderCard";
 import { useOrders } from "../../orders/hooks/useOrders";
@@ -32,46 +33,52 @@ export default function Orders() {
   const [filterCustomer, setFilterCustomer] = useState("");
   const [filterDate, setFilterDate] = useState("");
 
-  // ✅ Fetch orders on mount
+  const filterRef = useRef(null);
+
   useEffect(() => {
     fetchPharmacy();
   }, [fetchPharmacy]);
 
-  // ✅ Error handling
   useEffect(() => {
     if (error) {
-      const errorMessage =
+      toast.error(
         error?.message ||
-        (typeof error === "string" ? error : "An unexpected error occurred");
-      toast.error(errorMessage);
+          (typeof error === "string" ? error : "An unexpected error occurred"),
+      );
     }
   }, [error]);
 
-  // ✅ Filter orders
+  // Close filter dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target))
+        setShowFilters(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   const filtered = useMemo(() => {
     let list = [...orders];
-
     if (q.trim()) {
       const s = q.toLowerCase();
       list = list.filter(
         (o) =>
           o.userName?.toLowerCase().includes(s) ||
           o.pharmacyName?.toLowerCase().includes(s) ||
-          o.id?.toString().includes(s)
+          o.id?.toString().includes(s),
       );
     }
-
     if (filterOrderId)
       list = list.filter((o) => o.id?.toString().includes(filterOrderId));
     if (filterCustomer)
       list = list.filter((o) =>
-        o.userName?.toLowerCase().includes(filterCustomer.toLowerCase())
+        o.userName?.toLowerCase().includes(filterCustomer.toLowerCase()),
       );
     if (filterDate)
       list = list.filter(
-        (o) => new Date(o.orderDate).toLocaleDateString("en-CA") === filterDate
+        (o) => new Date(o.orderDate).toLocaleDateString("en-CA") === filterDate,
       );
-
     return list;
   }, [orders, q, filterOrderId, filterCustomer, filterDate]);
 
@@ -96,7 +103,6 @@ export default function Orders() {
     }
   };
 
-  // ✅ Export filtered orders to CSV
   const handleExport = () => {
     const rows = [
       ["Order ID", "User", "Pharmacy", "Date", "Total", "Status"],
@@ -109,11 +115,9 @@ export default function Orders() {
         o.status,
       ]),
     ];
-
     const csv = rows
       .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
       .join("\n");
-
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -123,60 +127,62 @@ export default function Orders() {
     URL.revokeObjectURL(url);
   };
 
-  // ✅ Pagination
-  const handlePrevPage = () => page > 1 && setPage(page - 1);
-  const handleNextPage = () => page < totalPages && setPage(page + 1);
-  const handlePageClick = (p) => setPage(p);
+  const clearFilters = () => {
+    setFilterOrderId("");
+    setFilterCustomer("");
+    setFilterDate("");
+    setShowFilters(false);
+  };
 
-  // ✅ Mutation wrapper
-const handleMutation = async (mutationFn, id, successMessagePrefix) => {
-  try {
-    const res = await mutationFn(id);
-
-    if (res?.success) {
-      toast.success(res.message || `${successMessagePrefix} successfully`);
-
-      // 🔥 إعادة جلب الطلبات
-      await fetchPharmacy();
-    } else {
-      toast.error(res?.message || "Something went wrong");
+  const handleMutation = async (mutationFn, id, successMessagePrefix) => {
+    try {
+      const res = await mutationFn(id);
+      if (res?.success) {
+        toast.success(res.message || `${successMessagePrefix} successfully`);
+        await fetchPharmacy();
+      } else {
+        toast.error(res?.message || "Something went wrong");
+      }
+    } catch {
+      toast.error("Operation failed");
     }
-  } catch (err) {
-    toast.error("Operation failed");
-  }
-};
+  };
+
+  // Stats data
+  const statsData = [
+    { title: "Total Orders", value: orders.length },
+    {
+      title: "Completed",
+      value: orders.filter((o) => o.status === "Delivered").length,
+    },
+    {
+      title: "Pending",
+      value: orders.filter((o) =>
+        ["Pending", "Accepted", "Processing"].includes(o.status),
+      ).length,
+    },
+    {
+      title: "Cancelled",
+      value: orders.filter((o) => o.status?.startsWith("Cancelled")).length,
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
-        <StatCard title="Total Orders" value={orders.length} />
-        <StatCard
-          title="Completed Orders"
-          value={orders.filter((o) => o.status === "Delivered").length}
-        />
-        <StatCard
-          title="Pending Orders"
-          value={
-            orders.filter((o) =>
-              ["Pending", "Accepted", "Processing"].includes(o.status)
-            ).length
-          }
-        />
-        <StatCard
-          title="Cancelled Orders"
-          value={orders.filter((o) =>
-            o.status?.startsWith("Cancelled")
-          ).length}
-        />
+    <div className="space-y-4 p-3 sm:space-y-5 sm:p-4 md:space-y-6 md:p-0">
+      {/* ===== Stats ===== */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6 lg:grid-cols-4">
+        {statsData.map((s) => (
+          <StatCard key={s.title} title={s.title} value={s.value} />
+        ))}
       </div>
 
-      {/* Toolbar */}
-      <div className="bg-white p-4 rounded-2xl shadow border flex flex-col md:flex-row gap-4 justify-between">
-        <div className="flex items-center gap-3 bg-gray-100 px-4 py-2 rounded-full w-full md:w-1/3">
-          <Search size={16} className="text-gray-400" />
+      {/* ===== Toolbar ===== */}
+      <div className="flex flex-col justify-between gap-3 rounded-2xl border bg-white p-3 shadow sm:p-4 md:flex-row">
+        {/* Search */}
+        <div className="flex w-full items-center gap-2 rounded-full bg-gray-100 px-3 py-2 md:w-1/3">
+          <Search className="h-4 w-4 flex-shrink-0 text-gray-400" />
           <input
-            className="bg-transparent outline-none w-full text-sm"
+            className="w-full bg-transparent text-xs outline-none sm:text-sm"
             placeholder="Search orders..."
             value={q}
             onChange={(e) => {
@@ -186,195 +192,296 @@ const handleMutation = async (mutationFn, id, successMessagePrefix) => {
           />
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="px-4 py-2 rounded-full border text-sm flex items-center gap-2"
-          >
-            <Filter size={16} /> Filters
-          </button>
+        {/* Actions */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Filter Button + Dropdown */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs transition sm:px-4 sm:text-sm ${showFilters ? "border-gray-400 bg-gray-100" : "hover:bg-gray-50"}`}
+            >
+              <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Filters
+              {(filterOrderId || filterCustomer || filterDate) && (
+                <span className="h-2 w-2 rounded-full bg-secondary" />
+              )}
+            </button>
 
-          {showFilters && (
-            <div className="absolute mt-2 bg-white border shadow-lg rounded-xl p-4 w-64 z-50 space-y-2">
-              <input
-                placeholder="Order ID"
-                value={filterOrderId}
-                onChange={(e) => setFilterOrderId(e.target.value)}
-                className="border px-3 py-2 rounded-lg w-full text-sm"
-              />
-              <input
-                placeholder="Customer name"
-                value={filterCustomer}
-                onChange={(e) => setFilterCustomer(e.target.value)}
-                className="border px-3 py-2 rounded-lg w-full text-sm"
-              />
-              <input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="border px-3 py-2 rounded-lg w-full text-sm"
-              />
-            </div>
-          )}
+            {/* Filter Dropdown */}
+            {showFilters && (
+              <div className="absolute right-0 z-50 mt-2 w-64 space-y-2 rounded-xl border bg-white p-3 shadow-xl sm:w-72 sm:space-y-3 sm:p-4">
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="text-xs font-semibold text-gray-700 sm:text-sm">
+                    Filters
+                  </p>
+                  <button
+                    onClick={() => setShowFilters(false)}
+                    className="p-0.5 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <input
+                  placeholder="Order ID"
+                  value={filterOrderId}
+                  onChange={(e) => {
+                    setFilterOrderId(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full rounded-lg border px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-secondary sm:text-sm"
+                />
+                <input
+                  placeholder="Customer name"
+                  value={filterCustomer}
+                  onChange={(e) => {
+                    setFilterCustomer(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full rounded-lg border px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-secondary sm:text-sm"
+                />
+                <input
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => {
+                    setFilterDate(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full rounded-lg border px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-secondary sm:text-sm"
+                />
+                <button
+                  onClick={clearFilters}
+                  className="w-full py-1 text-center text-xs text-red-500 transition hover:text-red-700 sm:text-sm"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            )}
+          </div>
 
+          {/* Export */}
           <button
             onClick={handleExport}
-            className="px-4 py-2 rounded-full border text-sm flex items-center gap-2"
+            className="flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs transition hover:bg-gray-50 sm:px-4 sm:text-sm"
           >
-            <Download size={16} /> Export
+            <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Export
           </button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl shadow border overflow-x-auto">
-        <table className="w-full min-w-[1000px] text-sm">
-          <thead className="bg-gray-50 text-gray-500">
-            <tr>
-              <th className="px-6 py-4 text-left">Order</th>
-              <th className="px-6 py-4 text-left">User</th>
-              <th className="px-6 py-4 text-left">Pharmacy</th>
-              <th className="px-6 py-4 text-center">Date</th>
-              <th className="px-6 py-4 text-center">Total</th>
-              <th className="px-6 py-4 text-center">Status</th>
-              <th className="px-6 py-4 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+      {/* ===== Table ===== */}
+      <div className="overflow-hidden rounded-2xl border bg-white shadow">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px] text-xs sm:text-sm">
+            <thead className="bg-gray-50 text-gray-500">
               <tr>
-                <td colSpan={7} className="text-center py-8">
-                  Loading...
-                </td>
+                {[
+                  "Order",
+                  "User",
+                  "Pharmacy",
+                  "Date",
+                  "Total",
+                  "Status",
+                  "Action",
+                ].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`px-3 py-3 font-semibold sm:px-4 sm:py-4 md:px-6 ${i >= 3 ? "text-center" : "text-left"}`}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ) : pageData.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center py-8">
-                  No orders found.
-                </td>
-              </tr>
-            ) : (
-              pageData.map((o) => (
-                <tr key={o.id} className="border-t hover:bg-gray-50">
-                  <td className="px-6 py-4 text-secondary font-medium">
-                    #{o.id}
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-10 text-center">
+                    <div className="flex flex-col items-center gap-2 text-gray-500">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-secondary border-t-transparent" />
+                      <span className="text-xs sm:text-sm">
+                        Loading orders...
+                      </span>
+                    </div>
                   </td>
-                  <td className="px-6 py-4">{o.userName}</td>
-                  <td className="px-6 py-4">{o.pharmacyName}</td>
-                  <td className="px-6 py-4 text-center">
-                    {new Date(o.orderDate).toLocaleDateString()}
+                </tr>
+              ) : pageData.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="py-10 text-center text-xs text-gray-500 sm:text-sm"
+                  >
+                    No orders found.
                   </td>
-                  <td className="px-6 py-4 text-center">{o.totalPrice} EGP</td>
-                  <td className="px-6 py-4 text-center">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs ${statusStyle(
-                        o.status
-                      )}`}
-                    >
-                      {o.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center space-x-2">
-                    {o.status === "Pending" && (
-                            <button
-                            type="button"
+                </tr>
+              ) : (
+                pageData.map((o) => (
+                  <tr
+                    key={o.id}
+                    className="border-t transition hover:bg-gray-50"
+                  >
+                    {/* Order ID */}
+                    <td className="whitespace-nowrap px-3 py-3 font-medium text-secondary sm:px-4 sm:py-4 md:px-6">
+                      #{o.id}
+                    </td>
+
+                    {/* User */}
+                    <td className="max-w-[100px] truncate px-3 py-3 sm:max-w-[140px] sm:px-4 sm:py-4 md:px-6">
+                      {o.userName}
+                    </td>
+
+                    {/* Pharmacy */}
+                    <td className="max-w-[100px] truncate px-3 py-3 sm:max-w-[140px] sm:px-4 sm:py-4 md:px-6">
+                      {o.pharmacyName}
+                    </td>
+
+                    {/* Date */}
+                    <td className="whitespace-nowrap px-3 py-3 text-center sm:px-4 sm:py-4 md:px-6">
+                      {new Date(o.orderDate).toLocaleDateString()}
+                    </td>
+
+                    {/* Total */}
+                    <td className="whitespace-nowrap px-3 py-3 text-center font-medium sm:px-4 sm:py-4 md:px-6">
+                      {o.totalPrice} EGP
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-3 py-3 text-center sm:px-4 sm:py-4 md:px-6">
+                      <span
+                        className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs sm:px-3 sm:py-1 ${statusStyle(o.status)}`}
+                      >
+                        {o.status}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-3 py-3 text-center sm:px-4 sm:py-4 md:px-6">
+                      <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
+                        {o.status === "Pending" && (
+                          <button
                             disabled={loading}
                             onClick={() =>
                               handleMutation(accept, o.id, "Order accepted")
                             }
-                            className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 hover:bg-green-200"
+                            className="whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700 transition hover:bg-green-200 disabled:opacity-50 sm:px-3 sm:py-1"
                           >
                             Accept
                           </button>
-                    )}
-                    {o.status === "Accepted" && (
-                      <button
-                        disabled={loading}
-                        onClick={() =>
-                          handleMutation(process, o.id, "Order processed")
-                        }
-                        className="px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                      >
-                        Process
-                      </button>
-                    )}
-                    {o.status === "Processing" && (
-                      <button
-                        disabled={loading}
-                        onClick={() =>
-                          handleMutation(
-                            outForDelivery,
-                            o.id,
-                            "Order out for delivery"
-                          )
-                        }
-                        className="px-3 py-1 text-xs rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200"
-                      >
-                        Out For Delivery
-                      </button>
-                    )}
-                    {o.status === "OutForDelivery" && (
-                      <button
-                        disabled={loading}
-                        onClick={() =>
-                          handleMutation(deliver, o.id, "Order delivered")
-                        }
-                        className="px-3 py-1 text-xs rounded-full bg-green-200 text-green-800 hover:bg-green-300"
-                      >
-                        Delivered
-                      </button>
-                    )}
-                    {!["Delivered", "OutForDelivery"].includes(o.status) &&
-                      !o.status?.startsWith("Cancelled") && (
-                        <button
-                          disabled={loading}
-                          onClick={() =>
-                            handleMutation(
-                              cancelByPharmacy,
-                              o.id,
-                              "Order cancelled"
-                            )
-                          }
-                          className="px-3 py-1 text-xs rounded-full bg-red-100 text-red-600 hover:bg-red-200"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                        )}
+                        {o.status === "Accepted" && (
+                          <button
+                            disabled={loading}
+                            onClick={() =>
+                              handleMutation(process, o.id, "Order processed")
+                            }
+                            className="whitespace-nowrap rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700 transition hover:bg-yellow-200 disabled:opacity-50 sm:px-3 sm:py-1"
+                          >
+                            Process
+                          </button>
+                        )}
+                        {o.status === "Processing" && (
+                          <button
+                            disabled={loading}
+                            onClick={() =>
+                              handleMutation(
+                                outForDelivery,
+                                o.id,
+                                "Order out for delivery",
+                              )
+                            }
+                            className="whitespace-nowrap rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 transition hover:bg-blue-200 disabled:opacity-50 sm:px-3 sm:py-1"
+                          >
+                            Out For Delivery
+                          </button>
+                        )}
+                        {o.status === "OutForDelivery" && (
+                          <button
+                            disabled={loading}
+                            onClick={() =>
+                              handleMutation(deliver, o.id, "Order delivered")
+                            }
+                            className="whitespace-nowrap rounded-full bg-green-200 px-2 py-0.5 text-xs text-green-800 transition hover:bg-green-300 disabled:opacity-50 sm:px-3 sm:py-1"
+                          >
+                            Delivered
+                          </button>
+                        )}
+                        {!["Delivered", "OutForDelivery"].includes(o.status) &&
+                          !o.status?.startsWith("Cancelled") && (
+                            <button
+                              disabled={loading}
+                              onClick={() =>
+                                handleMutation(
+                                  cancelByPharmacy,
+                                  o.id,
+                                  "Order cancelled",
+                                )
+                              }
+                              className="whitespace-nowrap rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 transition hover:bg-red-200 disabled:opacity-50 sm:px-3 sm:py-1"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Pagination */}
+      {/* ===== Pagination ===== */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-1 sm:gap-2">
           <button
-            onClick={handlePrevPage}
+            onClick={() => setPage(1)}
             disabled={page === 1}
-            className="flex items-center gap-1 px-3 py-1 rounded-full border text-sm disabled:opacity-50"
+            className="flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition hover:bg-gray-50 disabled:opacity-50 sm:px-3 sm:text-sm"
           >
-            <ChevronLeft size={16} /> Prev
+            <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+            <ChevronLeft className="-ml-2 h-3 w-3 sm:h-4 sm:w-4" />
           </button>
+
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition hover:bg-gray-50 disabled:opacity-50 sm:px-3 sm:text-sm"
+          >
+            <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+            Prev
+          </button>
+
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <button
               key={p}
-              onClick={() => handlePageClick(p)}
-              className={`px-3 py-1 rounded-full text-sm ${
-                page === p ? "bg-secondary text-white" : "border"
+              onClick={() => setPage(p)}
+              className={`rounded-full px-2 py-1 text-xs transition sm:px-3 sm:text-sm ${
+                page === p
+                  ? "bg-secondary text-white"
+                  : "border hover:bg-gray-50"
               }`}
             >
               {p}
             </button>
           ))}
+
           <button
-            onClick={handleNextPage}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="flex items-center gap-1 px-3 py-1 rounded-full border text-sm disabled:opacity-50"
+            className="flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition hover:bg-gray-50 disabled:opacity-50 sm:px-3 sm:text-sm"
           >
-            Next <ChevronRight size={16} />
+            Next
+            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+          </button>
+
+          <button
+            onClick={() => setPage(totalPages)}
+            disabled={page === totalPages}
+            className="flex items-center rounded-full border px-2 py-1 text-xs transition hover:bg-gray-50 disabled:opacity-50 sm:px-3 sm:text-sm"
+          >
+            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+            <ChevronRight className="-ml-2 h-3 w-3 sm:h-4 sm:w-4" />
           </button>
         </div>
       )}
