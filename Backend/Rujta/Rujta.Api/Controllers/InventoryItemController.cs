@@ -12,6 +12,8 @@ namespace Rujta.Api.Controllers
     {
         private readonly IInventoryItemService _inventoryService;
         private readonly ILogService _logService;
+		
+		 private const string MissingPharmacyIdMessage = "PharmacyId claim missing in JWT.";
 
         public InventoryItemController(IInventoryItemService inventoryService, ILogService logService)
         {
@@ -26,7 +28,15 @@ namespace Rujta.Api.Controllers
                    ?? AuthMessages.UnknownUser;
         }
 
- 
+        private bool TryGetPharmacyId(out int pharmacyId)
+        {
+            pharmacyId = 0;
+            var claim = User.FindFirst("PharmacyId");
+            if (claim == null) return false;
+            return int.TryParse(claim.Value, out pharmacyId);
+        }
+
+
         [HttpGet(Name = "GetAllInventoryItems")]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetAll()
         {
@@ -34,10 +44,12 @@ namespace Rujta.Api.Controllers
             return Ok(items);
         }
 
-        [HttpGet("{id}", Name = "GetInventoryItemById")]
+        [HttpGet("{id:int}", Name = "GetInventoryItemById")]
         public async Task<ActionResult<InventoryItemDto>> GetById(int id)
         {
-            int pharmacyId = GetPharmacyIdFromClaims();
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = MissingPharmacyIdMessage });
+
             var item = await _inventoryService.GetByIdAsync(id);
             if (item == null || item.PharmacyID != pharmacyId)
                 return NotFound();
@@ -48,7 +60,10 @@ namespace Rujta.Api.Controllers
         [HttpPost(Name = "AddInventoryItem")]
         public async Task<ActionResult> Add([FromBody] InventoryItemDto dto)
         {
-            dto.PharmacyID = GetPharmacyIdFromClaims();
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = MissingPharmacyIdMessage});
+
+            dto.PharmacyID = pharmacyId;
             await _inventoryService.AddAsync(dto);
 
             await _logService.AddLogAsync(
@@ -59,10 +74,14 @@ namespace Rujta.Api.Controllers
             return CreatedAtRoute("GetInventoryItemById", new { id = dto.Id }, dto);
         }
 
-        [HttpPut("{id}", Name = "UpdateInventoryItem")]
+        [HttpPut("{id:int}", Name = "UpdateInventoryItem")]
         public async Task<ActionResult> Update(int id, [FromBody] InventoryItemDto dto)
         {
-            dto.PharmacyID = GetPharmacyIdFromClaims();
+            
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = MissingPharmacyIdMessage });
+
+            dto.PharmacyID = pharmacyId;
             try
             {
                 await _inventoryService.UpdateAsync(id, dto);
@@ -80,10 +99,12 @@ namespace Rujta.Api.Controllers
             }
         }
 
-        [HttpDelete("{id}", Name = "DeleteInventoryItem")]
+        [HttpDelete("{id:int}", Name = "DeleteInventoryItem")] 
         public async Task<ActionResult> Delete(int id)
         {
-            int pharmacyId = GetPharmacyIdFromClaims();
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = MissingPharmacyIdMessage });
+
             var item = await _inventoryService.GetByIdAsync(id);
             if (item == null || item.PharmacyID != pharmacyId)
                 return NotFound();
@@ -98,19 +119,12 @@ namespace Rujta.Api.Controllers
             return NoContent();
         }
 
-        private int GetPharmacyIdFromClaims()
-        {
-            var claim = User.FindFirst("PharmacyID");
-            if (claim == null)
-                throw new InvalidOperationException("PharmacyID claim missing in JWT.");
-
-            return int.Parse(claim.Value);
-        }
-
         [HttpGet("products", Name = "GetInventoryProducts")]
         public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetInventoryProducts()
         {
-            int pharmacyId = GetPharmacyIdFromClaims();
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = MissingPharmacyIdMessage });
+
             var products = await _inventoryService.GetByPharmacyAsync(pharmacyId);
             return Ok(products);
         }

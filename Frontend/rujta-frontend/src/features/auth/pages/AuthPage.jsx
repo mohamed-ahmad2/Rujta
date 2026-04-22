@@ -154,7 +154,6 @@ export const AuthPage = () => {
             {/* Form Section */}
             <motion.div
               animate={{
-                // ✅ Fix: على الموبايل x دايمًا 0 — الـ slide animation للـ desktop بس
                 x: isMobile ? "0%" : isSignUp ? "100%" : "0%",
               }}
               transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}

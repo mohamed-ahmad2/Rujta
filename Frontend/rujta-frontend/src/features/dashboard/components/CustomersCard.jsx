@@ -1,8 +1,12 @@
 export default function CustomersCard({ title, value, variant }) {
   return (
-    <div className={`p-5 rounded-xl shadow-sm bg-white`}>
-      <h3 className="text-gray-500 text-sm">{title}</h3>
-      <p className="text-2xl font-bold mt-2">{value}</p>
+    <div className="w-full rounded-xl bg-white p-3 shadow-sm sm:p-4 md:p-5">
+      <h3 className="truncate text-xs text-gray-500 sm:text-sm md:text-base">
+        {title}
+      </h3>
+      <p className="mt-1 truncate text-xl font-bold sm:mt-2 sm:text-2xl md:text-3xl">
+        {value}
+      </p>
     </div>
   );
 }
