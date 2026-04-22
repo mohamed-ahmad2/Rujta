@@ -38,8 +38,7 @@ export default function SalesPage() {
   const formatCurrency = (value) =>
     value
       ? `
-$$
-{value.toLocaleString()}`
+$${value.toLocaleString()}`
       : "$0";
 
   return (
@@ -85,8 +84,7 @@ $$
               />
               <Tooltip
                 formatter={(value) => `
-$$
-{value.toLocaleString()}`}
+$${value.toLocaleString()}`}
                 contentStyle={{ fontSize: "12px" }}
               />
               <Bar dataKey="totalSales" fill="#9DC873" radius={[6, 6, 6, 6]} />

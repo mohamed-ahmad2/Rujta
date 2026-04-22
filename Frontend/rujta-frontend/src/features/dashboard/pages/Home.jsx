@@ -15,7 +15,6 @@ import {
 export default function HomePage() {
   const { report, loading, error } = usePharmacyReport();
 
-  // Loading
   if (loading)
     return (
       <div className="flex items-center justify-center p-8 sm:p-12 md:p-16">
@@ -26,7 +25,6 @@ export default function HomePage() {
       </div>
     );
 
-  // Error
   if (error)
     return (
       <div className="flex items-center justify-center p-8 sm:p-12">
@@ -36,12 +34,35 @@ export default function HomePage() {
       </div>
     );
 
+  if (!report)
+    return (
+      <div className="flex items-center justify-center p-8">
+        <p className="text-sm text-gray-400">No report data available.</p>
+      </div>
+    );
+
+  // ✅ Safe defaults
+  const safe = {
+    totalRevenue: report.totalRevenue ?? 0,
+    totalOrders: report.totalOrders ?? 0,
+    dailySales: report.dailySales ?? [],
+    alerts: report.alerts ?? [],
+    topProducts: report.topProducts ?? [],
+    lowStockItems: report.lowStockItems ?? [],
+    expiredItems: report.expiredItems ?? [],
+    inventorySummary: report.inventorySummary ?? { lowStockCount: 0 },
+    salesSummary: report.salesSummary ?? {
+      completedOrders: 0,
+      pendingOrders: 0,
+      canceledOrders: 0,
+    },
+  };
+
   const formatCurrency = (value) =>
     value
       ? `
-$$
-{value.toLocaleString()}`
-      : "$0";
+$${Number(value).toLocaleString()}`
+      : "\$0";
 
   return (
     <div className="space-y-4 p-3 sm:space-y-6 sm:p-4 md:space-y-8 md:p-0">
@@ -49,26 +70,26 @@ $$
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6 lg:grid-cols-4">
         <SalesCard
           title="Total Revenue"
-          value={formatCurrency(report.totalRevenue)}
+          value={formatCurrency(safe.totalRevenue)}
           positive
         />
-        <SalesCard title="Total Orders" value={report.totalOrders} positive />
+        <SalesCard title="Total Orders" value={safe.totalOrders} positive />
         <SalesCard
           title="Low Stock Items"
-          value={report.inventorySummary.lowStockCount}
+          value={safe.inventorySummary.lowStockCount}
           positive={false}
         />
         <SalesCard
           title="Expired Items"
-          value={report.expiredItems.length}
+          value={safe.expiredItems.length}
           positive={false}
         />
       </div>
 
       {/* ===== ALERTS ===== */}
-      {report.alerts.length > 0 && (
+      {safe.alerts.length > 0 && (
         <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
-          {report.alerts.map((alert, i) => (
+          {safe.alerts.map((alert, i) => (
             <AlertCard key={i} message={alert} />
           ))}
         </div>
@@ -86,7 +107,7 @@ $$
             <div className="h-48 sm:h-56 md:h-64 lg:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={report.dailySales}
+                  data={safe.dailySales}
                   margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
                 >
                   <CartesianGrid stroke="#f3f3f3" vertical={false} />
@@ -95,10 +116,10 @@ $$
                     tick={{ fontSize: 10 }}
                     interval="preserveStartEnd"
                   />
+
                   <Tooltip
                     formatter={(value) => `
-$$
-{value.toLocaleString()}`}
+$${Number(value).toLocaleString()}`}
                     contentStyle={{ fontSize: "12px" }}
                   />
                   <Bar
@@ -122,17 +143,17 @@ $$
                   {[
                     {
                       label: "Completed Orders",
-                      value: report.salesSummary.completedOrders,
+                      value: safe.salesSummary.completedOrders,
                       color: "text-green-600",
                     },
                     {
                       label: "Pending Orders",
-                      value: report.salesSummary.pendingOrders,
+                      value: safe.salesSummary.pendingOrders,
                       color: "text-yellow-600",
                     },
                     {
                       label: "Canceled Orders",
-                      value: report.salesSummary.canceledOrders,
+                      value: safe.salesSummary.canceledOrders,
                       color: "text-red-500",
                     },
                   ].map((row) => (
@@ -152,39 +173,38 @@ $$
         </div>
 
         {/* ===== RIGHT COLUMN ===== */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:gap-6 lg:col-span-4 lg:grid-cols-1 lg:space-y-0">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 md:gap-6 lg:col-span-4 lg:grid-cols-1">
           {/* Top Selling Products */}
           <div className="rounded-2xl bg-white p-3 shadow-sm sm:p-4 md:p-5 lg:p-6">
             <h3 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base md:text-lg">
               Top Selling Products
             </h3>
-
-            {report.topProducts.length === 0 && (
+            {safe.topProducts.length === 0 ? (
               <p className="text-xs text-gray-400 sm:text-sm">
                 No top products
               </p>
-            )}
-
-            <div className="space-y-2 sm:space-y-3">
-              {report.topProducts.map((p) => (
-                <div
-                  key={p.medicineId}
-                  className="flex items-start justify-between gap-2 border-b border-gray-100 pb-2 last:border-0"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-medium sm:text-sm">
-                      {p.medicineName}
-                    </p>
-                    <p className="mt-0.5 text-xs text-gray-400">
-                      Sold: {p.quantitySold}
+            ) : (
+              <div className="space-y-2 sm:space-y-3">
+                {safe.topProducts.map((p) => (
+                  <div
+                    key={p.medicineId}
+                    className="flex items-start justify-between gap-2 border-b border-gray-100 pb-2 last:border-0"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium sm:text-sm">
+                        {p.medicineName}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-400">
+                        Sold: {p.quantitySold}
+                      </p>
+                    </div>
+                    <p className="flex-shrink-0 text-xs font-semibold text-secondary sm:text-sm">
+                      {formatCurrency(p.totalRevenue)}
                     </p>
                   </div>
-                  <p className="flex-shrink-0 text-xs font-semibold text-secondary sm:text-sm">
-                    {formatCurrency(p.totalRevenue)}
-                  </p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Low Stock Items */}
@@ -192,33 +212,32 @@ $$
             <h3 className="mb-3 text-sm font-semibold sm:mb-4 sm:text-base md:text-lg">
               Low Stock Items
             </h3>
-
-            {report.lowStockItems.length === 0 && (
+            {safe.lowStockItems.length === 0 ? (
               <p className="text-xs text-gray-400 sm:text-sm">
                 All items are in stock
               </p>
-            )}
-
-            <div className="space-y-2 sm:space-y-3">
-              {report.lowStockItems.map((item) => (
-                <div
-                  key={item.medicineId}
-                  className="flex items-start justify-between gap-2 border-b border-gray-100 pb-2 last:border-0"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-medium sm:text-sm">
-                      {item.medicineName}
-                    </p>
-                    <p className="mt-0.5 text-xs text-gray-400">
-                      Reorder Level: {item.reorderLevel}
+            ) : (
+              <div className="space-y-2 sm:space-y-3">
+                {safe.lowStockItems.map((item) => (
+                  <div
+                    key={item.medicineId}
+                    className="flex items-start justify-between gap-2 border-b border-gray-100 pb-2 last:border-0"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium sm:text-sm">
+                        {item.medicineName}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-400">
+                        Reorder Level: {item.reorderLevel}
+                      </p>
+                    </div>
+                    <p className="flex-shrink-0 text-xs font-semibold text-red-500 sm:text-sm">
+                      {item.currentStock}
                     </p>
                   </div>
-                  <p className="flex-shrink-0 text-xs font-semibold text-red-500 sm:text-sm">
-                    {item.currentStock}
-                  </p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
