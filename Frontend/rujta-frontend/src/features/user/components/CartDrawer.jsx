@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { IoMdClose } from "react-icons/io";
 import { FaPlus, FaMinus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
@@ -8,7 +8,8 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const clickSound = new Audio(audio);
+  // ✅ useRef بدل new Audio في كل render
+  const clickSound = useRef(new Audio(audio));
 
   // Increase quantity
   const handleIncrease = (id) => {
@@ -41,7 +42,9 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     if (isCheckingOut) return;
 
     setIsCheckingOut(true);
-    clickSound.play();
+
+    // ✅ clickSound.current بدل clickSound
+    clickSound.current.play();
 
     setTimeout(() => {
       onClose();
@@ -108,6 +111,15 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
       {/* Footer */}
       {cart.length > 0 && (
         <div className="sticky bottom-0 border-t border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="font-semibold text-gray-700 dark:text-gray-200">
+              Total:
+            </span>
+            <span className="font-bold text-gray-900 dark:text-white">
+              {total.toFixed(2)} EGP
+            </span>
+          </div>
+
           <button
             onClick={handleCheckout}
             disabled={isCheckingOut}
@@ -120,7 +132,6 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
             {isCheckingOut && (
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
             )}
-
             {isCheckingOut ? "Processing..." : "Checkout"}
           </button>
         </div>
