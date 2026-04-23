@@ -1,5 +1,6 @@
 ﻿using Rujta.Domain.Common;
 using Rujta.Domain.Entities;
+using Rujta.Domain.Entities.Rujta.Domain.Entities;
 namespace Rujta.Domain.Entities
 {
     public class Pharmacy : BaseEntity
@@ -26,5 +27,9 @@ namespace Rujta.Domain.Entities
         public ICollection<Order> Orders { get; set; } = new List<Order>();
 
         public ICollection<Customer> Customers { get; set; } = new List<Customer>();
+        public string? ImageUrl { get; set; }
+        public bool IsDeleted { get; set; } = false;
+        public Subscription? Subscription { get; set; }
+        public bool RememberMe { get; set; } = false;
     }
 }

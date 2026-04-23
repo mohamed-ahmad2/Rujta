@@ -142,7 +142,7 @@ const Products = ({ cart, setCart }) => {
                 style={{ background: "#EAF3DE", border: "2px solid rgba(90,138,31,0.12)" }}
               >
                 <img
-                  src={ph.imageUrl || imge1}
+                src={ph.imageUrl || ph.ImageUrl || imge1}
                   alt={ph.name}
                   className="h-12 w-12 object-contain sm:h-14 sm:w-14"
                   onError={(e) => (e.currentTarget.src = imge1)}
