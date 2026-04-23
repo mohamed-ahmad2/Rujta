@@ -1,3 +1,5 @@
+// App.jsx - Full Fixed Version
+
 import React, { useState, useEffect } from "react";
 import AppRoutes from "./routes/Approuts";
 import { useAuth } from "./features/auth/hooks/useAuth";
@@ -6,10 +8,10 @@ import FloatingCartButton from "./features/user/components/FloatingCartButton";
 import CartDrawerUser from "./features/user/components/CartDrawer";
 import Splash from "./features/splash/splash";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-
 import { PresenceProvider } from "./context/PresenceProvider";
 import { OrdersProvider } from "./context/OrdersProvider";
 import { NotificationProvider } from "./context/NotificationProvider";
+
 const App = () => {
   const { user, loading } = useAuth();
 
@@ -19,40 +21,47 @@ const App = () => {
   /* ===== Cart State ===== */
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  // ✅ بدل cartLoaded: boolean → cartUser: string | null
+  // بيحفظ إيميل اليوزر اللي الكارت بتاعه في الـ memory دلوقتي
+  const [cartUser, setCartUser] = useState(null);
+
   const location = useLocation();
 
   /* ===== Splash Logic ===== */
   useEffect(() => {
     if (loading) return;
-
     const globalSeen = localStorage.getItem("seenSplash_global");
     const userSeen = user
       ? localStorage.getItem(`seenSplash_${user.email}`)
       : null;
-
     if (globalSeen || userSeen) {
       setShowSplash(false);
     }
   }, [user, loading]);
 
   const handleFinish = () => {
-    // Splash
     localStorage.setItem("seenSplash_global", "true");
-
     if (user?.email) {
       localStorage.setItem(`seenSplash_${user.email}`, "true");
     }
-
     setShowSplash(false);
   };
 
   /* ===== Cart Key ===== */
-  const getCartKey = () =>
-    user ? `cart_${user.profile?.email || user.email}` : null;
+  const getCartEmail = () => user?.profile?.email || user?.email || null;
+  const getCartKey = () => {
+    const email = getCartEmail();
+    return email ? `cart_${email}` : null;
+  };
 
   /* ===== Load Cart ===== */
   useEffect(() => {
     if (loading) return;
+
+    // ✅ Reset: الكارت في الـ memory مش بتاع أي يوزر دلوقتي
+    setCartUser(null);
+
     if (!user) {
       setCart([]);
       return;
@@ -61,15 +70,23 @@ const App = () => {
     const key = getCartKey();
     const savedCart = localStorage.getItem(key);
     setCart(savedCart ? JSON.parse(savedCart) : []);
+
+    // ✅ علّم إن الكارت ده بتاع اليوزر ده تحديداً
+    setCartUser(getCartEmail());
   }, [user, loading]);
 
   /* ===== Save Cart ===== */
   useEffect(() => {
-    if (loading || !user) return;
+    const currentEmail = getCartEmail();
+
+    // ✅ بيحفظ بس لو الكارت في الـ memory بتاع نفس اليوزر الحالي
+    if (!cartUser || cartUser !== currentEmail || loading || !user) return;
 
     const key = getCartKey();
+    if (!key) return;
+
     localStorage.setItem(key, JSON.stringify(cart));
-  }, [cart, user, loading]);
+  }, [cart, cartUser, user, loading]);
 
   /* ===== Hide cart button in some pages ===== */
   const isLandingPage = location.pathname === "/";
@@ -94,7 +111,6 @@ const App = () => {
             setIsCartOpen={setIsCartOpen}
           />
 
-          {/* Floating Cart Button */}
           {user &&
             !isLandingPage &&
             !isAuthPage &&
@@ -107,7 +123,6 @@ const App = () => {
               />
             )}
 
-          {/* Cart Drawer */}
           {user && (
             <CartDrawerUser
               cart={cart}
@@ -117,7 +132,6 @@ const App = () => {
             />
           )}
 
-          {/* Vercel Speed Insights */}
           <SpeedInsights />
         </NotificationProvider>
       </OrdersProvider>

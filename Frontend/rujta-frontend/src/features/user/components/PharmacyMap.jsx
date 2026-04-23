@@ -8,6 +8,7 @@ import {
 } from "react-leaflet";
 import { useEffect } from "react";
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 const greenIcon = new L.Icon({
   iconUrl: "https://maps.gstatic.com/mapfiles/ms2/micons/green.png",
@@ -25,8 +26,19 @@ const blueIcon = new L.Icon({
 const MapUpdater = ({ center }) => {
   const map = useMap();
   useEffect(() => {
+    map.invalidateSize();
     map.setView(center, 15, { animate: true });
   }, [center, map]);
+  return null;
+};
+
+const MapInvalidator = () => {
+  const map = useMap();
+  useEffect(() => {
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+  }, [map]);
   return null;
 };
 
@@ -75,16 +87,18 @@ const PharmacyMap = ({
       ];
 
   return (
-    <div style={{ height: "100%", width: "100%" }}>
+    <div style={{ height: "100%", width: "100%", minHeight: "400px" }}>
       <MapContainer
         center={center}
         zoom={15}
         style={{ height: "100%", width: "100%" }}
+        key={`${center[0]}-${center[1]}`}
       >
         <TileLayer
           attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <MapInvalidator /> {/* ✅ أضفه */}
         <MapUpdater center={center} />
         <PharmacyBoundsUpdater
           pharmacies={pharmacies}
@@ -92,7 +106,6 @@ const PharmacyMap = ({
           selectedPharmacy={selectedPharmacy}
           deliveryAddressLocation={deliveryAddressLocation}
         />
-
         {userLocation && (
           <Marker position={[userLocation.lat, userLocation.lng]} />
         )}
@@ -112,7 +125,6 @@ const PharmacyMap = ({
             </Popup>
           </Marker>
         )}
-
         {pharmacies.map((p, index) => (
           <Marker
             key={p.pharmacyId}
@@ -129,8 +141,6 @@ const PharmacyMap = ({
             </Popup>
           </Marker>
         ))}
-
-        {/* ================== REAL ROAD PATHS ================== */}
         {(deliveryAddressLocation || userLocation) &&
           pharmacies.length > 0 &&
           pharmacies.map((p) => {
