@@ -1,3 +1,14 @@
-// src/features/auth/hooks/useAuth.js
-// Re-exports from context so every existing import still works unchanged.
-export { useAuth } from "../context/AuthContext";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
+
+/* ================= useAuth Hook ================= */
+
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+
+  if (!ctx) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+
+  return ctx;
+};

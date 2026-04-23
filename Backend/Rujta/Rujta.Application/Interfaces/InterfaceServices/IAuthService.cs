@@ -17,6 +17,7 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task ResetPasswordAsync(ResetPasswordDto dto);
         Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email);
         Task<TokenDto> LoginWithGoogle(string idToken);
+        Task ChangePasswordAsync(string email, string newPassword);
 
 
     }

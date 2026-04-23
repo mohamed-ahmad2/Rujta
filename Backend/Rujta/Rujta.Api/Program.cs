@@ -58,6 +58,7 @@ namespace Rujta.API
             builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
             builder.Services.AddScoped<IReportService, ReportService>();
             builder.Services.AddScoped<ISuperAdminService, SuperAdminService>();
+            builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
             // 🔥🔥🔥 ADD THIS (SignalR Registration)
             builder.Services.AddSignalR();

@@ -14,6 +14,7 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
 
         // Get stock of a specific medicine in a pharmacy
         Task<int> GetMedicineStockAsync(int pharmacyId, int medicineId);
+        Task<Pharmacy?> GetByAdminIdAsync(Guid adminId);
     }
    
 }

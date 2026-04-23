@@ -17,7 +17,8 @@ namespace Rujta.API.Controllers
 
         // ================= CREATE PHARMACY =================
         [HttpPost("pharmacies")]
-        public async Task<IActionResult> CreatePharmacy([FromBody] CreatePharmacyDto dto)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> CreatePharmacy([FromForm] CreatePharmacyDto dto)
         {
             if (dto == null)
                 return BadRequest(new { message = "Invalid request data." });
@@ -101,6 +102,18 @@ namespace Rujta.API.Controllers
         {
             var result = await _service.GetTopPharmaciesAsync(count, cancellationToken);
             return Ok(result);
+        }
+        [HttpDelete("pharmacies/{id}")]
+        public async Task<IActionResult> DeletePharmacy(int id)
+        {
+            await _service.DeletePharmacyAsync(id);
+            return Ok(new { message = "Pharmacy deleted (inactivated) successfully" });
+        }
+        [HttpPost("pharmacies/{id}/restore")]
+        public async Task<IActionResult> RestorePharmacy(int id)
+        {
+            await _service.RestorePharmacyAsync(id);
+            return Ok(new { message = "Pharmacy restored successfully" });
         }
     }
 }

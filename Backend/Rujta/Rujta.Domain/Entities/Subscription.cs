@@ -23,3 +23,4 @@ namespace Rujta.Domain.Entities
         }
     }
 }
+

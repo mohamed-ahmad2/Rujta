@@ -21,6 +21,7 @@ namespace Rujta.Application.Interfaces
         ICustomerRepository Customers { get; }
 
         ISuperAdminRepository SuperAdmin { get; }
+        ISubscriptionRepository Subscriptions { get; }
 
         Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
         Task<int> SaveAsync(CancellationToken cancellationToken = default);

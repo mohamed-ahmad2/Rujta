@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,6 +14,7 @@ namespace Rujta.Application.DTOs
 
         public double Latitude { get; set; }
         public double Longitude { get; set; }
+        public IFormFile? Image { get; set; }
 
         public string AdminName { get; set; } = string.Empty;
         public string AdminEmail { get; set; } = string.Empty;

@@ -56,3 +56,8 @@ export const registerStaff = async (dto) => {
   const res = await apiClient.post("/auth/register/staff", dto);
   return res.data;
 };
+
+export const changePassword = async ({ newPassword }) => {
+  const response = await apiClient.post("/auth/change-password", { newPassword });
+  return response.data;
+};
