@@ -9,21 +9,15 @@ const FloatingCartButton = ({ cart, onClick }) => {
       className="fixed bottom-6 right-6 z-50 cursor-pointer"
       onClick={onClick}
     >
-      <div className="relative group">
+      <div className="group relative">
         {/* Floating button */}
-        <div className="w-16 h-16 bg-gradient-to-r from-primary to-secondary 
-                        rounded-full flex items-center justify-center shadow-lg 
-                        hover:shadow-2xl transform hover:scale-110 transition-all duration-300">
-          <FaCartShopping className="text-white text-2xl" />
+        <div className="flex h-16 w-16 transform items-center justify-center rounded-full bg-gradient-to-r from-primary to-secondary shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-2xl">
+          <FaCartShopping className="text-2xl text-white" />
         </div>
 
         {/* Badge */}
         {cart.length > 0 && (
-          <span
-            className="absolute -top-2 -right-2 bg-red-500 text-white text-xs 
-                       font-bold rounded-full h-6 w-6 flex items-center justify-center 
-                       animate-pulse shadow-md"
-          >
+          <span className="absolute -right-2 -top-2 flex h-6 w-6 animate-pulse items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white shadow-md">
             {cart.length}
           </span>
         )}
