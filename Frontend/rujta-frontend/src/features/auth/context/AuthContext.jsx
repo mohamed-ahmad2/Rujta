@@ -19,7 +19,7 @@ import {
 
 import apiClient from "../../../shared/api/apiClient";
 import { setAccessToken, removeAccessToken } from "../../../authProvider/authTokenProvider";
-import { jwtDecode } from "jwt-decode";
+import  jwtDecode  from "jwt-decode";
 
 /* ================= Context ================= */
 
