@@ -1,40 +1,33 @@
 // features/dashboard/layout/DashboardLayout.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "../../components/Sidebar";
 import NavbarDashbord from "../../components/NavbarDashbord";
 
 const DashboardLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setSidebarOpen(window.innerWidth >= 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#F6F7F9]">
+    <div className="flex min-h-screen bg-[#F6F7F9]">
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
 
-      {/* Sidebar */}
-      <aside
-        className={`
-          fixed top-0 left-0 h-screen z-40
-          transition-all duration-300
-          ${sidebarOpen ? "w-64" : "w-20"}
-        `}
-      >
-        <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-      </aside>
-
-      {/* Main Content */}
-      <div
-        className={`
-          flex flex-col min-h-screen transition-all duration-300
-          ${sidebarOpen ? "ml-64" : "ml-20"}
-        `}
-      >
-        {/* Navbar (زي ما هي – ثابتة) */}
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col transition-all duration-300">
         <div className="sticky top-0 z-30 bg-white shadow-sm">
-          <NavbarDashbord />
+          <NavbarDashbord
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+          />
         </div>
 
-        {/* Pages */}
-        <div className="flex-1 p-6 overflow-y-auto bg-[#F6F7F9]">
+        <div className="flex-1 overflow-y-auto bg-[#F6F7F9] p-3 sm:p-4 md:p-6">
           <Outlet />
         </div>
       </div>

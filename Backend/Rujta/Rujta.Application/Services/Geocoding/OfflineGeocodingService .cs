@@ -10,10 +10,14 @@
         private readonly IGeocodingService _onlineGeocodingService;
         private readonly ILogger<OfflineGeocodingService> _logger;
 
-        public OfflineGeocodingService(
-            string pbfFilePath,
-            IGeocodingService onlineGeocodingService,
-            ILogger<OfflineGeocodingService> logger)
+        private static readonly Regex _normalizeRegex = new Regex(
+            @"[^\w\s]",
+            RegexOptions.Compiled,
+            TimeSpan.FromSeconds(5));
+
+        private static readonly JaroWinkler _staticJw = new JaroWinkler();
+
+        public OfflineGeocodingService(string pbfFilePath, IGeocodingService onlineGeocodingService, ILogger<OfflineGeocodingService> logger)
         {
             _onlineGeocodingService = onlineGeocodingService ?? throw new ArgumentNullException(nameof(onlineGeocodingService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -196,7 +200,6 @@
             if (!candidates.Any()) return ("", 0.0);
 
             return candidates
-                .AsParallel()
                 .Select(c => (Match: c, Score: _jw.Similarity(c, input)))
                 .OrderByDescending(x => x.Score)
                 .First();
@@ -210,7 +213,7 @@
             if (inputBuildingNo.Equals(nodeBuildingNo, StringComparison.OrdinalIgnoreCase))
                 return 1.0;
 
-            return new JaroWinkler().Similarity(nodeBuildingNo, inputBuildingNo);
+            return _staticJw.Similarity(nodeBuildingNo, inputBuildingNo);
         }
 
         private static string NormalizeString(string? input)
@@ -218,8 +221,7 @@
             if (string.IsNullOrEmpty(input))
                 return string.Empty;
 
-            var regex = new Regex(@"[^\w\s]", RegexOptions.None, TimeSpan.FromMilliseconds(100));
-            input = regex.Replace(input, "");
+            input = _normalizeRegex.Replace(input, "");
 
             input = new string(input.Normalize(NormalizationForm.FormD)
                 .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
