@@ -38,7 +38,7 @@ namespace Rujta.Api.Controllers
 
         private string GetDomainPersonId() => User.FindFirstValue("domainPersonId") ?? string.Empty;
 
-        // ================= CREATE =================
+
         [Authorize(Roles = $"{nameof(UserRole.User)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPost]
         public async Task<IActionResult> CreateOrder([FromBody] List<CreateOrderDto> orders)
@@ -68,7 +68,7 @@ namespace Rujta.Api.Controllers
             }
         }
 
-        // ================= GET =================
+
         [Authorize(Roles = nameof(UserRole.SuperAdmin))]
         [HttpGet]
         public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
@@ -117,7 +117,6 @@ namespace Rujta.Api.Controllers
             return Ok(orders);
         }
 
-        // ================= UPDATE =================
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] OrderDto dto, CancellationToken cancellationToken)
         {
@@ -144,7 +143,6 @@ namespace Rujta.Api.Controllers
             return NoContent();
         }
 
-        // ================= ORDER STATUS =================
         [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPut("{id:int}/accept")]
         public async Task<IActionResult> Accept(int id, CancellationToken cancellationToken)
