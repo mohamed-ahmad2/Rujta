@@ -17,6 +17,10 @@ namespace Rujta.Application.DTOs
             public double Latitude { get; set; }
             public double Longitude { get; set; }
             public bool IsActive { get; set; }
+
+            public bool IsDeleted { get; set; } = false;
+
+            public string? ImageUrl { get; set; }
             public Guid? AdminId { get; set; }
 
             public double TotalOrders { get; set; } // 🔥 NEW

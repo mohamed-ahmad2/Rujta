@@ -37,10 +37,12 @@ namespace Rujta.Infrastructure.Identity.Services
 
             try
             {
+                // ================= CHECK EXISTING ADMIN =================
                 var existingUser = await _userManager.FindByEmailAsync(dto.AdminEmail);
                 if (existingUser != null)
                     throw new InvalidOperationException("Admin email already exists.");
 
+                // ================= CREATE ADMIN =================
                 var admin = new Admin
                 {
                     Id = Guid.NewGuid(),
@@ -49,8 +51,10 @@ namespace Rujta.Infrastructure.Identity.Services
                     PhoneNumber = dto.AdminPhone,
                     CreatedAt = DateTime.UtcNow
                 };
+
                 await _unitOfWork.People.AddAsync(admin, cancellationToken);
 
+                // ================= CREATE IDENTITY USER =================
                 var generatedPassword = GenerateStrongPassword();
 
                 var identityUser = new ApplicationUser
@@ -60,7 +64,8 @@ namespace Rujta.Infrastructure.Identity.Services
                     Email = dto.AdminEmail,
                     FullName = dto.AdminName,
                     DomainPersonId = admin.Id,
-                    Location = dto.PharmacyLocation
+                    Location = dto.PharmacyLocation,
+                    IsFirstLogin = true
                 };
 
                 var result = await _userManager.CreateAsync(identityUser, generatedPassword);
@@ -69,6 +74,29 @@ namespace Rujta.Infrastructure.Identity.Services
 
                 await _userManager.AddToRoleAsync(identityUser, "PharmacyAdmin");
 
+                // ================= HANDLE IMAGE UPLOAD =================
+                string? imageUrl = null;
+
+                if (dto.Image != null)
+                {
+                    var folderPath = Path.Combine("wwwroot", "images", "pharmacies");
+
+                    // تأكد إن الفولدر موجود
+                    if (!Directory.Exists(folderPath))
+                        Directory.CreateDirectory(folderPath);
+
+                    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(dto.Image.FileName);
+                    var filePath = Path.Combine(folderPath, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await dto.Image.CopyToAsync(stream, cancellationToken);
+                    }
+
+                    imageUrl = $"/images/pharmacies/{fileName}";
+                }
+
+                // ================= CREATE PHARMACY =================
                 var pharmacy = new Pharmacy
                 {
                     Name = dto.PharmacyName,
@@ -78,10 +106,14 @@ namespace Rujta.Infrastructure.Identity.Services
                     Latitude = dto.Latitude,
                     Longitude = dto.Longitude,
                     IsActive = true,
-                    AdminId = admin.Id
+                    AdminId = admin.Id,
+                    ImageUrl = imageUrl, // 🔥 NEW
+                    IsDeleted = false
                 };
+
                 await _unitOfWork.Pharmacies.AddAsync(pharmacy, cancellationToken);
 
+                // ================= SAVE =================
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
 
@@ -104,8 +136,8 @@ namespace Rujta.Infrastructure.Identity.Services
         // ================= GET ALL PHARMACIES =================
         public async Task<IEnumerable<PharmacyDto>> GetAllPharmaciesAsync(CancellationToken cancellationToken = default)
         {
-            var pharmacies = await _unitOfWork.Pharmacies.GetAllAsync(cancellationToken);
-
+            var pharmacies = (await _unitOfWork.Pharmacies.GetAllAsync(cancellationToken))
+                                .Where(p => !p.IsDeleted);
             var result = new List<PharmacyDto>();
 
             foreach (var p in pharmacies)
@@ -122,7 +154,8 @@ namespace Rujta.Infrastructure.Identity.Services
                     Longitude = p.Longitude,
                     IsActive = p.IsActive,
                     AdminId = p.AdminId,
-                    TotalOrders = totalOrders // 🔥 لو ضفتها في DTO
+                    TotalOrders = totalOrders, // 🔥 لو ضفتها في DTO
+                    ImageUrl = p.ImageUrl
                 });
             }
 
@@ -133,7 +166,8 @@ namespace Rujta.Infrastructure.Identity.Services
         public async Task<PharmacyDto?> GetPharmacyByIdAsync(int pharmacyId, CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
-            if (pharmacy == null) return null;
+            if (pharmacy == null || pharmacy.IsDeleted)
+                return null;
 
             return new PharmacyDto
             {
@@ -144,7 +178,8 @@ namespace Rujta.Infrastructure.Identity.Services
                 Latitude = pharmacy.Latitude,
                 Longitude = pharmacy.Longitude,
                 IsActive = pharmacy.IsActive,
-                AdminId = pharmacy.AdminId
+                AdminId = pharmacy.AdminId,
+                ImageUrl = pharmacy.ImageUrl
             };
         }
 
@@ -154,6 +189,8 @@ namespace Rujta.Infrastructure.Identity.Services
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
             if (pharmacy == null)
                 throw new KeyNotFoundException("Pharmacy not found.");
+            if (pharmacy.IsDeleted)
+                throw new Exception("Cannot update deleted pharmacy");
 
             pharmacy.Name = dto.Name;
             pharmacy.Location = dto.Location;
@@ -217,6 +254,43 @@ namespace Rujta.Infrastructure.Identity.Services
         {
             return await _unitOfWork.SuperAdmin
                 .GetTopPharmaciesAsync(count, cancellationToken);
+        }
+        public async Task<bool> DeletePharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default)
+        {
+            var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
+
+            if (pharmacy == null)
+                throw new KeyNotFoundException("Pharmacy not found.");
+
+            if (pharmacy.IsDeleted)
+                throw new InvalidOperationException("Pharmacy already deleted.");
+
+            // 🔥 Soft Delete
+            pharmacy.IsDeleted = true;
+
+            await _unitOfWork.SaveAsync(cancellationToken);
+
+            _logger.LogInformation("Pharmacy {Id} set to IsDeleted", pharmacyId);
+
+            return true;
+        }
+        public async Task<bool> RestorePharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default)
+        {
+            var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
+
+            if (pharmacy == null)
+                throw new KeyNotFoundException("Pharmacy not found.");
+
+            // لو مش محذوفة أصلاً
+            if (!pharmacy.IsDeleted)
+                throw new InvalidOperationException("Pharmacy is already active.");
+
+            // 🔥 Restore
+            pharmacy.IsDeleted = false;
+
+            await _unitOfWork.SaveAsync(cancellationToken);
+
+            return true;
         }
     }
 }

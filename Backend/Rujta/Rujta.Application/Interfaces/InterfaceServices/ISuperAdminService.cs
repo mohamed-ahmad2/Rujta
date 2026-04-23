@@ -17,5 +17,8 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         // 🔥 NEW
         Task<int> GetPharmacyTotalOrdersAsync(int pharmacyId, CancellationToken cancellationToken = default);
         Task<List<PharmacyStatsDto>> GetTopPharmaciesAsync(int count, CancellationToken cancellationToken = default);
+        Task<bool> DeletePharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default);
+
+        Task<bool> RestorePharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default);
     }
 }

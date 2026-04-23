@@ -1,5 +1,6 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom"; // 👈 Navigate added
+import { useAuth } from "../features/auth/hooks/useAuth";   // 👈 added
 import ProtectedRoute from "../shared/components/ProtectedRoute";
 
 import AnimatedErrorPage from "../features/Error/AnimatedErrorPage";
@@ -14,6 +15,7 @@ import Contact from "../features/landing/pages/Contact";
 /* ================= Auth ================= */
 import AuthPage from "../features/auth/pages/AuthPage";
 import ResetPasswordPage from "../features/auth/pages/ResetPasswordPage";
+import ChangePasswordPage from "../features/auth/pages/ChangePasswordPage";
 
 /* ================= User ================= */
 import UserLayout from "../features/user/components/layout/UserLayout";
@@ -50,148 +52,154 @@ import SettingsAdmin from "../features/dashboardAdmin/pages/Settings";
 /* ================= Notifications ================= */
 import NotificationsPage from "../features/notifications/pages/NotificationsPage";
 
-const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => (
-  <Routes>
 
-    {/* ========= Error Pages ========= */}
-    <Route path="/error" element={<AnimatedErrorPage />} />
+const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => {
+  const { user } = useAuth(); // ✅ now works correctly
 
-    {/* ========= Landing ========= */}
-    <Route
-      path="/"
-      element={
-        <div className="min-h-screen bg-page">
-          <NavbarLanding />
-          <HeroLanding />
-        </div>
-      }
-    />
-    <Route
-      path="/features"
-      element={
-        <div className="min-h-screen bg-page">
-          <NavbarLanding />
-          <Features />
-        </div>
-      }
-    />
-    <Route
-      path="/how-it-works"
-      element={
-        <div className="min-h-screen bg-page">
-          <NavbarLanding />
-          <HowItWorks />
-        </div>
-      }
-    />
-    <Route
-      path="/contact"
-      element={
-        <div className="min-h-screen bg-page">
-          <NavbarLanding />
-          <Contact />
-        </div>
-      }
-    />
+  return (
+    <Routes>
 
-    {/* ========= Auth ========= */}
-    <Route path="/auth" element={<AuthPage />} />
-    <Route path="/reset-password" element={<ResetPasswordPage />} />
+      {/* ========= Error Pages ========= */}
+      <Route path="/error" element={<AnimatedErrorPage />} />
 
-    {/* ========= User ========= */}
-<Route
-  path="/user"
-  element={
-    <ProtectedRoute>
-      <UserLayout
-        cart={cart}
-        setCart={setCart}
-        isCartOpen={isCartOpen}
-        setIsCartOpen={setIsCartOpen}
+      {/* ========= Landing ========= */}
+      <Route
+        path="/"
+        element={
+          <div className="min-h-screen bg-page">
+            <NavbarLanding />
+            <HeroLanding />
+          </div>
+        }
       />
-    </ProtectedRoute>
-  }
->
-  <Route
-    index
-    element={
-      <>
-        <HeroUser />
-        <ProductsUser cart={cart} setCart={setCart} />
-      </>
-    }
-  />
-  <Route path="orders" element={<Ordersuser />} />
-  <Route path="profile" element={<Profile />} />
-  <Route path="checkout" element={<Checkout />} />
-  <Route path="notifications" element={<NotificationsPage />} />
-  <Route path="payment" element={<Payment />} />  {/* هنا صفحة الدفع */}
-  <Route path="pharmacy/:id" element={<PharmacyDetails />} />
-</Route>
+      <Route
+        path="/features"
+        element={
+          <div className="min-h-screen bg-page">
+            <NavbarLanding />
+            <Features />
+          </div>
+        }
+      />
+      <Route
+        path="/how-it-works"
+        element={
+          <div className="min-h-screen bg-page">
+            <NavbarLanding />
+            <HowItWorks />
+          </div>
+        }
+      />
+      <Route
+        path="/contact"
+        element={
+          <div className="min-h-screen bg-page">
+            <NavbarLanding />
+            <Contact />
+          </div>
+        }
+      />
 
+      {/* ========= Auth ========= */}
+      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/change-password" element={<ChangePasswordPage />} /> {/* 👈 added */}
 
-    {/* ========= Medicines ========= */}
-    <Route
-      path="/medicines/:id"
-      element={<MedicineDetails cart={cart} setCart={setCart} />}
-    />
+      {/* ========= User ========= */}
+      <Route
+        path="/user"
+        element={
+          <ProtectedRoute>
+            <UserLayout
+              cart={cart}
+              setCart={setCart}
+              isCartOpen={isCartOpen}
+              setIsCartOpen={setIsCartOpen}
+            />
+          </ProtectedRoute>
+        }
+      >
+        <Route
+          index
+          element={
+            <>
+              <HeroUser />
+              <ProductsUser cart={cart} setCart={setCart} />
+            </>
+          }
+        />
+        <Route path="orders" element={<Ordersuser />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="checkout" element={<Checkout />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="payment" element={<Payment />} />
+        <Route path="pharmacy/:id" element={<PharmacyDetails />} />
+      </Route>
 
-    {/* ========= Dashboard ========= */}
-                <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute roles={["Pharmacist", "PharmacyAdmin"]}>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Home />} />
-              <Route path="home" element={<Home />} />
-              <Route path="products" element={<Products />} />
-              <Route path="orders" element={<Orders />} />
-              <Route path="sales" element={<Sales />} />
-              <Route path="customers" element={<Customers />} />
-              <Route path="settings" element={<Settings />} />
+      {/* ========= Medicines ========= */}
+      <Route
+        path="/medicines/:id"
+        element={<MedicineDetails cart={cart} setCart={setCart} />}
+      />
 
-              <Route
-                path="logs"
-                element={
-                  <ProtectedRoute roles={["PharmacyAdmin"]}>
-                    <Logs />
-                  </ProtectedRoute>
-                }
-              />
+      {/* ========= Dashboard ========= */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute roles={["Pharmacist", "PharmacyAdmin"]}>
+            {/* ✅ If PharmacyAdmin first login → redirect to change password */}
+            {user?.role === "PharmacyAdmin" && user?.IsFirstLogin
+              ? <Navigate to="/change-password" replace />
+              : <DashboardLayout />
+            }
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Home />} />
+        <Route path="home" element={<Home />} />
+        <Route path="products" element={<Products />} />
+        <Route path="orders" element={<Orders />} />
+        <Route path="sales" element={<Sales />} />
+        <Route path="customers" element={<Customers />} />
+        <Route path="settings" element={<Settings />} />
+        <Route
+          path="logs"
+          element={
+            <ProtectedRoute roles={["PharmacyAdmin"]}>
+              <Logs />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="ads"
+          element={
+            <ProtectedRoute roles={["PharmacyAdmin"]}>
+              <Ads />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
 
-              <Route
-                path="ads"
-                element={
-                  <ProtectedRoute roles={["PharmacyAdmin"]}>
-                    <Ads />
-                  </ProtectedRoute>
-                }
-              />
-            </Route>
+      {/* ========= Super Admin Dashboard ========= */}
+      <Route
+        path="/superadmin"
+        element={
+          <ProtectedRoute roles={["SuperAdmin"]}>
+            <DashboardLayoutSuberAdmin />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Overview />} />
+        <Route path="pharmacies" element={<Pharmacies />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="settings" element={<SettingsAdmin />} />
+      </Route>
 
-            {/* ========= Super Admin Dashboard ========= */}
-<Route
-  path="/superadmin"
-  element={
-    <ProtectedRoute roles={["SuperAdmin"]}>
-      <DashboardLayoutSuberAdmin />
-    </ProtectedRoute>
-  }
->
-  <Route index element={<Overview />} />
-  <Route path="pharmacies" element={<Pharmacies />} />
-  <Route path="reports" element={<Reports />} />
-  <Route path="settings" element={<SettingsAdmin />} />
-</Route>
+      {/* ========= 404 ========= */}
+      <Route path="*" element={<AnimatedErrorPage />} />
 
-
-    {/* ========= 404 ========= */}
-    <Route path="*" element={<AnimatedErrorPage />} />
-
-  </Routes>
-);
+    </Routes>
+  );
+};
 
 export default AppRoutes;

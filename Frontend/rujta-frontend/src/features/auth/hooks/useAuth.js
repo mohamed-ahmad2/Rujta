@@ -8,6 +8,7 @@ import {
   forgotPassword,
   resetPassword,
   socialLogin, // updated
+  changePassword, // 👈 ADD THIS
 } from "../api/authApi";
 import apiClient from "../../../shared/api/apiClient";
 import jwt_decode from "jwt-decode";
@@ -24,38 +25,49 @@ export const useAuth = () => {
 
   // Load current user on mount
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const userData = await getCurrentUser();
-        if (userData) {
-          setUser({ email: userData.email, role: userData.role });
-        }
-      } catch {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadUser();
-  }, []);
-
+  const token = localStorage.getItem("token");
+  const isFirstLogin = localStorage.getItem("IsFirstLogin") === "true";
+  if (token) {
+    try {
+      const decoded = jwt_decode(token);
+      setUser({
+        email: decoded.email,
+        role: decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"],
+        IsFirstLogin: isFirstLogin,
+      });
+      updateTokenExp(token);
+    } catch {
+      setUser(null);
+    }
+  }
+  setLoading(false);
+}, []); // 👈 same empty array []
   // Standard login
   const handleLogin = async (email, password) => {
-    const response = await login({ email, password });
-    setUser({ email: response.email, role: response.role });
-    if (response.accessToken) {
-      setAccessToken(response.accessToken);
-      apiClient.defaults.headers.common["Authorization"] =
-        `Bearer ${response.accessToken}`;
-      updateTokenExp(response.accessToken);
-      localStorage.setItem("token", response.accessToken);
-    }
-    setTimeout(() => {
-      window.location.reload();
-    }, 60);
-    return response;
-  };
+  const response = await login({ email, password });
 
+  // 👇 Save IsFirstLogin to localStorage
+  localStorage.setItem("IsFirstLogin", response.isFirstLogin ?? false);
+
+  setUser({
+    email: response.email,
+    role: response.role,
+    IsFirstLogin: response.isFirstLogin ?? false,
+  });
+
+  if (response.accessToken) {
+    setAccessToken(response.accessToken);
+    apiClient.defaults.headers.common["Authorization"] = `Bearer ${response.accessToken}`;
+    updateTokenExp(response.accessToken);
+    localStorage.setItem("token", response.accessToken);
+  }
+
+  setTimeout(() => {
+    window.location.reload();
+  }, 60);
+
+  return response;
+};
   // Standard registration
   const handleRegister = async (dto) => {
     try {
@@ -188,6 +200,15 @@ export const useAuth = () => {
     const response = await resetPassword({ email, otp, newPassword });
     return response;
   };
+  const handleChangePassword = async ({ newPassword, email, password }) => {
+  const response = await changePassword({ newPassword });
+  
+  // ✅ Clear IsFirstLogin immediately
+  localStorage.setItem("IsFirstLogin", "false");
+  setUser((prev) => ({ ...prev, IsFirstLogin: false }));
+  
+  return response;
+};
 
   return {
     user,
@@ -199,5 +220,6 @@ export const useAuth = () => {
     handleRegisterStaff,
     handleForgotPassword,
     handleResetPassword,
+    handleChangePassword, // 👈 ADD THIS
   };
 };

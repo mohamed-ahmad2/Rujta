@@ -32,5 +32,9 @@ namespace Rujta.Infrastructure.Repositories
                 .Select(i => i.Quantity)
                 .FirstOrDefaultAsync();
         }
+        public async Task<Pharmacy?> GetByAdminIdAsync(Guid adminId)
+    => await _context.Pharmacies
+        .Include(p => p.Subscription)
+        .FirstOrDefaultAsync(p => p.AdminId == adminId);
     }
 }
