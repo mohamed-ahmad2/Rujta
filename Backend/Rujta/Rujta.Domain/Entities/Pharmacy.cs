@@ -31,5 +31,7 @@ namespace Rujta.Domain.Entities
 
         public Subscription? Subscription { get; set; }
 
+
+        public bool RememberMe { get; set; } = false;
     }
 }

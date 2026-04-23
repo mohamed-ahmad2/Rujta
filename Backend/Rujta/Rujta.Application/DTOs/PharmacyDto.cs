@@ -11,9 +11,9 @@ namespace Rujta.Application.DTOs
         public class PharmacyDto
         {
             public int Id { get; set; }
-            public string Name { get; set; }
-            public string Location { get; set; }
-            public string ContactNumber { get; set; }
+            public string? Name { get; set; }
+            public string? Location { get; set; }
+            public string? ContactNumber { get; set; }
             public double Latitude { get; set; }
             public double Longitude { get; set; }
             public bool IsActive { get; set; }
@@ -23,7 +23,7 @@ namespace Rujta.Application.DTOs
             public string? ImageUrl { get; set; }
             public Guid? AdminId { get; set; }
 
-            public double TotalOrders { get; set; } // 🔥 NEW
+            public double TotalOrders { get; set; }
         }
     }
 

@@ -1,22 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { IoMdClose } from "react-icons/io";
 import { FaPlus, FaMinus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import audio from "../../../assets/audio.wav";
 
-
 const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const clickSound = new Audio(audio);
+  // ✅ useRef بدل new Audio في كل render
+  const clickSound = useRef(new Audio(audio));
 
   // Increase quantity
   const handleIncrease = (id) => {
     setCart((prevCart) =>
       prevCart.map((item) =>
-        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-      )
+        item.id === id ? { ...item, quantity: item.quantity + 1 } : item,
+      ),
     );
   };
 
@@ -25,24 +25,26 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     setCart((prevCart) =>
       prevCart
         .map((item) =>
-          item.id === id ? { ...item, quantity: item.quantity - 1 } : item
+          item.id === id ? { ...item, quantity: item.quantity - 1 } : item,
         )
-        .filter((item) => item.quantity > 0)
+        .filter((item) => item.quantity > 0),
     );
   };
 
   // Total price
   const total = cart.reduce(
     (sum, item) => sum + parseFloat(item.price) * item.quantity,
-    0
+    0,
   );
 
   // Handle Checkout
   const handleCheckout = () => {
-    if (isCheckingOut) return; // يمنع الدوس تاني
+    if (isCheckingOut) return;
 
     setIsCheckingOut(true);
-    clickSound.play(); // تشغيل الصوت
+
+    // ✅ clickSound.current بدل clickSound
+    clickSound.current.play();
 
     setTimeout(() => {
       onClose();
@@ -52,30 +54,28 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
 
   return (
     <div
-      className={`fixed top-0 right-0 h-full w-[320px] bg-white dark:bg-gray-900 
-                  shadow-2xl transform transition-transform duration-300 
-                  ${isOpen ? "translate-x-0" : "translate-x-full"} z-50 flex flex-col`}
+      className={`fixed right-0 top-0 h-full w-[320px] transform bg-white shadow-2xl transition-transform duration-300 dark:bg-gray-900 ${isOpen ? "translate-x-0" : "translate-x-full"} z-50 flex flex-col`}
     >
       {/* Header */}
-      <div className="flex justify-between items-center px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
         <h2 className="text-lg font-bold dark:text-white">Your Cart</h2>
         <IoMdClose
-          className="text-2xl cursor-pointer text-gray-500 hover:text-red-500 transition-colors"
+          className="cursor-pointer text-2xl text-gray-500 transition-colors hover:text-red-500"
           onClick={onClose}
         />
       </div>
 
       {/* Cart Items */}
-      <div className="flex-1 p-5 space-y-4 overflow-y-auto">
+      <div className="flex-1 space-y-4 overflow-y-auto p-5">
         {cart.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-300 text-center mt-10">
+          <p className="mt-10 text-center text-gray-500 dark:text-gray-300">
             Your cart is empty 🛒
           </p>
         ) : (
           cart.map((item) => (
             <div
               key={item.id}
-              className="flex justify-between items-center bg-gray-100 dark:bg-gray-800 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200"
+              className="flex items-center justify-between rounded-xl bg-gray-100 p-3 shadow-sm transition-all duration-200 hover:shadow-md dark:bg-gray-800"
             >
               <div>
                 <p className="font-semibold text-gray-800 dark:text-white">
@@ -89,18 +89,18 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleDecrease(item.id)}
-                  className="p-1 bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600"
+                  className="rounded-full bg-gray-200 p-1 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
                 >
-                  <FaMinus className="text-gray-700 dark:text-gray-200 text-xs" />
+                  <FaMinus className="text-xs text-gray-700 dark:text-gray-200" />
                 </button>
-                <span className="text-gray-800 dark:text-gray-200 font-semibold text-sm w-5 text-center">
+                <span className="w-5 text-center text-sm font-semibold text-gray-800 dark:text-gray-200">
                   {item.quantity}
                 </span>
                 <button
                   onClick={() => handleIncrease(item.id)}
-                  className="p-1 bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600"
+                  className="rounded-full bg-gray-200 p-1 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
                 >
-                  <FaPlus className="text-gray-700 dark:text-gray-200 text-xs" />
+                  <FaPlus className="text-xs text-gray-700 dark:text-gray-200" />
                 </button>
               </div>
             </div>
@@ -110,35 +110,30 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
 
       {/* Footer */}
       {cart.length > 0 && (
-        <div className="border-t border-gray-200 dark:border-gray-700 p-5 bg-white dark:bg-gray-900 sticky bottom-0">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-gray-700 dark:text-gray-300 font-semibold">
+        <div className="sticky bottom-0 border-t border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="font-semibold text-gray-700 dark:text-gray-200">
               Total:
             </span>
-            <span className="text-lg font-bold text-primary">
+            <span className="font-bold text-gray-900 dark:text-white">
               {total.toFixed(2)} EGP
             </span>
           </div>
 
           <button
-  onClick={handleCheckout}
-  disabled={isCheckingOut}
-  className={`w-full flex items-center justify-center gap-2
-              bg-gradient-to-r from-secondary to-secondary
-              text-white py-2.5 rounded-md font-semibold
-              transition-all duration-300
-              ${
-                isCheckingOut
-                  ? "opacity-80 cursor-not-allowed animate-pulse"
-                  : "hover:scale-105 active:scale-95 hover:opacity-90"
-              }`}
->
-  {isCheckingOut && (
-    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-  )}
-
-  {isCheckingOut ? "Processing..." : "Checkout"}
-</button>
+            onClick={handleCheckout}
+            disabled={isCheckingOut}
+            className={`flex w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r from-secondary to-secondary py-2.5 font-semibold text-white transition-all duration-300 ${
+              isCheckingOut
+                ? "animate-pulse cursor-not-allowed opacity-80"
+                : "hover:scale-105 hover:opacity-90 active:scale-95"
+            }`}
+          >
+            {isCheckingOut && (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+            )}
+            {isCheckingOut ? "Processing..." : "Checkout"}
+          </button>
         </div>
       )}
     </div>

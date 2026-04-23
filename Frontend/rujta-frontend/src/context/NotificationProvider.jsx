@@ -2,7 +2,10 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 import { NotificationContext } from "./NotificationContext";
 import { useAuth } from "../features/auth/hooks/useAuth";
-import { getAccessToken, subscribeTokenChange } from "../authProvider/authTokenProvider";
+import {
+  getAccessToken,
+  subscribeTokenChange,
+} from "../authProvider/authTokenProvider";
 
 export const NotificationProvider = ({ children }) => {
   const { user, loading } = useAuth();
@@ -43,8 +46,13 @@ export const NotificationProvider = ({ children }) => {
 
     startingRef.current = true;
 
+    const hubUrl =
+      import.meta.env.MODE === "development"
+        ? "/hubs/notifications"
+        : "https://rujta.runasp.net/hubs/notifications";
+
     const hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl("https://localhost:7065/hubs/notifications", {
+      .withUrl(hubUrl, {
         accessTokenFactory: () => getAccessToken(),
         withCredentials: true,
       })
@@ -105,7 +113,9 @@ export const NotificationProvider = ({ children }) => {
   }, [startHubConnection, cleanupConnection]);
 
   return (
-    <NotificationContext.Provider value={{ connection, notifications, setNotifications }}>
+    <NotificationContext.Provider
+      value={{ connection, notifications, setNotifications }}
+    >
       {children}
     </NotificationContext.Provider>
   );

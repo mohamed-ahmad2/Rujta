@@ -37,6 +37,9 @@ namespace Rujta.Infrastructure.Data
         public DbSet<Subscription> Subscriptions { get; set; } = null!;
 
 
+        public DbSet<Ad> Ads { get; set; } = null!;
+        public DbSet<Payment> Payments { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

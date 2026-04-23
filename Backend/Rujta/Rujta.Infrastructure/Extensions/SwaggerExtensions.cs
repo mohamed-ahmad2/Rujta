@@ -1,6 +1,5 @@
 ﻿using Microsoft.OpenApi.Models;
 
-
 namespace Rujta.Infrastructure.Extensions
 {
     public static class SwaggerExtensions
@@ -15,7 +14,8 @@ namespace Rujta.Infrastructure.Extensions
                     Type = SecuritySchemeType.Http,
                     Scheme = "bearer",
                     BearerFormat = "JWT",
-                    In = ParameterLocation.Header
+                    In = ParameterLocation.Header,
+                    Description = "Enter 'Bearer' followed by a space and your JWT token."
                 });
 
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -27,9 +27,12 @@ namespace Rujta.Infrastructure.Extensions
                             {
                                 Type = ReferenceType.SecurityScheme,
                                 Id = "Bearer"
-                            }
+                            },
+                            Scheme = "bearer",
+                            Name = "Authorization",
+                            In = ParameterLocation.Header
                         },
-                        Array.Empty<string>()
+                        new List<string>()
                     }
                 });
             });

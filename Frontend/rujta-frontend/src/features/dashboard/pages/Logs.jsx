@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../../auth/hooks/useAuth"; // Adjust the path if needed
+import { useAuth } from "../../auth/hooks/useAuth";
 import { usePharmacists } from "../../pharmacists/hook/usePharmacists";
-import { usePresence } from "../../../context/usePresence"; // Assuming the path is correct based on provided files
+import { usePresence } from "../../../context/usePresence";
+import { X, Search, UserPlus, Users, Wifi, WifiOff, Clock } from "lucide-react";
 
 const Logs = () => {
   const { handleRegisterStaff } = useAuth();
   const { fetchPharmacyStaff, loading: pharmacistsLoading } = usePharmacists();
-  const { onlineUsers } = usePresence(); // Get online users from PresenceContext
+  const { onlineUsers } = usePresence();
+
   const [staff, setStaff] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [newStaff, setNewStaff] = useState({
@@ -19,11 +21,10 @@ const Logs = () => {
     role: "Pharmacist",
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const [filterStatus, setFilterStatus] = useState("all"); // New: Filter by online/offline
-  const [searchTerm, setSearchTerm] = useState(""); // New: Search functionality
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const itemsPerPage = 10;
 
-  // Fetch staff and enhance with online status
   useEffect(() => {
     const loadStaff = async () => {
       const data = await fetchPharmacyStaff();
@@ -36,16 +37,15 @@ const Logs = () => {
         hireDate: p.hireDate
           ? new Date(p.hireDate).toLocaleDateString()
           : "N/A",
-        isOnline: onlineUsers.includes(p.id), // Determine online status from onlineUsers (userId)
+        isOnline: onlineUsers.includes(p.id),
       }));
       setStaff(enhancedData);
     };
     loadStaff();
-  }, [fetchPharmacyStaff, onlineUsers]); // Re-fetch when onlineUsers change
+  }, [fetchPharmacyStaff, onlineUsers]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e) =>
     setNewStaff({ ...newStaff, [e.target.name]: e.target.value });
-  };
 
   const addStaff = async () => {
     if (
@@ -55,13 +55,11 @@ const Logs = () => {
       !newStaff.location ||
       !newStaff.createPassword ||
       !newStaff.confirmPassword
-    ) {
+    )
       return alert("Please fill in all required fields");
-    }
 
-    if (newStaff.createPassword !== newStaff.confirmPassword) {
+    if (newStaff.createPassword !== newStaff.confirmPassword)
       return alert("Passwords do not match");
-    }
 
     try {
       const response = await handleRegisterStaff({
@@ -73,18 +71,18 @@ const Logs = () => {
         ConfirmPassword: newStaff.confirmPassword,
         Role: newStaff.role,
       });
-
-      const newStaffMember = {
-        id: response.UserId,
-        name: newStaff.name,
-        email: response.Email,
-        phone: newStaff.phone,
-        role: newStaff.role,
-        hireDate: new Date().toLocaleDateString(),
-        isOnline: false, // New staff starts offline
-      };
-
-      setStaff([...staff, newStaffMember]);
+      setStaff([
+        ...staff,
+        {
+          id: response.UserId,
+          name: newStaff.name,
+          email: response.Email,
+          phone: newStaff.phone,
+          role: newStaff.role,
+          hireDate: new Date().toLocaleDateString(),
+          isOnline: false,
+        },
+      ]);
       setShowModal(false);
       setNewStaff({
         name: "",
@@ -103,7 +101,6 @@ const Logs = () => {
     }
   };
 
-  // Filter and search staff
   const filteredStaff = staff
     .filter((s) => {
       if (filterStatus === "online") return s.isOnline;
@@ -116,14 +113,12 @@ const Logs = () => {
         s.email.toLowerCase().includes(searchTerm.toLowerCase()),
     );
 
-  // Pagination calculations
   const totalPages = Math.ceil(filteredStaff.length / itemsPerPage);
   const currentStaff = filteredStaff.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
 
-  // Stats calculations
   const totalStaff = staff.length;
   const onlineCount = staff.filter((s) => s.isOnline).length;
   const offlineCount = totalStaff - onlineCount;
@@ -132,274 +127,326 @@ const Logs = () => {
     return hireDate > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   }).length;
 
+  // Stats data
+  const statsData = [
+    {
+      label: "Total Staff",
+      value: totalStaff,
+      icon: <Users className="h-4 w-4 sm:h-5 sm:w-5" />,
+      color: "text-gray-800",
+      iconBg: "bg-gray-100",
+    },
+    {
+      label: "Online",
+      value: onlineCount,
+      icon: <Wifi className="h-4 w-4 sm:h-5 sm:w-5" />,
+      color: "text-green-600",
+      iconBg: "bg-green-100",
+    },
+    {
+      label: "Offline",
+      value: offlineCount,
+      icon: <WifiOff className="h-4 w-4 sm:h-5 sm:w-5" />,
+      color: "text-red-500",
+      iconBg: "bg-red-100",
+    },
+    {
+      label: "Recent Hires (30d)",
+      value: recentHires,
+      icon: <Clock className="h-4 w-4 sm:h-5 sm:w-5" />,
+      color: "text-blue-600",
+      iconBg: "bg-blue-100",
+    },
+  ];
+
+  // Modal fields
+  const modalFields = [
+    { name: "name", label: "Full Name", type: "text" },
+    { name: "email", label: "Email", type: "email" },
+    { name: "phone", label: "Phone", type: "text" },
+    { name: "location", label: "Location (e.g., EG)", type: "text" },
+    { name: "createPassword", label: "Password", type: "password" },
+    { name: "confirmPassword", label: "Confirm Password", type: "password" },
+  ];
+
   return (
-    <div className="p-8 space-y-6 bg-gray-100 min-h-screen">
-      {/* Header with Search and Filter */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Staff Logs</h1>
-        <div className="flex items-center space-x-4">
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            className="border px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+    <div className="min-h-screen space-y-4 bg-gray-100 p-3 sm:space-y-5 sm:p-4 md:space-y-6 md:p-6 lg:p-8">
+      {/* ===== Header ===== */}
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <h1 className="text-xl font-bold text-gray-800 sm:text-2xl md:text-3xl">
+          Staff Logs
+        </h1>
+
+        {/* Search + Filter + Add */}
+        <div className="xs:flex-row xs:items-center flex w-full flex-col items-stretch gap-2 sm:w-auto sm:gap-3">
+          {/* Search */}
+          <div className="relative flex-1 sm:w-48 md:w-56">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Filter */}
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="border px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary"
+            className="flex-shrink-0 rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
           >
             <option value="all">All Status</option>
             <option value="online">Online</option>
             <option value="offline">Offline</option>
           </select>
+
+          {/* Add Button */}
           <button
             onClick={() => setShowModal(true)}
-            className="bg-secondary hover:bg-green-500 text-white px-4 py-2 rounded shadow transition"
+            className="flex flex-shrink-0 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-sm text-white shadow transition hover:bg-green-500 sm:px-4 sm:text-base"
           >
-            Add Staff
+            <UserPlus className="h-4 w-4" />
+            <span>Add Staff</span>
           </button>
         </div>
       </div>
 
-      {/* Enhanced Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-2xl p-4 shadow flex flex-col items-center text-center">
-          <h3 className="font-semibold text-gray-700 mb-2">Total Staff</h3>
-          <span className="text-2xl font-bold">{totalStaff}</span>
-        </div>
-        <div className="bg-white rounded-2xl p-4 shadow flex flex-col items-center text-center">
-          <h3 className="font-semibold text-gray-700 mb-2">Online</h3>
-          <span className="text-2xl font-bold text-green-600">
-            {onlineCount}
-          </span>
-        </div>
-        <div className="bg-white rounded-2xl p-4 shadow flex flex-col items-center text-center">
-          <h3 className="font-semibold text-gray-700 mb-2">Offline</h3>
-          <span className="text-2xl font-bold text-red-600">
-            {offlineCount}
-          </span>
-        </div>
-        <div className="bg-white rounded-2xl p-4 shadow flex flex-col items-center text-center">
-          <h3 className="font-semibold text-gray-700 mb-2">
-            Recent Hires (30 days)
-          </h3>
-          <span className="text-2xl font-bold">{recentHires}</span>
-        </div>
+      {/* ===== Stats Cards ===== */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6 lg:grid-cols-4">
+        {statsData.map((stat) => (
+          <div
+            key={stat.label}
+            className="flex flex-col items-center gap-2 rounded-2xl bg-white p-3 text-center shadow sm:p-4 md:p-5"
+          >
+            <div
+              className={`flex h-8 w-8 items-center justify-center rounded-full sm:h-10 sm:w-10 ${stat.iconBg} ${stat.color}`}
+            >
+              {stat.icon}
+            </div>
+            <h3 className="text-xs font-semibold leading-tight text-gray-600 sm:text-sm">
+              {stat.label}
+            </h3>
+            <span
+              className={`text-xl font-bold sm:text-2xl md:text-3xl ${stat.color}`}
+            >
+              {stat.value}
+            </span>
+          </div>
+        ))}
       </div>
 
-      {/* Staff Table with Status Column */}
-      <div className="bg-white rounded-2xl shadow overflow-x-auto">
-        <table className="w-full text-left table-auto min-w-max">
-          <thead className="bg-gray-200">
-            <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Phone</th>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3">Hire Date</th>
-              <th className="px-4 py-3">Status</th> {/* New Status Column */}
-            </tr>
-          </thead>
-          <tbody>
-            {pharmacistsLoading ? (
+      {/* ===== Table ===== */}
+      <div className="overflow-hidden rounded-2xl bg-white shadow">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[550px] table-auto text-left">
+            <thead className="bg-gray-200">
               <tr>
-                <td colSpan="6" className="px-4 py-3 text-center text-gray-500">
-                  Loading...
-                </td>
-              </tr>
-            ) : currentStaff.length === 0 ? (
-              <tr>
-                <td colSpan="6" className="px-4 py-3 text-center text-gray-500">
-                  No staff found
-                </td>
-              </tr>
-            ) : (
-              currentStaff.map((s) => (
-                <tr
-                  key={s.id}
-                  className="border-t text-gray-700 hover:bg-gray-50 transition"
-                >
-                  <td className="px-4 py-3 font-medium">{s.name}</td>
-                  <td className="px-4 py-3">{s.email}</td>
-                  <td className="px-4 py-3">{s.phone}</td>
-                  <td className="px-4 py-3">{s.role}</td>
-                  <td className="px-4 py-3">{s.hireDate}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        s.isOnline
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
+                {["Name", "Email", "Phone", "Role", "Hire Date", "Status"].map(
+                  (h) => (
+                    <th
+                      key={h}
+                      className="whitespace-nowrap px-3 py-2 text-xs font-semibold text-gray-600 sm:px-4 sm:py-3 sm:text-sm"
                     >
-                      <span
-                        className={`w-2 h-2 rounded-full mr-1 ${
-                          s.isOnline ? "bg-green-500" : "bg-red-500"
-                        }`}
-                      ></span>
-                      {s.isOnline ? "Online" : "Offline"}
-                    </span>
+                      {h}
+                    </th>
+                  ),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {pharmacistsLoading ? (
+                <tr>
+                  <td colSpan="6" className="px-4 py-8 text-center">
+                    <div className="flex flex-col items-center gap-2 text-gray-500">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-secondary border-t-transparent" />
+                      <span className="text-sm">Loading...</span>
+                    </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : currentStaff.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="6"
+                    className="px-4 py-8 text-center text-sm text-gray-500"
+                  >
+                    No staff found
+                  </td>
+                </tr>
+              ) : (
+                currentStaff.map((s) => (
+                  <tr
+                    key={s.id}
+                    className="border-t text-gray-700 transition hover:bg-gray-50"
+                  >
+                    <td className="whitespace-nowrap px-3 py-2 text-xs font-medium sm:px-4 sm:py-3 sm:text-sm">
+                      {s.name}
+                    </td>
+                    <td className="max-w-[140px] truncate px-3 py-2 text-xs sm:px-4 sm:py-3 sm:text-sm">
+                      {s.email}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-xs sm:px-4 sm:py-3 sm:text-sm">
+                      {s.phone}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-xs sm:px-4 sm:py-3 sm:text-sm">
+                      {s.role}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-xs sm:px-4 sm:py-3 sm:text-sm">
+                      {s.hireDate}
+                    </td>
+                    <td className="px-3 py-2 sm:px-4 sm:py-3">
+                      <span
+                        className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium sm:py-1 ${
+                          s.isOnline
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 flex-shrink-0 rounded-full sm:h-2 sm:w-2 ${s.isOnline ? "bg-green-500" : "bg-red-500"}`}
+                        />
+                        {s.isOnline ? "Online" : "Offline"}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Enhanced Pagination */}
+      {/* ===== Pagination ===== */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center space-x-2 mt-4">
-          <button
-            onClick={() => setCurrentPage(1)}
-            disabled={currentPage === 1}
-            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 transition"
-          >
-            &lt;&lt;
-          </button>
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 transition"
-          >
-            &lt;
-          </button>
+        <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
+          {[
+            {
+              label: "«",
+              action: () => setCurrentPage(1),
+              disabled: currentPage === 1,
+            },
+            {
+              label: "‹",
+              action: () => setCurrentPage((p) => Math.max(1, p - 1)),
+              disabled: currentPage === 1,
+            },
+          ].map((btn) => (
+            <button
+              key={btn.label}
+              onClick={btn.action}
+              disabled={btn.disabled}
+              className="rounded bg-gray-200 px-2 py-1 text-sm transition hover:bg-gray-300 disabled:opacity-50 sm:px-3"
+            >
+              {btn.label}
+            </button>
+          ))}
+
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
             <button
               key={page}
               onClick={() => setCurrentPage(page)}
-              className={`px-3 py-1 rounded ${
+              className={`rounded px-2 py-1 text-sm transition sm:px-3 ${
                 currentPage === page
                   ? "bg-secondary text-white"
                   : "bg-gray-200 hover:bg-gray-300"
-              } transition`}
+              }`}
             >
               {page}
             </button>
           ))}
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 transition"
-          >
-            &gt;
-          </button>
-          <button
-            onClick={() => setCurrentPage(totalPages)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 transition"
-          >
-            &gt;&gt;
-          </button>
+
+          {[
+            {
+              label: "›",
+              action: () => setCurrentPage((p) => Math.min(totalPages, p + 1)),
+              disabled: currentPage === totalPages,
+            },
+            {
+              label: "»",
+              action: () => setCurrentPage(totalPages),
+              disabled: currentPage === totalPages,
+            },
+          ].map((btn) => (
+            <button
+              key={btn.label}
+              onClick={btn.action}
+              disabled={btn.disabled}
+              className="rounded bg-gray-200 px-2 py-1 text-sm transition hover:bg-gray-300 disabled:opacity-50 sm:px-3"
+            >
+              {btn.label}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* Improved Modal with Better UX (e.g., labels, better layout) */}
+      {/* ===== Modal ===== */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-lg relative">
-            <h2 className="text-xl font-bold mb-4">Add New Staff</h2>
-            <div className="flex flex-col gap-4">
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
+        >
+          <div className="relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-4 shadow-lg sm:max-w-md sm:rounded-2xl sm:p-6">
+            {/* Modal Header */}
+            <div className="mb-4 flex items-center justify-between sm:mb-5">
+              <h2 className="text-base font-bold sm:text-lg md:text-xl">
+                Add New Staff
+              </h2>
+              <button
+                onClick={() => setShowModal(false)}
+                className="rounded-full p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
+            </div>
+
+            {/* Modal Fields */}
+            <div className="flex flex-col gap-3 sm:gap-4">
+              {modalFields.map((field) => (
+                <div key={field.name}>
+                  <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
+                    {field.label}
+                  </label>
+                  <input
+                    type={field.type}
+                    name={field.name}
+                    value={newStaff[field.name]}
+                    onChange={handleInputChange}
+                    className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                  />
+                </div>
+              ))}
+
+              {/* Role Select */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  className="mt-1 border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-secondary"
-                  value={newStaff.name}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  className="mt-1 border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-secondary"
-                  value={newStaff.email}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Phone
-                </label>
-                <input
-                  type="text"
-                  name="phone"
-                  className="mt-1 border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-secondary"
-                  value={newStaff.phone}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Location (e.g., EG)
-                </label>
-                <input
-                  type="text"
-                  name="location"
-                  className="mt-1 border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-secondary"
-                  value={newStaff.location}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  name="createPassword"
-                  className="mt-1 border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-secondary"
-                  value={newStaff.createPassword}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  className="mt-1 border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-secondary"
-                  value={newStaff.confirmPassword}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
                   Role
                 </label>
                 <select
                   name="role"
-                  className="mt-1 border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-secondary"
                   value={newStaff.role}
                   onChange={handleInputChange}
+                  className="w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
                 >
                   <option value="Pharmacist">Pharmacist</option>
                 </select>
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
+
+            {/* Modal Actions */}
+            <div className="mt-5 flex justify-end gap-2 sm:mt-6 sm:gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 transition"
+                className="rounded-lg bg-gray-200 px-3 py-2 text-sm transition hover:bg-gray-300 sm:px-4 sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={addStaff}
-                className="px-4 py-2 rounded bg-secondary hover:bg-green-600 text-white transition"
+                className="rounded-lg bg-secondary px-3 py-2 text-sm text-white transition hover:bg-green-600 sm:px-4 sm:text-base"
               >
-                Add
+                Add Staff
               </button>
             </div>
           </div>

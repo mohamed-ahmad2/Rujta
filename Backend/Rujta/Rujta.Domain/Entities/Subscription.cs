@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Rujta.Domain.Enums;
 namespace Rujta.Domain.Entities
 {
-    
+
     namespace Rujta.Domain.Entities
     {
         public class Subscription : BaseEntity
@@ -23,3 +23,4 @@ namespace Rujta.Domain.Entities
         }
     }
 }
+

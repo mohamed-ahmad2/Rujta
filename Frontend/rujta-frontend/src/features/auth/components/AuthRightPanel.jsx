@@ -6,7 +6,7 @@ const AuthRightPanel = ({ isSignUp, setIsSignUp }) => {
       initial={false}
       animate={{ x: isSignUp ? "-100%" : "0%" }}
       transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
-      className="hidden md:flex md:relative w-full md:w-1/2 bg-gradient-primary text-white flex-col items-center justify-center text-center p-12 order-1 md:order-2"
+      className="order-1 hidden w-full flex-col items-center justify-center bg-gradient-primary p-12 text-center text-white md:relative md:order-2 md:flex md:w-1/2"
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -18,30 +18,30 @@ const AuthRightPanel = ({ isSignUp, setIsSignUp }) => {
         >
           {isSignUp ? (
             <>
-              <h2 className="text-5xl font-bold mb-4">Hello, Friend! 👋</h2>
-              <p className="text-xl mb-8 opacity-90">
+              <h2 className="mb-4 text-5xl font-bold">Hello, Friend! 👋</h2>
+              <p className="mb-8 text-xl opacity-90">
                 Enter your details and join us today!
               </p>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsSignUp(false)}
-                className="bg-white text-primary px-10 py-3 rounded-2xl text-lg font-semibold shadow-lg"
+                className="rounded-2xl bg-white px-10 py-3 text-lg font-semibold text-primary shadow-lg"
               >
                 Sign In
               </motion.button>
             </>
           ) : (
             <>
-              <h2 className="text-5xl font-bold mb-4">Welcome to Rujta 🌿</h2>
-              <p className="text-xl mb-8 opacity-90">
+              <h2 className="mb-4 text-5xl font-bold">Welcome to Rujta 🌿</h2>
+              <p className="mb-8 text-xl opacity-90">
                 Create your account and discover the possibilities
               </p>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsSignUp(true)}
-                className="bg-white text-primary px-10 py-3 rounded-2xl text-lg font-semibold shadow-lg"
+                className="rounded-2xl bg-white px-10 py-3 text-lg font-semibold text-primary shadow-lg"
               >
                 Sign Up
               </motion.button>

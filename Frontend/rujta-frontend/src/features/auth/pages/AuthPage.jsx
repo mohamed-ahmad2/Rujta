@@ -1,16 +1,26 @@
 // src/features/auth/pages/AuthPage.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../hooks/useAuth";
 import LoginForm from "../components/LoginForm";
 import { RegisterForm } from "../components/RegisterForm";
 import AuthRightPanel from "../components/AuthRightPanel";
 import { useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 export const AuthPage = () => {
   const navigate = useNavigate();
   const { handleLogin, handleRegister } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(false);
+
+  const [searchParams] = useSearchParams();
+  const mode = searchParams.get("mode") || "login";
+  const [isSignUp, setIsSignUp] = useState(mode === "signup");
+
+  // ✅ Fix: Detect mobile to disable the x-slide animation
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" && window.innerWidth < 768,
+  );
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -20,24 +30,28 @@ export const AuthPage = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
- const redirectByRole = (role) => {
+  useEffect(() => {
+    setIsSignUp(mode === "signup");
+  }, [mode]);
 
-  if (role === "SuperAdmin") {
-    navigate("/superadmin");
-  }
+  // ✅ Fix: Track window resize to update isMobile
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
-  else if (role === "Pharmacist" || role === "PharmacyAdmin") {
-    navigate("/dashboard");
-  }
-
-  else if (role === "User") {
-    navigate("/user/");
-  }
-
-  else {
-    navigate("/");
-  }
-};
+  const redirectByRole = (role) => {
+    if (role === "SuperAdmin") {
+      navigate("/superadmin");
+    } else if (role === "Pharmacist" || role === "PharmacyAdmin") {
+      navigate("/dashboard");
+    } else if (role === "User") {
+      navigate("/user/");
+    } else {
+      navigate("/");
+    }
+  };
 
   const onLogin = async (e) => {
     e.preventDefault();
@@ -82,7 +96,6 @@ export const AuthPage = () => {
       const role = userData.role || "User";
       redirectByRole(role);
     } catch (err) {
-      // Log detailed error info
       console.error("Registration error:", err);
 
       if (err.response) {
@@ -107,9 +120,9 @@ export const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-background flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-background p-4">
       {/* ✨ Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
           animate={{
             scale: [1, 1.2, 1],
@@ -117,7 +130,7 @@ export const AuthPage = () => {
             opacity: [0.3, 0.5, 0.3],
           }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-48 -left-48 w-96 h-96 bg-primary/20 rounded-full blur-3xl"
+          className="absolute -left-48 -top-48 h-96 w-96 rounded-full bg-primary/20 blur-3xl"
         />
         <motion.div
           animate={{
@@ -126,7 +139,7 @@ export const AuthPage = () => {
             opacity: [0.3, 0.5, 0.3],
           }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-48 -right-48 w-96 h-96 bg-accent/20 rounded-full blur-3xl"
+          className="absolute -bottom-48 -right-48 h-96 w-96 rounded-full bg-accent/20 blur-3xl"
         />
       </div>
 
@@ -136,18 +149,16 @@ export const AuthPage = () => {
         transition={{ duration: 0.6 }}
         className="relative w-full max-w-6xl"
       >
-        <div className="relative bg-white/80 backdrop-blur-glass rounded-3xl shadow-glass overflow-hidden min-h-[700px]">
-          <div className="relative flex flex-col md:flex-row min-h-[700px]">
+        <div className="relative min-h-[700px] overflow-hidden rounded-3xl bg-white/80 shadow-glass backdrop-blur-glass">
+          <div className="relative flex min-h-[700px] flex-col md:flex-row">
             {/* Form Section */}
-          <motion.div
-  animate={{
-    x: typeof window !== "undefined" && window.innerWidth >= 768
-      ? (isSignUp ? "100%" : "0%")
-      : "0%"
-  }}
-  transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
-  className="w-full md:w-1/2 flex items-center justify-center p-8 md:p-12 z-20 order-2 md:order-1"
->
+            <motion.div
+              animate={{
+                x: isMobile ? "0%" : isSignUp ? "100%" : "0%",
+              }}
+              transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
+              className="z-20 order-2 flex w-full items-center justify-center p-8 md:order-1 md:w-1/2 md:p-12"
+            >
               <AnimatePresence mode="wait">
                 {!isSignUp ? (
                   <LoginForm

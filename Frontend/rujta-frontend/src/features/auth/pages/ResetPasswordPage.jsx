@@ -6,7 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 const ResetPasswordPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { handleResetPassword } = useAuth(); // ✅ FIX
+  const { handleResetPassword } = useAuth();
 
   const params = new URLSearchParams(location.search);
   const email = params.get("email") || "";
@@ -43,7 +43,7 @@ const ResetPasswordPage = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen">
+    <div className="flex min-h-screen items-center justify-center">
       <ResetPasswordForm
         email={email}
         otp={otp}
