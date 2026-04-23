@@ -1,10 +1,10 @@
 import React, {
   createContext,
-  useContext,
   useEffect,
   useState,
   useCallback,
 } from "react";
+
 import {
   login,
   registerUser,
@@ -14,215 +14,249 @@ import {
   forgotPassword,
   resetPassword,
   socialLogin,
+  changePassword,
 } from "../api/authApi";
-import apiClient from "../../../shared/api/apiClient";
-import {
-  setAccessToken,
-  removeAccessToken,
-} from "../../../authProvider/authTokenProvider";
 
-const AuthContext = createContext(null);
+import apiClient from "../../../shared/api/apiClient";
+import { setAccessToken, removeAccessToken } from "../../../authProvider/authTokenProvider";
+import { jwtDecode } from "jwt-decode";
+
+/* ================= Context ================= */
+
+export const AuthContext = createContext(null);
+
+/* ================= Helpers ================= */
+
+const applyToken = (token) => {
+  if (token) {
+    apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  } else {
+    delete apiClient.defaults.headers.common["Authorization"];
+  }
+};
+
+const decodeToken = (token) => {
+  try {
+    return jwtDecode(token);
+  } catch {
+    return null;
+  }
+};
+
+/* ================= Provider ================= */
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tokenExp, setTokenExp] = useState(null);
 
-  const applyToken = useCallback((token) => {
-    if (token) {
-      apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    } else {
-      delete apiClient.defaults.headers.common["Authorization"];
-    }
-  }, []);
-
-  const updateTokenExp = useCallback((token) => {
-    if (!token) return;
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      setTokenExp(payload.exp * 1000);
-    } catch {
-      console.error("Failed to decode token");
-    }
-  }, []);
-
+  /* ================= Init ================= */
   useEffect(() => {
-    const loadUser = async () => {
+    const init = async () => {
       try {
-        const storedToken = localStorage.getItem("token");
-        if (storedToken) applyToken(storedToken);
+        const token = localStorage.getItem("token");
+
+        if (token) {
+          applyToken(token);
+          const decoded = decodeToken(token);
+
+          if (decoded?.exp) {
+            setTokenExp(decoded.exp * 1000);
+          }
+        }
 
         const userData = await getCurrentUser();
+
         if (userData) {
-          setUser({ email: userData.email, role: userData.role });
-          if (storedToken) updateTokenExp(storedToken);
-        } else {
-          setUser(null);
+          setUser({
+            email: userData.email,
+            role: userData.role,
+            isFirstLogin: userData.isFirstLogin ?? false,
+          });
         }
-      } catch {
+      } catch (err) {
+        console.error("Auth init error:", err);
         setUser(null);
       } finally {
         setLoading(false);
       }
     };
-    loadUser();
-  }, [applyToken, updateTokenExp]);
 
+    init();
+  }, []);
+
+  /* ================= Login ================= */
   const handleLogin = async (email, password) => {
-    const response = await login({ email, password });
-    setUser({ email: response.email, role: response.role });
+    const res = await login({ email, password });
 
-    if (response.accessToken) {
-      setAccessToken(response.accessToken);
-      applyToken(response.accessToken);
-      updateTokenExp(response.accessToken);
-      localStorage.setItem("token", response.accessToken);
+    const token = res.accessToken;
+    const decoded = decodeToken(token);
+
+    const newUser = {
+      email: res.email,
+      role: res.role,
+      isFirstLogin: res.isFirstLogin ?? false,
+    };
+
+    setUser(newUser);
+
+    if (token) {
+      localStorage.setItem("token", token);
+      setAccessToken(token);
+      applyToken(token);
+
+      if (decoded?.exp) setTokenExp(decoded.exp * 1000);
     }
 
-    const redirectTo =
-      response.role === "Admin"
-        ? "/dashboard"
-        : response.role === "SuperAdmin"
-          ? "/superadmin"
-          : "/user";
-
-    window.location.href = redirectTo;
-
-    return response;
+    return newUser;
   };
 
+  /* ================= Register ================= */
   const handleRegister = async (dto) => {
-    try {
-      await registerUser(dto);
-      const res = await login({
-        email: dto.email,
-        password: dto.createPassword,
-      });
-      const loggedUser = {
-        email: res?.email ?? dto.email,
-        role: res?.role ?? "User",
-      };
-      setUser(loggedUser);
+    await registerUser(dto);
 
-      if (res.accessToken) {
-        setAccessToken(res.accessToken);
-        applyToken(res.accessToken);
-        updateTokenExp(res.accessToken);
-        localStorage.setItem("token", res.accessToken);
-      }
+    const res = await login({
+      email: dto.email,
+      password: dto.createPassword,
+    });
 
-      window.location.href = "/user";
+    const token = res.accessToken;
+    const decoded = decodeToken(token);
 
-      return loggedUser;
-    } catch (err) {
-      console.error("Registration failed:", err.response?.data || err.message);
-      throw err;
+    const newUser = {
+      email: res.email,
+      role: res.role ?? "User",
+      isFirstLogin: res.isFirstLogin ?? false,
+    };
+
+    setUser(newUser);
+
+    if (token) {
+      localStorage.setItem("token", token);
+      setAccessToken(token);
+      applyToken(token);
+
+      if (decoded?.exp) setTokenExp(decoded.exp * 1000);
     }
+
+    return newUser;
   };
 
+  /* ================= Staff ================= */
   const handleRegisterStaff = async (dto) => {
-    try {
-      return await registerStaff(dto);
-    } catch (err) {
-      console.error(
-        "Register staff failed:",
-        err.response?.data || err.message,
-      );
-      throw err;
-    }
+    return await registerStaff(dto);
   };
 
+  /* ================= Logout ================= */
   const handleLogout = useCallback(async () => {
     try {
       setUser(null);
       setTokenExp(null);
+
       await logout();
-      applyToken(null);
-      await removeAccessToken();
+
       localStorage.removeItem("token");
-
-      window.location.href = "/";
+      await removeAccessToken();
+      applyToken(null);
     } catch (err) {
-      console.error("Logout failed", err);
+      console.error("Logout failed:", err);
     }
-  }, [applyToken]);
+  }, []);
 
+  /* ================= Social ================= */
+  const handleGoogleLogin = useCallback(async (IdToken) => {
+    const res = await socialLogin({ IdToken });
 
-  const handleGoogleLogin = useCallback(
-    async (IdToken) => {
-      try {
-        const response = await socialLogin({ IdToken });
-        if (response) {
-          const { accessToken, email, role } = response;
-          setUser({ email, role });
-          if (accessToken) {
-            setAccessToken(accessToken);
-            applyToken(accessToken);
-            updateTokenExp(accessToken);
-            localStorage.setItem("token", accessToken);
-          }
-        }
-        return response;
-      } catch (err) {
-        console.error(
-          "Google login failed:",
-          err.response?.data || err.message,
-        );
-        throw err;
-      }
-    },
-    [applyToken, updateTokenExp],
-  );
+    const token = res.accessToken;
+    const decoded = decodeToken(token);
 
+    const newUser = {
+      email: res.email,
+      role: res.role,
+      isFirstLogin: res.isFirstLogin ?? false,
+    };
 
+    setUser(newUser);
+
+    if (token) {
+      localStorage.setItem("token", token);
+      setAccessToken(token);
+      applyToken(token);
+
+      if (decoded?.exp) setTokenExp(decoded.exp * 1000);
+    }
+
+    return res;
+  }, []);
+
+  /* ================= Refresh ================= */
   const refreshToken = useCallback(async () => {
     try {
       const res = await apiClient.post("/auth/refresh-token", null, {
         withCredentials: true,
       });
-      if (res.data?.accessToken) {
-        applyToken(res.data.accessToken);
-        updateTokenExp(res.data.accessToken);
-        localStorage.setItem("token", res.data.accessToken);
+
+      const token = res.data?.accessToken;
+
+      if (token) {
+        localStorage.setItem("token", token);
+        setAccessToken(token);
+        applyToken(token);
+
+        const decoded = decodeToken(token);
+        if (decoded?.exp) setTokenExp(decoded.exp * 1000);
       }
     } catch (err) {
-      console.error("Token refresh failed", err);
+      console.error("Refresh failed:", err);
       handleLogout();
     }
-  }, [applyToken, updateTokenExp, handleLogout]);
+  }, [handleLogout]);
 
+  /* ================= Auto refresh ================= */
   useEffect(() => {
     if (!tokenExp || !user) return;
+
     const interval = setInterval(() => {
-      if (tokenExp - Date.now() < 3 * 60 * 1000) refreshToken();
-    }, 60 * 1000);
+      if (tokenExp - Date.now() < 3 * 60 * 1000) {
+        refreshToken();
+      }
+    }, 60000);
+
     return () => clearInterval(interval);
   }, [tokenExp, user, refreshToken]);
 
-  // ── Password ────────────────────────────────────────────────────────────────
+  /* ================= Password ================= */
   const handleForgotPassword = (email) => forgotPassword(email);
+
   const handleResetPassword = (dto) => resetPassword(dto);
 
-  const value = {
-    user,
-    loading,
-    handleLogin,
-    handleRegister,
-    handleLogout,
-    handleGoogleLogin,
-    handleRegisterStaff,
-    handleForgotPassword,
-    handleResetPassword,
+  const handleChangePassword = async (dto) => {
+    const res = await changePassword(dto);
+
+    setUser((prev) => ({
+      ...prev,
+      isFirstLogin: false,
+    }));
+
+    return res;
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx)
-    throw new Error(
-      "useAuth must be used inside <AuthProvider>. Wrap your app in main.jsx.",
-    );
-  return ctx;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        handleLogin,
+        handleRegister,
+        handleLogout,
+        handleGoogleLogin,
+        handleRegisterStaff,
+        handleForgotPassword,
+        handleResetPassword,
+        handleChangePassword,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
