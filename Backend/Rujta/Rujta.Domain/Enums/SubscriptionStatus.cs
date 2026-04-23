@@ -13,3 +13,4 @@ namespace Rujta.Domain.Enums
         Expired = 2
     }
 }
+

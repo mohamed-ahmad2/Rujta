@@ -15,5 +15,8 @@ namespace Rujta.Application.DTOs
         public string Location { get; set; } = string.Empty;
         public string? DeviceId { get; set; }
         public string Role { get; set; } = string.Empty;
+
+        public bool IsFirstLogin { get; set; } = false; // 👈 ADD THIS
+
     }
 }

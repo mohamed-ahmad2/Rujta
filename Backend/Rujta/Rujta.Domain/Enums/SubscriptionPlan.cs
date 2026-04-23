@@ -12,3 +12,4 @@ namespace Rujta.Domain.Enums
         Yearly = 2
     }
 }
+

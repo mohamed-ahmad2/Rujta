@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.DTOs.Auth;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
@@ -43,7 +44,9 @@ namespace Rujta.API.Controllers
                 {
                     Email = dto.Email,
                     Role = role,
-                    AccessToken = token.AccessToken
+                    AccessToken = token.AccessToken,
+                    IsFirstLogin = user?.IsFirstLogin ?? false // 👈 ADD THIS
+
                 });
             }
             catch (InvalidOperationException ex)
@@ -375,6 +378,30 @@ namespace Rujta.API.Controllers
                       LogConstants.UnknownUser,
                     $"Dummy SuperAdmin creation error: {ex.Message}");
 
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        [HttpPost("change-password")]
+        [Authorize(Roles = "PharmacyAdmin")] // 👈 Only PharmacyAdmin can hit this
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            try
+            {
+                var email = User.FindFirstValue(ClaimTypes.Email);
+
+                if (string.IsNullOrWhiteSpace(email))
+                    return Unauthorized(new { message = "Invalid token." });
+
+                await _authService.ChangePasswordAsync(email, dto.NewPassword);
+
+                return Ok(new { message = "Password changed successfully." });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
                 return BadRequest(new { message = ex.Message });
             }
         }

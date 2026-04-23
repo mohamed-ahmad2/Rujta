@@ -51,5 +51,46 @@
             await _identity.Identity.UserManager.UpdateAsync(user);
             _infra.Logger.LogInformation("Password reset successfully for {Email}", dto.Email);
         }
+        public async Task ChangePasswordAsync(string email, string newPassword)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ArgumentNullException(nameof(email));
+
+            if (string.IsNullOrWhiteSpace(newPassword))
+                throw new ArgumentNullException(nameof(newPassword));
+
+            var user = await _identity.Identity.UserManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                _infra.Logger.LogWarning("Change password failed: user not found ({Email})", email);
+                throw new InvalidOperationException("User not found.");
+            }
+
+            // ✅ Check role is PharmacyAdmin
+            var roles = await _identity.Identity.UserManager.GetRolesAsync(user);
+            if (!roles.Contains("PharmacyAdmin"))
+            {
+                _infra.Logger.LogWarning("Change password denied: user {Email} is not a PharmacyAdmin", email);
+                throw new UnauthorizedAccessException("Only PharmacyAdmin can use this endpoint.");
+            }
+
+            // ✅ Check it's actually first login
+            if (!user.IsFirstLogin)
+            {
+                _infra.Logger.LogWarning("Change password denied: user {Email} already changed password", email);
+                throw new InvalidOperationException("Password already changed.");
+            }
+
+            // Hash and set new password
+            user.PasswordHash = _identity.Identity.UserManager
+                .PasswordHasher.HashPassword(user, newPassword);
+
+            // ✅ Mark first login as done
+            user.IsFirstLogin = false;
+
+            await _identity.Identity.UserManager.UpdateAsync(user);
+
+            _infra.Logger.LogInformation("Password changed successfully for PharmacyAdmin {Email}", email);
+        }
     }
 }
