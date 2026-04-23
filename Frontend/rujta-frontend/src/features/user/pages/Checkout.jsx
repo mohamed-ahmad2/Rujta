@@ -73,7 +73,8 @@ const Checkout = () => {
 
   const [expandedPharmacies, setExpandedPharmacies] = useState({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] = useState(null);
+  const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] =
+    useState(null);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [selectedPharmacies, setSelectedPharmacies] = useState([]);
   const [creatingOrder, setCreatingOrder] = useState(false);
@@ -113,7 +114,11 @@ const Checkout = () => {
           }));
         }
       } catch (err) {
-        console.error("OSRM route error for pharmacy", pharmacy.pharmacyId, err);
+        console.error(
+          "OSRM route error for pharmacy",
+          pharmacy.pharmacyId,
+          err,
+        );
       }
     },
     [deliveryAddressLocation, userLocation, routeData],
@@ -155,8 +160,12 @@ const Checkout = () => {
   }, []);
 
   useEffect(() => {
-    const errorMessage = typeof error === "string" ? error : error?.message || "";
-    if (errorMessage.includes("User location not set") || errorMessage.includes("location not set")) {
+    const errorMessage =
+      typeof error === "string" ? error : error?.message || "";
+    if (
+      errorMessage.includes("User location not set") ||
+      errorMessage.includes("location not set")
+    ) {
       setShowLocationPrompt(true);
     }
   }, [error]);
@@ -202,12 +211,18 @@ const Checkout = () => {
     setIsConfirmingAddress(true);
     try {
       if (cart.length > 0) {
-        const dtoItems = cart.map((item) => ({ id: item.id, quantity: item.quantity }));
+        const dtoItems = cart.map((item) => ({
+          id: item.id,
+          quantity: item.quantity,
+        }));
         await fetchPharmacies(dtoItems, selectedAddressId, pharmaciesRange);
       }
       const fullAddress = await fetchById(selectedAddressId);
       if (fullAddress?.latitude && fullAddress?.longitude) {
-        setDeliveryAddressLocation({ lat: fullAddress.latitude, lng: fullAddress.longitude });
+        setDeliveryAddressLocation({
+          lat: fullAddress.latitude,
+          lng: fullAddress.longitude,
+        });
         setDeliveryAddress(fullAddress);
       }
       setShowAddressSelection(false);
@@ -222,7 +237,10 @@ const Checkout = () => {
     const newRange = pharmaciesRange + 5;
     setPharmaciesRange(newRange);
     if (!selectedAddressId || cart.length === 0) return;
-    const dtoItems = cart.map((item) => ({ id: item.id, quantity: item.quantity }));
+    const dtoItems = cart.map((item) => ({
+      id: item.id,
+      quantity: item.quantity,
+    }));
     await fetchPharmacies(dtoItems, selectedAddressId, newRange);
   };
 
@@ -242,7 +260,10 @@ const Checkout = () => {
           const allMedicineIds = pharmacy.foundMedicines
             .filter((m) => m.isQuantityEnough)
             .map((m) => m.medicineId);
-          setSelectedMedicines((prevMeds) => ({ ...prevMeds, [pharmacyId]: allMedicineIds }));
+          setSelectedMedicines((prevMeds) => ({
+            ...prevMeds,
+            [pharmacyId]: allMedicineIds,
+          }));
         }
         return [...prev, pharmacyId];
       }
@@ -272,15 +293,26 @@ const Checkout = () => {
   };
 
   const handleConfirmOrders = async () => {
-    if (cart.length === 0) { alert("Cart is empty!"); return; }
-    if (!selectedAddressId) { alert("No delivery address selected!"); return; }
-    if (selectedPharmacies.length === 0) { alert("No pharmacies selected!"); return; }
+    if (cart.length === 0) {
+      alert("Cart is empty!");
+      return;
+    }
+    if (!selectedAddressId) {
+      alert("No delivery address selected!");
+      return;
+    }
+    if (selectedPharmacies.length === 0) {
+      alert("No pharmacies selected!");
+      return;
+    }
 
     setCreatingOrder(true);
     const orderDtos = [];
 
     for (const pharmacyId of selectedPharmacies) {
-      const selectedPharmacy = pharmacies.find((p) => p.pharmacyId === pharmacyId);
+      const selectedPharmacy = pharmacies.find(
+        (p) => p.pharmacyId === pharmacyId,
+      );
       if (!selectedPharmacy) continue;
 
       const selectedMedicineIds = selectedMedicines[pharmacyId] || [];
@@ -300,7 +332,9 @@ const Checkout = () => {
     }
 
     if (orderDtos.length === 0) {
-      alert("No valid orders to create (check selected medicines & quantities)");
+      alert(
+        "No valid orders to create (check selected medicines & quantities)",
+      );
       setCreatingOrder(false);
       return;
     }
@@ -311,7 +345,9 @@ const Checkout = () => {
       if (results && results.length > 0) {
         alert(`Successfully created ${results.length} order(s)!`);
         const orderedIdsSet = new Set();
-        orderDtos.forEach((dto) => dto.OrderItems.forEach((item) => orderedIdsSet.add(item.MedicineID)));
+        orderDtos.forEach((dto) =>
+          dto.OrderItems.forEach((item) => orderedIdsSet.add(item.MedicineID)),
+        );
         const updatedCart = cart.filter((item) => !orderedIdsSet.has(item.id));
         setCart(updatedCart);
         localStorage.setItem(`cart_${user.email}`, JSON.stringify(updatedCart));
@@ -344,7 +380,7 @@ const Checkout = () => {
     <div className="flex min-h-screen w-screen items-center justify-center bg-gray-100 p-6">
       <div className="flex h-[700px] w-[1150px] flex-col rounded-3xl bg-white shadow-xl lg:flex-row">
         {/* LEFT – MAP */}
-        <div className="relative z-0 h-full w-full overflow-hidden lg:w-1/2">
+        <div className="relative h-full w-full overflow-hidden lg:w-1/2">
           <div className="absolute inset-0 z-0">
             <PharmacyMap
               userLocation={userLocation}
@@ -409,13 +445,15 @@ const Checkout = () => {
                     <option value="">Select an address...</option>
                     {addresses.map((addr) => (
                       <option key={addr.id} value={addr.id}>
-                        {addr.street}, {addr.buildingNo}, {addr.city}, {addr.governorate}{" "}
-                        {addr.isDefault ? "(Default)" : ""}
+                        {addr.street}, {addr.buildingNo}, {addr.city},{" "}
+                        {addr.governorate} {addr.isDefault ? "(Default)" : ""}
                       </option>
                     ))}
                   </select>
                   {addresses.length === 0 && (
-                    <p className="text-gray-600">No addresses found. Please add a new one.</p>
+                    <p className="text-gray-600">
+                      No addresses found. Please add a new one.
+                    </p>
                   )}
                   <button
                     onClick={() => setShowNewAddressForm(true)}
@@ -520,7 +558,7 @@ const Checkout = () => {
                       audio.currentTime = 0;
                       audio.play();
                     }}
-                    className="hover:bg-secondary-dark rounded-lg bg-secondary px-5 py-2 font-medium text-white transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg bg-secondary px-5 py-2 font-medium text-white transition-all duration-200 hover:bg-secondary-dark active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!selectedAddressId}
                   >
                     Confirm Address
@@ -597,7 +635,7 @@ const Checkout = () => {
                                   [p.pharmacyId]: !isExpanded,
                                 }))
                               }
-                              className="hover:text-secondary-dark text-sm font-medium text-secondary transition hover:underline"
+                              className="text-sm font-medium text-secondary transition hover:text-secondary-dark hover:underline"
                             >
                               {isExpanded ? "Hide Details" : "Show Details"}
                             </button>
@@ -608,7 +646,7 @@ const Checkout = () => {
                         <div className="flex items-start md:items-center">
                           <button
                             onClick={() => handleOrderClick(p)}
-                            className="hover:bg-secondary-dark w-full rounded-xl bg-secondary px-5 py-2 font-medium text-white transition-all duration-200 hover:scale-105 active:scale-95 md:w-auto"
+                            className="w-full rounded-xl bg-secondary px-5 py-2 font-medium text-white transition-all duration-200 hover:scale-105 hover:bg-secondary-dark active:scale-95 md:w-auto"
                           >
                             Order
                           </button>
@@ -692,7 +730,7 @@ const Checkout = () => {
                   className={`/* 📱 mobile */ /* 📱➡️ tablet */ /* 💻 desktop */ w-full rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 sm:w-auto sm:px-5 sm:py-2.5 sm:text-base md:px-6 md:py-3 md:text-base ${
                     loading || showAddressSelection || creatingOrder
                       ? "cursor-not-allowed bg-gray-300 text-gray-500"
-                      : "hover:bg-secondary-dark bg-secondary text-white active:scale-95"
+                      : "bg-secondary text-white hover:bg-secondary-dark active:scale-95"
                   } `}
                 >
                   Expand (+5)
@@ -707,10 +745,12 @@ const Checkout = () => {
                   className={`w-full rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 sm:w-auto sm:px-5 sm:py-2.5 sm:text-base md:px-6 md:py-3 md:text-base ${
                     loading || selectedPharmacies.length === 0 || creatingOrder
                       ? "cursor-not-allowed bg-gray-300 text-gray-500"
-                      : "hover:bg-secondary-dark bg-secondary text-white active:scale-95"
+                      : "bg-secondary text-white hover:bg-secondary-dark active:scale-95"
                   } `}
                 >
-                  {creatingOrder ? "Processing..." : `Order Selected (${selectedPharmacies.length})`}
+                  {creatingOrder
+                    ? "Processing..."
+                    : `Order Selected (${selectedPharmacies.length})`}
                 </button>
               </div>
             </>

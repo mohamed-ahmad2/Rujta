@@ -19,6 +19,8 @@ const App = () => {
   /* ===== Cart State ===== */
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [cartLoaded, setCartLoaded] = useState(false);
+
   const location = useLocation();
 
   /* ===== Splash Logic ===== */
@@ -53,6 +55,9 @@ const App = () => {
   /* ===== Load Cart ===== */
   useEffect(() => {
     if (loading) return;
+
+    setCartLoaded(false);
+
     if (!user) {
       setCart([]);
       return;
@@ -61,15 +66,16 @@ const App = () => {
     const key = getCartKey();
     const savedCart = localStorage.getItem(key);
     setCart(savedCart ? JSON.parse(savedCart) : []);
+    setCartLoaded(true);
   }, [user, loading]);
 
   /* ===== Save Cart ===== */
   useEffect(() => {
-    if (loading || !user) return;
+    if (!cartLoaded  || loading || !user) return;
 
     const key = getCartKey();
     localStorage.setItem(key, JSON.stringify(cart));
-  }, [cart, user, loading]);
+  }, [cart, user,cartLoaded, loading]);
 
   /* ===== Hide cart button in some pages ===== */
   const isLandingPage = location.pathname === "/";
