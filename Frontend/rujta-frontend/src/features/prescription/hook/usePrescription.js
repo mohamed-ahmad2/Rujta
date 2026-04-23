@@ -13,8 +13,16 @@ export const usePrescription = () => {
       setError(null);
 
       const response = await scanPrescription(imageFile);
+
+      // ── DEBUG: remove this log once confirmed working ──
+      console.log("📦 raw response:", response);
+      console.log("📦 response.data:", response.data);
+
+      // response.data is the object returned by Ok(result) in .NET
+      // Expected shape: { availableMedicines: [...], unavailableMedicines: [...] }
       setResult(response.data);
     } catch (err) {
+      console.error("❌ scan error:", err);
       setError(err?.response?.data?.message || "Failed to scan prescription");
       setResult(null);
     } finally {
