@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import imge1 from "../../../assets/hero/img1.png";
@@ -15,64 +16,76 @@ const categoryOptions = [
 function AdBanner({ ad }) {
   return (
     <div
-      className="relative cursor-pointer overflow-hidden rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+      className="relative cursor-pointer overflow-hidden rounded-3xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
       style={{
         background: `linear-gradient(135deg, ${ad.colorFrom}, ${ad.colorTo})`,
         fontFamily: ad.fontValue || "sans-serif",
-        minHeight: 190,
+        minHeight: 280,
+        padding: "2.5rem 3rem",
         boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
       }}
     >
-      {/* Decorative orbs */}
-      <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full"
+      <div className="pointer-events-none absolute -right-8 -top-8 h-56 w-56 rounded-full"
         style={{ background: "rgba(255,255,255,0.15)" }} />
-      <div className="pointer-events-none absolute -bottom-6 -left-5 h-28 w-28 rounded-full"
+      <div className="pointer-events-none absolute -bottom-6 -left-5 h-40 w-40 rounded-full"
         style={{ background: "rgba(255,255,255,0.08)" }} />
-      <div className="pointer-events-none absolute bottom-[-40px] right-20 h-20 w-20 rounded-full"
+      <div className="pointer-events-none absolute bottom-[-40px] right-20 h-28 w-28 rounded-full"
         style={{ background: "rgba(255,255,255,0.06)" }} />
 
-    {ad.adMode === "medicine" && ad.medicineImage && (
-  <img
-    src={ad.medicineImage}
-    alt={ad.medicineName}
-    className="absolute right-7 top-1/2 -translate-y-1/2 object-contain"
-    style={{
-      width: 130,
-      height: 130,
-      border: "3px solid rgba(255,255,255,0.3)",
-      borderRadius: "50%",
-      background: "rgba(255,255,255,0.15)",
-      padding: 8,
-    }}
-  />
-)}
+      {ad.adMode === "medicine" && ad.medicineImage && (
+        <img
+          src={ad.medicineImage}
+          alt={ad.medicineName}
+          className="absolute right-10 top-1/2 -translate-y-1/2 object-contain"
+          style={{
+            width: 180,
+            height: 180,
+            border: "4px solid rgba(255,255,255,0.3)",
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.15)",
+            padding: 10,
+          }}
+        />
+      )}
 
-      {/* Badge */}
       <span
-        className="mb-3 inline-block rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white"
+        className="mb-4 inline-block rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white"
         style={{ background: "rgba(255,255,255,0.22)", letterSpacing: "0.06em" }}
       >
         {ad.badge}
       </span>
 
-      {/* Headline */}
       <h3
-        className="max-w-[58%] text-xl font-semibold leading-snug text-white"
-        style={{ fontFamily: "'Playfair Display', serif" }}
+        className="font-semibold leading-snug text-white"
+        style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: "clamp(1.4rem, 3vw, 2rem)",
+          maxWidth: "58%",
+        }}
       >
         {ad.headline}
       </h3>
-      <p className="mt-1.5 max-w-[58%] text-xs leading-relaxed text-white/75">
+
+      <p className="mt-2 leading-relaxed text-white/75"
+        style={{ maxWidth: "58%", fontSize: "0.95rem" }}>
         {ad.subtext}
       </p>
 
-      {/* CTA */}
       <button
-        className="mt-5 rounded-xl px-5 py-2 text-xs font-semibold transition hover:opacity-90"
-        style={{ background: "rgba(255,255,255,0.95)", color: ad.colorFrom }}
+        className="mt-6 rounded-xl font-semibold transition hover:opacity-90"
+        style={{
+          background: "rgba(255,255,255,0.95)",
+          color: ad.colorFrom,
+          padding: "10px 28px",
+          fontSize: "0.9rem",
+          border: "none",
+          cursor: "pointer",
+        }}
       >
         {ad.ctaLabel} →
       </button>
+
+      <span className="absolute bottom-3 right-4 text-xs text-white/20 pointer-events-none">Rujta™</span>
     </div>
   );
 }
@@ -91,6 +104,9 @@ const PharmacyDetails = ({ cart, setCart }) => {
   const [expanded, setExpanded] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [addedIds, setAddedIds] = useState({});
+  
+  // Slide State
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -115,6 +131,16 @@ const PharmacyDetails = ({ cart, setCart }) => {
     fetchData();
   }, [id, fetchByPharmacy]);
 
+  // Auto-slide logic
+  useEffect(() => {
+    if (ads.length > 1) {
+      const timer = setInterval(() => {
+        setCurrentAdIndex((prev) => (prev + 1) % ads.length);
+      }, 5000); // Change slide every 5 seconds
+      return () => clearInterval(timer);
+    }
+  }, [ads]);
+
   const handleAddToCart = (product) => {
     if (!setCart) return;
     setCart((prev) => {
@@ -130,7 +156,6 @@ const PharmacyDetails = ({ cart, setCart }) => {
       return [...(prev || []), { ...product, pharmacyId: pharmacy.id, quantity: 1 }];
     });
 
-    // Added feedback
     setAddedIds((p) => ({ ...p, [product.id]: true }));
     setTimeout(() => setAddedIds((p) => ({ ...p, [product.id]: false })), 1200);
   };
@@ -141,13 +166,6 @@ const PharmacyDetails = ({ cart, setCart }) => {
       med.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  // Only last ad
-  const lastAd = ads.length > 0
-  ? [...ads].sort((a, b) => b.id - a.id)[0]   // or b.createdAt - a.createdAt
-  : null;
-console.log("adMode:", lastAd?.adMode, "imageDataUrl:", lastAd?.imageDataUrl);
-console.log("Full ad object:", lastAd);
-  /* ── Loading / Error states ── */
   if (loading) return (
     <div className="flex items-center justify-center py-32">
       <div className="h-9 w-9 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
@@ -172,13 +190,10 @@ console.log("Full ad object:", lastAd);
             position: "relative",
           }}
         >
-          {/* Glow accent */}
           <div
             className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full"
             style={{ background: "radial-gradient(circle, rgba(90,138,31,0.08) 0%, transparent 70%)" }}
           />
-
-          {/* Avatar */}
           <div
             className="flex h-[72px] w-[72px] flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl"
             style={{ background: "#EAF3DE", border: "2px solid rgba(90,138,31,0.15)", boxShadow: "0 4px 16px rgba(90,138,31,0.12)" }}
@@ -190,8 +205,6 @@ console.log("Full ad object:", lastAd);
               onError={(e) => (e.currentTarget.src = imge1)}
             />
           </div>
-
-          {/* Info */}
           <div className="flex-1">
             <h1
               className="text-2xl font-semibold"
@@ -209,8 +222,6 @@ console.log("Full ad object:", lastAd);
               </p>
             )}
           </div>
-
-          {/* Badge */}
           <span
             className="rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-widest"
             style={{ background: "#EAF3DE", color: "#5a8a1f", border: "1px solid rgba(90,138,31,0.2)" }}
@@ -219,22 +230,39 @@ console.log("Full ad object:", lastAd);
           </span>
         </div>
 
-        {/* ── Last Ad Only ── */}
-        {lastAd && (
+        {/* ── Dynamic Ad Slider ── */}
+        {ads.length > 0 && (
           <div className="mb-8">
-            <p
-              className="mb-3 text-[10px] font-semibold uppercase tracking-widest"
-              style={{ color: "#7a8472" }}
-            >
-              Pharmacy Offers
-            </p>
-            <AdBanner ad={lastAd} />
+            <div className="mb-3 flex items-center justify-between">
+               <p
+                className="text-[10px] font-semibold uppercase tracking-widest"
+                style={{ color: "#7a8472" }}
+              >
+                Pharmacy Offers ({currentAdIndex + 1}/{ads.length})
+              </p>
+              {ads.length > 1 && (
+                <div className="flex gap-1">
+                  {ads.map((_, idx) => (
+                    <div 
+                      key={idx}
+                      className="h-1 rounded-full transition-all duration-300"
+                      style={{ 
+                        width: idx === currentAdIndex ? "20px" : "6px", 
+                        background: idx === currentAdIndex ? "#5a8a1f" : "#e8eee2" 
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="transition-all duration-500 ease-in-out">
+               <AdBanner ad={ads[currentAdIndex]} />
+            </div>
           </div>
         )}
 
         {/* ── Search + Categories ── */}
         <div className="mb-7 flex flex-wrap items-center gap-3">
-          {/* Search */}
           <div className="relative flex-1" style={{ minWidth: 200 }}>
             <svg
               className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
@@ -260,7 +288,6 @@ console.log("Full ad object:", lastAd);
             />
           </div>
 
-          {/* Category pills */}
           <div className="flex flex-wrap gap-2">
             {categoryOptions.map((cat) => {
               const active = selectedCategory === cat.id;
@@ -330,7 +357,6 @@ console.log("Full ad object:", lastAd);
                     e.currentTarget.style.borderColor = "#e8eee2";
                   }}
                 >
-                  {/* Image zone */}
                   <div
                     className="flex h-44 items-center justify-center overflow-hidden"
                     style={{ background: "#EAF3DE", position: "relative" }}
@@ -341,14 +367,12 @@ console.log("Full ad object:", lastAd);
                       className="h-28 w-28 object-contain transition-transform duration-500 group-hover:scale-105"
                       onError={(e) => (e.currentTarget.src = imge1)}
                     />
-                    {/* Bottom fade */}
                     <div
                       className="pointer-events-none absolute bottom-0 left-0 right-0 h-8"
                       style={{ background: "linear-gradient(to top, rgba(234,243,222,0.6), transparent)" }}
                     />
                   </div>
 
-                  {/* Body */}
                   <div className="flex flex-1 flex-col p-4">
                     <h3
                       className="font-semibold"
@@ -372,13 +396,11 @@ console.log("Full ad object:", lastAd);
                       </button>
                     )}
 
-                    {/* Footer row */}
                     <div
                       className="mt-4 flex items-center justify-between pt-3"
                       style={{ borderTop: "1px solid #e8eee2" }}
                     >
-
-                      <button
+                       <button
                         onClick={(e) => { e.stopPropagation(); handleAddToCart(med); }}
                         className="flex items-center gap-1.5 rounded-xl text-xs font-semibold text-white transition-all duration-200 active:scale-95"
                         style={{
@@ -389,9 +411,7 @@ console.log("Full ad object:", lastAd);
                           fontFamily: "'DM Sans', sans-serif",
                         }}
                       >
-                        {isAdded ? (
-                          "✓ Added"
-                        ) : (
+                        {isAdded ? "✓ Added" : (
                           <>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                               <path d="M12 5v14M5 12h14" />
@@ -412,7 +432,6 @@ console.log("Full ad object:", lastAd);
             <p className="text-gray-400">No medicines found.</p>
           </div>
         )}
-
       </div>
     </div>
   );
