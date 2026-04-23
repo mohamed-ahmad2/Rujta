@@ -52,9 +52,6 @@ const staticAds = [
   },
 ];
 
-// --- UI Component: Dynamic Slide ---
-// --- Enhanced UI Component: Dynamic Slide ---
-// --- Enhanced UI Component: Dynamic Slide (Image Right, Text Left) ---
 const DynamicSlide = ({ ad }) => (
   <section
     className="relative w-full min-h-screen overflow-hidden flex items-center justify-center transition-all duration-700"

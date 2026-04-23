@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Rujta.Domain.Common;
 using Rujta.Domain.Entities;
+using Rujta.Domain.Entities.Rujta.Domain.Entities;
 using Rujta.Infrastructure.Extensions;
 using Rujta.Infrastructure.Identity;
 
@@ -34,7 +35,8 @@ namespace Rujta.Infrastructure.Data
         public DbSet<Notification> Notifications { get; set; } = null!;
         public DbSet<Log> Logs { get; set; } = null!;
         public DbSet<Ad> Ads { get; set; } = null!;
-
+        public DbSet<Payment> Payments { get; set; } = null!;
+        public DbSet<Subscription> Subscriptions { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
