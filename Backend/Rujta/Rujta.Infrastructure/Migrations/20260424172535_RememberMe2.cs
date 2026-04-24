@@ -5,24 +5,25 @@
 namespace Rujta.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class addimg_phar : Migration
+    public partial class RememberMe2 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "ImageUrl",
-                table: "Pharmacies",
-                type: "nvarchar(max)",
-                nullable: true);
+            migrationBuilder.AddColumn<bool>(
+                name: "RememberMe",
+                table: "RefreshTokens",
+                type: "bit",
+                nullable: false,
+                defaultValue: false);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "ImageUrl",
-                table: "Pharmacies");
+                name: "RememberMe",
+                table: "RefreshTokens");
         }
     }
 }

@@ -12,8 +12,8 @@ using Rujta.Infrastructure.Data;
 namespace Rujta.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260419145410_ads")]
-    partial class ads
+    [Migration("20260424172322_RememberMe")]
+    partial class RememberMe
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -698,6 +698,65 @@ namespace Rujta.Infrastructure.Migrations
                     b.ToTable("OrderItems");
                 });
 
+            modelBuilder.Entity("Rujta.Domain.Entities.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AdId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PaymentToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymobOrderId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymobTransactionId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PharmacyId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SubscriptionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Payments");
+                });
+
             modelBuilder.Entity("Rujta.Domain.Entities.Pharmacy", b =>
                 {
                     b.Property<int>("Id")
@@ -718,7 +777,13 @@ namespace Rujta.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<double>("Latitude")
@@ -744,6 +809,9 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.Property<int?>("ParentPharmacyID")
                         .HasColumnType("int");
+
+                    b.Property<bool>("RememberMe")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAddOrUpdate()
@@ -880,6 +948,9 @@ namespace Rujta.Infrastructure.Migrations
                     b.Property<DateTime?>("LastUsedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("RememberMe")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("Revoked")
                         .HasColumnType("bit");
 
@@ -903,6 +974,47 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("RefreshTokens", (string)null);
+                });
+
+            modelBuilder.Entity("Rujta.Domain.Entities.Rujta.Domain.Entities.Subscription", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PharmacyId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PharmacyId")
+                        .IsUnique();
+
+                    b.ToTable("Subscriptions");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.SellDrugViaPharmacy", b =>
@@ -984,6 +1096,9 @@ namespace Rujta.Infrastructure.Migrations
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsFirstLogin")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Location")
                         .IsRequired()
@@ -1398,6 +1513,17 @@ namespace Rujta.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Rujta.Domain.Entities.Rujta.Domain.Entities.Subscription", b =>
+                {
+                    b.HasOne("Rujta.Domain.Entities.Pharmacy", "Pharmacy")
+                        .WithOne("Subscription")
+                        .HasForeignKey("Rujta.Domain.Entities.Rujta.Domain.Entities.Subscription", "PharmacyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Pharmacy");
+                });
+
             modelBuilder.Entity("Rujta.Domain.Entities.SellDrugViaPharmacy", b =>
                 {
                     b.HasOne("Rujta.Domain.Entities.Medicine", "Medicine")
@@ -1515,6 +1641,8 @@ namespace Rujta.Infrastructure.Migrations
                     b.Navigation("Orders");
 
                     b.Navigation("SellDrugViaPharmacy");
+
+                    b.Navigation("Subscription");
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Prescription", b =>

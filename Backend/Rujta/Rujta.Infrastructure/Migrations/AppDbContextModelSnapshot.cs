@@ -17,7 +17,6 @@ namespace Rujta.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-
                 .HasAnnotation("ProductVersion", "8.0.25")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
@@ -198,7 +197,6 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.UseTphMappingStrategy();
                 });
-
 
             modelBuilder.Entity("Rujta.Domain.Entities.Ad", b =>
                 {
@@ -697,7 +695,6 @@ namespace Rujta.Infrastructure.Migrations
                     b.ToTable("OrderItems");
                 });
 
-
             modelBuilder.Entity("Rujta.Domain.Entities.Payment", b =>
                 {
                     b.Property<int>("Id")
@@ -948,6 +945,9 @@ namespace Rujta.Infrastructure.Migrations
                     b.Property<DateTime?>("LastUsedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("RememberMe")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("Revoked")
                         .HasColumnType("bit");
 
@@ -994,8 +994,6 @@ namespace Rujta.Infrastructure.Migrations
                     b.Property<string>("Plan")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-                    b.Property<int>("Plan")
-                        .HasColumnType("int");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
@@ -1003,8 +1001,6 @@ namespace Rujta.Infrastructure.Migrations
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .ValueGeneratedOnAddOrUpdate()
@@ -1100,7 +1096,6 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.Property<bool>("IsFirstLogin")
                         .HasColumnType("bit");
-
 
                     b.Property<string>("Location")
                         .IsRequired()

@@ -5,18 +5,18 @@
 namespace Rujta.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class finalmigrationnn : Migration
+    public partial class InitialBaseline1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-
+            
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-
+            
         }
     }
 }
