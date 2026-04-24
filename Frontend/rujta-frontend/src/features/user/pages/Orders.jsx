@@ -4,8 +4,50 @@ import { OrdersContext } from "../../../context/OrdersContext";
 import useMedicines from "../../medicines/hook/useMedicines";
 import { useOrders } from "../../orders/hooks/useOrders";
 
+const ACTIVE_STATUSES = ["Pending", "Accepted", "Processing", "OutForDelivery"];
+const CANCELLED_STATUSES = ["CancelledByUser", "CancelledByPharmacy"];
+const COMPLETED_STATUSES = ["Delivered"];
+
+const STATUS_PRIORITY = [
+  "Pending",
+  "Accepted",
+  "Processing",
+  "OutForDelivery",
+  "Delivered",
+  "CancelledByUser",
+  "CancelledByPharmacy",
+];
+
+const getDisplayStatus = (orders) => {
+  const statuses = orders.map((o) => o?.status).filter(Boolean);
+  for (const s of STATUS_PRIORITY) {
+    if (statuses.includes(s)) return s;
+  }
+  return orders[0]?.status || "Pending";
+};
+مفص;
+const splitBatchIntoTabs = (originalBatch) => {
+  const groupId = originalBatch[0]?.id;
+  const groupDate = originalBatch[0]?.orderDate;
+  const totalInBatch = originalBatch.length;
+
+  const makeEntry = (orders) => ({ groupId, groupDate, totalInBatch, orders });
+
+  return {
+    active: makeEntry(
+      originalBatch.filter((o) => ACTIVE_STATUSES.includes(o?.status)),
+    ),
+    cancelled: makeEntry(
+      originalBatch.filter((o) => CANCELLED_STATUSES.includes(o?.status)),
+    ),
+    completed: makeEntry(
+      originalBatch.filter((o) => COMPLETED_STATUSES.includes(o?.status)),
+    ),
+  };
+};
+
 export default function Orders() {
-  const { orders: liveOrders, setOrders } = useContext(OrdersContext);
+  const { orders: liveOrders } = useContext(OrdersContext);
   const { fetchUser, cancelByUser, loading } = useOrders();
   const { medicines, fetchAll } = useMedicines();
 
@@ -18,100 +60,145 @@ export default function Orders() {
     fetchUser();
   }, [fetchAll, fetchUser]);
 
-  // ================= Helpers =================
   const getMedicineName = (id) => {
     const med = medicines.find((m) => m.id === id);
     return med ? med.name : `Medicine ID: ${id}`;
   };
 
-  const toggleDetails = (index) => {
-    setShowMoreGroups((prev) => ({ ...prev, [index]: !prev[index] }));
-  };
+  const toggleDetails = (tabKey, index) =>
+    setShowMoreGroups((prev) => ({
+      ...prev,
+      [`${tabKey}-${index}`]: !prev[`${tabKey}-${index}`],
+    }));
 
   const canCancel = (status) => ["Pending", "Accepted"].includes(status);
 
-  const handleCancelGroup = async (group) => {
-    const confirmCancel = window.confirm(
-      "Are you sure you want to cancel this order group?"
-    );
-    if (!confirmCancel) return;
+  // ================= Cancel Handlers =================
+  const handleCancelGroup = async (orders) => {
+    const cancellable = orders.filter((o) => canCancel(o?.status));
+    if (!cancellable.length) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to cancel all cancellable orders in this group?",
+      )
+    )
+      return;
+    for (const order of cancellable) await cancelByUser(order?.id);
+    fetchUser();
+  };
 
-    for (const order of group) {
-      await cancelByUser(order?.id);
-    }
-
+  const handleCancelOrder = async (order) => {
+    if (!window.confirm(`Are you sure you want to cancel Order #${order?.id}?`))
+      return;
+    await cancelByUser(order?.id);
     fetchUser();
   };
 
   // ================= Status Badge =================
   const getStatusBadge = (status) => {
-    const base = "px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap";
-
     const styles = {
-      Pending: "bg-yellow-100 text-yellow-700",
-      Accepted: "bg-blue-100 text-blue-700",
-      Processing: "bg-indigo-100 text-indigo-700",
-      OutForDelivery: "bg-purple-100 text-purple-700",
-      Delivered: "bg-green-100 text-green-700",
-      CancelledByUser: "bg-red-100 text-red-700",
-      CancelledByPharmacy: "bg-red-100 text-red-700",
+      Pending: "bg-yellow-100 text-yellow-700 ring-yellow-200",
+      Accepted: "bg-blue-100   text-blue-700   ring-blue-200",
+      Processing: "bg-indigo-100 text-indigo-700 ring-indigo-200",
+      OutForDelivery: "bg-purple-100 text-purple-700 ring-purple-200",
+      Delivered: "bg-green-100  text-green-700  ring-green-200",
+      CancelledByUser: "bg-red-100    text-red-700    ring-red-200",
+      CancelledByPharmacy: "bg-red-100    text-red-700    ring-red-200",
     };
-
-    return <span className={`${base} ${styles[status] || ""}`}>{status}</span>;
+    return (
+      <span
+        className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ring-1 ${styles[status] || "bg-gray-100 text-gray-600 ring-gray-200"}`}
+      >
+        {status}
+      </span>
+    );
   };
 
   // ================= Stepper =================
   const OrderStatusStepper = ({ currentStatus }) => {
     const stages = [
-      { key: "Pending", icon: "⏳" },
-      { key: "Accepted", icon: "✔️" },
-      { key: "Processing", icon: "⚙️" },
-      { key: "OutForDelivery", icon: "🚚" },
-      { key: "Delivered", icon: "📦" },
+      { key: "Pending", icon: "⏳", label: "Pending" },
+      { key: "Accepted", icon: "✅", label: "Accepted" },
+      { key: "Processing", icon: "⚙️", label: "Processing" },
+      { key: "OutForDelivery", icon: "🚚", label: "Delivery" },
+      { key: "Delivered", icon: "📦", label: "Delivered" },
     ];
 
-    const currentIndex = stages.findIndex((s) => s.key === currentStatus);
+    const isCancelled = CANCELLED_STATUSES.includes(currentStatus);
+    const currentIndex = isCancelled
+      ? -1
+      : stages.findIndex((s) => s.key === currentStatus);
+
+    if (isCancelled) {
+      return (
+        <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 px-4 py-2.5">
+          <span className="text-lg">❌</span>
+          <span className="text-sm font-medium text-red-600">
+            {currentStatus}
+          </span>
+        </div>
+      );
+    }
 
     return (
-      <div className="flex justify-between mt-4">
-        {stages.map((stage, index) => (
-          <div
-            key={stage.key}
-            className={`w-9 h-9 flex items-center justify-center rounded-full text-sm
-              ${index <= currentIndex
-                ? "bg-green-500 text-white"
-                : "bg-gray-200 text-gray-500"
-              }`}
-          >
-            {stage.icon}
-          </div>
-        ))}
+      <div className="relative mt-5 px-2">
+        {/* Background line */}
+        <div className="absolute left-6 right-6 top-4 h-0.5 bg-gray-200" />
+        {/* Progress line */}
+        <div
+          className="absolute left-6 top-4 h-0.5 bg-green-400 transition-all duration-500"
+          style={{
+            width:
+              currentIndex <= 0
+                ? "0%"
+                : `${(currentIndex / (stages.length - 1)) * 100}%`,
+          }}
+        />
+        <div className="relative flex justify-between">
+          {stages.map((stage, index) => {
+            const isDone = index <= currentIndex;
+            const isCurrent = index === currentIndex;
+            return (
+              <div
+                key={stage.key}
+                className="flex flex-col items-center gap-1.5"
+              >
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm transition-all duration-300 ${isDone ? "bg-green-500 text-white shadow-md shadow-green-200" : "bg-white text-gray-400 ring-2 ring-gray-200"} ${isCurrent ? "ring-2 ring-green-300 ring-offset-2" : ""}`}
+                >
+                  {stage.icon}
+                </div>
+                <span
+                  className={`text-[10px] font-medium ${isDone ? "text-green-600" : "text-gray-400"}`}
+                >
+                  {stage.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };
 
-  // ================= Group Logic =================
   const groupedTabs = useMemo(() => {
     const tabs = { active: [], completed: [], cancelled: [] };
 
-    const filteredGroups = liveOrders.filter((group) =>
-      group?.some(
+    const filtered = liveOrders.filter((batch) =>
+      batch?.some(
         (order) =>
           order?.id?.toString()?.includes(searchQuery) ||
-          order?.status?.toLowerCase()?.includes(searchQuery.toLowerCase())
-      )
+          order?.status?.toLowerCase()?.includes(searchQuery.toLowerCase()),
+      ),
     );
 
-    filteredGroups.forEach((group) => {
-      const status = group?.[0]?.status || "Pending";
+    filtered.forEach((originalBatch) => {
+      const { active, cancelled, completed } =
+        splitBatchIntoTabs(originalBatch);
 
-      if (["CancelledByUser", "CancelledByPharmacy"].includes(status)) {
-        tabs.cancelled.push(group);
-      } else if (status === "Delivered") {
-        tabs.completed.push(group);
-      } else {
-        tabs.active.push(group);
-      }
+      if (active.orders.length > 0) tabs.active.push(active);
+      if (cancelled.orders.length > 0) tabs.cancelled.push(cancelled);
+      if (completed.orders.length > 0) tabs.completed.push(completed);
     });
 
     return tabs;
@@ -120,139 +207,218 @@ export default function Orders() {
   // ================= UI =================
   return (
     <section className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-4 sm:p-8">
-      <div className="max-w-6xl mx-auto">
-        <h2 className="text-2xl font-bold mb-6">My Orders</h2>
+      <div className="mx-auto max-w-4xl">
+        <h2 className="mb-6 text-2xl font-bold text-gray-800">My Orders</h2>
 
         {/* Tabs */}
-        <div className="flex space-x-4 sm:space-x-6 mb-6 border-b overflow-x-auto">
+        <div className="mb-6 flex space-x-2 overflow-x-auto border-b border-gray-200 sm:space-x-6">
           {["active", "completed", "cancelled"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-2 font-medium capitalize whitespace-nowrap text-sm sm:text-base ${
+              className={`whitespace-nowrap pb-3 text-sm font-medium capitalize transition-colors sm:text-base ${
                 activeTab === tab
                   ? "border-b-2 border-secondary text-secondary"
-                  : "text-gray-500"
+                  : "text-gray-400 hover:text-gray-600"
               }`}
             >
-              {tab} ({groupedTabs[tab]?.length || 0})
+              {tab}{" "}
+              <span
+                className={`ml-1 rounded-full px-2 py-0.5 text-xs ${activeTab === tab ? "bg-secondary/10 text-secondary" : "bg-gray-100 text-gray-500"}`}
+              >
+                {groupedTabs[tab]?.length || 0}
+              </span>
             </button>
           ))}
         </div>
 
         {/* Search */}
-        <input
-          type="text"
-          placeholder="Search orders..."
-          className="mb-6 w-full max-w-md px-4 py-2 border rounded-lg"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+        <div className="relative mb-6 max-w-md">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            🔍
+          </span>
+          <input
+            type="text"
+            placeholder="Search by order ID or status..."
+            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-secondary/30"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* Empty State */}
+        {groupedTabs[activeTab]?.length === 0 && (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center">
+            <span className="text-4xl">📋</span>
+            <p className="mt-3 text-gray-500">No {activeTab} orders found</p>
+          </div>
+        )}
 
         {/* ===== Cards ===== */}
-        {groupedTabs[activeTab]?.map((group, index) => {
-          const firstOrder = group?.[0] || {};
-          const groupStatus = firstOrder?.status || "Pending";
-          const groupDate = firstOrder?.orderDate
-            ? new Date(firstOrder.orderDate).toLocaleDateString()
+        {groupedTabs[activeTab]?.map((entry, index) => {
+          const { groupId, groupDate, totalInBatch, orders } = entry;
+
+          const displayStatus = getDisplayStatus(orders);
+          const formattedDate = groupDate
+            ? new Date(groupDate).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })
             : "-";
 
-          // بدل ما نعرض كل الـ IDs، نعرض أول ID وعدد الباقين
-          const firstId = group?.[0]?.id || "N/A";
-          const extraCount = group.length - 1;
-          const groupIdLabel = extraCount > 0
-            ? `#${firstId} +${extraCount} more`
-            : `#${firstId}`;
+          const splitNote =
+            orders.length < totalInBatch
+              ? `${orders.length} of ${totalInBatch} from batch`
+              : null;
 
-          const isOpen = showMoreGroups[index];
+          const firstId = orders[0]?.id || groupId;
+          const extraCount = orders.length - 1;
+          const groupIdLabel =
+            extraCount > 0 ? `#${firstId} +${extraCount} more` : `#${firstId}`;
+
+          const isOpen = showMoreGroups[`${activeTab}-${index}`];
+          const isActiveTab = activeTab === "active";
+          const hasCancellable = orders.some((o) => canCancel(o?.status));
 
           return (
-            // ===== Outer Card =====
             <div
-              key={index}
-              className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 mb-6 shadow-sm hover:shadow-xl transition"
+              key={`${groupId}-${activeTab}-${index}`}
+              className="mb-4 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-lg"
             >
-              {/* Header — كل حاجة في سطر واحد */}
-              <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-                {/* Left: info */}
+              {/* ===== Group Header ===== */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-400 uppercase">Order Group</p>
-                  <p className="font-bold text-base sm:text-lg truncate">{groupIdLabel}</p>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{groupDate}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                    Order Group
+                  </p>
+                  <p className="mt-0.5 truncate text-lg font-bold text-gray-800">
+                    {groupIdLabel}
+                  </p>
+                  <div className="mt-0.5 flex items-center gap-2">
+                    <p className="flex items-center gap-1 text-xs text-gray-400">
+                      <span>📅</span> {formattedDate}
+                    </p>
+
+                    {splitNote && (
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-500">
+                        {splitNote}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                {/* Right: badge + buttons */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {getStatusBadge(groupStatus)}
+                <div className="flex flex-shrink-0 items-center gap-2">
+                  {getStatusBadge(displayStatus)}
 
                   <button
-                    onClick={() => toggleDetails(index)}
-                    className="text-sm text-gray-600 hover:text-black flex items-center gap-1 whitespace-nowrap"
+                    onClick={() => toggleDetails(activeTab, index)}
+                    className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
                   >
-                    Details
-                    <span className={`transition-transform inline-block ${isOpen ? "rotate-180" : ""}`}>
-                      ⌄
+                    {isOpen ? "Hide" : "Details"}
+                    <span
+                      className={`inline-block transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+                    >
+                      ▾
                     </span>
                   </button>
 
-                  {activeTab === "active" && canCancel(groupStatus) && (
+                  {isActiveTab && hasCancellable && (
                     <button
-                      onClick={() => handleCancelGroup(group)}
-                      className="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium bg-red-500 text-white hover:bg-red-600 whitespace-nowrap"
+                      onClick={() => handleCancelGroup(orders)}
+                      disabled={loading}
+                      className="rounded-xl bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:opacity-50"
                     >
-                      Cancel
+                      Cancel All
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* ===== Details (expanded) ===== */}
               <div
-                className={`transition-all duration-500 overflow-hidden ${
-                  isOpen ? "max-h-[2000px] opacity-100 mt-6" : "max-h-0 opacity-0"
-                }`}
+                className={`overflow-hidden transition-all duration-500 ${isOpen ? "max-h-[3000px] opacity-100" : "max-h-0 opacity-0"}`}
               >
-                <div className="flex flex-col gap-4">
-                  {group?.map((order, orderIndex) => {
-                    const orderItems = order?.orderItems || [];
-                    const pharmacyLabel = order?.pharmacyName || `Pharmacy Order #${order?.id}`;
+                <div className="border-t border-gray-100 bg-gray-50 p-4 sm:p-5">
+                  <div className="flex flex-col gap-4">
+                    {orders.map((order, orderIndex) => {
+                      const orderItems = order?.orderItems || [];
+                      const pharmacyLabel =
+                        order?.pharmacyName || `Pharmacy #${order?.id}`;
 
-                    return (
-                      <div
-                        key={orderIndex}
-                        className="border border-gray-100 rounded-xl p-4 bg-gray-50"
-                      >
-                        <div className="flex justify-between items-center mb-3">
-                          <div>
-                            <p className="text-xs text-gray-400 uppercase">Order</p>
-                            <p className="font-semibold text-base">#{order?.id}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{pharmacyLabel}</p>
+                      return (
+                        <div
+                          key={orderIndex}
+                          className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+                        >
+                          {/* Order Header */}
+                          <div className="flex items-start justify-between gap-3 border-b border-gray-100 bg-gray-50/50 p-4">
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                                Order
+                              </p>
+                              <p className="mt-0.5 text-base font-bold text-gray-800">
+                                #{order?.id}
+                              </p>
+                              <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+                                <span>🏪</span> {pharmacyLabel}
+                              </p>
+                            </div>
+                            <div className="flex flex-shrink-0 items-center gap-2">
+                              {getStatusBadge(order?.status)}
+
+                              {isActiveTab && canCancel(order?.status) && (
+                                <button
+                                  onClick={() => handleCancelOrder(order)}
+                                  disabled={loading}
+                                  className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:opacity-50"
+                                >
+                                  Cancel
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          {getStatusBadge(order?.status)}
+
+                          {/* Stepper */}
+                          <div className="px-4 pb-2 pt-1">
+                            <OrderStatusStepper currentStatus={order?.status} />
+                          </div>
+
+                          {/* Items */}
+                          <div className="p-4 pt-2">
+                            {orderItems.length > 0 ? (
+                              <>
+                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                  Items ({orderItems.length})
+                                </p>
+                                <ul className="space-y-2">
+                                  {orderItems.map((item, i) => (
+                                    <li
+                                      key={i}
+                                      className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-4 py-2.5"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-base">💊</span>
+                                        <span className="text-sm font-medium text-gray-700">
+                                          {getMedicineName(item?.medicineID)}
+                                        </span>
+                                      </div>
+                                      <span className="rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-semibold text-gray-600">
+                                        ×{item?.quantity || 0}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </>
+                            ) : (
+                              <p className="py-2 text-center text-sm text-gray-400">
+                                No items found
+                              </p>
+                            )}
+                          </div>
                         </div>
-
-                        <OrderStatusStepper currentStatus={order?.status} />
-
-                        {orderItems.length > 0 ? (
-                          <ul className="mt-4 space-y-2">
-                            {orderItems.map((item, i) => (
-                              <li
-                                key={i}
-                                className="flex justify-between bg-white p-3 rounded-lg border border-gray-100"
-                              >
-                                <span className="font-medium text-sm">
-                                  {getMedicineName(item?.medicineID)}
-                                </span>
-                                <span className="text-gray-500 text-sm">Qty: {item?.quantity || 0}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-sm text-gray-500 mt-4">No items found.</p>
-                        )}
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
