@@ -24,72 +24,76 @@ const ChangePasswordPage = () => {
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
     if (newPassword.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
     }
 
-  try {
-  setLoading(true);
-  await handleChangePassword({ newPassword });
-  localStorage.setItem("IsFirstLogin", "false"); // 👈 make sure it's false
-  navigate("/dashboard");
-  window.location.reload(); // 👈 force fresh state
-} catch (err) {
-  setError(err.response?.data?.message || "Failed to change password.");
-}
-  }
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await handleChangePassword({ newPassword });
+
+      // ✅ Fix: navigate بس - مش reload
+      // الـ context بالفعل بيعمل setUser مع isFirstLogin: false
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to change password.");
+    } finally {
+      // ✅ Fix: setLoading(false) في finally عشان يتنفذ دايماً
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-page">
+    <div className="flex min-h-screen items-center justify-center bg-page">
       <motion.div
-        className="w-full max-w-md mx-auto px-6"
+        className="mx-auto w-full max-w-md px-6"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
         {/* Header */}
-        <div className="text-center mb-10">
+        <div className="mb-10 text-center">
           <motion.div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-primary mb-4"
+            className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-primary"
             initial={{ scale: 0.7 }}
             animate={{ scale: 1 }}
           >
-            <KeyRound className="w-8 h-8 text-white" />
+            <KeyRound className="h-8 w-8 text-white" />
           </motion.div>
 
-          <h2 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-3">
+          <h2 className="mb-3 bg-gradient-primary bg-clip-text text-4xl font-bold text-transparent">
             Set New Password
           </h2>
 
-          <p className="text-muted-foreground text-lg">
+          <p className="text-lg text-muted-foreground">
             Welcome! Please set a new password to continue.
           </p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-
           {/* New Password */}
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <input
               type={showPassword ? "text" : "password"}
               placeholder="New Password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               required
-              className="w-full pl-12 pr-12 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+              className="w-full rounded-2xl border-2 border-border py-4 pl-12 pr-12 text-lg outline-none focus:border-primary"
             />
             <button
               type="button"
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-secondary"
               onClick={() => setShowPassword(!showPassword)}
+              aria-label="Toggle password visibility"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
@@ -97,28 +101,27 @@ const ChangePasswordPage = () => {
 
           {/* Confirm Password */}
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <input
               type={showConfirm ? "text" : "password"}
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              className="w-full pl-12 pr-12 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+              className="w-full rounded-2xl border-2 border-border py-4 pl-12 pr-12 text-lg outline-none focus:border-primary"
             />
             <button
               type="button"
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-secondary"
               onClick={() => setShowConfirm(!showConfirm)}
+              aria-label="Toggle confirm password visibility"
             >
               {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
 
           {/* Error */}
-          {error && (
-            <p className="text-red-500 text-sm text-center">{error}</p>
-          )}
+          {error && <p className="text-center text-sm text-red-500">{error}</p>}
 
           {/* Submit */}
           <motion.button
@@ -126,7 +129,7 @@ const ChangePasswordPage = () => {
             whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-primary text-white py-4 text-lg rounded-2xl font-semibold shadow-lg disabled:opacity-60"
+            className="w-full rounded-2xl bg-gradient-primary py-4 text-lg font-semibold text-white shadow-lg disabled:opacity-60"
           >
             {loading ? "Saving..." : "Set Password"}
           </motion.button>

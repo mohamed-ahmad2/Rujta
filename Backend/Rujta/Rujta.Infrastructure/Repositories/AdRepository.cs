@@ -1,19 +1,11 @@
 ﻿// Rujta.Infrastructure/Repositories/AdRepository.cs
-using Microsoft.EntityFrameworkCore;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Data;          
-
 namespace Rujta.Infrastructure.Repositories
 {
     public class AdRepository : GenericRepository<Ad, int>, IAdRepository
     {
-        private readonly AppDbContext _context;
 
         public AdRepository(AppDbContext context) : base(context)
         {
-            _context = context;
         }
 
         public async Task<IEnumerable<Ad>> GetAllActiveAsync(

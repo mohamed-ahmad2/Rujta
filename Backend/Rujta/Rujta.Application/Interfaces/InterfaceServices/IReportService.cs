@@ -1,4 +1,4 @@
-﻿using Rujta.Application.DTOs;
+﻿using Rujta.Application.DTOs.PharmacyDto;
 using System.Threading;
 using System.Threading.Tasks;
 

@@ -1,4 +1,5 @@
-﻿using Rujta.Application.DTOs;
+﻿using Rujta.Application.DTOs.OrderDto;
+using Rujta.Application.DTOs.PharmacyDto;
 using Rujta.Domain.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;

@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-using Rujta.Application.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Rujta.Application.DTOs.PharmacyDto;
+using Rujta.Application.DTOs.InventoryDto;
+using Rujta.Application.DTOs.MedicineDtos;
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {

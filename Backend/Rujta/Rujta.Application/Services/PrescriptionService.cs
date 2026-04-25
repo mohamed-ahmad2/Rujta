@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Rujta.Application.DTOs.MedicineDtos;
 using System.Text.Json;
 
 namespace Rujta.Application.Services
@@ -42,40 +43,42 @@ namespace Rujta.Application.Services
             var body = new
             {
                 contents = new[]
-    {
-        new
-        {
-            parts = new object[]
-            {
-                new {
-                    inline_data = new {
-                        mime_type="image/jpeg",
-                        data = base64
-                    }
-                },
-                new {
-                    text = @"Extract medicine names from this prescription image whole medicine name and its dosage.
+                {
+                    new
+                    {
+                        parts = new object[]
+                        {
+                            new {
+                                inline_data = new {
+                                    mime_type = "image/jpeg",
+                                    data = base64
+                                }
+                            },
+                            new {
+                                text = @"Extract medicine names from this prescription image whole medicine name and its dosage.
 Return ONLY a JSON array of strings like:
 [""Panadol 50mg "",""Augmentin""]
 No explanation."
+                            }
+                        }
+                    }
                 }
-            }
-        }
-    }
             };
+
             var modelName = "models/gemini-2.5-flash";
             var request = new HttpRequestMessage(
-    HttpMethod.Post,
-    $"https://generativelanguage.googleapis.com/v1/{modelName}:generateContent?key={apiKey}");
+                HttpMethod.Post,
+                $"https://generativelanguage.googleapis.com/v1/{modelName}:generateContent?key={apiKey}");
+
             request.Content = new StringContent(
                 JsonSerializer.Serialize(body),
                 Encoding.UTF8,
                 "application/json");
 
             var response = await _http.SendAsync(request);
-
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
             Console.WriteLine(json);
+
             using var doc = JsonDocument.Parse(json);
 
             if (!doc.RootElement.TryGetProperty("candidates", out var candidates))
@@ -88,18 +91,30 @@ No explanation."
             }
 
             var rawText = candidates[0]
-       .GetProperty("content")
-       .GetProperty("parts")[0]
-       .GetProperty("text")
-       .GetString() ?? "[]";
+                .GetProperty("content")
+                .GetProperty("parts")[0]
+                .GetProperty("text")
+                .GetString() ?? "[]";
 
-         
             var cleanedText = rawText
                 .Replace("```json", "", StringComparison.OrdinalIgnoreCase)
                 .Replace("```", "")
                 .Trim();
 
-            var medicineNames = JsonSerializer.Deserialize<List<string>>(cleanedText);
+            // ✅ التصحيح: تأمين ضد الـ null باستخدام ?? 
+            var medicineNames = JsonSerializer.Deserialize<List<string>>(cleanedText)
+                                ?? new List<string>();
+
+            // ✅ إذا القائمة فارغة، ارجع مباشرة
+            if (!medicineNames.Any())
+            {
+                return new PrescriptionResultDto
+                {
+                    AvailableMedicines = new(),
+                    NotFoundMedicines = new List<string> { "No medicines extracted from prescription" }
+                };
+            }
+
             var medicines = await _unitOfWork.Medicines
                 .FindAsync(m => medicineNames.Contains(m.Name), cancellationToken);
 

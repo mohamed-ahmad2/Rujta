@@ -1,4 +1,4 @@
-﻿using Rujta.Application.DTOs;
+﻿using Rujta.Application.DTOs.CustomerDtos;
 using Rujta.Application.Interfaces.InterfaceServices.IGenericS;
 
 namespace Rujta.Application.Interfaces.InterfaceServices

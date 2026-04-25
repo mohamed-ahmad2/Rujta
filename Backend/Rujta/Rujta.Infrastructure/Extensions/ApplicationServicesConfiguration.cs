@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Rujta.Application.Interfaces.InterfaceServices.IAuth;
 using Rujta.Application.Interfaces.InterfaceServices.IGeocoding;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 using Rujta.Application.Interfaces.InterfaceServices.IOrder;

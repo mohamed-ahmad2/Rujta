@@ -6,7 +6,6 @@ namespace Rujta.Domain.Entities
 {
     public class Payment : BaseEntity
     {
-        
         public Guid UserId { get; set; }          
         public int PharmacyId { get; set; }
         public PaymentType Type { get; set; }      
@@ -21,8 +20,5 @@ namespace Rujta.Domain.Entities
         public string Currency { get; set; } = "EGP";
 
         public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
-
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? UpdatedAt { get; set; }
     }
 }

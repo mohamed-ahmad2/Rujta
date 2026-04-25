@@ -1,4 +1,5 @@
 ﻿using FirebaseAdmin.Auth;
+using Rujta.Application.DTOs.AuthDto;
 
 namespace Rujta.Infrastructure.Identity.Services.Auth
 {

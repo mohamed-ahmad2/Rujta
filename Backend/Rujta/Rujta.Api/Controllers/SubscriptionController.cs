@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Rujta.Application.DTOs;
+using Rujta.Application.DTOs.SubscriptionDto;
 using Rujta.Application.Interfaces;
 
 namespace Rujta.API.Controllers

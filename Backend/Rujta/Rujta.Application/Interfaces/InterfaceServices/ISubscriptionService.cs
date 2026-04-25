@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Rujta.Application.DTOs.PharmacyDto;
+using Rujta.Application.DTOs.SubscriptionDto;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

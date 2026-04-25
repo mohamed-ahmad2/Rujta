@@ -22,8 +22,6 @@ const App = () => {
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // ✅ بدل cartLoaded: boolean → cartUser: string | null
-  // بيحفظ إيميل اليوزر اللي الكارت بتاعه في الـ memory دلوقتي
   const [cartUser, setCartUser] = useState(null);
 
   const location = useLocation();
@@ -59,7 +57,6 @@ const App = () => {
   useEffect(() => {
     if (loading) return;
 
-    // ✅ Reset: الكارت في الـ memory مش بتاع أي يوزر دلوقتي
     setCartUser(null);
 
     if (!user) {
@@ -71,7 +68,6 @@ const App = () => {
     const savedCart = localStorage.getItem(key);
     setCart(savedCart ? JSON.parse(savedCart) : []);
 
-    // ✅ علّم إن الكارت ده بتاع اليوزر ده تحديداً
     setCartUser(getCartEmail());
   }, [user, loading]);
 
@@ -79,7 +75,6 @@ const App = () => {
   useEffect(() => {
     const currentEmail = getCartEmail();
 
-    // ✅ بيحفظ بس لو الكارت في الـ memory بتاع نفس اليوزر الحالي
     if (!cartUser || cartUser !== currentEmail || loading || !user) return;
 
     const key = getCartKey();

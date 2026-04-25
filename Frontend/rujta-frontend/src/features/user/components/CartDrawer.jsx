@@ -8,10 +8,8 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  // ✅ useRef بدل new Audio في كل render
   const clickSound = useRef(new Audio(audio));
 
-  // Increase quantity
   const handleIncrease = (id) => {
     setCart((prevCart) =>
       prevCart.map((item) =>
@@ -20,7 +18,6 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     );
   };
 
-  // Decrease quantity
   const handleDecrease = (id) => {
     setCart((prevCart) =>
       prevCart
@@ -31,19 +28,16 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     );
   };
 
-  // Total price
   const total = cart.reduce(
     (sum, item) => sum + parseFloat(item.price) * item.quantity,
     0,
   );
 
-  // Handle Checkout
   const handleCheckout = () => {
     if (isCheckingOut) return;
 
     setIsCheckingOut(true);
 
-    // ✅ clickSound.current بدل clickSound
     clickSound.current.play();
 
     setTimeout(() => {
@@ -54,15 +48,38 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
 
   return (
     <div
-      className={`fixed right-0 top-0 h-full w-[320px] transform bg-white shadow-2xl transition-transform duration-300 dark:bg-gray-900 ${isOpen ? "translate-x-0" : "translate-x-full"} z-50 flex flex-col`}
+      className={`fixed right-0 top-0 h-full w-[320px] transform bg-white shadow-2xl transition-transform duration-300 dark:bg-gray-900 ${
+        isOpen ? "translate-x-0" : "translate-x-full"
+      } z-50 flex flex-col`}
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-        <h2 className="text-lg font-bold dark:text-white">Your Cart</h2>
-        <IoMdClose
-          className="cursor-pointer text-2xl text-gray-500 transition-colors hover:text-red-500"
-          onClick={onClose}
-        />
+        {/* Left: Title + items count */}
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-lg font-bold dark:text-white">Your Cart</h2>
+          {cart.length > 0 && (
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              {cart.length} {cart.length === 1 ? "item" : "items"}
+            </span>
+          )}
+        </div>
+
+        {/* Right: clear all + close */}
+        <div className="flex items-center gap-3">
+          {cart.length > 0 && (
+            <button
+              onClick={() => setCart([])}
+              className="text-[11px] font-medium text-gray-400 underline-offset-2 transition-colors duration-200 hover:text-red-500 hover:underline dark:text-gray-500 dark:hover:text-red-400"
+            >
+              clear all
+            </button>
+          )}
+          <div className="h-4 w-px bg-gray-200 dark:bg-gray-700" />
+          <IoMdClose
+            className="cursor-pointer text-2xl text-gray-400 transition-colors hover:text-red-500"
+            onClick={onClose}
+          />
+        </div>
       </div>
 
       {/* Cart Items */}

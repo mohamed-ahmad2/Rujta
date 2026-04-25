@@ -1,9 +1,4 @@
-import React, {
-  createContext,
-  useEffect,
-  useState,
-  useCallback,
-} from "react";
+import React, { createContext, useEffect, useState, useCallback } from "react";
 
 import {
   login,
@@ -18,10 +13,11 @@ import {
 } from "../api/authApi";
 
 import apiClient from "../../../shared/api/apiClient";
-import { setAccessToken, removeAccessToken } from "../../../authProvider/authTokenProvider";
-import  jwtDecode  from "jwt-decode";
-
-/* ================= Context ================= */
+import {
+  setAccessToken,
+  removeAccessToken,
+} from "../../../authProvider/authTokenProvider";
+import jwtDecode from "jwt-decode";
 
 export const AuthContext = createContext(null);
 
@@ -43,6 +39,15 @@ const decodeToken = (token) => {
   }
 };
 
+const applyAndStoreToken = (token, setTokenExp) => {
+  if (!token) return;
+  localStorage.setItem("token", token);
+  setAccessToken(token);
+  applyToken(token);
+  const decoded = decodeToken(token);
+  if (decoded?.exp) setTokenExp(decoded.exp * 1000);
+};
+
 /* ================= Provider ================= */
 
 export const AuthProvider = ({ children }) => {
@@ -59,7 +64,6 @@ export const AuthProvider = ({ children }) => {
         if (token) {
           applyToken(token);
           const decoded = decodeToken(token);
-
           if (decoded?.exp) {
             setTokenExp(decoded.exp * 1000);
           }
@@ -86,11 +90,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   /* ================= Login ================= */
-  const handleLogin = async (email, password) => {
-    const res = await login({ email, password });
+  const handleLogin = async (email, password, rememberMe = false) => {
+    const res = await login({ email, password, rememberMe });
 
     const token = res.accessToken;
-    const decoded = decodeToken(token);
 
     const newUser = {
       email: res.email,
@@ -99,45 +102,25 @@ export const AuthProvider = ({ children }) => {
     };
 
     setUser(newUser);
-
-    if (token) {
-      localStorage.setItem("token", token);
-      setAccessToken(token);
-      applyToken(token);
-
-      if (decoded?.exp) setTokenExp(decoded.exp * 1000);
-    }
+    applyAndStoreToken(token, setTokenExp);
 
     return newUser;
   };
 
   /* ================= Register ================= */
   const handleRegister = async (dto) => {
-    await registerUser(dto);
-
-    const res = await login({
-      email: dto.email,
-      password: dto.createPassword,
-    });
+    const res = await registerUser(dto);
 
     const token = res.accessToken;
-    const decoded = decodeToken(token);
 
     const newUser = {
       email: res.email,
       role: res.role ?? "User",
-      isFirstLogin: res.isFirstLogin ?? false,
+      isFirstLogin: false,
     };
 
     setUser(newUser);
-
-    if (token) {
-      localStorage.setItem("token", token);
-      setAccessToken(token);
-      applyToken(token);
-
-      if (decoded?.exp) setTokenExp(decoded.exp * 1000);
-    }
+    applyAndStoreToken(token, setTokenExp);
 
     return newUser;
   };
@@ -163,30 +146,25 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  /* ================= Social ================= */
+  /* ================= Google Login ================= */
   const handleGoogleLogin = useCallback(async (IdToken) => {
     const res = await socialLogin({ IdToken });
 
     const token = res.accessToken;
-    const decoded = decodeToken(token);
+
+    applyAndStoreToken(token, setTokenExp);
+
+    const userData = await getCurrentUser();
 
     const newUser = {
-      email: res.email,
-      role: res.role,
-      isFirstLogin: res.isFirstLogin ?? false,
+      email: userData?.email ?? "",
+      role: userData?.role ?? "User",
+      isFirstLogin: userData?.isFirstLogin ?? false,
     };
 
     setUser(newUser);
 
-    if (token) {
-      localStorage.setItem("token", token);
-      setAccessToken(token);
-      applyToken(token);
-
-      if (decoded?.exp) setTokenExp(decoded.exp * 1000);
-    }
-
-    return res;
+    return { accessToken: token, user: newUser };
   }, []);
 
   /* ================= Refresh ================= */
@@ -199,12 +177,7 @@ export const AuthProvider = ({ children }) => {
       const token = res.data?.accessToken;
 
       if (token) {
-        localStorage.setItem("token", token);
-        setAccessToken(token);
-        applyToken(token);
-
-        const decoded = decodeToken(token);
-        if (decoded?.exp) setTokenExp(decoded.exp * 1000);
+        applyAndStoreToken(token, setTokenExp);
       }
     } catch (err) {
       console.error("Refresh failed:", err);
@@ -212,7 +185,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [handleLogout]);
 
-  /* ================= Auto refresh ================= */
+  /* ================= Auto Refresh ================= */
   useEffect(() => {
     if (!tokenExp || !user) return;
 
@@ -220,7 +193,7 @@ export const AuthProvider = ({ children }) => {
       if (tokenExp - Date.now() < 3 * 60 * 1000) {
         refreshToken();
       }
-    }, 60000);
+    }, 60_000);
 
     return () => clearInterval(interval);
   }, [tokenExp, user, refreshToken]);
