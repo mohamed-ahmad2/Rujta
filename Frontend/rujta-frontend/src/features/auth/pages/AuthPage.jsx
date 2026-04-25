@@ -1,12 +1,10 @@
-// src/features/auth/pages/AuthPage.jsx
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../hooks/useAuth";
 import LoginForm from "../components/LoginForm";
 import { RegisterForm } from "../components/RegisterForm";
 import AuthRightPanel from "../components/AuthRightPanel";
-import { useNavigate } from "react-router-dom";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 export const AuthPage = () => {
   const navigate = useNavigate();
@@ -16,7 +14,6 @@ export const AuthPage = () => {
   const mode = searchParams.get("mode") || "login";
   const [isSignUp, setIsSignUp] = useState(mode === "signup");
 
-  // ✅ Fix: Detect mobile to disable the x-slide animation
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" && window.innerWidth < 768,
   );
@@ -34,14 +31,26 @@ export const AuthPage = () => {
     setIsSignUp(mode === "signup");
   }, [mode]);
 
-  // ✅ Fix: Track window resize to update isMobile
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const redirectByRole = (role) => {
+  // ✅ مسح الـ error لما المستخدم يبدل بين login و register
+  useEffect(() => {
+    setError("");
+  }, [isSignUp]);
+
+  const redirectByRole = (userData) => {
+    const role = userData.role || "User";
+
+    // ✅ Fix: بس PharmacyAdmin هو اللي محتاج يغير الـ password في أول login
+    if (userData.isFirstLogin && role === "PharmacyAdmin") {
+      navigate("/change-password");
+      return;
+    }
+
     if (role === "SuperAdmin") {
       navigate("/superadmin");
     } else if (role === "Pharmacist" || role === "PharmacyAdmin") {
@@ -53,32 +62,34 @@ export const AuthPage = () => {
     }
   };
 
-  const onLogin = async (e) => {
+  // ✅ بياخد rememberMe من LoginForm
+  const onLogin = async (e, rememberMe = false) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      const userData = await handleLogin(email, password);
-      const role = userData.role || "User";
-      redirectByRole(role);
+      const userData = await handleLogin(email, password, rememberMe);
+      redirectByRole(userData);
     } catch (err) {
       const message =
-        (err && err.message) ||
-        (typeof err === "string" ? err : "Login failed");
+        err.response?.data?.message ||
+        err.message ||
+        "Login failed. Please try again.";
       setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const onRegister = async (e) => {
+  // ✅ بياخد rememberMe من RegisterForm
+  const onRegister = async (e, rememberMe = false) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError("Passwords do not match.");
       setLoading(false);
       return;
     }
@@ -87,32 +98,19 @@ export const AuthPage = () => {
       const userData = await handleRegister({
         name,
         email,
-        phone,
+        phoneNumber: phone,
         location,
         createPassword: password,
         confirmPassword,
+        rememberMe,
       });
 
-      const role = userData.role || "User";
-      redirectByRole(role);
+      redirectByRole(userData);
     } catch (err) {
-      console.error("Registration error:", err);
-
-      if (err.response) {
-        console.error("Response data:", err.response.data);
-        console.error("Response status:", err.response.status);
-        console.error("Response headers:", err.response.headers);
-      } else if (err.request) {
-        console.error("No response received:", err.request);
-      } else {
-        console.error("Error message:", err.message);
-      }
-
       const message =
-        (err.response && err.response.data?.message) ||
-        (err && err.message) ||
-        (typeof err === "string" ? err : "Registration failed");
-
+        err.response?.data?.message ||
+        err.message ||
+        "Registration failed. Please try again.";
       setError(message);
     } finally {
       setLoading(false);
@@ -162,7 +160,7 @@ export const AuthPage = () => {
               <AnimatePresence mode="wait">
                 {!isSignUp ? (
                   <LoginForm
-                    key={"login"}
+                    key="login"
                     email={email}
                     setEmail={setEmail}
                     password={password}
@@ -174,7 +172,7 @@ export const AuthPage = () => {
                   />
                 ) : (
                   <RegisterForm
-                    key={"register"}
+                    key="register"
                     name={name}
                     setName={setName}
                     email={email}

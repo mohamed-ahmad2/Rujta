@@ -1,4 +1,6 @@
-﻿namespace Rujta.Application.Mapper
+﻿using Rujta.Application.DTOs.OrderDto;
+
+namespace Rujta.Application.Mapper
 {
     public class OrderProfile : Profile
     {

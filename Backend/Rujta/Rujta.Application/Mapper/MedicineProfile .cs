@@ -1,4 +1,6 @@
-﻿namespace Rujta.Application.Mapper
+﻿using Rujta.Application.DTOs.MedicineDtos;
+
+namespace Rujta.Application.Mapper
 {
     public class MedicineProfile : Profile
     {

@@ -1,9 +1,5 @@
-﻿using Rujta.Application.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Rujta.Application.DTOs.CustomerDtos;
+using Rujta.Application.DTOs.OrderDto;
 
 namespace Rujta.Application.Interfaces.InterfaceServices
 {

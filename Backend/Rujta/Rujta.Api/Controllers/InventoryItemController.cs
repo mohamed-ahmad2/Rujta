@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.DTOs.InventoryDto;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 

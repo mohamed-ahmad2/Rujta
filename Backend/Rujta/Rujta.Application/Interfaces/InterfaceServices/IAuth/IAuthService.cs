@@ -1,0 +1,24 @@
+﻿using Rujta.Application.DTOs.AuthDto;
+using Rujta.Domain.Entities;
+using Rujta.Infrastructure.Identity;
+
+
+namespace Rujta.Application.Interfaces.InterfaceServices.IAuth
+{
+    public interface IAuthService
+    {
+        Task<bool> IsEmailExistsAsync(string email, CancellationToken cancellationToken = default);
+        Task<bool> CheckPasswordAsync(string email, string password, CancellationToken cancellationToken = default);
+        Task<Guid> CreateUserAsync(RegisterDto dto, UserRole role, CancellationToken cancellationToken = default);
+        Task<TokenDto> GenerateTokensAsync(string email, bool rememberMe = false, CancellationToken cancellationToken = default);
+        Task<TokenDto> RefreshAccessTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
+        Task LogoutAsync(Guid userId, string? refreshToken = null);
+        Task<ApplicationUserDto?> GetUserByEmailAsync(string email);
+        Task ResetPasswordAsync(ResetPasswordDto dto);
+        Task<ForgotPasswordResponseDto> ForgotPasswordAsync(string email);
+        Task<TokenDto> LoginWithGoogle(string idToken);
+        Task ChangePasswordAsync(string email, string newPassword);
+
+
+    }
+}

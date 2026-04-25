@@ -1,19 +1,12 @@
-﻿
-using Microsoft.EntityFrameworkCore;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Domain.Entities;
-using Rujta.Domain.Enums;
-using Rujta.Infrastructure.Data;
+﻿using Rujta.Domain.Enums;
 
 namespace Rujta.Infrastructure.Repositories
 {
     public class PaymentRepository : GenericRepository<Payment, int>, IPaymentRepository
     {
-        private readonly AppDbContext _context;
 
         public PaymentRepository(AppDbContext context) : base(context)
         {
-            _context = context;
         }
 
         public async Task<Payment?> GetByPaymobOrderIdAsync(string paymobOrderId, CancellationToken cancellationToken = default)

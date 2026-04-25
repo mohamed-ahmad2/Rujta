@@ -1,4 +1,4 @@
-﻿using Rujta.Application.DTOs;
+﻿using Rujta.Application.DTOs.OrderDto;
 using Rujta.Application.Interfaces.InterfaceServices.IGenericS;
 using Rujta.Domain.Entities;
 

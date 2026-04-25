@@ -1,6 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.DTOs.AdDto;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 

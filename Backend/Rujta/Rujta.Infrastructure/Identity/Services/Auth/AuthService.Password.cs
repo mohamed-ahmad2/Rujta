@@ -1,4 +1,6 @@
-﻿namespace Rujta.Infrastructure.Identity.Services.Auth
+﻿using Rujta.Application.DTOs.AuthDto;
+
+namespace Rujta.Infrastructure.Identity.Services.Auth
 {
     public partial class AuthService
     {

@@ -1,0 +1,24 @@
+﻿using Rujta.Application.DTOs.PharmacyDto;
+using Rujta.Application.DTOs.Rujta.Application.DTOs;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Rujta.Application.Interfaces.InterfaceServices.IAuth
+{
+    public interface ISuperAdminService
+    {
+        Task<CreatePharmacyResultDto> CreatePharmacyAsync(CreatePharmacyDto dto, CancellationToken cancellationToken = default);
+        Task<IEnumerable<PharmacyDto>> GetAllPharmaciesAsync(CancellationToken cancellationToken = default);
+        Task<PharmacyDto?> GetPharmacyByIdAsync(int pharmacyId, CancellationToken cancellationToken = default);
+        Task<PharmacyDto> UpdatePharmacyAsync(int pharmacyId, UpdatePharmacyDto dto, CancellationToken cancellationToken = default);
+        Task<string> ResetPharmacyAdminPasswordAsync(int pharmacyId, CancellationToken cancellationToken = default);
+
+        // 🔥 NEW
+        Task<int> GetPharmacyTotalOrdersAsync(int pharmacyId, CancellationToken cancellationToken = default);
+        Task<List<PharmacyStatsDto>> GetTopPharmaciesAsync(int count, CancellationToken cancellationToken = default);
+        Task<bool> DeletePharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default);
+
+        Task<bool> RestorePharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default);
+    }
+}

@@ -1,4 +1,5 @@
-﻿using Rujta.Domain.Common;
+﻿using Rujta.Application.DTOs.AuthDto;
+using Rujta.Domain.Common;
 
 namespace Rujta.Infrastructure.Identity.Services.Auth
 {

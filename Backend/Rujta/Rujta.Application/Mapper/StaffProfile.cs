@@ -1,4 +1,5 @@
-﻿using Rujta.Domain.Common;
+﻿using Rujta.Application.DTOs.PharmacyDto;
+using Rujta.Domain.Common;
 
 namespace Rujta.Application.MappingProfiles
 {

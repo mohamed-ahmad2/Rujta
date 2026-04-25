@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
+using Rujta.Application.DTOs.InventoryDto;
 
 namespace Rujta.Application.Services
 {

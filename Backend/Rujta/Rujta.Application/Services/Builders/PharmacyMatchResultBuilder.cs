@@ -1,4 +1,8 @@
-﻿namespace Rujta.Application.Services.Builders
+﻿using Rujta.Application.DTOs.MedicineDtos;
+using Rujta.Application.DTOs.OrderDto;
+using Rujta.Application.DTOs.PharmacyDto;
+
+namespace Rujta.Application.Services.Builders
 {
     public class PharmacyMatchResultParams
     {

@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
-using Rujta.Application.DTOs.Payment;
+using Rujta.Application.DTOs.PaymentDto;
 using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Domain.Entities;

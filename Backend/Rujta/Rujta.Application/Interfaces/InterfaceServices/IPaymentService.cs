@@ -1,5 +1,5 @@
 ﻿// Rujta.Application/Interfaces/InterfaceServices/IPaymentService.cs
-using Rujta.Application.DTOs.Payment;
+using Rujta.Application.DTOs.PaymentDto;
 using Rujta.Domain.Enums;
 
 namespace Rujta.Application.Interfaces.InterfaceServices

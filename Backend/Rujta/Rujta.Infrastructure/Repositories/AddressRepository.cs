@@ -1,4 +1,5 @@
-﻿using Rujta.Infrastructure.Identity;
+﻿using Rujta.Application.DTOs.CustomerDtos;
+using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Infrastructure.Repositories
 {

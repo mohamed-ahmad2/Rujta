@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Rujta.Application.DTOs.AuthDto;
 
 namespace Rujta.Infrastructure.Identity.Services.Auth
 {
@@ -18,7 +19,7 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
             return result.Succeeded;
         }
 
-        public async Task<TokenDto> GenerateTokensAsync(string email, CancellationToken cancellationToken = default)
+        public async Task<TokenDto> GenerateTokensAsync(string email, bool rememberMe = false, CancellationToken cancellationToken = default)
         {
             var user = await _identity.Identity.UserManager.FindByEmailAsync(email);
             if (user == null)
@@ -57,12 +58,12 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
                 _infra.Logger.LogInformation("New device registered: {DeviceId} for user {Email}", deviceId, email);
             }
 
-            bool loginOrRegister = true;
-            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId, loginOrRegister);
+            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, deviceId, loginOrRegister:true, rememberMe: rememberMe);
 
-            SetRefreshTokenCookie(tokens.RefreshToken);
+            SetRefreshTokenCookie(tokens.RefreshToken, rememberMe);
 
-            _infra.Logger.LogInformation("Tokens generated for user {Email}", email);
+            _infra.Logger.LogInformation(
+        "Tokens generated for user {Email}, RememberMe: {RememberMe}", email, rememberMe);
             return tokens;
         }
 
@@ -99,17 +100,20 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
                 throw new InvalidOperationException(AuthMessages.InvalidOrExpiredRefreshToken);
             }
 
+            bool rememberMe = storedToken.RememberMe;
+
             ApplicationUserDto userDto = _identity.Mapper.Map<ApplicationUserDto>(user);
-            bool loginOrRegister = false;
-            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, storedToken.DeviceInfo, loginOrRegister, refreshToken);
+            
+            var tokens = await _tokenHelper.GenerateTokenPairAsync(userDto, storedToken.DeviceInfo, loginOrRegister : false, rememberMe: rememberMe, refreshToken);
 
             storedToken.Revoked = true;
             storedToken.RevokedAt = DateTime.UtcNow;
             await _identity.UnitOfWork.SaveAsync(); 
 
-            SetRefreshTokenCookie(tokens.RefreshToken);
+            SetRefreshTokenCookie(tokens.RefreshToken, rememberMe);
 
-            _infra.Logger.LogInformation("Access token refreshed for user {Email} and old refresh token revoked.", user.Email);
+            _infra.Logger.LogInformation(
+        "Access token refreshed for user {Email}, RememberMe: {RememberMe}", user.Email, rememberMe);
             return tokens;
         }
 

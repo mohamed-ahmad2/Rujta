@@ -3,6 +3,7 @@ using Rujta.Application.Constants;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using Rujta.Domain.Enums;
+using Rujta.Application.DTOs.OrderDto;
 
 namespace Rujta.Api.Controllers
 {

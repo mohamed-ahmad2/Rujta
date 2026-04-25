@@ -1,4 +1,4 @@
-﻿using Rujta.Infrastructure.Identity.Services;
+﻿using Rujta.Application.DTOs.AuthDto;
 
 namespace Rujta.Infrastructure.Identity.Helpers
 {
@@ -8,27 +8,30 @@ namespace Rujta.Infrastructure.Identity.Helpers
         private readonly TokenService _tokenService;
         private readonly IConfiguration _configuration;
 
-        public TokenHelper(IUnitOfWork unitOfWork, TokenService tokenService, IConfiguration configuration)
+        public TokenHelper(
+            IUnitOfWork unitOfWork,
+            TokenService tokenService,
+            IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _tokenService = tokenService;
             _configuration = configuration;
         }
 
-        public async Task<TokenDto> GenerateTokenPairAsync(ApplicationUserDto userDto, string deviceId, bool loginOrRegister, string? rawRefreshToken = null)
+        public async Task<TokenDto> GenerateTokenPairAsync(ApplicationUserDto userDto,string deviceId, bool loginOrRegister,bool rememberMe = false,string? rawRefreshToken = null)
         {
             if (loginOrRegister)
             {
-                var refreshToken = await _tokenService.GenerateRefreshTokenAsync(userDto, deviceId);
-                var accessToken = await _tokenService.GenerateAccessTokenAsync(userDto, deviceId);
+                var refreshToken = await _tokenService.GenerateRefreshTokenAsync(userDto, deviceId, rememberMe);
 
+                var accessToken = await _tokenService.GenerateAccessTokenAsync(userDto);
 
-                var refreshTokenExpiration = DateTime.UtcNow.AddDays(
-                    double.TryParse(_configuration["JWT:RefreshTokenExpirationDays"], out var days) ? days : 30
-                );
+                var refreshTokenExpiration = GetRefreshTokenExpiration(rememberMe);
                 var accessTokenExpiration = DateTime.UtcNow.AddMinutes(
-                        double.TryParse(_configuration["JWT:AccessTokenExpirationMinutes"], out var aMins) ? aMins : 10
-                    );
+                    double.TryParse(
+                        _configuration["JWT:AccessTokenExpirationMinutes"],
+                        out var aMins) ? aMins : 10
+                );
 
                 return new TokenDto
                 {
@@ -41,17 +44,18 @@ namespace Rujta.Infrastructure.Identity.Helpers
             else
             {
                 if (string.IsNullOrWhiteSpace(rawRefreshToken))
-                    throw new ArgumentException("Refresh token data required.", nameof(rawRefreshToken));
+                    throw new ArgumentException( "Refresh token data required.", nameof(rawRefreshToken));
 
-                var (accessToken, accessTokenJti, accessTokenExpiration) = await _tokenService.GenerateAccessTokenFromRefreshTokenAsync(rawRefreshToken, userDto, deviceId);
+                var (accessToken, accessTokenJti, accessTokenExpiration) =
+                    await _tokenService.GenerateAccessTokenFromRefreshTokenAsync(
+                        rawRefreshToken, userDto, deviceId);
 
                 await RevokeOldRefreshTokensExceptAsync(userDto.Id, rawRefreshToken);
 
-                var refreshTokenExpiration = DateTime.UtcNow.AddDays(
-                    double.TryParse(_configuration["JWT:RefreshTokenExpirationDays"], out var days) ? days : 30
-                );
+                var newRefreshToken = await _tokenService.GenerateRefreshTokenAsync(
+                    userDto, deviceId, rememberMe);
 
-                var newRefreshToken = await _tokenService.GenerateRefreshTokenAsync(userDto, deviceId);
+                var refreshTokenExpiration = GetRefreshTokenExpiration(rememberMe);
 
                 return new TokenDto
                 {
@@ -64,6 +68,21 @@ namespace Rujta.Infrastructure.Identity.Helpers
             }
         }
 
+        private DateTime GetRefreshTokenExpiration(bool rememberMe)
+        {
+            if (rememberMe)
+            {
+                var longDays = double.TryParse(
+                    _configuration["JWT:RefreshTokenExpirationDays"], out var d) ? d : 30;
+                return DateTime.UtcNow.AddDays(longDays);
+            }
+            else
+            {
+                var shortDays = double.TryParse(
+                    _configuration["JWT:ShortRefreshTokenExpirationDays"], out var d) ? d : 1;
+                return DateTime.UtcNow.AddDays(shortDays);
+            }
+        }
 
         public async Task RevokeOldRefreshTokensAsync(Guid userId)
         {
@@ -76,17 +95,21 @@ namespace Rujta.Infrastructure.Identity.Helpers
             await _unitOfWork.SaveAsync();
         }
 
-        public async Task RevokeOldRefreshTokensExceptAsync(Guid userId, string exceptToken)
+        public async Task RevokeOldRefreshTokensExceptAsync(Guid userId, string exceptRawToken)
         {
+            using var sha256 = SHA256.Create();
+            var hashedExceptToken = Convert.ToBase64String(
+                sha256.ComputeHash(Encoding.UTF8.GetBytes(exceptRawToken)));
+
             var tokens = await _unitOfWork.RefreshTokens.GetAllValidTokensByUserIdAsync(userId);
             foreach (var token in tokens)
             {
-                if (token.Token == exceptToken) continue;
+                if (token.Token == hashedExceptToken) continue;
+
                 token.Revoked = true;
                 token.RevokedAt = DateTime.UtcNow;
             }
             await _unitOfWork.SaveAsync();
         }
-
     }
 }
