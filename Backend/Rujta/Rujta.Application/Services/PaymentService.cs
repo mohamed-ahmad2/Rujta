@@ -246,9 +246,7 @@ namespace Rujta.Infrastructure.Services
             var computed = Convert.ToHexString(
                 hmac.ComputeHash(Encoding.UTF8.GetBytes(data))).ToLower();
 
-            // TODO: remove before production
-            Console.WriteLine($"HMAC COMPUTED : {computed}");
-            Console.WriteLine($"HMAC RECEIVED : {receivedHmac.ToLower()}");
+            
 
             return computed == receivedHmac.ToLower();
         }
