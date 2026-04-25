@@ -10,6 +10,10 @@ import { TbMenuOrder, TbReportSearch } from "react-icons/tb";
 import { IoLogoBuffer } from "react-icons/io";
 import { CiSettings } from "react-icons/ci";
 import { MdCampaign } from "react-icons/md";
+
+import { MdAttachMoney } from "react-icons/md";
+
+
 import { useAuth } from "../../auth/hooks/useAuth";
 
 export default function Sidebar({ open, setOpen }) {
@@ -51,21 +55,13 @@ export default function Sidebar({ open, setOpen }) {
       icon: <TbMenuOrder size={22} />,
       path: "/dashboard/orders",
     },
-    {
-      label: "Sales",
-      icon: <TbReportSearch size={22} />,
-      path: "/dashboard/sales",
-    },
+    
     {
       label: "Customers",
       icon: <IoLogoBuffer size={22} />,
       path: "/dashboard/customers",
     },
-    {
-      label: "Settings",
-      icon: <CiSettings size={22} />,
-      path: "/dashboard/settings",
-    },
+   
     {
       label: "Logs",
       icon: <FiUsers size={22} />,
@@ -78,6 +74,18 @@ export default function Sidebar({ open, setOpen }) {
       path: "/dashboard/ads",
       role: "PharmacyAdmin",
     },
+   {
+  label: "Subscription",
+  icon: <CiSettings size={22} />,
+  path: "/dashboard/subscription",
+  role: "PharmacyAdmin",
+},
+{
+  label: "Discounts",
+  icon: <TbReportSearch size={22} />,
+  path: "/dashboard/discounts",
+  role: "PharmacyAdmin",
+},
   ];
 
   const onLogout = async () => {

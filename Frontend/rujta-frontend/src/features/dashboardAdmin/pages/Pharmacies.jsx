@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Search, Plus, Eye, Edit, KeyRound, X } from "lucide-react";
+import { Search, Plus, Eye, Edit, KeyRound, X, CheckCircle, XCircle } from "lucide-react";
 import useSuperAdminPharmacies from "../hooks/useSuperAdminPharmacies";
 
 /* ─────────────────────────────────────────────
@@ -22,18 +22,42 @@ function Modal({ onClose, children }) {
 }
 
 /* ─────────────────────────────────────────────
+   SUBSCRIPTION BADGE
+───────────────────────────────────────────── */
+function SubBadge({ status }) {
+  if (!status) return <span className="text-gray-300 text-xs">—</span>;
+  const styles =
+    status === "Active"
+      ? "bg-green-100 text-green-600"
+      : status === "Expired"
+      ? "bg-red-100 text-red-600"
+      : "bg-yellow-100 text-yellow-600";
+  return (
+    <span className={`px-2 py-1 text-xs rounded-full font-medium ${styles}`}>
+      {status}
+    </span>
+  );
+}
+
+/* ─────────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────────── */
 export default function Pharmacies() {
-  const { pharmacies, fetchAll, fetchById, create, update, resetPassword } =
-    useSuperAdminPharmacies();
+  const {
+    pharmacies,
+    fetchAll,
+    fetchById,
+    create,
+    update,
+    resetPassword,
+    activate,
+    deactivate,
+  } = useSuperAdminPharmacies();
 
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
-
-  // modal states
-  const [modal, setModal] = useState(null); // "add" | "view" | "edit"
-  const [selected, setSelected] = useState(null); // pharmacy object (for view/edit)
+  const [modal, setModal] = useState(null);
+  const [selected, setSelected] = useState(null);
 
   /* ---------- ADD FORM ---------- */
   const emptyForm = {
@@ -61,12 +85,10 @@ export default function Pharmacies() {
 
   const perPage = 7;
 
-  /* ---------- FETCH ---------- */
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
-  /* ---------- FILTER ---------- */
   const filtered = useMemo(() => {
     if (!q) return pharmacies;
     return pharmacies.filter(
@@ -79,16 +101,13 @@ export default function Pharmacies() {
   const totalPages = Math.ceil(filtered.length / perPage);
   const data = filtered.slice((page - 1) * perPage, page * perPage);
 
-  /* ══════════════════════════════
-     ADD PHARMACY
-  ══════════════════════════════ */
+  /* ══ ADD ══ */
   const handleAdd = async () => {
     const { pharmacyName, adminPhone, adminEmail, adminName } = addForm;
     if (!pharmacyName || !adminPhone || !adminEmail || !adminName) {
       alert("Please fill all required fields");
       return;
     }
-
     try {
       const payload = {
         pharmacyName: addForm.pharmacyName,
@@ -100,49 +119,40 @@ export default function Pharmacies() {
         adminPhone: addForm.adminPhone,
       };
 
-      console.log("🚀 CREATE payload:", payload);
-      const res = await create(payload);
-      console.log("✅ CREATE response:", res);
+      console.log("🚀 Sending payload:", payload);
 
+      const res = await create(payload);
       alert(
         `✅ Pharmacy created!\n\nAdmin Email: ${res.adminEmail}\nGenerated Password: ${res.generatedPassword}`
       );
-
       setAddForm(emptyForm);
       setModal(null);
       fetchAll();
     } catch (err) {
-      console.log("❌ CREATE ERROR:", err);
-      alert(err?.message || "Error creating pharmacy");
+      alert(`❌ ${err?.message || "Error creating pharmacy"}`);
     }
   };
 
-  /* ══════════════════════════════
-     VIEW PHARMACY
-  ══════════════════════════════ */
-  const handleView = async (pharmacy) => {
+  /* ══ VIEW ══ */
+  const handleView = async (p) => {
     try {
-      const detail = await fetchById(pharmacy.id);
-      setSelected({ ...pharmacy, ...detail });
-      setModal("view");
+      const detail = await fetchById(p.id);
+      setSelected({ ...p, ...detail });
     } catch {
-      // fallback to local data
-      setSelected(pharmacy);
-      setModal("view");
+      setSelected(p);
     }
+    setModal("view");
   };
 
-  /* ══════════════════════════════
-     EDIT PHARMACY
-  ══════════════════════════════ */
-  const openEdit = (pharmacy) => {
-    setSelected(pharmacy);
+  /* ══ EDIT ══ */
+  const openEdit = (p) => {
+    setSelected(p);
     setEditForm({
-      name: pharmacy.name,
-      location: pharmacy.location,
-      contactNumber: pharmacy.phone,
-      latitude: pharmacy.raw?.latitude || "",
-      longitude: pharmacy.raw?.longitude || "",
+      name: p.name,
+      location: p.location,
+      contactNumber: p.phone,
+      latitude: p.raw?.latitude || "",
+      longitude: p.raw?.longitude || "",
     });
     setModal("edit");
   };
@@ -153,41 +163,43 @@ export default function Pharmacies() {
       return;
     }
     try {
-      const payload = {
+      await update(selected.id, {
         name: editForm.name,
         location: editForm.location,
         contactNumber: editForm.contactNumber,
         latitude: parseFloat(editForm.latitude) || 0,
         longitude: parseFloat(editForm.longitude) || 0,
-      };
-
-      console.log("🚀 UPDATE payload:", payload);
-      await update(selected.id, payload);
-
+      });
       alert("✅ Pharmacy updated successfully!");
       setModal(null);
       fetchAll();
     } catch (err) {
-      console.log("❌ UPDATE ERROR:", err);
-      alert(err?.message || "Error updating pharmacy");
+      alert(`❌ ${err?.message || "Error updating pharmacy"}`);
     }
   };
 
-  /* ══════════════════════════════
-     RESET PASSWORD
-  ══════════════════════════════ */
-  const handleResetPassword = async (pharmacy) => {
-    const confirmed = window.confirm(
-      `Reset password for "${pharmacy.name}"?`
-    );
-    if (!confirmed) return;
-
+  /* ══ RESET PASSWORD ══ */
+  const handleResetPassword = async (p) => {
+    if (!window.confirm(`Reset password for "${p.name}"?`)) return;
     try {
-      const res = await resetPassword(pharmacy.id);
+      const res = await resetPassword(p.id);
       alert(`✅ New Password: ${res.newPassword}`);
     } catch (err) {
-      console.log("❌ RESET ERROR:", err);
       alert(err?.message || "Error resetting password");
+    }
+  };
+
+  /* ══ ACTIVATE / DEACTIVATE ══ */
+  const handleToggle = async (p) => {
+    const isActive = p.subscriptionStatus === "Active";
+    const action = isActive ? "Deactivate" : "Activate";
+    if (!window.confirm(`Are you sure you want to ${action} "${p.name}"?`)) return;
+    try {
+      isActive ? await deactivate(p.id) : await activate(p.id);
+      alert(`✅ ${action}d successfully!`);
+      fetchAll();
+    } catch (err) {
+      alert(err?.message || `Error during ${action}`);
     }
   };
 
@@ -213,14 +225,16 @@ export default function Pharmacies() {
         >
           <Plus size={16} /> Add Pharmacy
         </button>
-
         <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-xl border w-[320px]">
           <Search size={16} className="text-gray-400" />
           <input
             placeholder="Search pharmacy..."
             className="bg-transparent outline-none w-full text-sm"
             value={q}
-            onChange={(e) => { setQ(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
           />
         </div>
       </div>
@@ -237,6 +251,9 @@ export default function Pharmacies() {
               <th className="py-3 px-2 text-center">Total Orders</th>
               <th className="py-3 px-2 text-center">Status</th>
               <th className="py-3 px-2 text-center">Branch</th>
+              <th className="py-3 px-2 text-center">Subscription</th>
+              <th className="py-3 px-2 text-center">Plan</th>
+              <th className="py-3 px-2 text-center">Days</th>
               <th className="py-3 px-2 text-center">Actions</th>
             </tr>
           </thead>
@@ -262,6 +279,7 @@ export default function Pharmacies() {
                 <td className="py-3 px-2 text-center">{p.location}</td>
                 <td className="py-3 px-2 text-center">{p.totalOrders ?? "-"}</td>
 
+                {/* Status */}
                 <td className="py-3 px-2 text-center">
                   <span
                     className={`px-2 py-1 text-xs rounded-full ${
@@ -274,7 +292,7 @@ export default function Pharmacies() {
                   </span>
                 </td>
 
-                {/* Main Branch */}
+                {/* Branch */}
                 <td className="py-3 px-2 text-center">
                   {p.isMain ? (
                     <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-600">
@@ -287,35 +305,77 @@ export default function Pharmacies() {
                   )}
                 </td>
 
+                {/* Subscription Badge */}
+                <td className="py-3 px-2 text-center">
+                  <SubBadge status={p.subscriptionStatus} />
+                </td>
+
+                {/* Plan */}
+                <td className="py-3 px-2 text-center">
+                  {p.plan ? (
+                    <span className="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-600 font-medium">
+                      {p.plan}
+                    </span>
+                  ) : (
+                    <span className="text-gray-300 text-xs">—</span>
+                  )}
+                </td>
+
+                {/* Days Remaining */}
+                <td className="py-3 px-2 text-center">
+                  {p.daysRemaining !== null ? (
+                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600">
+                      {p.daysRemaining}d
+                    </span>
+                  ) : (
+                    <span className="text-gray-300 text-xs">—</span>
+                  )}
+                </td>
+
                 {/* Actions */}
                 <td className="py-3 px-2">
-                  <div className="flex justify-center gap-3">
-                    {/* View */}
+                  <div className="flex justify-center gap-2">
                     <button
                       title="View"
                       onClick={() => handleView(p)}
                       className="text-blue-500 hover:text-blue-700"
                     >
-                      <Eye size={18} />
+                      <Eye size={17} />
                     </button>
 
-                    {/* Edit */}
                     <button
                       title="Edit"
                       onClick={() => openEdit(p)}
                       className="text-gray-500 hover:text-gray-700"
                     >
-                      <Edit size={18} />
+                      <Edit size={17} />
                     </button>
 
-                    {/* Reset Password */}
                     <button
                       title="Reset Password"
                       onClick={() => handleResetPassword(p)}
                       className="text-orange-500 hover:text-orange-700"
                     >
-                      <KeyRound size={18} />
+                      <KeyRound size={17} />
                     </button>
+
+                    {p.subscriptionStatus === "Active" ? (
+                      <button
+                        title="Deactivate"
+                        onClick={() => handleToggle(p)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <XCircle size={17} />
+                      </button>
+                    ) : p.subscriptionStatus ? (
+                      <button
+                        title="Activate"
+                        onClick={() => handleToggle(p)}
+                        className="text-green-500 hover:text-green-700"
+                      >
+                        <CheckCircle size={17} />
+                      </button>
+                    ) : null}
                   </div>
                 </td>
               </tr>
@@ -323,7 +383,7 @@ export default function Pharmacies() {
 
             {data.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-10 text-center text-gray-400">
+                <td colSpan={11} className="py-10 text-center text-gray-400">
                   No pharmacies found
                 </td>
               </tr>
@@ -351,7 +411,7 @@ export default function Pharmacies() {
         </div>
       )}
 
-      {/* ══════════════ ADD MODAL ══════════════ */}
+      {/* ══ ADD MODAL ══ */}
       {modal === "add" && (
         <Modal onClose={() => setModal(null)}>
           <h2 className="text-lg font-semibold">Add Pharmacy</h2>
@@ -362,8 +422,6 @@ export default function Pharmacies() {
             { label: "Admin Email *", key: "adminEmail", placeholder: "admin@example.com", type: "email" },
             { label: "Admin Phone *", key: "adminPhone", placeholder: "e.g. 01012345678" },
             { label: "Location", key: "pharmacyLocation", placeholder: "e.g. Nasr City, Cairo" },
-            { label: "Latitude", key: "latitude", placeholder: "e.g. 30.0444", type: "number" },
-            { label: "Longitude", key: "longitude", placeholder: "e.g. 31.2357", type: "number" },
           ].map(({ label, key, placeholder, type = "text" }) => (
             <div key={key}>
               <label className="text-xs text-gray-500 mb-1 block">{label}</label>
@@ -377,11 +435,10 @@ export default function Pharmacies() {
             </div>
           ))}
 
-          {/* Logo Upload */}
+          {/* Logo */}
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Logo</label>
             <div className="flex items-center gap-3">
-              {/* Preview */}
               <div className="w-14 h-14 rounded-full bg-gray-100 border flex items-center justify-center overflow-hidden shrink-0">
                 {addForm.logoPreview ? (
                   <img src={addForm.logoPreview} className="w-full h-full object-cover" alt="logo" />
@@ -398,15 +455,14 @@ export default function Pharmacies() {
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (!file) return;
-                    const url = URL.createObjectURL(file);
-                    setAddForm({ ...addForm, logo: file, logoPreview: url });
+                    setAddForm({ ...addForm, logo: file, logoPreview: URL.createObjectURL(file) });
                   }}
                 />
               </label>
             </div>
           </div>
 
-          {/* Main Branch */}
+          {/* Main Branch Toggle */}
           <label className="flex items-center gap-3 cursor-pointer select-none">
             <div
               onClick={() => setAddForm({ ...addForm, isMain: !addForm.isMain })}
@@ -424,27 +480,20 @@ export default function Pharmacies() {
           </label>
 
           <div className="flex justify-end gap-2 pt-1">
-            <button
-              onClick={() => setModal(null)}
-              className="px-4 py-2 border rounded-lg text-sm"
-            >
+            <button onClick={() => setModal(null)} className="px-4 py-2 border rounded-lg text-sm">
               Cancel
             </button>
-            <button
-              onClick={handleAdd}
-              className="bg-secondary text-white px-4 py-2 rounded-lg text-sm"
-            >
+            <button onClick={handleAdd} className="bg-secondary text-white px-4 py-2 rounded-lg text-sm">
               Save
             </button>
           </div>
         </Modal>
       )}
 
-      {/* ══════════════ VIEW MODAL ══════════════ */}
+      {/* ══ VIEW MODAL ══ */}
       {modal === "view" && selected && (
         <Modal onClose={() => setModal(null)}>
           <h2 className="text-lg font-semibold">Pharmacy Details</h2>
-
           <div className="space-y-2 text-sm">
             {[
               ["ID", selected.id],
@@ -456,6 +505,12 @@ export default function Pharmacies() {
               ["Status", selected.isActive ? "Active" : "Inactive"],
               ["Total Orders", selected.totalOrders ?? "-"],
               ["Admin ID", selected.adminId ?? "-"],
+              ["─────────", "─────────"],
+              ["Subscription", selected.subscriptionStatus ?? "-"],
+              ["Plan", selected.plan ?? "-"],
+              ["Start Date", selected.startDate ? new Date(selected.startDate).toLocaleDateString() : "-"],
+              ["End Date", selected.endDate ? new Date(selected.endDate).toLocaleDateString() : "-"],
+              ["Days Remaining", selected.daysRemaining ?? "-"],
             ].map(([label, val]) => (
               <div key={label} className="flex justify-between border-b pb-1">
                 <span className="text-gray-500">{label}</span>
@@ -463,29 +518,22 @@ export default function Pharmacies() {
               </div>
             ))}
           </div>
-
           <div className="flex justify-end pt-1">
-            <button
-              onClick={() => setModal(null)}
-              className="px-4 py-2 border rounded-lg text-sm"
-            >
+            <button onClick={() => setModal(null)} className="px-4 py-2 border rounded-lg text-sm">
               Close
             </button>
           </div>
         </Modal>
       )}
 
-      {/* ══════════════ EDIT MODAL ══════════════ */}
+      {/* ══ EDIT MODAL ══ */}
       {modal === "edit" && selected && (
         <Modal onClose={() => setModal(null)}>
           <h2 className="text-lg font-semibold">Edit Pharmacy</h2>
-
           {[
             { label: "Name *", key: "name", placeholder: "Pharmacy name" },
             { label: "Location", key: "location", placeholder: "e.g. Nasr City" },
             { label: "Contact Number", key: "contactNumber", placeholder: "e.g. 01012345678" },
-            { label: "Latitude", key: "latitude", placeholder: "e.g. 30.0444", type: "number" },
-            { label: "Longitude", key: "longitude", placeholder: "e.g. 31.2357", type: "number" },
           ].map(({ label, key, placeholder, type = "text" }) => (
             <div key={key}>
               <label className="text-xs text-gray-500 mb-1 block">{label}</label>
@@ -498,18 +546,11 @@ export default function Pharmacies() {
               />
             </div>
           ))}
-
           <div className="flex justify-end gap-2 pt-1">
-            <button
-              onClick={() => setModal(null)}
-              className="px-4 py-2 border rounded-lg text-sm"
-            >
+            <button onClick={() => setModal(null)} className="px-4 py-2 border rounded-lg text-sm">
               Cancel
             </button>
-            <button
-              onClick={handleEdit}
-              className="bg-secondary text-white px-4 py-2 rounded-lg text-sm"
-            >
+            <button onClick={handleEdit} className="bg-secondary text-white px-4 py-2 rounded-lg text-sm">
               Update
             </button>
           </div>
