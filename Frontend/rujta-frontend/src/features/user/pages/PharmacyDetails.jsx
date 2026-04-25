@@ -13,6 +13,7 @@ const categoryOptions = [
 ];
 
 /* ─────────────────────────── Ad Banner ─────────────────────────── */
+/* ─────────────────────────── Updated Ad Banner ─────────────────────────── */
 function AdBanner({ ad }) {
   return (
     <div
@@ -25,27 +26,32 @@ function AdBanner({ ad }) {
         boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
       }}
     >
+      {/* Background Decorative Circles */}
       <div className="pointer-events-none absolute -right-8 -top-8 h-56 w-56 rounded-full"
         style={{ background: "rgba(255,255,255,0.15)" }} />
       <div className="pointer-events-none absolute -bottom-6 -left-5 h-40 w-40 rounded-full"
         style={{ background: "rgba(255,255,255,0.08)" }} />
-      <div className="pointer-events-none absolute bottom-[-40px] right-20 h-28 w-28 rounded-full"
-        style={{ background: "rgba(255,255,255,0.06)" }} />
 
+      {/* ── Updated Image Section ── */}
       {ad.adMode === "medicine" && ad.medicineImage && (
-        <img
-          src={ad.medicineImage}
-          alt={ad.medicineName}
-          className="absolute right-10 top-1/2 -translate-y-1/2 object-contain"
+        <div 
+          className="absolute right-10 top-1/2 flex -translate-y-1/2 items-center justify-center overflow-hidden transition-transform duration-500 hover:scale-105"
           style={{
-            width: 180,
-            height: 180,
-            border: "4px solid rgba(255,255,255,0.3)",
-            borderRadius: "50%",
-            background: "rgba(255,255,255,0.15)",
-            padding: 10,
+            width: 200,
+            height: 200,
+            background: "rgba(255, 255, 255, 0.2)", // Semi-transparent white to show the gradient behind
+            backdropFilter: "blur(4px)",
+            borderRadius: "24% 76% 70% 30% / 30% 30% 70% 70%", // Organic "blob" shape or use "50%" for perfect circle
+            border: "1px solid rgba(255,255,255,0.3)",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)"
           }}
-        />
+        >
+          <img
+            src={ad.medicineImage}
+            alt={ad.medicineName}
+            className="h-32 w-32 object-contain drop-shadow-2xl"
+          />
+        </div>
       )}
 
       <span
@@ -89,7 +95,6 @@ function AdBanner({ ad }) {
     </div>
   );
 }
-
 /* ─────────────────────────── Main Page ─────────────────────────── */
 const PharmacyDetails = ({ cart, setCart }) => {
   const { id } = useParams();
