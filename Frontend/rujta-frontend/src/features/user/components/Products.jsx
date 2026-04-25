@@ -45,11 +45,45 @@ const Products = ({ cart, setCart }) => {
     setTimeout(() => setAddedIds((prev) => ({ ...prev, [product.id]: false })), 1200);
   };
 
+
   const filteredMedicines = medicines.filter(
     (med) =>
       (selectedCategory === "All" || med.categoryId === selectedCategory) &&
       med.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+ const filtered = useMemo(() => {
+  return items.filter((p) => {
+    const search = q.trim().toLowerCase();
+
+    if (filterStatus !== "All" && p.status !== filterStatus) return false;
+
+    if (filterCategory !== "All" && p.category !== filterCategory)
+      return false;
+
+    // ✅ فلترة بالتاريخ
+    if (filterDate) {
+      const productDate = new Date(p.expiry);
+      const selectedDate = new Date(filterDate);
+
+      // مثال: نفس اليوم بالظبط
+      if (
+        productDate.toDateString() !== selectedDate.toDateString()
+      ) {
+        return false;
+      }
+    }
+
+    if (search) {
+      const matchName = p.name.toLowerCase().includes(search);
+      const matchId = String(p.raw?.id ?? "").includes(search);
+      if (!matchName && !matchId) return false;
+    }
+
+    return true;
+  });
+}, [items, q, filterCategory, filterStatus, filterDate]);
+
 
   /* ── States ── */
   if (loading || pharmaciesLoading)
