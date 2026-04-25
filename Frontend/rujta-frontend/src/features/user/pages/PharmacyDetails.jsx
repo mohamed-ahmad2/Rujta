@@ -14,7 +14,6 @@ const categoryOptions = [
   { id: 3, name: "Allergy & Respiratory" },
 ];
 
-/* ─────────────────────────── Ad Banner ─────────────────────────── */
 function AdBanner({ ad }) {
   return (
     <div
@@ -27,6 +26,7 @@ function AdBanner({ ad }) {
         boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
       }}
     >
+      {/* Background Decorative Circles */}
       <div
         className="pointer-events-none absolute -right-8 -top-8 h-56 w-56 rounded-full"
         style={{ background: "rgba(255,255,255,0.15)" }}
@@ -40,20 +40,26 @@ function AdBanner({ ad }) {
         style={{ background: "rgba(255,255,255,0.06)" }}
       />
 
+      {/* ── Updated Image Section ── */}
       {ad.adMode === "medicine" && ad.medicineImage && (
-        <img
-          src={ad.medicineImage}
-          alt={ad.medicineName}
-          className="absolute right-10 top-1/2 -translate-y-1/2 object-contain"
+        <div
+          className="absolute right-10 top-1/2 flex -translate-y-1/2 items-center justify-center overflow-hidden transition-transform duration-500 hover:scale-105"
           style={{
-            width: 180,
-            height: 180,
-            border: "4px solid rgba(255,255,255,0.3)",
-            borderRadius: "50%",
-            background: "rgba(255,255,255,0.15)",
-            padding: 10,
+            width: 200,
+            height: 200,
+            background: "rgba(255, 255, 255, 0.2)",
+            backdropFilter: "blur(4px)",
+            borderRadius: "24% 76% 70% 30% / 30% 30% 70% 70%",
+            border: "1px solid rgba(255,255,255,0.3)",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
           }}
-        />
+        >
+          <img
+            src={ad.medicineImage}
+            alt={ad.medicineName}
+            className="h-32 w-32 object-contain drop-shadow-2xl"
+          />
+        </div>
       )}
 
       <span
@@ -149,12 +155,11 @@ const PharmacyDetails = ({ cart, setCart }) => {
     fetchData();
   }, [id, fetchByPharmacy]);
 
-  // Auto-slide logic
   useEffect(() => {
     if (ads.length > 1) {
       const timer = setInterval(() => {
         setCurrentAdIndex((prev) => (prev + 1) % ads.length);
-      }, 5000); // Change slide every 5 seconds
+      }, 5000);
       return () => clearInterval(timer);
     }
   }, [ads]);
