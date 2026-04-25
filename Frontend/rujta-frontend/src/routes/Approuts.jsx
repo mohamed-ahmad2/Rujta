@@ -86,9 +86,7 @@ const Pharmacies = lazy(
   () => import("../features/dashboardAdmin/pages/Pharmacies"),
 );
 const Reports = lazy(() => import("../features/dashboardAdmin/pages/Reports"));
-const SettingsAdmin = lazy(
-  () => import("../features/dashboardAdmin/pages/Settings"),
-);
+
 const ServicePricing = lazy(() => import("../features/dashboardAdmin/pages/ServicePricing"));
 const ApprovalQueue = lazy(() => import("../features/dashboardAdmin/pages/ApprovalQueue"));
 
@@ -268,7 +266,6 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => {
           <Route index element={<Overview />} />
           <Route path="pharmacies" element={<Pharmacies />} />
           <Route path="reports" element={<Reports />} />
-          <Route path="settings" element={<SettingsAdmin />} />
           <Route path="service-pricing" element={<ServicePricing />} />
           <Route path="ApprovalQueue" element={<ApprovalQueue />} />
         </Route>
