@@ -1,4 +1,6 @@
-﻿namespace Rujta.Application.Mapper
+﻿using Rujta.Application.DTOs.InventoryDto;
+
+namespace Rujta.Application.Mapper
 {
     public class InventoryItemProfile : Profile
     {

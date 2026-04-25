@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Rujta.Application.DTOs.OrderDto;
 using Rujta.Application.Interfaces.InterfaceServices.IOrder;
 using Rujta.Domain.Entities;
 

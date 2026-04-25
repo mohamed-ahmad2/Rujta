@@ -1,5 +1,6 @@
 ﻿using Rujta.API.Realtime.Services;
 using Rujta.Application.Interfaces;
+using Rujta.Application.Interfaces.InterfaceServices.IAuth;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 using Rujta.Application.Notifications;
 using Rujta.Infrastructure.Services;

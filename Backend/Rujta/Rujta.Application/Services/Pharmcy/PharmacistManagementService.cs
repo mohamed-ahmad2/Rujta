@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
+using Rujta.Application.DTOs.PharmacyDto;
 using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
 using Rujta.Domain.Common;
 

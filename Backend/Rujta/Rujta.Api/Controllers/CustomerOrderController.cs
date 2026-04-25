@@ -1,7 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
+﻿using Rujta.Application.DTOs.CustomerDtos;
+using Rujta.Application.DTOs.OrderDto;
 
 namespace Rujta.API.Controllers
 {

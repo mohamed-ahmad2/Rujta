@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Rujta.Application.DTOs.MedicineDtos;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 
 namespace Rujta.Application.Services.MedicineS

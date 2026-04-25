@@ -6,7 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 const ResetPasswordPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { handleResetPassword } = useAuth();
+  const { handleResetPassword, handleForgotPassword } = useAuth();
 
   const params = new URLSearchParams(location.search);
   const email = params.get("email") || "";
@@ -14,32 +14,48 @@ const ResetPasswordPage = () => {
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const handleReset = async (e) => {
     e.preventDefault();
+    setError("");
 
     if (!email.trim()) {
-      alert("Email is missing.");
+      setError("Email is missing.");
       return;
     }
 
     if (!otp.trim()) {
-      alert("OTP code is required.");
+      setError("OTP code is required.");
       return;
     }
 
     if (!newPassword.trim()) {
-      alert("Please enter a new password.");
+      setError("Please enter a new password.");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters.");
       return;
     }
 
     try {
-      await handleResetPassword({ email, otp, newPassword }); // ✅ FIX
-
-      alert("Password reset successfully!");
+      setLoading(true);
+      await handleResetPassword({ email, otp, newPassword });
       navigate("/auth");
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to reset password");
+      setError(
+        err.response?.data?.message || "Failed to reset password. Try again.",
+      );
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleResendOtp = async (email) => {
+    await handleForgotPassword(email);
   };
 
   return (
@@ -51,6 +67,9 @@ const ResetPasswordPage = () => {
         newPassword={newPassword}
         setNewPassword={setNewPassword}
         onReset={handleReset}
+        onResendOtp={handleResendOtp} 
+        error={error}
+        loading={loading}
       />
     </div>
   );

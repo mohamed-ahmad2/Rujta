@@ -1,11 +1,13 @@
-﻿using Rujta.Application.DTOs.Rujta.Application.DTOs;
+﻿using Rujta.Application.DTOs.PharmacyDto;
+using Rujta.Application.DTOs.Rujta.Application.DTOs;
+using Rujta.Application.Interfaces.InterfaceServices.IAuth;
 using Rujta.Infrastructure.Identity;
 
 namespace Rujta.API.Controllers
 {
     [ApiController]
     [Route("api/super-admin")]
-    [Authorize(Roles = nameof(UserRole.SuperAdmin))] // Only SuperAdmin can access
+    [Authorize(Roles = nameof(UserRole.SuperAdmin))] 
     public class SuperAdminController : ControllerBase
     {
         private readonly ISuperAdminService _service;

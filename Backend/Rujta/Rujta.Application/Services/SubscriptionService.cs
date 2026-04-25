@@ -1,4 +1,5 @@
-﻿using Rujta.Application.DTOs;
+﻿using Rujta.Application.DTOs.PharmacyDto;
+using Rujta.Application.DTOs.SubscriptionDto;
 using Rujta.Application.Interfaces;
 using Rujta.Domain.Entities;
 using Rujta.Domain.Entities.Rujta.Domain.Entities;

@@ -1,4 +1,7 @@
-﻿using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
+﻿using Rujta.Application.DTOs.MedicineDtos;
+using Rujta.Application.DTOs.OrderDto;
+using Rujta.Application.DTOs.PharmacyDto;
+using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
 using Rujta.Application.Services.Builders;
 using Rujta.Application.Services.Logging;
 

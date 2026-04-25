@@ -41,19 +41,25 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
             return (int)(BitConverter.ToUInt32(bytes, 0) % max);
         }
 
-        private void SetRefreshTokenCookie(string? refreshToken)
+        private void SetRefreshTokenCookie(string? refreshToken, bool rememberMe = false)
         {
             var context = _infra.HttpContextAccessor.HttpContext;
             if (context == null || string.IsNullOrEmpty(refreshToken)) return;
 
-            int expirationDays = int.TryParse(_infra.Configuration[$"JWT:{TokenKeys.RefreshTokenExpirationDays}"], out var days) ? days : 30;
-            context.Response.Cookies.Append(CookieKeys.RefreshToken, refreshToken, new CookieOptions
+            var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddDays(expirationDays)
-            });
+                SameSite = SameSiteMode.Strict
+            };
+
+            if (rememberMe)
+            {
+                int expirationDays = int.TryParse(_infra.Configuration[$"JWT:{TokenKeys.RefreshTokenExpirationDays}"], out var days) ? days : 30;
+                cookieOptions.Expires = DateTime.UtcNow.AddDays(expirationDays);
+            }
+
+            context.Response.Cookies.Append(CookieKeys.RefreshToken, refreshToken, cookieOptions);
         }
     }
 }

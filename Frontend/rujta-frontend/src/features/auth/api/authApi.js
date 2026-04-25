@@ -1,8 +1,11 @@
-// src/features/auth/api/authApi.js
 import apiClient from "../../../shared/api/apiClient";
 
-export const login = async ({ email, password }) => {
-  const res = await apiClient.post("/auth/login", { email, password });
+export const login = async ({ email, password, rememberMe = false }) => {
+  const res = await apiClient.post("/auth/login", {
+    email,
+    password,
+    rememberMe,
+  });
   return res.data;
 };
 
@@ -47,7 +50,7 @@ export const socialLogin = async ({ IdToken }) => {
   const response = await apiClient.post(
     "/auth/google-login",
     { IdToken },
-    { withCredentials: true }
+    { withCredentials: true },
   );
   return response.data;
 };
@@ -58,6 +61,8 @@ export const registerStaff = async (dto) => {
 };
 
 export const changePassword = async ({ newPassword }) => {
-  const response = await apiClient.post("/auth/change-password", { newPassword });
+  const response = await apiClient.post("/auth/change-password", {
+    newPassword,
+  });
   return response.data;
 };

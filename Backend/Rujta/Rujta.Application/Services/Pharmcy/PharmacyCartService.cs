@@ -1,4 +1,6 @@
-﻿using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
+﻿using Rujta.Application.DTOs.OrderDto;
+using Rujta.Application.DTOs.PharmacyDto;
+using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
 
 namespace Rujta.Application.Services.Pharmcy
 {

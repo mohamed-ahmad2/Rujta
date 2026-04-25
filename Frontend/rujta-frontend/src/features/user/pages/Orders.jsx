@@ -25,7 +25,7 @@ const getDisplayStatus = (orders) => {
   }
   return orders[0]?.status || "Pending";
 };
-مفص;
+
 const splitBatchIntoTabs = (originalBatch) => {
   const groupId = originalBatch[0]?.id;
   const groupDate = originalBatch[0]?.orderDate;
@@ -55,10 +55,11 @@ export default function Orders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("active");
 
+  // ✅ Fix: إزالة fetchAll و fetchUser من dependencies لتجنب infinite loop
   useEffect(() => {
     fetchAll();
     fetchUser();
-  }, [fetchAll, fetchUser]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getMedicineName = (id) => {
     const med = medicines.find((m) => m.id === id);
@@ -184,7 +185,10 @@ export default function Orders() {
   const groupedTabs = useMemo(() => {
     const tabs = { active: [], completed: [], cancelled: [] };
 
-    const filtered = liveOrders.filter((batch) =>
+    // ✅ Fix: التأكد إن liveOrders array مش null أو undefined
+    const safeLiveOrders = Array.isArray(liveOrders) ? liveOrders : [];
+
+    const filtered = safeLiveOrders.filter((batch) =>
       batch?.some(
         (order) =>
           order?.id?.toString()?.includes(searchQuery) ||
@@ -299,7 +303,6 @@ export default function Orders() {
                     <p className="flex items-center gap-1 text-xs text-gray-400">
                       <span>📅</span> {formattedDate}
                     </p>
-
                     {splitNote && (
                       <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-500">
                         {splitNote}

@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../features/auth/hooks/useAuth";
 import ProtectedRoute from "../shared/components/ProtectedRoute";
+import SmartRedirect from "../shared/components/SmartRedirect";
 
 /* ================= Loading ================= */
 const PageLoader = () => (
@@ -15,57 +16,53 @@ const PageLoader = () => (
 
 /* ================= Error ================= */
 const AnimatedErrorPage = lazy(
-  () => import("../features/Error/AnimatedErrorPage")
+  () => import("../features/Error/AnimatedErrorPage"),
 );
 
 /* ================= Landing ================= */
 const LandingLayout = lazy(() => import("../layouts/LandingLayout"));
 const NavbarLanding = lazy(
-  () => import("../features/landing/components/Navbarlanding")
+  () => import("../features/landing/components/Navbarlanding"),
 );
 const Features = lazy(() => import("../features/landing/pages/Features"));
-const HowItWorks = lazy(
-  () => import("../features/landing/pages/HowItWorks")
-);
+const HowItWorks = lazy(() => import("../features/landing/pages/HowItWorks"));
 const Contact = lazy(() => import("../features/landing/pages/Contact"));
 
 /* ================= Auth ================= */
 const AuthPage = lazy(() => import("../features/auth/pages/AuthPage"));
 const ResetPasswordPage = lazy(
-  () => import("../features/auth/pages/ResetPasswordPage")
+  () => import("../features/auth/pages/ResetPasswordPage"),
 );
 const ChangePasswordPage = lazy(
-  () => import("../features/auth/pages/ChangePasswordPage")
+  () => import("../features/auth/pages/ChangePasswordPage"),
 );
 
 /* ================= User ================= */
 const UserLayout = lazy(
-  () => import("../features/user/components/layout/UserLayout")
+  () => import("../features/user/components/layout/UserLayout"),
 );
 const HeroUser = lazy(() => import("../features/user/pages/Hero"));
-const ProductsUser = lazy(
-  () => import("../features/user/components/Products")
-);
+const ProductsUser = lazy(() => import("../features/user/components/Products"));
 const Profile = lazy(() => import("../features/user/pages/Profile"));
 const Ordersuser = lazy(() => import("../features/user/pages/Orders"));
 const Checkout = lazy(() => import("../features/user/pages/Checkout"));
 const PharmacyDetails = lazy(
-  () => import("../features/user/pages/PharmacyDetails")
+  () => import("../features/user/pages/PharmacyDetails"),
 );
 const Payment = lazy(() => import("../features/user/pages/Payment"));
 const MedicineDetails = lazy(
-  () => import("../features/medicines/pages/MedicineDetails")
+  () => import("../features/medicines/pages/MedicineDetails"),
 );
 const ScanPrescription = lazy(
-  () => import("../features/prescription/pages/ScanPrescription")
+  () => import("../features/prescription/pages/ScanPrescription"),
 );
 const NotificationsPage = lazy(
-  () => import("../features/notifications/pages/NotificationsPage")
+  () => import("../features/notifications/pages/NotificationsPage"),
 );
 
 /* ================= Dashboard ================= */
 const DashboardLayout = lazy(
-  () => import("../features/dashboard/components/layouts/DashboardLayout")
+  () => import("../features/dashboard/components/layouts/DashboardLayout"),
 );
 const Home = lazy(() => import("../features/dashboard/pages/Home"));
 const Products = lazy(() => import("../features/dashboard/pages/Products"));
@@ -78,20 +75,20 @@ const Ads = lazy(() => import("../features/dashboard/pages/Ads"));
 
 /* ================= Super Admin ================= */
 const DashboardLayoutSuberAdmin = lazy(
-  () => import("../features/dashboardAdmin/components/layouts/DashboardLayout")
+  () => import("../features/dashboardAdmin/components/layouts/DashboardLayout"),
 );
 const Overview = lazy(
-  () => import("../features/dashboardAdmin/pages/Overview")
+  () => import("../features/dashboardAdmin/pages/Overview"),
 );
 const Pharmacies = lazy(
-  () => import("../features/dashboardAdmin/pages/Pharmacies")
+  () => import("../features/dashboardAdmin/pages/Pharmacies"),
 );
-const Reports = lazy(
-  () => import("../features/dashboardAdmin/pages/Reports")
-);
+const Reports = lazy(() => import("../features/dashboardAdmin/pages/Reports"));
 const SettingsAdmin = lazy(
-  () => import("../features/dashboardAdmin/pages/Settings")
+  () => import("../features/dashboardAdmin/pages/Settings"),
 );
+
+/* ================================================== */
 
 const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => {
   const { user } = useAuth();
@@ -105,7 +102,14 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => {
         <Route path="*" element={<AnimatedErrorPage />} />
 
         {/* ================= Landing ================= */}
-        <Route path="/" element={<LandingLayout />} />
+        <Route
+          path="/"
+          element={
+            <SmartRedirect>
+              <LandingLayout />
+            </SmartRedirect>
+          }
+        />
 
         <Route
           path="/features"
@@ -165,24 +169,29 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => {
               </>
             }
           />
-
           <Route path="orders" element={<Ordersuser />} />
           <Route path="profile" element={<Profile />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="payment" element={<Payment />} />
           <Route path="notifications" element={<NotificationsPage />} />
-          <Route path="pharmacy/:id" element={<PharmacyDetails />} />
+          <Route
+            path="pharmacy/:id"
+            element={<PharmacyDetails cart={cart} setCart={setCart} />}
+          />
+          <Route
+            path="scan-prescription"
+            element={<ScanPrescription cart={cart} setCart={setCart} />}
+          />
+          <Route
+            path="medicine/:id"
+            element={<MedicineDetails cart={cart} setCart={setCart} />}
+          />
         </Route>
 
-        {/* ================= Medicines ================= */}
+        {/* ================= Medicines (Public) ================= */}
         <Route
-          path="/medicine/:id"
+          path="/medicines/:id"
           element={<MedicineDetails cart={cart} setCart={setCart} />}
-        />
-
-        <Route
-          path="/scan-prescription"
-          element={<ScanPrescription cart={cart} setCart={setCart} />}
         />
 
         {/* ================= Dashboard ================= */}
@@ -190,7 +199,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => {
           path="/dashboard"
           element={
             <ProtectedRoute roles={["Pharmacist", "PharmacyAdmin"]}>
-              {user?.role === "PharmacyAdmin" && user?.IsFirstLogin ? (
+              {user?.role === "PharmacyAdmin" && user?.isFirstLogin ? (
                 <Navigate to="/change-password" replace />
               ) : (
                 <DashboardLayout />

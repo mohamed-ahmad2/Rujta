@@ -11,7 +11,7 @@ namespace Rujta.Infrastructure.Identity
         public string? PasswordResetToken { get; set; }
         public DateTime? PasswordResetTokenExpiry { get; set; }
 
-        public bool IsFirstLogin { get; set; } = false; // 👈 ADD THIS
+        public bool IsFirstLogin { get; set; } = false;
         public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         [ForeignKey("DomainPersonId")]
         public  virtual Person? DomainPerson { get; set; }

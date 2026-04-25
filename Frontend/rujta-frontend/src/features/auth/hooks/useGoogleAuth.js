@@ -11,25 +11,25 @@ export const useGoogleAuth = () => {
       provider.setCustomParameters({ prompt: "select_account" });
 
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      const firebaseUser = result.user;
 
-      if (!user) throw new Error("No user returned from Firebase");
+      if (!firebaseUser) throw new Error("No user returned from Firebase");
 
-      const IdToken = await user.getIdToken(true);
+      const IdToken = await firebaseUser.getIdToken(true);
 
-      const backendTokens = await handleGoogleLogin(IdToken);
-      if (!backendTokens) throw new Error("Failed to get tokens from backend");
+      const res = await handleGoogleLogin(IdToken);
+      if (!res) throw new Error("Failed to get tokens from backend");
 
       window.location.href = "/user";
 
       return {
         firebaseUser: {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
         },
-        backendTokens,
+        backendData: res,
       };
     } catch (error) {
       console.error("Firebase social login failed:", error);

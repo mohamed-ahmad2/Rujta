@@ -1,13 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Domain.Entities;
+﻿using Rujta.Application.DTOs.InventoryDto;
+using Rujta.Application.DTOs.MedicineDtos;
+using Rujta.Application.DTOs.PharmacyDto;
 using Rujta.Domain.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Repositories
 {

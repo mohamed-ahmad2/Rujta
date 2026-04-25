@@ -1,16 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Rujta.Application.DTOs;
+﻿using Rujta.Application.DTOs.PharmacyDto;
 using Rujta.Application.DTOs.Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Identity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using Rujta.Application.Interfaces.InterfaceServices.IAuth;
 
 namespace Rujta.Infrastructure.Identity.Services
 {
@@ -31,7 +21,9 @@ namespace Rujta.Infrastructure.Identity.Services
         }
 
         // ================= CREATE PHARMACY =================
-        public async Task<CreatePharmacyResultDto> CreatePharmacyAsync(CreatePharmacyDto dto, CancellationToken cancellationToken = default)
+        public async Task<CreatePharmacyResultDto> CreatePharmacyAsync(
+            CreatePharmacyDto dto,
+            CancellationToken cancellationToken = default)
         {
             await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
@@ -70,7 +62,8 @@ namespace Rujta.Infrastructure.Identity.Services
 
                 var result = await _userManager.CreateAsync(identityUser, generatedPassword);
                 if (!result.Succeeded)
-                    throw new InvalidOperationException(string.Join(", ", result.Errors.Select(e => e.Description)));
+                    throw new InvalidOperationException(
+                        string.Join(", ", result.Errors.Select(e => e.Description)));
 
                 await _userManager.AddToRoleAsync(identityUser, "PharmacyAdmin");
 
@@ -81,7 +74,6 @@ namespace Rujta.Infrastructure.Identity.Services
                 {
                     var folderPath = Path.Combine("wwwroot", "images", "pharmacies");
 
-                    // تأكد إن الفولدر موجود
                     if (!Directory.Exists(folderPath))
                         Directory.CreateDirectory(folderPath);
 
@@ -107,7 +99,7 @@ namespace Rujta.Infrastructure.Identity.Services
                     Longitude = dto.Longitude,
                     IsActive = true,
                     AdminId = admin.Id,
-                    ImageUrl = imageUrl, // 🔥 NEW
+                    ImageUrl = imageUrl,
                     IsDeleted = false
                 };
 
@@ -117,7 +109,9 @@ namespace Rujta.Infrastructure.Identity.Services
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
 
-                _logger.LogInformation("Pharmacy created successfully with Admin {Email}", dto.AdminEmail);
+                _logger.LogInformation(
+                    "Pharmacy created successfully with Admin {Email}",
+                    dto.AdminEmail);
 
                 return new CreatePharmacyResultDto
                 {
@@ -134,15 +128,18 @@ namespace Rujta.Infrastructure.Identity.Services
         }
 
         // ================= GET ALL PHARMACIES =================
-        public async Task<IEnumerable<PharmacyDto>> GetAllPharmaciesAsync(CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<PharmacyDto>> GetAllPharmaciesAsync(
+            CancellationToken cancellationToken = default)
         {
             var pharmacies = (await _unitOfWork.Pharmacies.GetAllAsync(cancellationToken))
                                 .Where(p => !p.IsDeleted);
+
             var result = new List<PharmacyDto>();
 
             foreach (var p in pharmacies)
             {
-                var totalOrders = await _unitOfWork.SuperAdmin.GetTotalOrdersAsync(p.Id, cancellationToken);
+                var totalOrders = await _unitOfWork.SuperAdmin
+                    .GetTotalOrdersAsync(p.Id, cancellationToken);
 
                 result.Add(new PharmacyDto
                 {
@@ -154,7 +151,7 @@ namespace Rujta.Infrastructure.Identity.Services
                     Longitude = p.Longitude,
                     IsActive = p.IsActive,
                     AdminId = p.AdminId,
-                    TotalOrders = totalOrders, // 🔥 لو ضفتها في DTO
+                    TotalOrders = totalOrders,
                     ImageUrl = p.ImageUrl
                 });
             }
@@ -163,7 +160,9 @@ namespace Rujta.Infrastructure.Identity.Services
         }
 
         // ================= GET PHARMACY BY ID =================
-        public async Task<PharmacyDto?> GetPharmacyByIdAsync(int pharmacyId, CancellationToken cancellationToken = default)
+        public async Task<PharmacyDto?> GetPharmacyByIdAsync(
+            int pharmacyId,
+            CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
             if (pharmacy == null || pharmacy.IsDeleted)
@@ -184,13 +183,18 @@ namespace Rujta.Infrastructure.Identity.Services
         }
 
         // ================= UPDATE PHARMACY =================
-        public async Task<PharmacyDto> UpdatePharmacyAsync(int pharmacyId, UpdatePharmacyDto dto, CancellationToken cancellationToken = default)
+        public async Task<PharmacyDto> UpdatePharmacyAsync(
+            int pharmacyId,
+            UpdatePharmacyDto dto,
+            CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
+
             if (pharmacy == null)
                 throw new KeyNotFoundException("Pharmacy not found.");
+
             if (pharmacy.IsDeleted)
-                throw new Exception("Cannot update deleted pharmacy");
+                throw new InvalidOperationException("Cannot update a deleted pharmacy.");
 
             pharmacy.Name = dto.Name;
             pharmacy.Location = dto.Location;
@@ -214,7 +218,9 @@ namespace Rujta.Infrastructure.Identity.Services
         }
 
         // ================= RESET PHARMACY ADMIN PASSWORD =================
-        public async Task<string> ResetPharmacyAdminPasswordAsync(int pharmacyId, CancellationToken cancellationToken = default)
+        public async Task<string> ResetPharmacyAdminPasswordAsync(
+            int pharmacyId,
+            CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
             if (pharmacy == null)
@@ -230,18 +236,18 @@ namespace Rujta.Infrastructure.Identity.Services
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(adminUser);
             var result = await _userManager.ResetPasswordAsync(adminUser, token, newPassword);
+
             if (!result.Succeeded)
-                throw new InvalidOperationException(string.Join(", ", result.Errors.Select(e => e.Description)));
+                throw new InvalidOperationException(
+                    string.Join(", ", result.Errors.Select(e => e.Description)));
 
             return newPassword;
         }
 
-        // ================= HELPER: GENERATE STRONG PASSWORD =================
-        private static string GenerateStrongPassword()
-        {
-            return "Ph@" + Guid.NewGuid().ToString("N")[..8] + "1!";
-        }
-        public async Task<int> GetPharmacyTotalOrdersAsync(int pharmacyId, CancellationToken cancellationToken = default)
+        // ================= GET PHARMACY TOTAL ORDERS =================
+        public async Task<int> GetPharmacyTotalOrdersAsync(
+            int pharmacyId,
+            CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
 
@@ -250,12 +256,20 @@ namespace Rujta.Infrastructure.Identity.Services
 
             return await _unitOfWork.SuperAdmin.GetTotalOrdersAsync(pharmacyId, cancellationToken);
         }
-        public async Task<List<PharmacyStatsDto>> GetTopPharmaciesAsync(int count, CancellationToken cancellationToken = default)
+
+        // ================= GET TOP PHARMACIES =================
+        public async Task<List<PharmacyStatsDto>> GetTopPharmaciesAsync(
+            int count,
+            CancellationToken cancellationToken = default)
         {
             return await _unitOfWork.SuperAdmin
                 .GetTopPharmaciesAsync(count, cancellationToken);
         }
-        public async Task<bool> DeletePharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default)
+
+        // ================= DELETE PHARMACY =================
+        public async Task<bool> DeletePharmacyAsync(
+            int pharmacyId,
+            CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
 
@@ -263,9 +277,8 @@ namespace Rujta.Infrastructure.Identity.Services
                 throw new KeyNotFoundException("Pharmacy not found.");
 
             if (pharmacy.IsDeleted)
-                throw new InvalidOperationException("Pharmacy already deleted.");
+                throw new InvalidOperationException("Pharmacy is already deleted.");
 
-            // 🔥 Soft Delete
             pharmacy.IsDeleted = true;
 
             await _unitOfWork.SaveAsync(cancellationToken);
@@ -274,23 +287,31 @@ namespace Rujta.Infrastructure.Identity.Services
 
             return true;
         }
-        public async Task<bool> RestorePharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default)
+
+        // ================= RESTORE PHARMACY =================
+        public async Task<bool> RestorePharmacyAsync(
+            int pharmacyId,
+            CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
 
             if (pharmacy == null)
                 throw new KeyNotFoundException("Pharmacy not found.");
 
-            // لو مش محذوفة أصلاً
             if (!pharmacy.IsDeleted)
                 throw new InvalidOperationException("Pharmacy is already active.");
 
-            // 🔥 Restore
             pharmacy.IsDeleted = false;
 
             await _unitOfWork.SaveAsync(cancellationToken);
 
             return true;
+        }
+
+        // ================= HELPER: GENERATE STRONG PASSWORD =================
+        private static string GenerateStrongPassword()
+        {
+            return "Ph@" + Guid.NewGuid().ToString("N")[..8] + "1!";
         }
     }
 }

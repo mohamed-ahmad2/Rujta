@@ -1,8 +1,6 @@
-﻿using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces;
-using Rujta.Application.Interfaces.InterfaceServices;
+﻿using Rujta.Application.DTOs.CustomerDtos;
+using Rujta.Application.DTOs.OrderDto;
 using Rujta.Application.Interfaces.InterfaceServices.IOrder;
-using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Services
 {
