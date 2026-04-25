@@ -32,9 +32,24 @@ const NavbarDashbord = ({ sidebarOpen, setSidebarOpen }) => {
       title: "Settings",
       subtitle: "Dashboard preferences",
     },
+
     "/dashboard/sales": { title: "Sales", subtitle: "Your sales overview" },
     "/dashboard/logs": { title: "Logs", subtitle: "Staff activity logs" },
     "/dashboard/ads": { title: "Ads", subtitle: "Manage your ads" },
+
+     "/dashboard/subscription": {
+      title: "Subscription",
+      subtitle: "Manage your Subscription ",
+      status: "Active",
+      color: "bg-indigo-100 text-indigo-700",
+    },
+    "/dashboard/discounts": {
+      title: "Discounts",
+      subtitle: "Manage your discounts ",
+      status: "Active",
+      color: "bg-indigo-100 text-indigo-700",
+    },
+
   };
 
   const current = pages[location.pathname] || {
