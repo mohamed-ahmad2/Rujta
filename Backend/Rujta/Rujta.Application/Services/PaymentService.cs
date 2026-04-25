@@ -15,11 +15,11 @@ namespace Rujta.Infrastructure.Services
     public class PaymentService : IPaymentService
     {
         private readonly IPaymentRepository _paymentRepository;
-        // to activate on success
-        private readonly IAdRepository _adRepository;                     // to activate on success
+        private readonly IAdRepository _adRepository;
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
 
+        private string BaseUrl => _configuration["Paymob:BaseUrl"]!;
         private string ApiKey => _configuration["Paymob:ApiKey"]!;
         private int IntegrationId => int.Parse(_configuration["Paymob:IntegrationId"]!);
         private int IframeId => int.Parse(_configuration["Paymob:IframeId"]!);
@@ -27,13 +27,11 @@ namespace Rujta.Infrastructure.Services
 
         public PaymentService(
             IPaymentRepository paymentRepository,
-          
             IAdRepository adRepository,
             HttpClient httpClient,
             IConfiguration configuration)
         {
             _paymentRepository = paymentRepository;
-            
             _adRepository = adRepository;
             _httpClient = httpClient;
             _configuration = configuration;
@@ -73,7 +71,7 @@ namespace Rujta.Infrastructure.Services
             {
                 InternalPaymentId = payment.Id,
                 PaymentToken = paymentKey,
-                IframeUrl = $"https://accept.paymob.com/api/acceptance/iframes/{IframeId}?payment_token={paymentKey}",
+                IframeUrl = $"{BaseUrl}/api/acceptance/iframes/{IframeId}?payment_token={paymentKey}",
                 PaymobOrderId = paymobOrderId
             };
         }
@@ -97,7 +95,6 @@ namespace Rujta.Infrastructure.Services
 
             await _paymentRepository.UpdateAsync(payment, cancellationToken);
 
-            // Post-payment activation
             if (payment.Status == PaymentStatus.Success)
                 await HandlePostPaymentAsync(payment, cancellationToken);
 
@@ -124,8 +121,6 @@ namespace Rujta.Infrastructure.Services
         {
             switch (payment.Type)
             {
-                
-
                 case PaymentType.Ad when payment.AdId.HasValue:
                     await _adRepository.SetStatusAsync(payment.AdId.Value, true, cancellationToken);
                     break;
@@ -167,7 +162,7 @@ namespace Rujta.Infrastructure.Services
         private async Task<string> GetAuthTokenAsync()
         {
             var response = await _httpClient.PostAsJsonAsync(
-                "https://accept.paymob.com/api/auth/tokens",
+                $"{BaseUrl}/api/auth/tokens",
                 new { api_key = ApiKey });
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -177,7 +172,7 @@ namespace Rujta.Infrastructure.Services
         private async Task<string> RegisterOrderAsync(string authToken, decimal amountCents, string currency)
         {
             var response = await _httpClient.PostAsJsonAsync(
-                "https://accept.paymob.com/api/ecommerce/orders",
+                $"{BaseUrl}/api/ecommerce/orders",
                 new
                 {
                     auth_token = authToken,
@@ -197,7 +192,7 @@ namespace Rujta.Infrastructure.Services
             PaymobBillingDataDto billing)
         {
             var response = await _httpClient.PostAsJsonAsync(
-                "https://accept.paymob.com/api/acceptance/payment_keys",
+                $"{BaseUrl}/api/acceptance/payment_keys",
                 new
                 {
                     auth_token = authToken,
@@ -247,9 +242,11 @@ namespace Rujta.Infrastructure.Services
                 obj.Success.ToString().ToLower()
             );
 
-            using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(HmacSecret));
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(HmacSecret));
             var computed = Convert.ToHexString(
                 hmac.ComputeHash(Encoding.UTF8.GetBytes(data))).ToLower();
+
+            
 
             return computed == receivedHmac.ToLower();
         }

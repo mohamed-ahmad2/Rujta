@@ -1,4 +1,4 @@
-// src/features/prescription/ScanPrescription.jsx
+
 import { useState, useEffect } from "react";
 import { IoCameraOutline } from "react-icons/io5";
 import { FiUploadCloud } from "react-icons/fi";
@@ -12,7 +12,7 @@ const DEFAULT_IMAGE = "https://via.placeholder.com/300x200?text=No+Image";
 function normalizeResult(result) {
   if (!result) return null;
 
-  // Shape 1: { availableMedicines, unavailableMedicines }  ← most likely from Ok(result)
+  // Shape 1: { availableMedicines, unavailableMedicines }
   if (Array.isArray(result.availableMedicines)) {
     return {
       availableMedicines: result.availableMedicines,
@@ -36,9 +36,15 @@ function normalizeResult(result) {
     };
   }
 
-  // Unknown shape — log and return empty so UI doesn't crash
   console.warn("⚠️ Unknown result shape:", result);
   return { availableMedicines: [], unavailableMedicines: [] };
+}
+
+// Helper to extract the medicine name regardless of whether the item is a string or object
+function getMedName(med) {
+  if (!med) return "Unknown";
+  if (typeof med === "string") return med;
+  return med.name || med.medicineName || med.title || JSON.stringify(med);
 }
 
 export default function ScanPrescription({ cart, setCart }) {
@@ -46,13 +52,20 @@ export default function ScanPrescription({ cart, setCart }) {
   const [preview, setPreview] = useState(null);
   const [addedIds, setAddedIds] = useState({});
   const [expanded, setExpanded] = useState({});
-  const [showUnavailable, setShowUnavailable] = useState(true);
+  const [showUnavailable, setShowUnavailable] = useState(false);
 
   const { result, loading, error, scan } = usePrescription();
 
   const data = normalizeResult(result);
   const availableMedicines = data?.availableMedicines ?? [];
   const unavailableMedicines = data?.unavailableMedicines ?? [];
+
+  // Show the unavailable banner whenever we get a new result that has unavailable items
+  useEffect(() => {
+    if (unavailableMedicines.length > 0) {
+      setShowUnavailable(true);
+    }
+  }, [result]); // re-trigger on every new scan result
 
   useEffect(() => {
     return () => {
@@ -69,14 +82,12 @@ export default function ScanPrescription({ cart, setCart }) {
     }
     setImage(file);
     setPreview(URL.createObjectURL(file));
-    setShowUnavailable(true);
   };
 
   const removeImage = () => {
     if (preview) URL.revokeObjectURL(preview);
     setImage(null);
     setPreview(null);
-    setShowUnavailable(true);
   };
 
   const handleUpload = async () => {
@@ -84,7 +95,7 @@ export default function ScanPrescription({ cart, setCart }) {
       alert("Please select a prescription image first");
       return;
     }
-    setShowUnavailable(true);
+    setShowUnavailable(false); // reset while scanning
     await scan(image);
   };
 
@@ -194,76 +205,128 @@ export default function ScanPrescription({ cart, setCart }) {
       {data && (
         <div className="w-full max-w-7xl">
 
-          {/* ── Unavailable Medicines — Alert Note ── */}
+          {/* ── Unavailable Medicines Modal/Banner ── */}
           <AnimatePresence>
             {showUnavailable && unavailableMedicines.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: -12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12, height: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mx-auto mb-8 w-full max-w-3xl overflow-hidden rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 shadow-sm sm:px-6 sm:py-5"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100">
-                      <svg
-                        className="h-4 w-4 text-amber-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2.2}
+              <>
+                {/* Dark overlay */}
+                <motion.div
+                  key="overlay"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+                  onClick={() => setShowUnavailable(false)}
+                />
+
+                {/* Modal */}
+                <motion.div
+                  key="modal"
+                  initial={{ opacity: 0, scale: 0.9, y: 40 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 40 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                >
+                  <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl overflow-hidden">
+                    {/* Red header strip */}
+                    <div className="bg-red-50 px-6 pt-6 pb-5 border-b border-red-100">
+                      <div className="flex items-start gap-4">
+                        {/* Warning icon */}
+                        <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-red-100">
+                          <svg
+                            className="w-6 h-6 text-red-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2.2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+                            />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-red-800">
+                            {unavailableMedicines.length} Medicine{unavailableMedicines.length > 1 ? "s" : ""} Not Available
+                          </h3>
+                          <p className="mt-0.5 text-sm text-red-500">
+                            The following items from your prescription are currently out of stock.
+                          </p>
+                        </div>
+                        {/* Close button */}
+                        <button
+                          onClick={() => setShowUnavailable(false)}
+                          className="flex-shrink-0 p-1.5 rounded-xl text-red-400 hover:bg-red-100 hover:text-red-600 transition"
+                          aria-label="Dismiss"
+                        >
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Medicine list */}
+                    <div className="px-6 py-5">
+                      <ul className="space-y-2.5">
+                        {unavailableMedicines.map((med, idx) => (
+                          <li
+                            key={idx}
+                            className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 border border-gray-100"
+                          >
+                            {/* Red dot */}
+                            <span className="flex-shrink-0 h-2.5 w-2.5 rounded-full bg-red-400" />
+                            <span className="flex-1 text-sm font-medium text-gray-700">
+                              {getMedName(med)}
+                            </span>
+                            <span className="text-xs font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
+                              Out of Stock
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <p className="mt-4 text-xs text-center text-gray-400">
+                        Please contact your pharmacist or check back later for availability.
+                      </p>
+
+                      <button
+                        onClick={() => setShowUnavailable(false)}
+                        className="mt-4 w-full rounded-xl bg-gray-900 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700 active:scale-95"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-                        />
-                      </svg>
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-amber-800 sm:text-base">
-                        {unavailableMedicines.length} medicine
-                        {unavailableMedicines.length > 1 ? "s" : ""} not available
-                      </p>
-                      <p className="text-xs text-amber-600 sm:text-sm">
-                        These items were found on your prescription but are currently out of stock.
-                      </p>
+                        Got it
+                      </button>
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => setShowUnavailable(false)}
-                    className="flex-shrink-0 rounded-lg p-1 text-amber-500 transition hover:bg-amber-100 hover:text-amber-700"
-                    aria-label="Dismiss"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {unavailableMedicines.map((med, idx) => {
-                    const name = typeof med === "string" ? med : med.name;
-                    return (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-medium text-amber-700 sm:text-sm"
-                      >
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                        {name}
-                      </span>
-                    );
-                  })}
-                </div>
-
-                <p className="mt-3 text-xs text-amber-500">
-                  Contact your pharmacist or check back later for availability.
-                </p>
-              </motion.div>
+                </motion.div>
+              </>
             )}
           </AnimatePresence>
+
+          {/* ── Inline collapsed badge (after modal is dismissed) ── */}
+          {!showUnavailable && unavailableMedicines.length > 0 && (
+            <div className="mx-auto mb-6 w-full max-w-3xl">
+              <button
+                onClick={() => setShowUnavailable(true)}
+                className="flex w-full items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-left transition hover:bg-red-100"
+              >
+                <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-red-100">
+                  <svg className="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                  </svg>
+                </span>
+                <span className="flex-1 text-sm font-semibold text-red-700">
+                  {unavailableMedicines.length} medicine{unavailableMedicines.length > 1 ? "s" : ""} not available — tap to view
+                </span>
+                <svg className="h-4 w-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          )}
 
           {/* ── Available Medicines Grid ── */}
           {availableMedicines.length > 0 && (
@@ -350,12 +413,7 @@ export default function ScanPrescription({ cart, setCart }) {
                           <button
                             onClick={() => setExpanded((p) => ({ ...p, [idx]: !p[idx] }))}
                             className="mt-1 text-left text-[13px] font-semibold hover:underline"
-                            style={{
-                              color: "#5a8a1f",
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                            }}
+                            style={{ color: "#5a8a1f", background: "none", border: "none", cursor: "pointer" }}
                           >
                             {isExpanded ? "↑ Show Less" : "↓ Show More"}
                           </button>
@@ -384,14 +442,7 @@ export default function ScanPrescription({ cart, setCart }) {
                               "✓ Added"
                             ) : (
                               <>
-                                <svg
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2.5"
-                                >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                   <path d="M12 5v14M5 12h14" />
                                 </svg>
                                 Add
