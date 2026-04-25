@@ -1,12 +1,10 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using Rujta.Application.DTOs.Payment;
-using Rujta.Application.Interfaces.InterfaceServices;
+using Rujta.Application.DTOs.PaymentDto;
 using Rujta.Domain.Entities;
 using Rujta.Domain.Enums;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
-using System.Security.Claims;
 
 namespace Rujta.Api.Controllers
 {
