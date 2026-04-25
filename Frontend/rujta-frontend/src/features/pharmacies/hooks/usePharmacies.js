@@ -15,8 +15,6 @@ export const usePharmacies = () => {
   const [medicines, setMedicines] = useState([]);
   const [stock, setStock] = useState(null);
 
-  /* ================== 1) TOP PHARMACIES (بتاعك زي ما هو) ================== */
-
   const fetchPharmacies = async (cartItems, addressId, topK = 5) => {
     setLoading(true);
     setError(null);
@@ -25,6 +23,7 @@ export const usePharmacies = () => {
       const dtoItems = cartItems.map((item) => ({
         medicineId: item.id,
         quantity: item.quantity,
+        pharmacyId: item.pharmacyId ?? null,
       }));
 
       const res = await getTopPharmacies(dtoItems, addressId, topK);
@@ -42,8 +41,6 @@ export const usePharmacies = () => {
     }
   };
 
-  /* ================== 2) GET ALL PHARMACIES ================== */
-
   const fetchAllPharmacies = async () => {
     setLoading(true);
     setError(null);
@@ -58,27 +55,22 @@ export const usePharmacies = () => {
     }
   };
 
-  /* ================== 3) GET MEDICINES OF PHARMACY ================== */
 
   const fetchPharmacyMedicines = async (pharmacyId) => {
     setLoading(true);
     try {
       const res = await getPharmacyMedicines(pharmacyId);
-      setMedicines(res.data); // array of medicine IDs
+      setMedicines(res.data);
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================== 4) GET STOCK OF MEDICINE ================== */
 
   const fetchMedicineStock = async (pharmacyId, medicineId) => {
     setLoading(true);
     try {
-      const res = await getMedicineStockInPharmacy(
-        pharmacyId,
-        medicineId
-      );
+      const res = await getMedicineStockInPharmacy(pharmacyId, medicineId);
       setStock(res.data.stock);
     } finally {
       setLoading(false);
@@ -92,10 +84,9 @@ export const usePharmacies = () => {
     loading,
     error,
 
-    // functions
-    fetchPharmacies,        // بتاع الأولوية
-    fetchAllPharmacies,     // كل الصيدليات
-    fetchPharmacyMedicines, // أدوية صيدلية
-    fetchMedicineStock,     // stock دواء
+    fetchPharmacies,
+    fetchAllPharmacies,
+    fetchPharmacyMedicines,
+    fetchMedicineStock,
   };
 };

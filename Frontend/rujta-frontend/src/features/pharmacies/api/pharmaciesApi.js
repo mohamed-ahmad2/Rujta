@@ -22,17 +22,14 @@ export const getTopPharmacies = (items, addressId, topK = 15) => {
 
 /* ===================== GENERAL PHARMACIES ===================== */
 
-// جلب كل الصيدليات
 export const getAllPharmacies = () => {
   return apiClient.get("/pharmacies");
 };
 
-// جلب كل أدوية صيدلية (IDs فقط)
 export const getPharmacyMedicines = (pharmacyId) => {
   return apiClient.get(`/pharmacies/${pharmacyId}/medicines`);
 };
 
-// جلب المخزون لدواء معين داخل صيدلية
 export const getMedicineStockInPharmacy = (pharmacyId, medicineId) => {
   return apiClient.get(
     `/pharmacies/${pharmacyId}/medicine/${medicineId}/stock`

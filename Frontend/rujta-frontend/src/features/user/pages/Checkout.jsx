@@ -151,7 +151,6 @@ const MedicineChip = ({ medicine, checked, onChange, disabled }) => {
       >
         {medicine.medicineName}
       </span>
-      {/* ✅ need فقط */}
       <span
         className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold ${
           enough
@@ -330,11 +329,7 @@ const Checkout = () => {
     setIsConfirmingAddress(true);
     try {
       if (cart.length > 0) {
-        const dtoItems = cart.map((item) => ({
-          id: item.id,
-          quantity: item.quantity,
-        }));
-        await fetchPharmacies(dtoItems, selectedAddressId, pharmaciesRange);
+        await fetchPharmacies(cart, selectedAddressId, pharmaciesRange);
       }
       const fullAddress = await fetchById(selectedAddressId);
       if (fullAddress?.latitude && fullAddress?.longitude) {
@@ -356,11 +351,7 @@ const Checkout = () => {
     const newRange = pharmaciesRange + 5;
     setPharmaciesRange(newRange);
     if (!selectedAddressId || cart.length === 0) return;
-    const dtoItems = cart.map((item) => ({
-      id: item.id,
-      quantity: item.quantity,
-    }));
-    await fetchPharmacies(dtoItems, selectedAddressId, newRange);
+    await fetchPharmacies(cart, selectedAddressId, newRange);
   };
 
   const handleTogglePharmacy = (pharmacyId) => {

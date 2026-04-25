@@ -1,14 +1,10 @@
 ﻿using Rujta.Application.DTOs.OrderDto;
-using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Services.OrderS
 {
     public partial class OrderService
     {
-        public async Task<OrderDto> CreateOrderAsync(
-            CreateOrderDto createOrderDto,
-            Guid userId,
-            CancellationToken cancellationToken = default)
+        public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto,Guid userId,CancellationToken cancellationToken = default)
         {
             try
             {
@@ -72,7 +68,6 @@ namespace Rujta.Application.Services.OrderS
             }
         }
 
-        // ── Private Helpers ────────────────────────────────────────────────
         private static string BuildAddressText(Address address)
         {
             string street = address.Street ?? "";
