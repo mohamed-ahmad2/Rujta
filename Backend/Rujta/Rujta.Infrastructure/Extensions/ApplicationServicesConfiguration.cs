@@ -52,7 +52,8 @@ namespace Rujta.Infrastructure.Extensions
             services.AddHttpClient<IGeocodingService, GeocodingService>();
             services.AddScoped<IPharmacistManagementService, PharmacistManagementService>();
             services.AddSingleton<IMedicineAutocompleteIndex, MedicineAutocompleteIndex>();
-            //   services.AddHttpClient<IPaymobService, PaymobService>();
+            services.AddHttpClient<IPaymentService, PaymentService>();
+            services.AddScoped<IPaymentRepository, PaymentRepository>();
             services.AddScoped<IPrescriptionService, PrescriptionService>();
             services.AddSingleton<IUserPresenceService, InMemoryUserPresenceService>();
             services.AddScoped<IAdService, AdService>();

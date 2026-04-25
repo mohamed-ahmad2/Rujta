@@ -1,7 +1,8 @@
-﻿/*
-using Microsoft.AspNetCore.RateLimiting;
+﻿using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Rujta.Application.DTOs.Payment;
 using Rujta.Application.Interfaces.InterfaceServices;
+using Rujta.Domain.Entities;
 using Rujta.Domain.Enums;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
@@ -31,29 +32,42 @@ namespace Rujta.Api.Controllers
 
         private string GetUser() => User.Identity?.Name ?? LogConstants.UnknownUser;
 
-        /// <summary>
-        /// Initiate a payment for an Order, Subscription, or Ad.
-        /// Set Type = 1 (Order), 2 (Subscription), or 3 (Ad)
-        /// and fill only the matching ID field.
-        /// </summary>
+     
+        private async Task<(ApplicationUser appUser, int pharmacyId)?> ResolvePharmacyUserAsync()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId)) return null;
+
+            // Must Include(DomainPerson) — FindByIdAsync does NOT load navigation properties
+            var appUser = await _userManager.Users
+                .Include(u => u.DomainPerson)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            // DomainPerson is stored as Person but the actual row is an Employee (TPH/TPT)
+            if (appUser?.DomainPerson is not Employee employee) return null;
+
+            // PharmacyId is int? on Employee — reject if unassigned
+            if (employee.PharmacyId is not int pharmacyId) return null;
+
+            return (appUser, pharmacyId);
+        }
+
+       
         [Authorize(Roles = nameof(UserRole.PharmacyAdmin))]
         [HttpPost("initiate")]
         public async Task<IActionResult> Initiate(
             [FromBody] InitiatePaymentDto dto,
             CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!Guid.TryParse(userIdClaim, out var userId))
-                return Unauthorized(ApiMessages.UnauthorizedAccess);
+            var resolved = await ResolvePharmacyUserAsync();
+            if (resolved == null) return Unauthorized(ApiMessages.UnauthorizedAccess);
 
-            var appUser = await _userManager.FindByIdAsync(userId.ToString());
-            if (appUser == null)
-                return Unauthorized(ApiMessages.UnauthorizedAccess);
+            var (appUser, pharmacyId) = resolved.Value;
 
             try
             {
                 var result = await _paymentService.InitiateAsync(
-                    userId, appUser.id, dto, cancellationToken);
+                    appUser.Id, pharmacyId, dto, cancellationToken);
 
                 await _logService.AddLogAsync(GetUser(),
                     $"Initiated {dto.Type} payment — Ref: Order={dto.OrderId}, Sub={dto.SubscriptionId}, Ad={dto.AdId}");
@@ -65,11 +79,7 @@ namespace Rujta.Api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-
-        /// <summary>
-        /// Paymob posts here after payment completes.
-        /// Must be [AllowAnonymous] — Paymob has no auth token.
-        /// </summary>
+ 
         [AllowAnonymous]
         [HttpPost("callback")]
         public async Task<IActionResult> Callback(
@@ -89,10 +99,12 @@ namespace Rujta.Api.Controllers
         [HttpGet("my")]
         public async Task<IActionResult> GetMyPayments(CancellationToken cancellationToken)
         {
-            var appUser = await GetCurrentPharmacyUserAsync();
-            if (appUser == null) return Unauthorized(ApiMessages.UnauthorizedAccess);
+            var resolved = await ResolvePharmacyUserAsync();
+            if (resolved == null) return Unauthorized(ApiMessages.UnauthorizedAccess);
 
-            var payments = await _paymentService.GetPharmacyPaymentsAsync(appUser.PharmacyId, cancellationToken);
+            var payments = await _paymentService.GetPharmacyPaymentsAsync(
+                resolved.Value.pharmacyId, cancellationToken);
+
             await _logService.AddLogAsync(GetUser(), "Fetched pharmacy payments");
             return Ok(payments);
         }
@@ -107,7 +119,7 @@ namespace Rujta.Api.Controllers
         public async Task<IActionResult> GetSubscriptionPayments(CancellationToken cancellationToken)
             => await GetByType(PaymentType.Subscription, cancellationToken);
 
-        [Authorize(Roles = nameof(UserRole.Pharmacy))]
+        [Authorize(Roles = nameof(UserRole.PharmacyAdmin))]
         [HttpGet("my/ads")]
         public async Task<IActionResult> GetAdPayments(CancellationToken cancellationToken)
             => await GetByType(PaymentType.Ad, cancellationToken);
@@ -126,21 +138,14 @@ namespace Rujta.Api.Controllers
 
         private async Task<IActionResult> GetByType(PaymentType type, CancellationToken cancellationToken)
         {
-            var appUser = await GetCurrentPharmacyUserAsync();
-            if (appUser == null) return Unauthorized(ApiMessages.UnauthorizedAccess);
+            var resolved = await ResolvePharmacyUserAsync();
+            if (resolved == null) return Unauthorized(ApiMessages.UnauthorizedAccess);
 
             var payments = await _paymentService.GetPharmacyPaymentsByTypeAsync(
-                appUser.PharmacyId, type, cancellationToken);
+                resolved.Value.pharmacyId, type, cancellationToken);
 
             await _logService.AddLogAsync(GetUser(), $"Fetched {type} payments");
             return Ok(payments);
         }
-
-        private async Task<ApplicationUser?> GetCurrentPharmacyUserAsync()
-        {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!Guid.TryParse(userIdClaim, out var userId)) return null;
-            return await _userManager.FindByIdAsync(userId.ToString());
-        }
     }
-}*/
+}
