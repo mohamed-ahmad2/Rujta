@@ -32,6 +32,7 @@ namespace Rujta.API.Controllers
             [FromBody] ItemDto order,
             [FromQuery] int addressId,
             [FromQuery] int topK = 5,
+            [FromQuery] int? maxShortageRange = null,
             CancellationToken cancellationToken = default)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -51,6 +52,8 @@ namespace Rujta.API.Controllers
             if (Math.Abs(address.Latitude) < CoordinateTolerance ||
                 Math.Abs(address.Longitude) < CoordinateTolerance)
                 return BadRequest(ApiMessages.UserLocationNotSet);
+
+            order.MaxShortageRange = maxShortageRange;
 
             var pharmacies = await _cartService.GetTopPharmaciesForCartAsync(
                 order,

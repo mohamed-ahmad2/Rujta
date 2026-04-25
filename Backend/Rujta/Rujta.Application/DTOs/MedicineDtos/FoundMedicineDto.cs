@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Rujta.Application.DTOs.MedicineDtos
+﻿namespace Rujta.Application.DTOs.MedicineDtos
 {
     public class FoundMedicineDto
     {
@@ -13,8 +7,8 @@ namespace Rujta.Application.DTOs.MedicineDtos
         public int RequestedQuantity { get; set; }
         public int AvailableQuantity { get; set; }
 
-        // Alert لو الكمية غير كافية
-        public bool IsQuantityEnough => AvailableQuantity >= RequestedQuantity;
+        public bool IsFullyAvailable => AvailableQuantity >= RequestedQuantity;
+
+        public int ShortageQuantity => Math.Max(0, RequestedQuantity - AvailableQuantity);
     }
 }
-
