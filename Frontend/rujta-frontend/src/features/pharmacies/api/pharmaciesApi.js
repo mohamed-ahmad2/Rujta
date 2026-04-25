@@ -1,23 +1,21 @@
 // src/features/pharmacies/api/pharmaciesApi.js
 import apiClient from "../../../shared/api/apiClient";
 
-/* ===================== PRIORITY PHARMACIES ===================== */
-
-/**
- * Get top pharmacies for cart using selected address
- * @param {Array} items - Cart items [{ medicineId, quantity }]
- * @param {number} addressId - Selected address ID
- * @param {number} topK - Number of pharmacies
- */
-export const getTopPharmacies = (items, addressId, topK = 15) => {
+export const getTopPharmacies = (
+  items,
+  addressId,
+  topK = 15,
+  maxShortageRange = null,
+) => {
   const payload = { items };
 
-  return apiClient.post(`/PriorityPharmacies/top-k`, payload, {
-    params: {
-      addressId,
-      topK,
-    },
-  });
+  const params = { addressId, topK };
+
+  if (maxShortageRange !== null && maxShortageRange !== undefined) {
+    params.maxShortageRange = maxShortageRange;
+  }
+
+  return apiClient.post(`/PriorityPharmacies/top-k`, payload, { params });
 };
 
 /* ===================== GENERAL PHARMACIES ===================== */
@@ -32,6 +30,6 @@ export const getPharmacyMedicines = (pharmacyId) => {
 
 export const getMedicineStockInPharmacy = (pharmacyId, medicineId) => {
   return apiClient.get(
-    `/pharmacies/${pharmacyId}/medicine/${medicineId}/stock`
+    `/pharmacies/${pharmacyId}/medicine/${medicineId}/stock`,
   );
 };

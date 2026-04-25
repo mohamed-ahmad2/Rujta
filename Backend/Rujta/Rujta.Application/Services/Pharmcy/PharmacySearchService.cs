@@ -37,64 +37,120 @@ namespace Rujta.Application.Services.Pharmcy
             if (!IsValidOrder(order))
                 return new();
 
-            var medicineIds = order.Items.Select(i => i.MedicineId).Distinct().ToList();
-            var medicines = await _medicineRepo.FindAsync(m => medicineIds.Contains(m.Id));
-            var medicineNames = medicines.ToDictionary(m => m.Id, m => m.Name ?? "Unknown");
+            var medicineNames = await GetMedicineNamesAsync(order);
 
             var specificItems = order.Items.Where(i => i.PharmacyId.HasValue).ToList();
             var generalItems = order.Items.Where(i => !i.PharmacyId.HasValue).ToList();
+
+            var (entryMap, itemsMap) = await BuildPharmacyMapsAsync(
+                specificItems, generalItems, userLat, userLng, topK);
+
+            var results = await BuildMatchResultsAsync(
+                entryMap, itemsMap, medicineNames, order.MaxShortageRange);
+
+            var final = RankResults(results, specificItems.Any(), generalItems.Any(), topK);
+
+            PharmacySearchLogger.LogFinalResults(_logger, final.Count);
+
+            return final;
+        }
+
+        private async Task<Dictionary<int, string>> GetMedicineNamesAsync(ItemDto order)
+        {
+            var medicineIds = order.Items.Select(i => i.MedicineId).Distinct().ToList();
+            var medicines = await _medicineRepo.FindAsync(m => medicineIds.Contains(m.Id));
+            return medicines.ToDictionary(m => m.Id, m => m.Name ?? "Unknown");
+        }
+
+        private async Task<(
+            Dictionary<int, (Pharmacy pharmacy, double distanceMeters, double durationMinutes)> entryMap,
+            Dictionary<int, List<CartItemDto>> itemsMap)>
+            BuildPharmacyMapsAsync(
+                List<CartItemDto> specificItems,
+                List<CartItemDto> generalItems,
+                double userLat, double userLng, int topK)
+        {
+            var entryMap = new Dictionary<int, (Pharmacy, double, double)>();
+            var itemsMap = new Dictionary<int, List<CartItemDto>>();
 
             var specificPharmacyIds = specificItems
                 .Select(i => i.PharmacyId!.Value)
                 .Distinct()
                 .ToList();
 
-            bool hasSpecific = specificPharmacyIds.Any();
-            bool hasGeneral = generalItems.Any();
+            if (specificPharmacyIds.Any())
+                await PopulateSpecificPharmaciesAsync(
+                    specificItems, specificPharmacyIds, userLat, userLng, entryMap, itemsMap);
 
-            var entryMap = new Dictionary<int, (Pharmacy pharmacy, double distanceMeters, double durationMinutes)>();
-            var itemsMap = new Dictionary<int, List<CartItemDto>>();
+            if (generalItems.Any())
+                await PopulateGeneralPharmaciesAsync(
+                    generalItems, specificPharmacyIds, userLat, userLng, topK, entryMap, itemsMap);
 
-            if (hasSpecific)
+            return (entryMap, itemsMap);
+        }
+
+        private async Task PopulateSpecificPharmaciesAsync(
+            List<CartItemDto> specificItems,
+            List<int> specificPharmacyIds,
+            double userLat, double userLng,
+            Dictionary<int, (Pharmacy, double, double)> entryMap,
+            Dictionary<int, List<CartItemDto>> itemsMap)
+        {
+            var entries = await GetSpecificPharmaciesWithDistance(
+                specificPharmacyIds, userLat, userLng);
+
+            foreach (var entry in entries)
             {
-                var specificEntries = await GetSpecificPharmaciesWithDistance(
-                    specificPharmacyIds, userLat, userLng);
+                entryMap[entry.pharmacy.Id] = entry;
+                itemsMap[entry.pharmacy.Id] = specificItems
+                    .Where(i => i.PharmacyId == entry.pharmacy.Id)
+                    .ToList();
+            }
+        }
 
-                foreach (var entry in specificEntries)
+        private async Task PopulateGeneralPharmaciesAsync(
+            List<CartItemDto> generalItems,
+            List<int> specificPharmacyIds,
+            double userLat, double userLng, int topK,
+            Dictionary<int, (Pharmacy, double, double)> entryMap,
+            Dictionary<int, List<CartItemDto>> itemsMap)
+        {
+            var nearestEntries = await GetNearestPharmaciesSafe(userLat, userLng, topK);
+
+            foreach (var entry in nearestEntries)
+            {
+                if (!entryMap.ContainsKey(entry.pharmacy.Id))
                 {
                     entryMap[entry.pharmacy.Id] = entry;
-
-                    itemsMap[entry.pharmacy.Id] = specificItems
-                        .Where(i => i.PharmacyId == entry.pharmacy.Id)
-                        .ToList();
+                    itemsMap[entry.pharmacy.Id] = new List<CartItemDto>();
                 }
+
+                itemsMap[entry.pharmacy.Id].AddRange(generalItems);
             }
 
-            if (hasGeneral)
+            AddGeneralItemsToSpecificPharmacies(specificPharmacyIds, generalItems, itemsMap);
+        }
+
+        private static void AddGeneralItemsToSpecificPharmacies(
+            List<int> specificPharmacyIds,
+            List<CartItemDto> generalItems,
+            Dictionary<int, List<CartItemDto>> itemsMap)
+        {
+            foreach (var id in specificPharmacyIds)
             {
-                var nearestEntries = await GetNearestPharmaciesSafe(userLat, userLng, topK);
+                if (!itemsMap.ContainsKey(id)) continue;
 
-                foreach (var entry in nearestEntries)
-                {
-                    if (!entryMap.ContainsKey(entry.pharmacy.Id))
-                    {
-                        entryMap[entry.pharmacy.Id] = entry;
-                        itemsMap[entry.pharmacy.Id] = new List<CartItemDto>();
-                    }
-
-                    itemsMap[entry.pharmacy.Id].AddRange(generalItems);
-                }
-
-                foreach (var id in specificPharmacyIds)
-                {
-                    if (!itemsMap.ContainsKey(id)) continue;
-
-                    bool alreadyHasGeneralItems = itemsMap[id].Any(i => !i.PharmacyId.HasValue);
-                    if (!alreadyHasGeneralItems)
-                        itemsMap[id].AddRange(generalItems);
-                }
+                bool alreadyHasGeneralItems = itemsMap[id].Any(i => !i.PharmacyId.HasValue);
+                if (!alreadyHasGeneralItems)
+                    itemsMap[id].AddRange(generalItems);
             }
-
+        }
+        private async Task<List<PharmacyMatchResultDto>> BuildMatchResultsAsync(
+            Dictionary<int, (Pharmacy pharmacy, double distanceMeters, double durationMinutes)> entryMap,
+            Dictionary<int, List<CartItemDto>> itemsMap,
+            Dictionary<int, string> medicineNames,
+            int? maxShortageRange)
+        {
             var results = new List<PharmacyMatchResultDto>();
 
             foreach (var (pharmacyId, entry) in entryMap)
@@ -105,32 +161,39 @@ namespace Rujta.Application.Services.Pharmcy
                 var pharmacyOrder = new ItemDto { Items = items };
                 var result = await ProcessPharmacyAsync(entry, pharmacyOrder, medicineNames);
 
-                if (result.MatchedDrugs > 0)
-                    results.Add(result);
+                if (result.MatchedDrugs == 0 && result.PartialMatches == 0)
+                    continue;
+
+                if (maxShortageRange.HasValue && result.TotalShortage > maxShortageRange.Value)
+                    continue;
+
+                results.Add(result);
             }
 
-            List<PharmacyMatchResultDto> final;
-
-            if (hasSpecific && !hasGeneral)
-            {
-                final = results
-                    .OrderByDescending(r => r.MatchedDrugs)
-                    .ToList();
-            }
-            else
-            {
-                final = results
-                    .OrderByDescending(r => r.MatchedDrugs)
-                    .ThenBy(r => r.DistanceKm)
-                    .Take(topK)
-                    .ToList();
-            }
-
-            PharmacySearchLogger.LogFinalResults(_logger, final.Count);
-
-            return final;
+            return results;
         }
 
+        private static List<PharmacyMatchResultDto> RankResults(
+            List<PharmacyMatchResultDto> results,
+            bool hasSpecific,
+            bool hasGeneral,
+            int topK)
+        {
+            if (hasSpecific && !hasGeneral)
+                return results
+                    .OrderByDescending(r => r.MatchedDrugs)
+                    .ThenByDescending(r => r.PartialMatches)
+                    .ThenBy(r => r.TotalShortage)
+                    .ToList();
+
+            return results
+                .OrderByDescending(r => r.MatchedDrugs)
+                .ThenByDescending(r => r.PartialMatches)
+                .ThenBy(r => r.TotalShortage)
+                .ThenBy(r => r.DistanceKm)
+                .Take(topK)
+                .ToList();
+        }
 
         private bool IsValidOrder(ItemDto order)
         {
@@ -197,6 +260,9 @@ namespace Rujta.Application.Services.Pharmcy
             PharmacySearchLogger.LogPharmacyProcessing(_logger, pharmacy.Id, pharmacy.Name, distanceKm);
 
             int matched = 0;
+            int partialMatches = 0;
+            int totalShortage = 0;
+
             var found = new List<FoundMedicineDto>();
             var notFound = new List<NotFoundMedicineDto>();
 
@@ -209,15 +275,31 @@ namespace Rujta.Application.Services.Pharmcy
 
                 if (stock > 0)
                 {
-                    if (stock >= item.Quantity) matched++;
-
-                    found.Add(new FoundMedicineDto
+                    var foundItem = new FoundMedicineDto
                     {
                         MedicineId = item.MedicineId,
                         MedicineName = name,
                         RequestedQuantity = item.Quantity,
                         AvailableQuantity = stock
-                    });
+                    };
+
+                    found.Add(foundItem);
+
+                    if (foundItem.IsFullyAvailable)
+                    {
+                        matched++;
+                    }
+                    else
+                    {
+                        partialMatches++;
+                        totalShortage += foundItem.ShortageQuantity;
+
+                        _logger.LogInformation(
+                            "Pharmacy {PharmacyId} | Medicine {MedicineId} | " +
+                            "Requested: {Requested} | Available: {Available} | Shortage: {Shortage}",
+                            pharmacy.Id, item.MedicineId,
+                            item.Quantity, stock, foundItem.ShortageQuantity);
+                    }
                 }
                 else
                 {
@@ -231,14 +313,17 @@ namespace Rujta.Application.Services.Pharmcy
             }
 
             _logger.LogInformation(
-                "Pharmacy {Id} | Distance: {Distance}km | DeliveryFee: {Fee}",
-                pharmacy.Id, distanceKm, deliveryFee);
+                "Pharmacy {Id} | Distance: {Distance}km | DeliveryFee: {Fee} | " +
+                "Matched: {Matched} | Partial: {Partial} | TotalShortage: {Shortage}",
+                pharmacy.Id, distanceKm, deliveryFee, matched, partialMatches, totalShortage);
 
             return PharmacyMatchResultBuilder.Build(new PharmacyMatchResultParams
             {
                 Pharmacy = pharmacy,
                 Order = order,
                 Matched = matched,
+                PartialMatches = partialMatches,
+                TotalShortage = totalShortage,
                 DistanceKm = distanceKm,
                 DurationMinutes = entry.durationMinutes,
                 DeliveryFee = deliveryFee,

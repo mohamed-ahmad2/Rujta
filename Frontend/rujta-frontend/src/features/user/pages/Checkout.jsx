@@ -1,3 +1,4 @@
+// src/features/pharmacies/pages/Checkout.jsx
 import React from "react";
 import clickSound from "../../../assets/audio.wav";
 import PharmacyMap from "../components/PharmacyMap";
@@ -12,14 +13,12 @@ audio.volume = 0.4;
 
 const Checkout = () => {
   const {
-    // data
     pharmacies,
     loading,
     error,
     addresses,
     addressesLoading,
     addressesError,
-    // address states
     showLocationPrompt,
     showAddressSelection,
     selectedAddressId,
@@ -29,7 +28,6 @@ const Checkout = () => {
     isConfirmingAddress,
     newAddressForm,
     setNewAddressForm,
-    // pharmacy / order states
     expandedPharmacies,
     setExpandedPharmacies,
     showPaymentModal,
@@ -40,17 +38,14 @@ const Checkout = () => {
     selectedPharmacies,
     creatingOrder,
     selectedMedicines,
-    // map states
     userLocation,
     deliveryAddressLocation,
     deliveryAddress,
     hoveredPharmacyId,
     setHoveredPharmacyId,
     routeData,
-    // toast
     toast,
     setToast,
-    // handlers
     handleSetLocation,
     handleNewAddressChange,
     handleAddNewAddress,
@@ -66,11 +61,10 @@ const Checkout = () => {
 
   return (
     <div className="flex min-h-screen w-screen items-center justify-center bg-gray-100 p-6">
-      {/* ── Toast ───────────────────────────────────────────────── */}
       <Toast toast={toast} onClose={() => setToast(null)} />
 
       <div className="flex h-[700px] w-[1150px] flex-col rounded-3xl bg-white shadow-xl lg:flex-row">
-        {/* ── LEFT: MAP ──────────────────────────────────────────── */}
+        {/* LEFT: MAP */}
         <div className="relative h-full w-full overflow-hidden lg:w-1/2">
           <div className="absolute inset-0 z-0">
             <PharmacyMap
@@ -86,7 +80,7 @@ const Checkout = () => {
           </div>
         </div>
 
-        {/* ── RIGHT: CONTENT ─────────────────────────────────────── */}
+        {/* RIGHT: CONTENT */}
         <div className="h-full w-full overflow-y-auto bg-white p-8 lg:w-1/2">
           {/* Header */}
           <div className="mb-6 flex items-center justify-between">
@@ -95,7 +89,6 @@ const Checkout = () => {
             </h1>
           </div>
 
-          {/* Location Prompt */}
           {showLocationPrompt && (
             <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
               <p className="mb-2 text-sm text-yellow-700">
@@ -111,7 +104,6 @@ const Checkout = () => {
             </div>
           )}
 
-          {/* Address Selection OR Pharmacy List */}
           {showAddressSelection ? (
             <AddressSelection
               addresses={addresses}
@@ -152,7 +144,6 @@ const Checkout = () => {
         </div>
       </div>
 
-      {/* ── Payment Modal ───────────────────────────────────────── */}
       {showPaymentModal && (
         <PaymentModal
           paymentMethod={paymentMethod}

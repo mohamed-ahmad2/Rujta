@@ -9,6 +9,11 @@ namespace Rujta.Application.Services.Builders
         public Pharmacy? Pharmacy { get; set; }
         public ItemDto? Order { get; set; }
         public int Matched { get; set; }
+
+        public int PartialMatches { get; set; }
+
+        public int TotalShortage { get; set; }
+
         public double DistanceKm { get; set; }
         public double DurationMinutes { get; set; }
         public double DeliveryFee { get; set; }
@@ -25,7 +30,6 @@ namespace Rujta.Application.Services.Builders
 
             var pharmacy = param.Pharmacy ?? throw new ArgumentNullException(nameof(param));
             var order = param.Order ?? new ItemDto();
-
             var foundList = param.Found ?? new List<FoundMedicineDto>();
             var notFoundList = param.NotFound ?? new List<NotFoundMedicineDto>();
 
@@ -38,10 +42,12 @@ namespace Rujta.Application.Services.Builders
                 ContactNumber = pharmacy.ContactNumber ?? string.Empty,
 
                 MatchedDrugs = param.Matched,
+                PartialMatches = param.PartialMatches,
+                TotalShortage = param.TotalShortage,
                 TotalRequestedDrugs = order.Items.Count,
                 MatchPercentage = order.Items.Count > 0
-                    ? Math.Round(((double)param.Matched / order.Items.Count) * 100, 1)
-                    : 0,
+                                        ? Math.Round((double)param.Matched / order.Items.Count * 100, 1)
+                                        : 0,
 
                 DistanceKm = param.DistanceKm,
                 EstimatedDurationMinutes = Math.Round(param.DurationMinutes, 1),

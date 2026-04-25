@@ -11,11 +11,15 @@ export const usePharmacies = () => {
   const [pharmacies, setPharmacies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
   const [medicines, setMedicines] = useState([]);
   const [stock, setStock] = useState(null);
 
-  const fetchPharmacies = async (cartItems, addressId, topK = 5) => {
+  const fetchPharmacies = async (
+    cartItems,
+    addressId,
+    topK = 5,
+    maxShortageRange = null,
+  ) => {
     setLoading(true);
     setError(null);
 
@@ -26,7 +30,12 @@ export const usePharmacies = () => {
         pharmacyId: item.pharmacyId ?? null,
       }));
 
-      const res = await getTopPharmacies(dtoItems, addressId, topK);
+      const res = await getTopPharmacies(
+        dtoItems,
+        addressId,
+        topK,
+        maxShortageRange,
+      );
       setPharmacies(res.data);
     } catch (err) {
       const errorMessage =
@@ -55,7 +64,6 @@ export const usePharmacies = () => {
     }
   };
 
-
   const fetchPharmacyMedicines = async (pharmacyId) => {
     setLoading(true);
     try {
@@ -65,7 +73,6 @@ export const usePharmacies = () => {
       setLoading(false);
     }
   };
-
 
   const fetchMedicineStock = async (pharmacyId, medicineId) => {
     setLoading(true);
@@ -83,7 +90,6 @@ export const usePharmacies = () => {
     stock,
     loading,
     error,
-
     fetchPharmacies,
     fetchAllPharmacies,
     fetchPharmacyMedicines,

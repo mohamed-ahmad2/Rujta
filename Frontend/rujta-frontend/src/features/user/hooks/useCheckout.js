@@ -186,22 +186,26 @@ export const useCheckout = () => {
       await fetchPharmacies(cart, selectedAddressId, newRange);
   };
 
-  const handleTogglePharmacy = (pharmacyId) => {
-    if (selectedPharmacies.includes(pharmacyId)) {
+  // ✅ عند Select → يحدد كل الأدوية المتاحة تلقائياً
+  // ✅ عند Deselect → يزيل الصيدلية وكل أدويتها
+  const handleTogglePharmacy = (pharmacyId, allMedicineIds = []) => {
+    const isCurrentlySelected = selectedPharmacies.includes(pharmacyId);
+
+    if (isCurrentlySelected) {
+      // ── Deselect ──
       setSelectedPharmacies((prev) => prev.filter((id) => id !== pharmacyId));
       setSelectedMedicines((prev) => {
-        const u = { ...prev };
-        delete u[pharmacyId];
-        return u;
+        const updated = { ...prev };
+        delete updated[pharmacyId];
+        return updated;
       });
     } else {
-      const pharmacy = pharmacies.find((p) => p.pharmacyId === pharmacyId);
-      const ids =
-        pharmacy?.foundMedicines
-          .filter((m) => m.isQuantityEnough)
-          .map((m) => m.medicineId) ?? [];
+      // ── Select: حدد الصيدلية + كل أدويتها تلقائياً ──
       setSelectedPharmacies((prev) => [...prev, pharmacyId]);
-      setSelectedMedicines((prev) => ({ ...prev, [pharmacyId]: ids }));
+      setSelectedMedicines((prev) => ({
+        ...prev,
+        [pharmacyId]: allMedicineIds,
+      }));
     }
   };
 
@@ -218,12 +222,12 @@ export const useCheckout = () => {
   };
 
   const handleOrderClick = (pharmacy) => {
+    // ✅ Order button → يحدد كل الأدوية المتاحة
+    const allMedicineIds = pharmacy.foundMedicines.map((m) => m.medicineId);
     setSelectedPharmacyForPayment(pharmacy);
     setSelectedPharmacies([pharmacy.pharmacyId]);
     setSelectedMedicines({
-      [pharmacy.pharmacyId]: pharmacy.foundMedicines
-        .filter((m) => m.isQuantityEnough)
-        .map((m) => m.medicineId),
+      [pharmacy.pharmacyId]: allMedicineIds,
     });
     setShowPaymentModal(true);
   };
@@ -246,11 +250,11 @@ export const useCheckout = () => {
     const orderDtos = selectedPharmacies.reduce((acc, pharmacyId) => {
       const pharmacy = pharmacies.find((p) => p.pharmacyId === pharmacyId);
       if (!pharmacy) return acc;
-      const items = pharmacy.foundMedicines.filter(
-        (m) =>
-          selectedMedicines[pharmacyId]?.includes(m.medicineId) &&
-          m.isQuantityEnough,
+
+      const items = pharmacy.foundMedicines.filter((m) =>
+        selectedMedicines[pharmacyId]?.includes(m.medicineId),
       );
+
       if (!items.length) return acc;
       acc.push({
         PharmacyID: pharmacyId,

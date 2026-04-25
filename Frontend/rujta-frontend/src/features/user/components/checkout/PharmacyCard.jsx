@@ -1,3 +1,4 @@
+// src/features/pharmacies/components/PharmacyCard.jsx
 import React from "react";
 import MedicineChip from "./MedicineChip";
 
@@ -33,17 +34,19 @@ const PharmacyCard = ({
   onMouseEnter,
   onMouseLeave,
 }) => {
-  const availableCount = pharmacy.foundMedicines.filter(
-    (m) => m.isQuantityEnough,
-  ).length;
-  const partialCount = pharmacy.foundMedicines.filter(
-    (m) => !m.isQuantityEnough,
+  const fullyAvailableCount = pharmacy.foundMedicines.filter(
+    (m) => m.isFullyAvailable,
   ).length;
 
-  // ── DEBUG: اطبع أول دواء عشان نشوف كل الـ fields المتاحة ──
-  if (pharmacy.foundMedicines.length > 0) {
-    console.log("🔍 Medicine object sample:", pharmacy.foundMedicines[0]);
-  }
+  const partialCount = pharmacy.foundMedicines.filter(
+    (m) => !m.isFullyAvailable,
+  ).length;
+
+  const totalShortage = pharmacy.totalShortage ?? 0;
+  const partialMatches = pharmacy.partialMatches ?? 0;
+
+  // ✅ كل IDs الأدوية المتاحة في هذه الصيدلية
+  const allMedicineIds = pharmacy.foundMedicines.map((m) => m.medicineId);
 
   return (
     <div
@@ -58,10 +61,13 @@ const PharmacyCard = ({
       {/* ── Header ──────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-1 gap-3">
+          {/* ✅ عند الـ select يمرر كل IDs الأدوية */}
           <input
             type="checkbox"
             checked={isSelected}
-            onChange={() => onTogglePharmacy(pharmacy.pharmacyId)}
+            onChange={() =>
+              onTogglePharmacy(pharmacy.pharmacyId, allMedicineIds)
+            }
             className="mt-1 h-5 w-5 cursor-pointer rounded border-gray-300 accent-secondary"
           />
 
@@ -70,7 +76,7 @@ const PharmacyCard = ({
               {index + 1}. {pharmacy.name}
             </p>
 
-            {/* Badges */}
+            {/* ── Badges ────────────────────────────────────── */}
             <div className="flex flex-wrap items-center gap-1.5">
               {routeInfo ? (
                 <>
@@ -98,6 +104,24 @@ const PharmacyCard = ({
               >
                 {pharmacy.matchPercentage.toFixed(0)}% Match
               </span>
+
+              {pharmacy.matchedDrugs > 0 && (
+                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+                  ✅ {pharmacy.matchedDrugs} Full
+                </span>
+              )}
+
+              {partialMatches > 0 && (
+                <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-700">
+                  ⚠️ {partialMatches} Partial
+                </span>
+              )}
+
+              {totalShortage > 0 && (
+                <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700">
+                  📦 -{totalShortage} units short
+                </span>
+              )}
 
               {isSelected && (
                 <span className="inline-flex items-center rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-medium text-secondary">
@@ -128,21 +152,60 @@ const PharmacyCard = ({
       {/* ── Expanded Details ─────────────────────────────────── */}
       {isExpanded && (
         <div className="mt-4 space-y-5 border-t pt-4">
+          {/* ── Summary Bar ───────────────────────────────────── */}
+          <div className="flex flex-wrap gap-2 rounded-xl bg-gray-50 p-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-500">Total Requested:</span>
+              <span className="text-xs font-semibold text-gray-700">
+                {pharmacy.totalRequestedDrugs}
+              </span>
+            </div>
+            <span className="text-gray-300">|</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-500">Fully Available:</span>
+              <span className="text-xs font-semibold text-green-600">
+                {pharmacy.matchedDrugs}
+              </span>
+            </div>
+            <span className="text-gray-300">|</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-500">Partial:</span>
+              <span className="text-xs font-semibold text-purple-600">
+                {partialMatches}
+              </span>
+            </div>
+            {totalShortage > 0 && (
+              <>
+                <span className="text-gray-300">|</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-500">Total Shortage:</span>
+                  <span className="text-xs font-semibold text-orange-600">
+                    {totalShortage} units
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ── Found Medicines ────────────────────────────────── */}
           {pharmacy.foundMedicines.length > 0 && (
             <div>
               <div className="mb-3 flex items-center gap-2">
                 <span className="text-sm font-bold text-gray-700">
-                  🟢Available
+                  🟢 Available
                 </span>
-                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
-                  {availableCount} available
-                </span>
+                {fullyAvailableCount > 0 && (
+                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                    ✅ {fullyAvailableCount} full
+                  </span>
+                )}
                 {partialCount > 0 && (
                   <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-600">
-                    {partialCount} partial
+                    ⚠️ {partialCount} partial
                   </span>
                 )}
               </div>
+
               <div className="grid grid-cols-1 gap-2">
                 {pharmacy.foundMedicines.map((m) => (
                   <MedicineChip
@@ -152,18 +215,18 @@ const PharmacyCard = ({
                     onChange={() =>
                       onToggleMedicine(pharmacy.pharmacyId, m.medicineId)
                     }
-                    disabled={!m.isQuantityEnough}
                   />
                 ))}
               </div>
             </div>
           )}
 
+          {/* ── Not Found Medicines ───────────────────────────── */}
           {pharmacy.notFoundMedicines.length > 0 && (
             <div>
               <div className="mb-3 flex items-center gap-2">
                 <span className="text-sm font-bold text-gray-700">
-                  🔴Unavailable
+                  🔴 Unavailable
                 </span>
                 <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600">
                   {pharmacy.notFoundMedicines.length} items
