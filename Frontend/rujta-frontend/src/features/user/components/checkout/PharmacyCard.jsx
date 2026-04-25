@@ -40,6 +40,11 @@ const PharmacyCard = ({
     (m) => !m.isQuantityEnough,
   ).length;
 
+  // ── DEBUG: اطبع أول دواء عشان نشوف كل الـ fields المتاحة ──
+  if (pharmacy.foundMedicines.length > 0) {
+    console.log("🔍 Medicine object sample:", pharmacy.foundMedicines[0]);
+  }
+
   return (
     <div
       className={`rounded-2xl border bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
@@ -127,7 +132,7 @@ const PharmacyCard = ({
             <div>
               <div className="mb-3 flex items-center gap-2">
                 <span className="text-sm font-bold text-gray-700">
-                  ✅ Found Medicines
+                  🟢Available
                 </span>
                 <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
                   {availableCount} available
@@ -158,7 +163,7 @@ const PharmacyCard = ({
             <div>
               <div className="mb-3 flex items-center gap-2">
                 <span className="text-sm font-bold text-gray-700">
-                  ❌ Not Found
+                  🔴Unavailable
                 </span>
                 <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600">
                   {pharmacy.notFoundMedicines.length} items
