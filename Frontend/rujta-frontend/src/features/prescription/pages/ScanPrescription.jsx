@@ -16,19 +16,23 @@ function normalizeResult(result) {
   if (Array.isArray(result.availableMedicines)) {
     return {
       availableMedicines: result.availableMedicines,
-      unavailableMedicines: result.unavailableMedicines ?? [],
+      unavailableMedicines: result.unavailableMedicines 
+        ?? result.notFoundMedicines  // ← add this fallback
+        ?? [],
     };
   }
 
-  // Shape 2: { data: { availableMedicines, unavailableMedicines } }
+  // Shape 2: { data: { availableMedicines, ... } }
   if (result.data && Array.isArray(result.data.availableMedicines)) {
     return {
       availableMedicines: result.data.availableMedicines,
-      unavailableMedicines: result.data.unavailableMedicines ?? [],
+      unavailableMedicines: result.data.unavailableMedicines 
+        ?? result.data.notFoundMedicines  // ← add this fallback
+        ?? [],
     };
   }
 
-  // Shape 3: camelCase variants — available / unavailable (no "Medicines" suffix)
+  // Shape 3: available / unavailable
   if (Array.isArray(result.available)) {
     return {
       availableMedicines: result.available,
@@ -39,7 +43,6 @@ function normalizeResult(result) {
   console.warn("⚠️ Unknown result shape:", result);
   return { availableMedicines: [], unavailableMedicines: [] };
 }
-
 // Helper to extract the medicine name regardless of whether the item is a string or object
 function getMedName(med) {
   if (!med) return "Unknown";

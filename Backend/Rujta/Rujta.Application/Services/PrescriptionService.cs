@@ -58,7 +58,7 @@ namespace Rujta.Application.Services
                                 text = @"Extract medicine names from this prescription image whole medicine name and its dosage.
 Return ONLY a JSON array of strings like:
 [""Panadol 50mg "",""Augmentin""]
-No explanation."
+No explanation dont get any ting extra stick with the forms i gave u."
                             }
                         }
                     }
