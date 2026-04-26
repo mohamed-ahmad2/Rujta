@@ -64,5 +64,29 @@ namespace Rujta.Application.Services.OrderS
                 message,
                 order.Id.ToString());
         }
+        private async Task SendOrderNotificationToPharmacy(Order order)
+        {
+            string title = order.Status switch
+            {
+                OrderStatus.Pending => $"New order #{order.Id} received!",
+                OrderStatus.CancelledByUser => $"Order #{order.Id} was cancelled by user.",
+                _ => $"Order #{order.Id} status changed."
+            };
+
+            string message = order.Status switch
+            {
+                OrderStatus.Pending => $"A new order has been placed and is waiting for your approval.",
+                OrderStatus.CancelledByUser => $"The user cancelled order #{order.Id}. Please update your stock.",
+                _ => $"Order status is now {order.Status}."
+            };
+
+            // Send to pharmacy admin using pharmacyId as their userId
+            await NotifyService.SendNotificationAsync(
+                order.PharmacyId.ToString(),  // pharmacy admin's userId
+                title,
+                message,
+                order.Id.ToString()
+            );
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Application.Notifications;
@@ -14,27 +15,36 @@ namespace Rujta.Infrastructure.Services
 {
     public class NotificationService : INotificationService, IDisposable
     {
-        private readonly INotificationRepository _repo;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly INotificationPublisher _publisher;
         private readonly ILogger<NotificationService> _logger;
 
-        private readonly ConcurrentQueue<(string userId, NotificationDto dto)> _notificationQueue = new();
+        // existing user queue
+        private readonly ConcurrentQueue<(string userId, NotificationDto dto, int attempts)> _notificationQueue = new();
+
+        // ✅ NEW — pharmacy queue
+        private readonly ConcurrentQueue<(string pharmacyId, NotificationDto dto, int attempts)> _pharmacyQueue = new();
+
         private readonly SemaphoreSlim _queueSemaphore = new(1, 1);
+
+        private const int MaxRetryPerAttempt = 5;
+        private const int MaxTotalRequeues = 3;
 
         private readonly CancellationTokenSource _cts = new();
 
         public NotificationService(
-            INotificationRepository repo,
+            IServiceScopeFactory scopeFactory,
             INotificationPublisher publisher,
             ILogger<NotificationService> logger)
         {
-            _repo = repo;
+            _scopeFactory = scopeFactory;
             _publisher = publisher;
             _logger = logger;
 
             _ = ProcessQueueLoopAsync(_cts.Token);
         }
 
+        // ─── existing — send to user ───────────────────────────────────────────
         public async Task SendNotificationAsync(
             string userId,
             string title,
@@ -43,6 +53,9 @@ namespace Rujta.Infrastructure.Services
         {
             try
             {
+                using var scope = _scopeFactory.CreateScope();
+                var repo = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
+
                 var notification = new Notification
                 {
                     UserId = userId,
@@ -53,7 +66,7 @@ namespace Rujta.Infrastructure.Services
                     IsRead = false
                 };
 
-                await _repo.AddNotificationAsync(notification);
+                await repo.AddNotificationAsync(notification);
 
                 var dto = new NotificationDto
                 {
@@ -65,7 +78,7 @@ namespace Rujta.Infrastructure.Services
                     IsRead = false
                 };
 
-                _notificationQueue.Enqueue((userId, dto));
+                _notificationQueue.Enqueue((userId, dto, 0));
             }
             catch (Exception ex)
             {
@@ -73,6 +86,49 @@ namespace Rujta.Infrastructure.Services
             }
         }
 
+        // ✅ NEW — send to pharmacy group
+        public async Task SendNotificationToPharmacyAsync(
+            string pharmacyId,
+            string title,
+            string message,
+            string? payload = null)
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var repo = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
+
+                var notification = new Notification
+                {
+                    UserId = pharmacyId, // stored with pharmacyId as userId
+                    Title = title,
+                    Message = message,
+                    Payload = payload,
+                    CreatedAt = DateTime.UtcNow,
+                    IsRead = false
+                };
+
+                await repo.AddNotificationAsync(notification);
+
+                var dto = new NotificationDto
+                {
+                    Id = notification.Id,
+                    Title = title,
+                    Message = message,
+                    Payload = payload,
+                    CreatedAt = notification.CreatedAt,
+                    IsRead = false
+                };
+
+                _pharmacyQueue.Enqueue((pharmacyId, dto, 0));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to queue pharmacy notification for Pharmacy {PharmacyId}", pharmacyId);
+            }
+        }
+
+        // ─── queue loop ────────────────────────────────────────────────────────
         private async Task ProcessQueueLoopAsync(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
@@ -96,23 +152,21 @@ namespace Rujta.Infrastructure.Services
 
             try
             {
+                // ─── existing user queue ───────────────────────────────────────
                 while (_notificationQueue.TryDequeue(out var item))
                 {
                     int retries = 0;
                     bool sent = false;
 
-                    while (!sent && retries < 5)
+                    while (!sent && retries < MaxRetryPerAttempt)
                     {
                         try
                         {
                             await _publisher.PublishAsync(item.userId, item.dto);
-
                             sent = true;
-
                             _logger.LogInformation(
                                 "Notification {NotificationId} sent to User {UserId}",
-                                item.dto.Id,
-                                item.userId);
+                                item.dto.Id, item.userId);
                         }
                         catch
                         {
@@ -123,12 +177,62 @@ namespace Rujta.Infrastructure.Services
 
                     if (!sent)
                     {
-                        _logger.LogWarning(
-                            "Notification {NotificationId} could not be sent to User {UserId}, retrying later",
-                            item.dto.Id,
-                            item.userId);
+                        if (item.attempts < MaxTotalRequeues)
+                        {
+                            int next = item.attempts + 1;
+                            _logger.LogWarning(
+                                "Notification {Id} re-queued (attempt {Attempt}/{Max})",
+                                item.dto.Id, next, MaxTotalRequeues);
+                            _notificationQueue.Enqueue((item.userId, item.dto, next));
+                        }
+                        else
+                        {
+                            _logger.LogError(
+                                "Notification {Id} permanently dropped after all retries",
+                                item.dto.Id);
+                        }
+                    }
+                }
 
-                        _notificationQueue.Enqueue(item);
+                // ✅ NEW — pharmacy queue ───────────────────────────────────────
+                while (_pharmacyQueue.TryDequeue(out var item))
+                {
+                    int retries = 0;
+                    bool sent = false;
+
+                    while (!sent && retries < MaxRetryPerAttempt)
+                    {
+                        try
+                        {
+                            await _publisher.PublishToPharmacyAsync(item.pharmacyId, item.dto);
+                            sent = true;
+                            _logger.LogInformation(
+                                "Notification {NotificationId} sent to Pharmacy {PharmacyId}",
+                                item.dto.Id, item.pharmacyId);
+                        }
+                        catch
+                        {
+                            retries++;
+                            await Task.Delay(200 * retries);
+                        }
+                    }
+
+                    if (!sent)
+                    {
+                        if (item.attempts < MaxTotalRequeues)
+                        {
+                            int next = item.attempts + 1;
+                            _logger.LogWarning(
+                                "Pharmacy Notification {Id} re-queued (attempt {Attempt}/{Max})",
+                                item.dto.Id, next, MaxTotalRequeues);
+                            _pharmacyQueue.Enqueue((item.pharmacyId, item.dto, next));
+                        }
+                        else
+                        {
+                            _logger.LogError(
+                                "Pharmacy Notification {Id} permanently dropped after all retries",
+                                item.dto.Id);
+                        }
                     }
                 }
             }
@@ -138,10 +242,13 @@ namespace Rujta.Infrastructure.Services
             }
         }
 
+        // ─── existing read methods — no change ────────────────────────────────
         public async Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(string userId)
         {
-            var notifications = await _repo.GetUserNotificationsAsync(userId);
+            using var scope = _scopeFactory.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
 
+            var notifications = await repo.GetUserNotificationsAsync(userId);
             return notifications.Select(n => new NotificationDto
             {
                 Id = n.Id,
@@ -155,18 +262,19 @@ namespace Rujta.Infrastructure.Services
 
         public async Task MarkAsReadAsync(int notificationId, string userId)
         {
-            await _repo.MarkAsReadAsync(notificationId, userId);
+            using var scope = _scopeFactory.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
+            await repo.MarkAsReadAsync(notificationId, userId);
         }
 
         public async Task<int> GetUnreadCountAsync(string userId)
         {
-            return await _repo.GetUnreadCountAsync(userId);
+            using var scope = _scopeFactory.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
+            return await repo.GetUnreadCountAsync(userId);
         }
 
-        public void Stop()
-        {
-            _cts.Cancel();
-        }
+        public void Stop() => _cts.Cancel();
 
         public void Dispose()
         {

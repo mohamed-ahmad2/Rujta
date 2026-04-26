@@ -1,15 +1,18 @@
 import React from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { FaBell } from "react-icons/fa";
 import { MdMenuOpen } from "react-icons/md";
 import UserImage from "../../../assets/change/HeroImg1.png";
 import { useUserProfile } from "../../userProfile/hook/useUserProfile";
 import { useAuth } from "../../auth/hooks/useAuth";
+import { useAdminNotifications } from "../../dashboard/notifications/hook/useAdminNotifications";
 
 const NavbarDashbord = ({ sidebarOpen, setSidebarOpen }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { profile, loading } = useUserProfile();
   const { user } = useAuth();
+  const { unreadCount } = useAdminNotifications();
 
   const pages = {
     "/dashboard/home": {
@@ -32,24 +35,25 @@ const NavbarDashbord = ({ sidebarOpen, setSidebarOpen }) => {
       title: "Settings",
       subtitle: "Dashboard preferences",
     },
-
     "/dashboard/sales": { title: "Sales", subtitle: "Your sales overview" },
     "/dashboard/logs": { title: "Logs", subtitle: "Staff activity logs" },
     "/dashboard/ads": { title: "Ads", subtitle: "Manage your ads" },
-
-     "/dashboard/subscription": {
+    "/dashboard/subscription": {
       title: "Subscription",
-      subtitle: "Manage your Subscription ",
+      subtitle: "Manage your Subscription",
       status: "Active",
       color: "bg-indigo-100 text-indigo-700",
     },
     "/dashboard/discounts": {
       title: "Discounts",
-      subtitle: "Manage your discounts ",
+      subtitle: "Manage your discounts",
       status: "Active",
       color: "bg-indigo-100 text-indigo-700",
     },
-
+    "/dashboard/notifications": {
+      title: "Notifications",
+      subtitle: "Your latest alerts",
+    },
   };
 
   const current = pages[location.pathname] || {
@@ -96,13 +100,19 @@ const NavbarDashbord = ({ sidebarOpen, setSidebarOpen }) => {
 
       {/* Right — Bell + User */}
       <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3 md:gap-4">
+
         {/* Bell */}
         <button
+          onClick={() => navigate("/dashboard/notifications")}
           className="relative rounded-full p-2 transition hover:bg-gray-100"
           aria-label="Notifications"
         >
           <FaBell className="text-base text-gray-600 sm:text-lg" />
-          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
+          {unreadCount > 0 && (
+            <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
         </button>
 
         {/* Divider */}

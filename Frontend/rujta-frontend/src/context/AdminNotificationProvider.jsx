@@ -1,37 +1,35 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
-import { NotificationContext } from "./NotificationContext";
+import { AdminNotificationContext } from "./AdminNotificationContext";
 import { useAuth } from "../features/auth/hooks/useAuth";
 import { getAccessToken, subscribeTokenChange } from "../authProvider/authTokenProvider";
 
-// ✅ Read user ID directly from the token (works before React loads)
-function getUserIdFromToken() {
+function getStorageKey() {
     try {
-        const token = localStorage.getItem("accessToken");
+        const token = localStorage.getItem("token");
         if (!token) return null;
         const payload = JSON.parse(atob(token.split(".")[1]));
-        // handles all common JWT claim names
-        return payload.sub || payload.userId || payload.id || payload.nameid || null;
+        const pharmacyId = payload.PharmacyId || payload.pharmacyId || null;
+        return pharmacyId ? `admin_notifications_${pharmacyId}` : null;
     } catch {
         return null;
     }
 }
 
-function getStorageKey(userId) {
-    return userId ? `notifications_${userId}` : null;
-}
-
-export const NotificationProvider = ({ children }) => {
+export const AdminNotificationProvider = ({ children }) => {
     const { user, loading } = useAuth();
     const connectionRef = useRef(null);
     const startingRef = useRef(false);
     const [connection, setConnection] = useState(null);
 
-    // ✅ Load immediately on first render using token — no waiting for user object
+    const isPharmacyAdmin = user?.role === "Pharmacy" ||
+                            user?.role === "Admin" ||
+                            user?.role === "PharmacyAdmin";
+
+    // ✅ Load from localStorage immediately on first render
     const [notifications, setNotificationsState] = useState(() => {
         try {
-            const userId = getUserIdFromToken();
-            const key = getStorageKey(userId);
+            const key = getStorageKey();
             if (!key) return [];
             const stored = localStorage.getItem(key);
             return stored ? JSON.parse(stored) : [];
@@ -40,37 +38,17 @@ export const NotificationProvider = ({ children }) => {
         }
     });
 
-    // ✅ Always write to localStorage using current user or token
+    // ✅ Wrapped setter — always saves to localStorage
     const setNotifications = useCallback((updater) => {
         setNotificationsState((prev) => {
             const next = typeof updater === "function" ? updater(prev) : updater;
             try {
-                const userId =
-                    user?.id || user?.userId || user?.sub || getUserIdFromToken();
-                const key = getStorageKey(userId);
+                const key = getStorageKey();
                 if (key) localStorage.setItem(key, JSON.stringify(next));
             } catch {}
             return next;
         });
-    }, [user]);
-
-    // ✅ When user object loads, re-load from localStorage to stay in sync
-    useEffect(() => {
-        if (!user) return;
-        try {
-            const userId = user.id || user.userId || user.sub || getUserIdFromToken();
-            const key = getStorageKey(userId);
-            if (!key) return;
-            const stored = localStorage.getItem(key);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                // Only update if stored has more data than current state
-                if (parsed.length > 0) {
-                    setNotificationsState(parsed);
-                }
-            }
-        } catch {}
-    }, [user]);
+    }, []);
 
     useEffect(() => {
         connectionRef.current = connection;
@@ -83,7 +61,7 @@ export const NotificationProvider = ({ children }) => {
             conn.off();
             await conn.stop();
         } catch (err) {
-            console.error("❌ SignalR stop error:", err);
+            console.error("❌ Admin SignalR stop error:", err);
         } finally {
             connectionRef.current = null;
             setConnection(null);
@@ -93,6 +71,7 @@ export const NotificationProvider = ({ children }) => {
     const startHubConnection = useCallback(async () => {
         if (startingRef.current) return;
         if (!user || loading) return;
+        if (!isPharmacyAdmin) return; // ✅ only connect for pharmacy admin
         if (connectionRef.current) return;
 
         const token = getAccessToken();
@@ -115,36 +94,35 @@ export const NotificationProvider = ({ children }) => {
             .build();
 
         hubConnection.on("Error", (msg) => {
-            console.error("⚠️ Server error:", msg);
+            console.error("⚠️ Admin SignalR error:", msg);
         });
 
         hubConnection.onclose((err) => {
-            console.warn("🔴 Connection closed:", err);
+            console.warn("🔴 Admin connection closed:", err);
             connectionRef.current = null;
             setConnection(null);
         });
 
         hubConnection.onreconnected(() => {
-            console.log("✅ SignalR reconnected");
+            console.log("✅ Admin SignalR reconnected");
             setConnection(hubConnection);
         });
 
         try {
             await hubConnection.start();
-            console.log("✅ SignalR connected");
+            console.log("✅ Admin SignalR connected");
             connectionRef.current = hubConnection;
             setConnection(hubConnection);
         } catch (err) {
-            console.error("❌ SignalR start failed:", err);
+            console.error("❌ Admin SignalR start failed:", err);
         } finally {
             startingRef.current = false;
         }
-    }, [user, loading]);
+    }, [user, loading, isPharmacyAdmin]);
 
     useEffect(() => {
         const unsubscribe = subscribeTokenChange(async (token) => {
             if (!token) {
-                // ✅ Logout: close connection, clear memory only
                 await cleanupConnection();
                 setNotificationsState([]);
             } else {
@@ -159,8 +137,8 @@ export const NotificationProvider = ({ children }) => {
     }, [startHubConnection]);
 
     return (
-        <NotificationContext.Provider value={{ connection, notifications, setNotifications }}>
+        <AdminNotificationContext.Provider value={{ connection, notifications, setNotifications }}>
             {children}
-        </NotificationContext.Provider>
+        </AdminNotificationContext.Provider>
     );
 };

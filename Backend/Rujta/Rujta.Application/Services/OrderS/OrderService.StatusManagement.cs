@@ -89,6 +89,14 @@ namespace Rujta.Application.Services.OrderS
 
             await SafeNotifyAsync(order, newStatus);
             await SendOrderStatusNotification(order);
+            if (newStatus == OrderStatus.CancelledByUser)
+            {
+                await NotifyService.SendNotificationToPharmacyAsync(
+                    order.PharmacyId.ToString(),
+                    $"Order #{order.Id} cancelled by user",
+                    $"The user cancelled order #{order.Id}. Please update your stock.",
+                    order.Id.ToString());
+            }
 
             return (true, true, GetSuccessMessage(newStatus));
         }

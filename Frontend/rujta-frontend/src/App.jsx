@@ -11,6 +11,10 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { PresenceProvider } from "./context/PresenceProvider";
 import { OrdersProvider } from "./context/OrdersProvider";
 import { NotificationProvider } from "./context/NotificationProvider";
+import { ToastProvider } from "./context/ToastProvider";
+import { AdminNotificationProvider } from "./context/AdminNotificationProvider"; // 🆕
+
+
 
 const App = () => {
   const { user, loading } = useAuth();
@@ -98,7 +102,10 @@ const App = () => {
   return (
     <PresenceProvider>
       <OrdersProvider>
-        <NotificationProvider>
+        <ToastProvider>
+          <NotificationProvider>
+            <AdminNotificationProvider>
+
           <AppRoutes
             cart={cart}
             setCart={setCart}
@@ -128,7 +135,9 @@ const App = () => {
           )}
 
           <SpeedInsights />
-        </NotificationProvider>
+            </AdminNotificationProvider>
+         </NotificationProvider>
+        </ToastProvider>
       </OrdersProvider>
     </PresenceProvider>
   );
