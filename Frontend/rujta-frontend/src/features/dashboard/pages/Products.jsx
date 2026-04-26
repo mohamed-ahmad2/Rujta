@@ -1,5 +1,5 @@
 // src/dashboard/pages/Products.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ProductsCard from "../components/ProductsCard";
 import {
   Package,
@@ -67,20 +67,7 @@ export default function Products() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filtered = useMemo(() => {
-    return items.filter((p) => {
-      const search = q.trim().toLowerCase();
-      if (filterStatus !== "All" && p.status !== filterStatus) return false;
-      if (filterCategory !== "All" && p.category !== filterCategory)
-        return false;
-      if (search) {
-        const matchName = p.name.toLowerCase().includes(search);
-        const matchId = String(p.raw?.id ?? "").includes(search);
-        if (!matchName && !matchId) return false;
-      }
-      return true;
-    });
-  }, [items, q, filterCategory, filterStatus]);
+
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const pageData = filtered.slice((page - 1) * perPage, page * perPage);

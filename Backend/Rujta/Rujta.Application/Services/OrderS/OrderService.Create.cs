@@ -57,6 +57,11 @@ namespace Rujta.Application.Services.OrderS
                     "Order Created",
                     $"Your order #{order.Id} has been created successfully.",
                     order.Id.ToString());
+                await NotifyService.SendNotificationToPharmacyAsync(
+                    createOrderDto.PharmacyID.ToString(),
+                    $"New order #{order.Id} received!",
+                    $"A new order is waiting for your approval.",
+    order.Id.ToString());
 
                 return orderDto;
             }

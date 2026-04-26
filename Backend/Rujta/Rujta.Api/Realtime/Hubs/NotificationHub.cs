@@ -17,7 +17,14 @@ namespace Rujta.API.Realtime.Hubs
 
         public override async Task OnConnectedAsync()
         {
+            foreach (var claim in Context.User?.Claims ?? Enumerable.Empty<Claim>())
+            {
+                Console.WriteLine($">>> CLAIM: {claim.Type} = {claim.Value}");
+            }
+
             var userId = Context.User?.FindFirst("domainPersonId")?.Value;
+            Console.WriteLine($">>> HUB userId = '{userId}'");
+            Console.WriteLine($">>> HUB group  = 'User-{userId}'");
 
             if (string.IsNullOrEmpty(userId))
             {
@@ -28,7 +35,10 @@ namespace Rujta.API.Realtime.Hubs
 
             await Groups.AddToGroupAsync(Context.ConnectionId, $"User-{userId}");
 
-            Console.WriteLine($"🔹 NotificationHub: User {userId} connected with connectionId {Context.ConnectionId}");
+            // ✅ ADD THESE 3 LINES — join pharmacy group if this user is pharmacy admin
+            var pharmacyId = Context.User?.FindFirst("PharmacyId")?.Value;
+            if (!string.IsNullOrEmpty(pharmacyId))
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"Pharmacy-{pharmacyId}");
 
             await base.OnConnectedAsync();
         }
@@ -36,12 +46,16 @@ namespace Rujta.API.Realtime.Hubs
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             var userId = Context.User?.FindFirst("domainPersonId")?.Value;
-
             if (!string.IsNullOrEmpty(userId))
             {
                 await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"User-{userId}");
                 Console.WriteLine($"🔹 NotificationHub: User {userId} disconnected.");
             }
+
+            // ✅ ADD THESE 3 LINES — leave pharmacy group on disconnect
+            var pharmacyId = Context.User?.FindFirst("PharmacyId")?.Value;
+            if (!string.IsNullOrEmpty(pharmacyId))
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Pharmacy-{pharmacyId}");
 
             await base.OnDisconnectedAsync(exception);
         }

@@ -53,8 +53,8 @@ namespace Rujta.API
 
             // Application Services
             builder.Services.AddApplicationServices(builder.Configuration);
-            builder.Services.AddScoped<INotificationPublisher, SignalRNotificationPublisher>();
-            builder.Services.AddScoped<INotificationService, NotificationService>();
+            builder.Services.AddSingleton<INotificationPublisher, SignalRNotificationPublisher>();
+            builder.Services.AddSingleton<INotificationService, NotificationService>();
             builder.Services.AddScoped<IOrderNotificationService, OrderNotificationService>();
             builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
             builder.Services.AddScoped<IReportService, ReportService>();
@@ -118,7 +118,7 @@ namespace Rujta.API
 
             app.UseCors("AllowReactApp");
 
-            app.UseWebSockets();
+            //app.UseWebSockets();
 
             app.UseWebSockets(new WebSocketOptions
             {

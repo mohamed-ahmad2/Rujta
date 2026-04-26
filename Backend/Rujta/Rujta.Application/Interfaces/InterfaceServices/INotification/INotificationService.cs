@@ -21,6 +21,10 @@ namespace Rujta.Application.Interfaces.InterfaceServices
 
         Task<int> GetUnreadCountAsync(string userId);
 
+        Task SendNotificationToPharmacyAsync(string pharmacyId, string title, string message, string? payload = null);
+
+
+
 
     }
 }

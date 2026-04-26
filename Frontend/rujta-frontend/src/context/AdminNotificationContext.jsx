@@ -1,7 +1,6 @@
-// src/context/NotificationContext.jsx
 import { createContext } from "react";
 
-export const NotificationContext = createContext({
+export const AdminNotificationContext = createContext({
   connection: null,
   notifications: [],
   setNotifications: () => {},

@@ -75,7 +75,16 @@ namespace Rujta.Api.Controllers
         {
             return User.Identity?.Name ?? NotificationMessages.UnknownUser;
         }
-        
+        [HttpGet("pharmacy")]
+        public async Task<IActionResult> GetPharmacyNotifications()
+        {
+            // Get pharmacyId from token claim instead of userId
+            string pharmacyId = User.FindFirstValue("PharmacyId")
+                                ?? throw new UnauthorizedAccessException();
+            var notifications = await _notificationService.GetUserNotificationsAsync(pharmacyId);
+            return Ok(notifications);
+        }
+
 
 
     }
