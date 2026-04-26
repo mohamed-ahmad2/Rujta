@@ -3,6 +3,7 @@ import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
 import { useOrders } from "../../orders/hooks/useOrders";
 import { useAuth } from "../../auth/hooks/useAuth";
 import useAddress from "../../address/hook/useAddress";
+import { usePayment } from "../../payment/hooks/usePayment";
 import apiClient from "../../../shared/api/apiClient";
 import { decodePolyline } from "../../../utils/decodePolyline";
 
@@ -20,7 +21,13 @@ export const useCheckout = () => {
     fetchById,
   } = useAddress();
 
-  // ── Address States ──────────────────────────────────────────────
+  const {
+    initiate,
+    paymentResult,
+    loading: initiatingPayment,
+    reset: resetPayment,
+  } = usePayment();
+
   const [pharmaciesRange, setPharmaciesRange] = useState(5);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [showAddressSelection, setShowAddressSelection] = useState(true);
@@ -35,24 +42,22 @@ export const useCheckout = () => {
     IsDefault: false,
   });
 
-  // ── Pharmacy / Order States ─────────────────────────────────────
   const [expandedPharmacies, setExpandedPharmacies] = useState({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] =
-    useState(null);
+  const [showPaymentIframe, setShowPaymentIframe] = useState(false);
+  const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [selectedPharmacies, setSelectedPharmacies] = useState([]);
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [selectedMedicines, setSelectedMedicines] = useState({});
+  const [pendingOrderId, setPendingOrderId] = useState(null);
 
-  // ── Map States ──────────────────────────────────────────────────
   const [userLocation, setUserLocation] = useState(null);
   const [deliveryAddressLocation, setDeliveryAddressLocation] = useState(null);
   const [deliveryAddress, setDeliveryAddress] = useState(null);
   const [hoveredPharmacyId, setHoveredPharmacyId] = useState(null);
   const [routeData, setRouteData] = useState({});
 
-  // ── Toast State ─────────────────────────────────────────────────
   const [toast, setToast] = useState(null);
 
   const showToast = useCallback((type, message) => {
@@ -60,7 +65,6 @@ export const useCheckout = () => {
     if (type === "success") setTimeout(() => setToast(null), 3200);
   }, []);
 
-  // ── Route Fetching ──────────────────────────────────────────────
   const fetchRoute = useCallback(
     (pharmacy) => {
       const start = deliveryAddressLocation || userLocation;
@@ -86,16 +90,13 @@ export const useCheckout = () => {
               }));
             }
           })
-          .catch((err) =>
-            console.error("OSRM error:", pharmacy.pharmacyId, err),
-          );
+          .catch((err) => console.error("OSRM error:", pharmacy.pharmacyId, err));
         return prev;
       });
     },
-    [deliveryAddressLocation, userLocation],
+    [deliveryAddressLocation, userLocation]
   );
 
-  // ── Effects ─────────────────────────────────────────────────────
   useEffect(() => {
     if (pharmacies.length > 0) pharmacies.forEach(fetchRoute);
   }, [pharmacies, fetchRoute]);
@@ -110,11 +111,8 @@ export const useCheckout = () => {
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
       (pos) =>
-        setUserLocation({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        }),
-      (err) => console.error("Geolocation error:", err),
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (err) => console.error("Geolocation error:", err)
     );
   }, []);
 
@@ -123,7 +121,13 @@ export const useCheckout = () => {
     if (msg.includes("location not set")) setShowLocationPrompt(true);
   }, [error]);
 
-  // ── Handlers ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (paymentResult?.iframeUrl) {
+      setShowPaymentModal(false);
+      setShowPaymentIframe(true);
+    }
+  }, [paymentResult]);
+
   const handleSetLocation = () => {
     navigator.geolocation?.getCurrentPosition(async ({ coords }) => {
       try {
@@ -186,13 +190,9 @@ export const useCheckout = () => {
       await fetchPharmacies(cart, selectedAddressId, newRange);
   };
 
-  // ✅ عند Select → يحدد كل الأدوية المتاحة تلقائياً
-  // ✅ عند Deselect → يزيل الصيدلية وكل أدويتها
   const handleTogglePharmacy = (pharmacyId, allMedicineIds = []) => {
     const isCurrentlySelected = selectedPharmacies.includes(pharmacyId);
-
     if (isCurrentlySelected) {
-      // ── Deselect ──
       setSelectedPharmacies((prev) => prev.filter((id) => id !== pharmacyId));
       setSelectedMedicines((prev) => {
         const updated = { ...prev };
@@ -200,12 +200,8 @@ export const useCheckout = () => {
         return updated;
       });
     } else {
-      // ── Select: حدد الصيدلية + كل أدويتها تلقائياً ──
       setSelectedPharmacies((prev) => [...prev, pharmacyId]);
-      setSelectedMedicines((prev) => ({
-        ...prev,
-        [pharmacyId]: allMedicineIds,
-      }));
+      setSelectedMedicines((prev) => ({ ...prev, [pharmacyId]: allMedicineIds }));
     }
   };
 
@@ -222,39 +218,24 @@ export const useCheckout = () => {
   };
 
   const handleOrderClick = (pharmacy) => {
-    // ✅ Order button → يحدد كل الأدوية المتاحة
     const allMedicineIds = pharmacy.foundMedicines.map((m) => m.medicineId);
     setSelectedPharmacyForPayment(pharmacy);
     setSelectedPharmacies([pharmacy.pharmacyId]);
-    setSelectedMedicines({
-      [pharmacy.pharmacyId]: allMedicineIds,
-    });
+    setSelectedMedicines({ [pharmacy.pharmacyId]: allMedicineIds });
     setShowPaymentModal(true);
   };
 
-  const handleConfirmOrders = async () => {
-    if (!cart.length) {
-      showToast("error", "Your cart is empty!");
-      return;
-    }
-    if (!selectedAddressId) {
-      showToast("error", "No delivery address selected!");
-      return;
-    }
-    if (!selectedPharmacies.length) {
-      showToast("error", "No pharmacies selected!");
-      return;
-    }
+  const createOrders = async () => {
+    if (!cart.length) throw new Error("Your cart is empty!");
+    if (!selectedAddressId) throw new Error("No delivery address selected!");
+    if (!selectedPharmacies.length) throw new Error("No pharmacies selected!");
 
-    setCreatingOrder(true);
     const orderDtos = selectedPharmacies.reduce((acc, pharmacyId) => {
       const pharmacy = pharmacies.find((p) => p.pharmacyId === pharmacyId);
       if (!pharmacy) return acc;
-
       const items = pharmacy.foundMedicines.filter((m) =>
-        selectedMedicines[pharmacyId]?.includes(m.medicineId),
+        selectedMedicines[pharmacyId]?.includes(m.medicineId)
       );
-
       if (!items.length) return acc;
       acc.push({
         PharmacyID: pharmacyId,
@@ -267,54 +248,128 @@ export const useCheckout = () => {
       return acc;
     }, []);
 
-    if (!orderDtos.length) {
-      showToast(
-        "error",
-        "No valid orders. Check selected medicines & quantities.",
-      );
-      setCreatingOrder(false);
-      return;
-    }
+    if (!orderDtos.length)
+      throw new Error("No valid orders. Check selected medicines & quantities.");
 
+    const { data: results } = await apiClient.post("/orders", orderDtos);
+    return { results, orderDtos };
+  };
+
+  const clearCartAfterOrder = async (orderDtos) => {
+    const orderedIds = new Set(
+      orderDtos.flatMap((d) => d.OrderItems.map((i) => i.MedicineID))
+    );
+    const updatedCart = cart.filter((item) => !orderedIds.has(item.id));
+    localStorage.setItem(`cart_${user.email}`, JSON.stringify(updatedCart));
+    window.dispatchEvent(new StorageEvent("storage", { key: `cart_${user.email}` }));
+    setCart(updatedCart);
+    setSelectedPharmacies([]);
+    setSelectedMedicines({});
+    await fetchUser();
+  };
+
+  const handleConfirmOrders = async () => {
+    setCreatingOrder(true);
     try {
-      const { data: results } = await apiClient.post("/orders", orderDtos);
+      const { results, orderDtos } = await createOrders();
       if (results?.length > 0) {
-        const orderedIds = new Set(
-          orderDtos.flatMap((d) => d.OrderItems.map((i) => i.MedicineID)),
-        );
-        const updatedCart = cart.filter((item) => !orderedIds.has(item.id));
-        localStorage.setItem(`cart_${user.email}`, JSON.stringify(updatedCart));
-        window.dispatchEvent(
-          new StorageEvent("storage", { key: `cart_${user.email}` }),
-        );
-        setCart(updatedCart);
-        setSelectedPharmacies([]);
-        setSelectedMedicines({});
-        await fetchUser();
-        showToast(
-          "success",
-          `${results.length} order${results.length > 1 ? "s" : ""} placed! 🎉`,
-        );
+        await clearCartAfterOrder(orderDtos);
+        showToast("success", `${results.length} order${results.length > 1 ? "s" : ""} placed! 🎉`);
         setTimeout(() => window.location.reload(), 3200);
       } else {
         showToast("error", "Failed to create orders. Please try again.");
       }
     } catch (err) {
       console.error("Order error:", err);
-      showToast("error", "Failed to create orders. Check console for details.");
+      showToast("error", err.message || "Failed to create orders.");
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
+  const handleOnlinePayment = async () => {
+    setCreatingOrder(true);
+    try {
+      const { results, orderDtos } = await createOrders();
+
+      if (!results?.length) {
+        showToast("error", "Failed to create orders. Please try again.");
+        return;
+      }
+
+      const firstOrderId = results[0]?.id ?? results[0]?.orderId ?? results[0];
+      setPendingOrderId(firstOrderId);
+
+      console.log("💳 firstOrderId:", firstOrderId, "| type:", typeof firstOrderId);
+      console.log("💳 results[0]:", results[0]);
+
+      const fullAddress = await fetchById(selectedAddressId);
+      console.log("📍 fullAddress:", fullAddress);
+      console.log("👤 user:", user);
+
+      const billingData = {
+        FirstName: user?.firstName || user?.name?.split(" ")[0] || "Customer",
+        LastName: user?.lastName || user?.name?.split(" ").slice(1).join(" ") || "User",
+        Email: user?.email || "customer@email.com",
+        PhoneNumber: user?.phone || "01000000000",
+        Apartment: "N/A",
+        Floor: "N/A",
+        Street: fullAddress?.street || "N/A",
+        Building: fullAddress?.buildingNo || "N/A",
+        ShippingMethod: "PKG",
+        PostalCode: "NA",
+        City: fullAddress?.city || "Cairo",
+        Country: "EG",
+        State: fullAddress?.governorate || "Cairo",
+      };
+
+      const totalAmount = selectedPharmacies.reduce((total, pharmacyId) => {
+        const pharmacy = pharmacies.find((p) => p.pharmacyId === pharmacyId);
+        if (!pharmacy) return total;
+        return (
+          total +
+          pharmacy.foundMedicines
+            .filter((m) => selectedMedicines[pharmacyId]?.includes(m.medicineId))
+            .reduce((sum, m) => sum + m.price * m.requestedQuantity, 0)
+        );
+      }, 0);
+
+      const dto = {
+        Type: "Order",
+        OrderId: firstOrderId,
+        Amount: Math.round(totalAmount * 100) / 100,
+        Currency: "EGP",
+        BillingData: billingData,
+      };
+
+      console.log("💳 DTO being sent:", JSON.stringify(dto, null, 2));
+
+      await initiate(dto);
+      await clearCartAfterOrder(orderDtos);
+    } catch (err) {
+      console.error("Online payment error:", err);
+      showToast("error", err.message || "Failed to initiate payment.");
     } finally {
       setCreatingOrder(false);
     }
   };
 
   const handlePaymentConfirm = async () => {
-    setShowPaymentModal(false);
-    if (paymentMethod === "Cash") await handleConfirmOrders();
-    else window.location.href = "/user/payment";
+    if (paymentMethod === "Cash") {
+      setShowPaymentModal(false);
+      await handleConfirmOrders();
+    } else {
+      await handleOnlinePayment();
+    }
+  };
+
+  const handleCloseIframe = () => {
+    setShowPaymentIframe(false);
+    resetPayment();
+    setPendingOrderId(null);
   };
 
   return {
-    // data
     cart,
     pharmacies,
     loading,
@@ -322,7 +377,6 @@ export const useCheckout = () => {
     addresses,
     addressesLoading,
     addressesError,
-    // address states
     pharmaciesRange,
     showLocationPrompt,
     showAddressSelection,
@@ -330,7 +384,6 @@ export const useCheckout = () => {
     showNewAddressForm,
     isConfirmingAddress,
     newAddressForm,
-    // pharmacy / order states
     expandedPharmacies,
     showPaymentModal,
     selectedPharmacyForPayment,
@@ -338,15 +391,15 @@ export const useCheckout = () => {
     selectedPharmacies,
     creatingOrder,
     selectedMedicines,
-    // map states
+    initiatingPayment,
+    showPaymentIframe,
+    paymentResult,
     userLocation,
     deliveryAddressLocation,
     deliveryAddress,
     hoveredPharmacyId,
     routeData,
-    // toast
     toast,
-    // setters
     setSelectedAddressId,
     setShowNewAddressForm,
     setNewAddressForm,
@@ -356,7 +409,6 @@ export const useCheckout = () => {
     setHoveredPharmacyId,
     setToast,
     setShowAddressSelection,
-    // handlers
     handleSetLocation,
     handleNewAddressChange,
     handleAddNewAddress,
@@ -366,5 +418,6 @@ export const useCheckout = () => {
     handleToggleMedicine,
     handleOrderClick,
     handlePaymentConfirm,
+    handleCloseIframe,
   };
 };
