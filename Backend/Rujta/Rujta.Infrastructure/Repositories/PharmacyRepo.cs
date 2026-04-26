@@ -1,18 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Rujta.Domain.Entities;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-
-namespace Rujta.Infrastructure.Repositories
+﻿namespace Rujta.Infrastructure.Repositories
 {
     public class PharmacyRepo : GenericRepository<Pharmacy, int>, IPharmacyRepository
     {
         public PharmacyRepo(AppDbContext context) : base(context) { }
 
-        // Get all pharmacies
         public async Task<IEnumerable<Pharmacy>> GetAllPharmacies(CancellationToken cancellationToken = default) =>
             await _context.Pharmacies.ToListAsync(cancellationToken);
 
-        // Get all medicine IDs in a pharmacy
         public async Task<List<Medicine>> GetAllMedicinesByPharmacyAsync(int pharmacyId)
         {
             return await _context.InventoryItems
@@ -24,8 +18,6 @@ namespace Rujta.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-
-        // Get stock of a specific medicine
         public async Task<int> GetMedicineStockAsync(int pharmacyId, int medicineId)
         {
             return await _context.InventoryItems
@@ -33,9 +25,16 @@ namespace Rujta.Infrastructure.Repositories
                 .Select(i => i.Quantity)
                 .FirstOrDefaultAsync();
         }
-        public async Task<Pharmacy?> GetByAdminIdAsync(Guid adminId)
-    => await _context.Pharmacies
-        .Include(p => p.Subscription)
-        .FirstOrDefaultAsync(p => p.AdminId == adminId);
+
+        public async Task<Pharmacy?> GetByAdminIdAsync(Guid adminId) => await _context.Pharmacies
+                .Include(p => p.Subscription)
+                .FirstOrDefaultAsync(p => p.AdminId == adminId);
+
+        public async Task<List<Pharmacy>> GetPharmaciesByIdsAsync(List<int> ids)
+        {
+            return await _context.Pharmacies
+                .Where(p => ids.Contains(p.Id))
+                .ToListAsync();
+        }
     }
 }

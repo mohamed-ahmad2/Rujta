@@ -190,17 +190,15 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
         {/*  DESKTOP (lg+)                                  */}
         {/* ═══════════════════════════════════════════════ */}
         <div className="hidden items-center justify-between gap-10 py-3.5 lg:flex">
-          {/* ✅ gap-6 → gap-10 */}
-
-          {/* Logo */}
+          {/* ── Logo ──────────────────────────────────────── */}
           <div
             className="flex-shrink-0 cursor-pointer text-3xl font-bold text-secondary transition-all duration-200 hover:opacity-80"
-            onClick={() => navigate("/user")}
+            onClick={() => (window.location.href = "/user")}
           >
             Rujta
           </div>
 
-          {/* Search */}
+          {/* ── Search ────────────────────────────────────── */}
           <div className="relative w-[420px] xl:w-[720px]">
             <input
               ref={inputRef}
@@ -218,7 +216,7 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
             {showResults && <SearchDropdown ref={resultsRef} />}
           </div>
 
-          {/* Icons */}
+          {/* ── Icons ─────────────────────────────────────── */}
           <div className="flex flex-shrink-0 items-center gap-10">
             {/* Scanner */}
             <button
@@ -306,19 +304,22 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
           </div>
         </div>
 
-
+        {/* ═══════════════════════════════════════════════ */}
+        {/*  MOBILE (< lg)                                  */}
+        {/* ═══════════════════════════════════════════════ */}
         <div className="lg:hidden">
           <div className="flex items-center justify-between py-3">
-            {/* Logo */}
+            {/* ── Logo ──────────────────────────────────────── */}
             <div
               className="cursor-pointer text-2xl font-bold text-secondary"
-              onClick={() => navigate("/user")}
+              onClick={() => (window.location.href = "/user")}
             >
               Rujta
             </div>
 
-            {/* Mobile Icons */}
+            {/* ── Mobile Icons ──────────────────────────────── */}
             <div className="flex items-center gap-3.5">
+              {/* Search Toggle */}
               <button
                 title="Search"
                 onClick={() => {
@@ -461,6 +462,7 @@ const Navbar = ({ cart, setCart, onCartClick }) => {
             </div>
           </div>
 
+          {/* Mobile Search Bar */}
           <div
             className={`overflow-hidden transition-all duration-300 ease-in-out ${
               showMobileSearch

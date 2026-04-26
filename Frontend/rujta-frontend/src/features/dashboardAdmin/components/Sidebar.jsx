@@ -1,17 +1,56 @@
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
+// src/features/dashboard/components/Sidebar.jsx
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../../../assets/Logo.png";
-
-import { TbMenuOrder } from "react-icons/tb";
 import { RiLogoutCircleLine } from "react-icons/ri";
-import { MdMenuOpen } from "react-icons/md";
+import { MdMenuOpen, MdAttachMoney } from "react-icons/md";
+import { TbMenuOrder } from "react-icons/tb";
+
+import { useAuth } from "../../auth/hooks/useAuth";
 
 export default function Sidebar({ open, setOpen }) {
   const location = useLocation();
+  const { user, loading, handleLogout } = useAuth();
+  const navigate = useNavigate();
+
+  const [expanded] = useState(null); // (مش مستخدم حالياً لكن سيبناه لو هتستخدميه لاحقاً)
+
+  if (loading) {
+    return (
+      <aside
+        className={`h-screen bg-secondary text-white transition-all duration-300 ${
+          open ? "w-64" : "w-20"
+        }`}
+      >
+        <div className="px-3 py-2 h-20 flex justify-center items-center">
+          Loading...
+        </div>
+      </aside>
+    );
+  }
 
   const menu = [
-    { label: "Pharmacies", icon: <TbMenuOrder size={22} />, path: "/superadmin/pharmacies" },
+    {
+      label: "Pharmacies",
+      icon: <TbMenuOrder size={22} />,
+      path: "/superadmin/pharmacies",
+    },
+    {
+      label: "Service Pricing",
+      icon: <MdAttachMoney size={22} />,
+      path: "/superadmin/service-pricing",
+    },
+    {
+      label: "Approval Queue",
+      icon: <MdAttachMoney size={22} />,
+      path: "/superadmin/ApprovalQueue",
+    },
   ];
+
+  const onLogout = async () => {
+    await handleLogout();
+    navigate("/auth");
+  };
 
   return (
     <aside
@@ -35,7 +74,7 @@ export default function Sidebar({ open, setOpen }) {
         <MdMenuOpen
           size={32}
           className={`cursor-pointer transition-transform duration-300 ${
-            !open ? "rotate-180" : ""
+            !open && "rotate-180"
           }`}
           onClick={() => setOpen(!open)}
         />
@@ -44,15 +83,21 @@ export default function Sidebar({ open, setOpen }) {
       {/* Menu */}
       <ul className="p-3 space-y-1">
         {menu.map((item) => {
-          const active = location.pathname.startsWith(item.path);
+          const isActive =
+            location.pathname === item.path ||
+            location.pathname.startsWith(item.path + "/");
 
           return (
-            <li key={item.label}>
+            <li key={item.path}>
               <Link
                 to={item.path}
                 className={`flex items-center gap-3 p-3 rounded-xl transition-all
-                ${active ? "bg-white text-black shadow" : "hover:bg-white/20"}
-                ${!open ? "justify-center" : ""}
+                  ${
+                    isActive
+                      ? "bg-white text-black shadow"
+                      : "hover:bg-white/20"
+                  }
+                  ${!open && "justify-center"}
                 `}
               >
                 {item.icon}
@@ -65,15 +110,15 @@ export default function Sidebar({ open, setOpen }) {
 
       {/* Logout */}
       <div className="absolute bottom-4 left-0 w-full px-3">
-        <Link
-          to="/logout"
-          className={`flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 transition-all ${
-            !open ? "justify-center" : ""
+        <button
+          onClick={onLogout}
+          className={`flex items-center gap-3 p-3 rounded-xl hover:bg-white/20 transition-all w-full ${
+            !open && "justify-center"
           }`}
         >
           <RiLogoutCircleLine size={22} />
           {open && <span>Logout</span>}
-        </Link>
+        </button>
       </div>
     </aside>
   );
