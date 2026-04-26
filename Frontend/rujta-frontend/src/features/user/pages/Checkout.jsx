@@ -6,6 +6,7 @@ import Toast from "../components/checkout/Toast";
 import AddressSelection from "../components/checkout/AddressSelection";
 import PharmacyList from "../components/checkout/PharmacyList";
 import PaymentModal from "../components/checkout/PaymentModal";
+import PaymentIframeModal from "../components/checkout/PaymentIframeModal"; // ← new
 import { useCheckout } from "../hooks/useCheckout";
 
 const audio = new Audio(clickSound);
@@ -38,6 +39,9 @@ const Checkout = () => {
     selectedPharmacies,
     creatingOrder,
     selectedMedicines,
+    initiatingPayment,     // ← new
+    showPaymentIframe,     // ← new
+    paymentResult,         // ← new
     userLocation,
     deliveryAddressLocation,
     deliveryAddress,
@@ -55,6 +59,7 @@ const Checkout = () => {
     handleToggleMedicine,
     handleOrderClick,
     handlePaymentConfirm,
+    handleCloseIframe,     // ← new
   } = useCheckout();
 
   const errorMessage = typeof error === "string" ? error : error?.message || "";
@@ -82,7 +87,6 @@ const Checkout = () => {
 
         {/* RIGHT: CONTENT */}
         <div className="h-full w-full overflow-y-auto bg-white p-8 lg:w-1/2">
-          {/* Header */}
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-2xl font-semibold">
               Pharmacy Search & Ranking
@@ -92,8 +96,7 @@ const Checkout = () => {
           {showLocationPrompt && (
             <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
               <p className="mb-2 text-sm text-yellow-700">
-                📍 Your location is not set. Allow access to set it
-                automatically.
+                📍 Your location is not set. Allow access to set it automatically.
               </p>
               <button
                 onClick={handleSetLocation}
@@ -144,13 +147,23 @@ const Checkout = () => {
         </div>
       </div>
 
+      {/* Payment method selection modal */}
       {showPaymentModal && (
         <PaymentModal
           paymentMethod={paymentMethod}
           setPaymentMethod={setPaymentMethod}
           creatingOrder={creatingOrder}
+          initiatingPayment={initiatingPayment}
           onConfirm={handlePaymentConfirm}
           onClose={() => setShowPaymentModal(false)}
+        />
+      )}
+
+      {/* Paymob iframe modal */}
+      {showPaymentIframe && paymentResult?.iframeUrl && (
+        <PaymentIframeModal
+          iframeUrl={paymentResult.iframeUrl}
+          onClose={handleCloseIframe}
         />
       )}
     </div>

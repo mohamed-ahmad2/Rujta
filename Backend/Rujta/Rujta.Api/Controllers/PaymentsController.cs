@@ -49,23 +49,53 @@ namespace Rujta.Api.Controllers
 
             return (appUser, pharmacyId);
         }
+        // Add this new resolver for regular users
+        private async Task<(ApplicationUser appUser, Guid userId)?> ResolveUserAsync()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdClaim, out var userId)) return null;
 
-       
-        [Authorize(Roles = nameof(UserRole.PharmacyAdmin))]
+            var appUser = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (appUser == null) return null;
+
+            return (appUser, userId);
+        }
+
+        
+        [Authorize(Roles = $"{nameof(UserRole.User)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPost("initiate")]
         public async Task<IActionResult> Initiate(
-            [FromBody] InitiatePaymentDto dto,
-            CancellationToken cancellationToken)
+    [FromBody] InitiatePaymentDto dto,
+    CancellationToken cancellationToken)
         {
-            var resolved = await ResolvePharmacyUserAsync();
-            if (resolved == null) return Unauthorized(ApiMessages.UnauthorizedAccess);
+            Guid appUserId;
+            int pharmacyId = 0; // default for regular users
 
-            var (appUser, pharmacyId) = resolved.Value;
+            var userRole = User.FindFirstValue(
+                "http://schemas.microsoft.com/ws/2008/06/identity/claims/role");
+
+            if (userRole == nameof(UserRole.User))
+            {
+                // Regular customer — no pharmacyId needed
+                var resolved = await ResolveUserAsync();
+                if (resolved == null) return Unauthorized(ApiMessages.UnauthorizedAccess);
+                appUserId = resolved.Value.userId;
+            }
+            else
+            {
+                // PharmacyAdmin or Pharmacist — needs pharmacyId
+                var resolved = await ResolvePharmacyUserAsync();
+                if (resolved == null) return Unauthorized(ApiMessages.UnauthorizedAccess);
+                appUserId = resolved.Value.appUser.Id;
+                pharmacyId = resolved.Value.pharmacyId;
+            }
 
             try
             {
                 var result = await _paymentService.InitiateAsync(
-                    appUser.Id, pharmacyId, dto, cancellationToken);
+                    appUserId, pharmacyId, dto, cancellationToken);
 
                 await _logService.AddLogAsync(GetUser(),
                     $"Initiated {dto.Type} payment — Ref: Order={dto.OrderId}, Sub={dto.SubscriptionId}, Ad={dto.AdId}");
@@ -77,7 +107,6 @@ namespace Rujta.Api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
- 
         [AllowAnonymous]
         [HttpPost("callback")]
         public async Task<IActionResult> Callback(
@@ -106,8 +135,7 @@ namespace Rujta.Api.Controllers
             await _logService.AddLogAsync(GetUser(), "Fetched pharmacy payments");
             return Ok(payments);
         }
-
-        [Authorize(Roles = nameof(UserRole.Pharmacist))]
+        [Authorize(Roles = $"{nameof(UserRole.User)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpGet("my/orders")]
         public async Task<IActionResult> GetOrderPayments(CancellationToken cancellationToken)
             => await GetByType(PaymentType.Order, cancellationToken);

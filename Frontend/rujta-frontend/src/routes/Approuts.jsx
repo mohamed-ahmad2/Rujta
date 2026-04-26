@@ -49,7 +49,7 @@ const Checkout = lazy(() => import("../features/user/pages/Checkout"));
 const PharmacyDetails = lazy(
   () => import("../features/user/pages/PharmacyDetails"),
 );
-const Payment = lazy(() => import("../features/user/pages/Payment"));
+
 const MedicineDetails = lazy(
   () => import("../features/medicines/pages/MedicineDetails"),
 );
@@ -174,7 +174,6 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => {
           <Route path="orders" element={<Ordersuser />} />
           <Route path="profile" element={<Profile />} />
           <Route path="checkout" element={<Checkout />} />
-          <Route path="payment" element={<Payment />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route
             path="pharmacy/:id"
