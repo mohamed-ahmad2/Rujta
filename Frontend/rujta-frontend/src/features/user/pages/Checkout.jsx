@@ -6,7 +6,7 @@ import Toast from "../components/checkout/Toast";
 import AddressSelection from "../components/checkout/AddressSelection";
 import PharmacyList from "../components/checkout/PharmacyList";
 import PaymentModal from "../components/checkout/PaymentModal";
-import PaymentIframeModal from "../components/checkout/PaymentIframeModal"; // ← new
+import PaymentIframeModal from "../components/checkout/PaymentIframeModal";
 import { useCheckout } from "../hooks/useCheckout";
 
 const audio = new Audio(clickSound);
@@ -37,11 +37,12 @@ const Checkout = () => {
     paymentMethod,
     setPaymentMethod,
     selectedPharmacies,
+    totalSelectedItems,      // ← جديد
     creatingOrder,
     selectedMedicines,
-    initiatingPayment,     // ← new
-    showPaymentIframe,     // ← new
-    paymentResult,         // ← new
+    initiatingPayment,
+    showPaymentIframe,
+    paymentResult,
     userLocation,
     deliveryAddressLocation,
     deliveryAddress,
@@ -57,9 +58,10 @@ const Checkout = () => {
     handleExpandRange,
     handleTogglePharmacy,
     handleToggleMedicine,
+    handleUpdateQty,         // ← جديد
     handleOrderClick,
     handlePaymentConfirm,
-    handleCloseIframe,     // ← new
+    handleCloseIframe,
   } = useCheckout();
 
   const errorMessage = typeof error === "string" ? error : error?.message || "";
@@ -69,7 +71,8 @@ const Checkout = () => {
       <Toast toast={toast} onClose={() => setToast(null)} />
 
       <div className="flex h-[700px] w-[1150px] flex-col rounded-3xl bg-white shadow-xl lg:flex-row">
-        {/* LEFT: MAP */}
+        
+        {/* ── LEFT: MAP ─────────────────────────────────────────────── */}
         <div className="relative h-full w-full overflow-hidden lg:w-1/2">
           <div className="absolute inset-0 z-0">
             <PharmacyMap
@@ -85,7 +88,7 @@ const Checkout = () => {
           </div>
         </div>
 
-        {/* RIGHT: CONTENT */}
+        {/* ── RIGHT: CONTENT ────────────────────────────────────────── */}
         <div className="h-full w-full overflow-y-auto bg-white p-8 lg:w-1/2">
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-2xl font-semibold">
@@ -93,6 +96,7 @@ const Checkout = () => {
             </h1>
           </div>
 
+          {/* ── Location Prompt ───────────────────────────────────── */}
           {showLocationPrompt && (
             <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
               <p className="mb-2 text-sm text-yellow-700">
@@ -100,13 +104,15 @@ const Checkout = () => {
               </p>
               <button
                 onClick={handleSetLocation}
-                className="rounded-xl bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-600"
+                className="rounded-xl bg-blue-500 px-5 py-2 text-sm font-medium
+                  text-white hover:bg-blue-600"
               >
                 Set My Location
               </button>
             </div>
           )}
 
+          {/* ── Address Selection OR Pharmacy List ────────────────── */}
           {showAddressSelection ? (
             <AddressSelection
               addresses={addresses}
@@ -133,11 +139,13 @@ const Checkout = () => {
               setExpandedPharmacies={setExpandedPharmacies}
               selectedPharmacies={selectedPharmacies}
               selectedMedicines={selectedMedicines}
+              totalSelectedItems={totalSelectedItems}    // ← جديد
               routeData={routeData}
               creatingOrder={creatingOrder}
               showAddressSelection={showAddressSelection}
               onTogglePharmacy={handleTogglePharmacy}
               onToggleMedicine={handleToggleMedicine}
+              onUpdateQty={handleUpdateQty}              // ← جديد
               onOrderClick={handleOrderClick}
               onExpandRange={handleExpandRange}
               onOpenPaymentModal={() => setShowPaymentModal(true)}
@@ -147,7 +155,7 @@ const Checkout = () => {
         </div>
       </div>
 
-      {/* Payment method selection modal */}
+      {/* ── Payment Method Modal ─────────────────────────────────────── */}
       {showPaymentModal && (
         <PaymentModal
           paymentMethod={paymentMethod}
@@ -159,7 +167,7 @@ const Checkout = () => {
         />
       )}
 
-      {/* Paymob iframe modal */}
+      {/* ── Paymob Iframe Modal ──────────────────────────────────────── */}
       {showPaymentIframe && paymentResult?.iframeUrl && (
         <PaymentIframeModal
           iframeUrl={paymentResult.iframeUrl}
