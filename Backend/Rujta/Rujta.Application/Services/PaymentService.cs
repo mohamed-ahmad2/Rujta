@@ -24,7 +24,8 @@ namespace Rujta.Infrastructure.Services
         private int IntegrationId => int.Parse(_configuration["Paymob:IntegrationId"]!);
         private int IframeId => int.Parse(_configuration["Paymob:IframeId"]!);
         private string HmacSecret => _configuration["Paymob:HmacSecret"]!;
-
+        private string UserRedirectUrl => _configuration["Paymob:UserRedirectUrl"]!;
+        private string AdminRedirectUrl => _configuration["Paymob:AdminRedirectUrl"]!;
         public PaymentService(
             IPaymentRepository paymentRepository,
             IAdRepository adRepository,
@@ -47,7 +48,9 @@ namespace Rujta.Infrastructure.Services
             var amountCents = dto.Amount * 100;
             var authToken = await GetAuthTokenAsync();
             var paymobOrderId = await RegisterOrderAsync(authToken, amountCents, dto.Currency);
-            var paymentKey = await GetPaymentKeyAsync(authToken, paymobOrderId, amountCents, dto.Currency, dto.BillingData);
+            var redirectUrl = dto.Type == PaymentType.Order ? UserRedirectUrl: AdminRedirectUrl;
+
+            var paymentKey = await GetPaymentKeyAsync(authToken, paymobOrderId, amountCents, dto.Currency, dto.BillingData, redirectUrl);
 
             var payment = new Payment
             {
@@ -122,11 +125,13 @@ namespace Rujta.Infrastructure.Services
             switch (payment.Type)
             {
                 case PaymentType.Ad when payment.AdId.HasValue:
-                    await _adRepository.SetStatusAsync(payment.AdId.Value, true, cancellationToken);
+                    // Activate ad with its stored duration
+                    var ad = await _adRepository.GetByIdAsync(payment.AdId.Value, cancellationToken);
+                    if (ad != null)
+                        await _adRepository.ActivateAsync(ad.Id, ad.DurationDays, cancellationToken);
                     break;
 
                 case PaymentType.Order:
-                    // Orders are handled by your order service — payment confirmation is enough
                     break;
             }
         }
@@ -189,7 +194,8 @@ namespace Rujta.Infrastructure.Services
         private async Task<string> GetPaymentKeyAsync(
             string authToken, string paymobOrderId,
             decimal amountCents, string currency,
-            PaymobBillingDataDto billing)
+            PaymobBillingDataDto billing,
+    string redirectUrl)
         {
             var response = await _httpClient.PostAsJsonAsync(
                 $"{BaseUrl}/api/acceptance/payment_keys",
@@ -199,6 +205,7 @@ namespace Rujta.Infrastructure.Services
                     amount_cents = (int)amountCents,
                     expiration = 3600,
                     order_id = paymobOrderId,
+                    redirect_url = redirectUrl,
                     billing_data = new
                     {
                         first_name = billing.FirstName,

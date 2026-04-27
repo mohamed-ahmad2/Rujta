@@ -28,6 +28,7 @@ export const useCheckout = () => {
     reset: resetPayment,
   } = usePayment();
 
+  // ── Address States ──────────────────────────────────────────────
   const [pharmaciesRange, setPharmaciesRange] = useState(5);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [showAddressSelection, setShowAddressSelection] = useState(true);
@@ -42,6 +43,7 @@ export const useCheckout = () => {
     IsDefault: false,
   });
 
+  // ── Pharmacy / Order States ─────────────────────────────────────
   const [expandedPharmacies, setExpandedPharmacies] = useState({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPaymentIframe, setShowPaymentIframe] = useState(false);
@@ -52,12 +54,14 @@ export const useCheckout = () => {
   const [selectedMedicines, setSelectedMedicines] = useState({});
   const [pendingOrderId, setPendingOrderId] = useState(null);
 
+  // ── Map States ──────────────────────────────────────────────────
   const [userLocation, setUserLocation] = useState(null);
   const [deliveryAddressLocation, setDeliveryAddressLocation] = useState(null);
   const [deliveryAddress, setDeliveryAddress] = useState(null);
   const [hoveredPharmacyId, setHoveredPharmacyId] = useState(null);
   const [routeData, setRouteData] = useState({});
 
+  // ── Toast State ─────────────────────────────────────────────────
   const [toast, setToast] = useState(null);
 
   const showToast = useCallback((type, message) => {
@@ -65,6 +69,7 @@ export const useCheckout = () => {
     if (type === "success") setTimeout(() => setToast(null), 3200);
   }, []);
 
+  // ── Route Fetching ──────────────────────────────────────────────
   const fetchRoute = useCallback(
     (pharmacy) => {
       const start = deliveryAddressLocation || userLocation;
@@ -97,6 +102,7 @@ export const useCheckout = () => {
     [deliveryAddressLocation, userLocation]
   );
 
+  // ── Effects ─────────────────────────────────────────────────────
   useEffect(() => {
     if (pharmacies.length > 0) pharmacies.forEach(fetchRoute);
   }, [pharmacies, fetchRoute]);
@@ -121,6 +127,7 @@ export const useCheckout = () => {
     if (msg.includes("location not set")) setShowLocationPrompt(true);
   }, [error]);
 
+  // When paymentResult arrives → close payment modal, open iframe
   useEffect(() => {
     if (paymentResult?.iframeUrl) {
       setShowPaymentModal(false);
@@ -128,6 +135,7 @@ export const useCheckout = () => {
     }
   }, [paymentResult]);
 
+  // ── Handlers ────────────────────────────────────────────────────
   const handleSetLocation = () => {
     navigator.geolocation?.getCurrentPosition(async ({ coords }) => {
       try {
@@ -225,6 +233,7 @@ export const useCheckout = () => {
     setShowPaymentModal(true);
   };
 
+  // ── Core order creation ─────────────────────────────────────────
   const createOrders = async () => {
     if (!cart.length) throw new Error("Your cart is empty!");
     if (!selectedAddressId) throw new Error("No delivery address selected!");
@@ -255,6 +264,7 @@ export const useCheckout = () => {
     return { results, orderDtos };
   };
 
+  // ── Clear cart after successful order ───────────────────────────
   const clearCartAfterOrder = async (orderDtos) => {
     const orderedIds = new Set(
       orderDtos.flatMap((d) => d.OrderItems.map((i) => i.MedicineID))
@@ -268,13 +278,17 @@ export const useCheckout = () => {
     await fetchUser();
   };
 
+  // ── Cash flow ───────────────────────────────────────────────────
   const handleConfirmOrders = async () => {
     setCreatingOrder(true);
     try {
       const { results, orderDtos } = await createOrders();
       if (results?.length > 0) {
         await clearCartAfterOrder(orderDtos);
-        showToast("success", `${results.length} order${results.length > 1 ? "s" : ""} placed! 🎉`);
+        showToast(
+          "success",
+          `${results.length} order${results.length > 1 ? "s" : ""} placed! 🎉`
+        );
         setTimeout(() => window.location.reload(), 3200);
       } else {
         showToast("error", "Failed to create orders. Please try again.");
@@ -287,6 +301,7 @@ export const useCheckout = () => {
     }
   };
 
+  // ── Online flow ─────────────────────────────────────────────────
   const handleOnlinePayment = async () => {
     setCreatingOrder(true);
     try {
@@ -297,15 +312,12 @@ export const useCheckout = () => {
         return;
       }
 
+      // Get order ID — backend returns it as `id` or `orderId`
       const firstOrderId = results[0]?.id ?? results[0]?.orderId ?? results[0];
       setPendingOrderId(firstOrderId);
 
-      console.log("💳 firstOrderId:", firstOrderId, "| type:", typeof firstOrderId);
-      console.log("💳 results[0]:", results[0]);
-
+      // Get delivery address for billing data
       const fullAddress = await fetchById(selectedAddressId);
-      console.log("📍 fullAddress:", fullAddress);
-      console.log("👤 user:", user);
 
       const billingData = {
         FirstName: user?.firstName || user?.name?.split(" ")[0] || "Customer",
@@ -323,28 +335,21 @@ export const useCheckout = () => {
         State: fullAddress?.governorate || "Cairo",
       };
 
-      const totalAmount = selectedPharmacies.reduce((total, pharmacyId) => {
-        const pharmacy = pharmacies.find((p) => p.pharmacyId === pharmacyId);
-        if (!pharmacy) return total;
-        return (
-          total +
-          pharmacy.foundMedicines
-            .filter((m) => selectedMedicines[pharmacyId]?.includes(m.medicineId))
-            .reduce((sum, m) => sum + m.price * m.requestedQuantity, 0)
-        );
-      }, 0);
+      // Use totalPrice from the order response — foundMedicines don't carry price
+      const totalAmount = results.reduce(
+        (sum, order) => sum + (order.totalPrice ?? 0),
+        0
+      );
 
-      const dto = {
+      await initiate({
         Type: "Order",
         OrderId: firstOrderId,
-        Amount: Math.round(totalAmount * 100) / 100,
+        Amount: totalAmount,
         Currency: "EGP",
         BillingData: billingData,
-      };
+      });
 
-      console.log("💳 DTO being sent:", JSON.stringify(dto, null, 2));
-
-      await initiate(dto);
+      // Clear cart after initiating payment
       await clearCartAfterOrder(orderDtos);
     } catch (err) {
       console.error("Online payment error:", err);
@@ -354,6 +359,7 @@ export const useCheckout = () => {
     }
   };
 
+  // ── Payment modal confirm ────────────────────────────────────────
   const handlePaymentConfirm = async () => {
     if (paymentMethod === "Cash") {
       setShowPaymentModal(false);
@@ -370,6 +376,7 @@ export const useCheckout = () => {
   };
 
   return {
+    // data
     cart,
     pharmacies,
     loading,
@@ -377,6 +384,7 @@ export const useCheckout = () => {
     addresses,
     addressesLoading,
     addressesError,
+    // address states
     pharmaciesRange,
     showLocationPrompt,
     showAddressSelection,
@@ -384,6 +392,7 @@ export const useCheckout = () => {
     showNewAddressForm,
     isConfirmingAddress,
     newAddressForm,
+    // pharmacy / order states
     expandedPharmacies,
     showPaymentModal,
     selectedPharmacyForPayment,
@@ -391,15 +400,19 @@ export const useCheckout = () => {
     selectedPharmacies,
     creatingOrder,
     selectedMedicines,
+    // payment states
     initiatingPayment,
     showPaymentIframe,
     paymentResult,
+    // map states
     userLocation,
     deliveryAddressLocation,
     deliveryAddress,
     hoveredPharmacyId,
     routeData,
+    // toast
     toast,
+    // setters
     setSelectedAddressId,
     setShowNewAddressForm,
     setNewAddressForm,
@@ -409,6 +422,7 @@ export const useCheckout = () => {
     setHoveredPharmacyId,
     setToast,
     setShowAddressSelection,
+    // handlers
     handleSetLocation,
     handleNewAddressChange,
     handleAddNewAddress,

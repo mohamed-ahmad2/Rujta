@@ -11,5 +11,7 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
         Task<IEnumerable<Ad>> GetByPharmacyIdAsync(int pharmacyId, CancellationToken cancellationToken = default);
         Task DeactivateAsync(int id, CancellationToken cancellationToken = default);
         Task SetStatusAsync(int id, bool isActive, CancellationToken cancellationToken = default);
+        Task ActivateAsync(int adId, int durationDays, CancellationToken cancellationToken = default);
+        Task<List<Ad>> GetExpiredActiveAdsAsync(DateTime now, CancellationToken cancellationToken = default);
     }
 }

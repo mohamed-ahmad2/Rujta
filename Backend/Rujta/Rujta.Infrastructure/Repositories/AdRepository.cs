@@ -59,5 +59,24 @@ namespace Rujta.Infrastructure.Repositories
 
             await _context.SaveChangesAsync(cancellationToken);
         }
+
+        public async Task ActivateAsync(int adId, int durationDays, CancellationToken cancellationToken = default)
+        {
+            var ad = await _context.Ads.FindAsync([adId], cancellationToken);
+            if (ad == null) return;
+
+            ad.IsActive = true;
+            ad.StartsAt = DateTime.UtcNow;
+            ad.ExpiresAt = DateTime.UtcNow.AddDays(durationDays);
+            ad.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        public async Task<List<Ad>> GetExpiredActiveAdsAsync(DateTime now, CancellationToken cancellationToken = default)
+        {
+            return await _context.Ads
+                .Where(a => a.IsActive && a.ExpiresAt.HasValue && a.ExpiresAt.Value < now)
+                .ToListAsync(cancellationToken);
+        }
     }
 }
