@@ -21,7 +21,7 @@ export const usePayment = () => {
       await fn();
     } catch (err) {
       // ── Full error detail for debugging ──
-      console.error("❌ payment error:", err?.response?.data?.errors ?? err?.response?.data ?? err);
+      console.error("❌ errors:", JSON.stringify(err?.response?.data?.errors, null, 2));
       setError(err?.response?.data?.message || "Payment request failed");
     } finally {
       setLoading(false);

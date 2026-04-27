@@ -7,6 +7,8 @@ import {
 import { FiCheckCircle } from "react-icons/fi";
 import useMedicines from "../../medicines/hook/useMedicines";
 import useCampaigns from "../../campaigns/hook/useCampaigns";
+import { usePayment } from "../../payment/hooks/usePayment";
+import PaymentIframeModal from "../../user/components/checkout/PaymentIframeModal";
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
@@ -34,6 +36,14 @@ const fontOptions = [
   { label: "Medical Clean", value: "'Nunito', sans-serif",      url: "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap"            },
   { label: "Retro Pharma",  value: "'Bebas Neue', cursive",     url: "https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap"                        },
   { label: "Rounded Soft",  value: "'Poppins', sans-serif",     url: "https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap"          },
+];
+
+// ─── Ad Plans ─────────────────────────────────────────────────────────────────
+
+const AD_PLANS = [
+  { days: 7,  price: 99,  label: "1 Week",  description: "Great for short promotions" },
+  { days: 14, price: 179, label: "2 Weeks", description: "Most popular choice"        },
+  { days: 30, price: 299, label: "1 Month", description: "Best value for visibility"  },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -181,11 +191,73 @@ function Toast({ message, onClose }) {
   );
 }
 
+// ─── Plan Modal ───────────────────────────────────────────────────────────────
+
+function PlanModal({ onSelect, onClose, loading }) {
+  const [selected, setSelected] = useState(AD_PLANS[1]); // default: 2 weeks
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40">
+      <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+        <h2 className="mb-1 text-xl font-semibold">Choose Ad Plan</h2>
+        <p className="mb-5 text-sm text-gray-500">
+          Your ad will go live immediately after payment and deactivate automatically when the plan ends.
+        </p>
+
+        <div className="flex flex-col gap-3 mb-6">
+          {AD_PLANS.map((plan) => (
+            <label
+              key={plan.days}
+              className={`flex cursor-pointer items-center justify-between rounded-xl border-2 p-4 transition ${
+                selected.days === plan.days
+                  ? "border-primary bg-primary/5"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  checked={selected.days === plan.days}
+                  onChange={() => setSelected(plan)}
+                  className="accent-primary"
+                />
+                <div>
+                  <p className="font-semibold text-gray-800">{plan.label}</p>
+                  <p className="text-xs text-gray-500">{plan.description}</p>
+                </div>
+              </div>
+              <span className="font-bold text-primary text-lg">{plan.price} EGP</span>
+            </label>
+          ))}
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-700 hover:bg-gray-300 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSelect(selected)}
+            disabled={loading}
+            className="rounded-lg bg-primary px-5 py-2 font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+          >
+            {loading ? "Processing..." : `Pay ${selected.price} EGP →`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Ads() {
   const { medicines, loading: medsLoading, error: medsError, fetchAll: fetchMeds } = useMedicines();
   const { create: createAd } = useCampaigns();
+  const { initiate, paymentResult, loading: initiatingPayment, reset: resetPayment } = usePayment();
 
   const [adMode,           setAdMode]          = useState("medicine");
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -202,10 +274,22 @@ export default function Ads() {
   const [toast,            setToast]            = useState(null);
   const [publishError,     setPublishError]     = useState(null);
 
+  // ── Plan & Payment states ──────────────────────────────────────
+  const [showPlanModal,    setShowPlanModal]    = useState(false);
+  const [showIframe,       setShowIframe]       = useState(false);
+
   const canvasRef = useRef(null);
 
   useEffect(() => { fetchMeds(); }, [fetchMeds]);
   useEffect(() => { fontOptions.forEach(f => loadFont(f.url)); }, []);
+
+  // Open iframe when paymentResult arrives
+  useEffect(() => {
+    if (paymentResult?.iframeUrl) {
+      setShowPlanModal(false);
+      setShowIframe(true);
+    }
+  }, [paymentResult]);
 
   const categories = useMemo(() => {
     const cats = medicines.map(m => m.category).filter(Boolean);
@@ -260,58 +344,108 @@ export default function Ads() {
     setTimeout(() => setPngSaved(false), 2500);
   };
 
-  const handlePublish = async () => {
-  if (!isReady || publishing) return;
+  // ── Step 1: Publish button → show plan modal ──────────────────
+  const handlePublishClick = () => {
+    if (!isReady || publishing) return;
+    setPublishError(null);
+    setShowPlanModal(true);
+  };
 
-  setPublishing(true);
-  setPublishError(null);
+  // ── Step 2: Plan selected → create ad + initiate payment ──────
+  const handlePlanSelect = async (plan) => {
+    setPublishing(true);
+    setPublishError(null);
 
-  try {
-    const payload = {
-      templateId:   selectedTemplate.id,
-      templateName: selectedTemplate.name,
-      badge:        selectedTemplate.badge,
-      adMode,
+    try {
+      // Create the ad first (isActive: false until payment succeeds)
+      const payload = {
+        templateId:    selectedTemplate.id,
+        templateName:  selectedTemplate.name,
+        badge:         selectedTemplate.badge,
+        adMode,
+        medicineId:    adMode === "medicine" ? selectedProduct?.id   : null,
+        medicineName:  adMode === "medicine" ? selectedProduct?.name : null,
+        category:      adMode === "category" ? selectedCategory      : null,
+        headline:      previewHeadline,
+        subtext:       previewSubtext,
+        ctaLabel:      previewCta,
+        colorFrom:     palette.from,
+        colorTo:       palette.to,
+        colorAccent:   palette.accent,
+        fontLabel:     font.label,
+        fontValue:     font.value,
+        medicineImage: adMode === "medicine" ? getImgSrc(selectedProduct) : null,
+        durationDays:  plan.days,   // ← new
+        price:         plan.price,  // ← new
+        isActive:      false,       // activated by payment callback
+      };
 
-      medicineId:   adMode === "medicine" ? selectedProduct?.id : null,
-      medicineName: adMode === "medicine" ? selectedProduct?.name : null,
-      category:     adMode === "category" ? selectedCategory : null,
+      const createdAd = await createAd(payload);
 
-      headline:     previewHeadline,
-      subtext:      previewSubtext,
-      ctaLabel:     previewCta,
+      // Initiate Paymob payment for this ad
+      await initiate({
+        Type:    "Ad",
+        AdId:    createdAd.id,
+        Amount:  plan.price,
+        Currency: "EGP",
+        BillingData: {
+          FirstName:      "Pharmacy",
+          LastName:       "Admin",
+          Email:          "admin@pharmacy.com", // ideally from auth context
+          PhoneNumber:    "01000000000",
+          Apartment:      "N/A",
+          Floor:          "N/A",
+          Street:         "N/A",
+          Building:       "N/A",
+          ShippingMethod: "PKG",
+          PostalCode:     "NA",
+          City:           "Cairo",
+          Country:        "EG",
+          State:          "Cairo",
+        },
+      });
 
-      colorFrom:    palette.from,
-      colorTo:      palette.to,
-      colorAccent:  palette.accent,
+      // paymentResult useEffect will open the iframe
 
-      fontLabel:    font.label,
-      fontValue:    font.value,
+    } catch (err) {
+      setPublishError(
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to publish"
+      );
+      setShowPlanModal(false);
+    } finally {
+      setPublishing(false);
+    }
+  };
 
-      // ✅ Save the medicine's actual image URL, not the canvas render
-      medicineImage: adMode === "medicine" ? getImgSrc(selectedProduct) : null,
+  const handleCloseIframe = () => {
+    setShowIframe(false);
+    resetPayment();
+    setToast({ message: "Ad submitted! It will activate once payment is confirmed." });
+  };
 
-      isActive: true
-    };
-// HI
-
-    await createAd(payload);
-    setToast({ message: "Ad published successfully 🚀" });
-
-  } catch (err) {
-    setPublishError(
-      err?.response?.data?.message ||
-      err?.message ||
-      "Failed to publish"
-    );
-  } finally {
-    setPublishing(false);
-  }
-};
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
 
       {toast && <Toast message={toast.message} onClose={() => setToast(null)} />}
+
+      {/* Plan modal */}
+      {showPlanModal && (
+        <PlanModal
+          loading={publishing || initiatingPayment}
+          onSelect={handlePlanSelect}
+          onClose={() => setShowPlanModal(false)}
+        />
+      )}
+
+      {/* Paymob iframe */}
+      {showIframe && paymentResult?.iframeUrl && (
+        <PaymentIframeModal
+          iframeUrl={paymentResult.iframeUrl}
+          onClose={handleCloseIframe}
+        />
+      )}
 
       <div className="flex items-center gap-3 pb-3 border-b">
         <MdCampaign size={30} className="text-primary" />
@@ -515,10 +649,10 @@ export default function Ads() {
           )}
 
           <div className="flex gap-3 flex-wrap">
-            <button disabled={!isReady || publishing} onClick={handlePublish}
+            <button disabled={!isReady || publishing || initiatingPayment} onClick={handlePublishClick}
               className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-semibold shadow disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 transition">
-              {publishing
-                ? <><span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> Publishing…</>
+              {publishing || initiatingPayment
+                ? <><span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" /> Processing…</>
                 : <><MdCampaign size={20} /> Publish Ad</>}
             </button>
             <button disabled={!isReady} onClick={handleDownload}
@@ -530,10 +664,12 @@ export default function Ads() {
 
           {!isReady && <p className="text-xs text-gray-400">↑ Pick a template and {adMode === "medicine" ? "a medicine" : "a category"} to enable.</p>}
 
+          {/* Info box updated to mention payment */}
           <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 text-xs text-blue-600 space-y-1">
-            <p className="font-semibold">Where will this ad appear?</p>
-            <p>✅ Pharmacy Details page — under that pharmacy's section</p>
-            <p>✅ Home page Offers section — visible to all customers</p>
+            <p className="font-semibold">How does publishing work?</p>
+            <p>✅ Choose a plan (7, 14, or 30 days)</p>
+            <p>✅ Pay via Paymob — ad activates automatically</p>
+            <p>✅ Ad deactivates automatically when plan expires</p>
           </div>
         </div>
       </div>
