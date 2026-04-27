@@ -22,7 +22,7 @@ namespace Rujta.Application.Interfaces
 
         ISuperAdminRepository SuperAdmin { get; }
         ISubscriptionRepository Subscriptions { get; }
-
+        IAdRepository Ads { get; }
         Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
     }

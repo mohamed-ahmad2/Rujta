@@ -25,7 +25,7 @@ namespace Rujta.Infrastructure.Repositories
         private ICustomerRepository? _customers;
         private ISuperAdminRepository? _superAdminReposatory;
         private ISubscriptionRepository? _subscriptions;
-
+        private IAdRepository? _ads;
 
 
         public UnitOfWork(AppDbContext context, IServiceProvider serviceProvider)
@@ -54,6 +54,7 @@ namespace Rujta.Infrastructure.Repositories
 
         public ISuperAdminRepository SuperAdmin => _superAdminReposatory ??= new SuperAdminReposatory(_context);
         public ISubscriptionRepository Subscriptions => _subscriptions ??= new SubscriptionRepository(_context);
+        public IAdRepository Ads => _ads ??= new AdRepository(_context);
         // Save changes
         public async Task<int> SaveAsync(CancellationToken cancellationToken = default)
             => await _context.SaveChangesAsync(cancellationToken);
