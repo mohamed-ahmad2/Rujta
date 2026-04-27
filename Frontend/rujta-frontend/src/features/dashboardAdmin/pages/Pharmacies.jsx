@@ -58,6 +58,9 @@ export default function Pharmacies() {
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [successData, setSuccessData] = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [confirmData, setConfirmData] = useState(null);
 
   /* ---------- ADD FORM ---------- */
   const emptyForm = {
@@ -102,36 +105,44 @@ export default function Pharmacies() {
   const data = filtered.slice((page - 1) * perPage, page * perPage);
 
   /* ══ ADD ══ */
-  const handleAdd = async () => {
-    const { pharmacyName, adminPhone, adminEmail, adminName } = addForm;
-    if (!pharmacyName || !adminPhone || !adminEmail || !adminName) {
-      alert("Please fill all required fields");
-      return;
-    }
-    try {
-      const payload = {
-        pharmacyName: addForm.pharmacyName,
-        pharmacyLocation: addForm.pharmacyLocation || "Not provided",
-        latitude: parseFloat(addForm.latitude) || 0,
-        longitude: parseFloat(addForm.longitude) || 0,
-        adminName: addForm.adminName,
-        adminEmail: addForm.adminEmail,
-        adminPhone: addForm.adminPhone,
-      };
+  /* ══ ADD ══ */
+ const handleAdd = async () => {
+  const { pharmacyName, adminPhone, adminEmail, adminName } = addForm;
 
-      console.log("🚀 Sending payload:", payload);
+ if (!pharmacyName || !adminPhone || !adminEmail || !adminName) {
+  setErrorMsg("Please fill all required fields");
+  return;
+}
 
-      const res = await create(payload);
-      alert(
-        `✅ Pharmacy created!\n\nAdmin Email: ${res.adminEmail}\nGenerated Password: ${res.generatedPassword}`
-      );
-      setAddForm(emptyForm);
-      setModal(null);
-      fetchAll();
-    } catch (err) {
-      alert(`❌ ${err?.message || "Error creating pharmacy"}`);
-    }
-  };
+  try {
+    const payload = {
+      pharmacyName: addForm.pharmacyName,
+      pharmacyLocation: addForm.pharmacyLocation || "Not provided",
+      latitude: parseFloat(addForm.latitude) || 0,
+      longitude: parseFloat(addForm.longitude) || 0,
+      adminName: addForm.adminName,
+      adminEmail: addForm.adminEmail,
+      adminPhone: addForm.adminPhone,
+      logo: addForm.logo,
+    };
+
+    const res = await create(payload);
+
+    // ❌ شيل alert
+    // ✅ استخدم modal
+    setSuccessData({
+      email: res.adminEmail,
+      password: res.generatedPassword,
+    });
+
+    setAddForm(emptyForm);
+    setModal(null);
+    fetchAll();
+
+  } catch (err) {
+  setErrorMsg(err?.message || "Error creating pharmacy");
+}
+};
 
   /* ══ VIEW ══ */
   const handleView = async (p) => {
@@ -556,6 +567,89 @@ export default function Pharmacies() {
           </div>
         </Modal>
       )}
+      {successData && (
+  <Modal onClose={() => setSuccessData(null)}>
+    <h2 className="text-lg font-semibold text-green-600 flex items-center gap-2">
+      <CheckCircle size={18} /> Pharmacy Created!
+    </h2>
+
+    <p className="text-sm text-gray-500">
+      Admin credentials generated successfully
+    </p>
+
+    {/* EMAIL */}
+    <div className="border rounded-lg p-3 flex justify-between items-center">
+      <div>
+        <p className="text-xs text-gray-400">Admin Email</p>
+        <p className="font-medium">{successData.email}</p>
+      </div>
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(successData.email);
+        }}
+        className="text-sm px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
+      >
+        Copy
+      </button>
+    </div>
+
+    {/* PASSWORD */}
+    <div className="border rounded-lg p-3 flex justify-between items-center">
+      <div>
+        <p className="text-xs text-gray-400">Password</p>
+        <p className="font-medium">{successData.password}</p>
+      </div>
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(successData.password);
+        }}
+        className="text-sm px-3 py-1 bg-gray-100 rounded hover:bg-gray-200"
+      >
+        Copy
+      </button>
+    </div>
+
+    {/* COPY ALL */}
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(
+          `Email: ${successData.email}\nPassword: ${successData.password}`
+        );
+      }}
+      className="w-full bg-secondary text-white py-2 rounded-lg mt-2"
+    >
+      Copy All
+    </button>
+
+    <div className="flex justify-end">
+      <button
+        onClick={() => setSuccessData(null)}
+        className="px-4 py-2 border rounded-lg text-sm"
+      >
+        Close
+      </button>
+    </div>
+  </Modal>
+)}
+
+{errorMsg && (
+  <Modal onClose={() => setErrorMsg("")}>
+    <h2 className="text-lg font-semibold text-red-600 flex items-center gap-2">
+      <XCircle size={18} /> Error
+    </h2>
+
+    <p className="text-sm text-gray-600">{errorMsg}</p>
+
+    <div className="flex justify-end">
+      <button
+        onClick={() => setErrorMsg("")}
+        className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm"
+      >
+        OK
+      </button>
+    </div>
+  </Modal>
+)}
     </div>
   );
 }
