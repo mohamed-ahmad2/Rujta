@@ -37,7 +37,8 @@ const Checkout = () => {
     paymentMethod,
     setPaymentMethod,
     selectedPharmacies,
-    totalSelectedItems,      // ← جديد
+    totalSelectedItems,
+    totalSelectedQtyPerMedicine, // ← جديد
     creatingOrder,
     selectedMedicines,
     initiatingPayment,
@@ -58,7 +59,7 @@ const Checkout = () => {
     handleExpandRange,
     handleTogglePharmacy,
     handleToggleMedicine,
-    handleUpdateQty,         // ← جديد
+    handleUpdateQty,
     handleOrderClick,
     handlePaymentConfirm,
     handleCloseIframe,
@@ -71,7 +72,6 @@ const Checkout = () => {
       <Toast toast={toast} onClose={() => setToast(null)} />
 
       <div className="flex h-[700px] w-[1150px] flex-col rounded-3xl bg-white shadow-xl lg:flex-row">
-        
         {/* ── LEFT: MAP ─────────────────────────────────────────────── */}
         <div className="relative h-full w-full overflow-hidden lg:w-1/2">
           <div className="absolute inset-0 z-0">
@@ -100,12 +100,12 @@ const Checkout = () => {
           {showLocationPrompt && (
             <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
               <p className="mb-2 text-sm text-yellow-700">
-                📍 Your location is not set. Allow access to set it automatically.
+                📍 Your location is not set. Allow access to set it
+                automatically.
               </p>
               <button
                 onClick={handleSetLocation}
-                className="rounded-xl bg-blue-500 px-5 py-2 text-sm font-medium
-                  text-white hover:bg-blue-600"
+                className="rounded-xl bg-blue-500 px-5 py-2 text-sm font-medium text-white hover:bg-blue-600"
               >
                 Set My Location
               </button>
@@ -139,13 +139,14 @@ const Checkout = () => {
               setExpandedPharmacies={setExpandedPharmacies}
               selectedPharmacies={selectedPharmacies}
               selectedMedicines={selectedMedicines}
-              totalSelectedItems={totalSelectedItems}    // ← جديد
+              totalSelectedItems={totalSelectedItems}
+              totalSelectedQtyPerMedicine={totalSelectedQtyPerMedicine} // ← جديد
               routeData={routeData}
               creatingOrder={creatingOrder}
               showAddressSelection={showAddressSelection}
               onTogglePharmacy={handleTogglePharmacy}
               onToggleMedicine={handleToggleMedicine}
-              onUpdateQty={handleUpdateQty}              // ← جديد
+              onUpdateQty={handleUpdateQty}
               onOrderClick={handleOrderClick}
               onExpandRange={handleExpandRange}
               onOpenPaymentModal={() => setShowPaymentModal(true)}

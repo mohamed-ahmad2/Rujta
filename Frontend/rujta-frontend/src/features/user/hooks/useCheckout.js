@@ -1,3 +1,4 @@
+// src/features/pharmacies/hooks/useCheckout.js
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
 import { useOrders } from "../../orders/hooks/useOrders";
@@ -73,7 +74,9 @@ export const useCheckout = () => {
     if (type !== "error") setTimeout(() => setToast(null), 3200);
   }, []);
 
-  // ── Derived ────────────────────────────────────────────────────────────────
+  // ── Derived State ──────────────────────────────────────────────────────────
+
+  /** الصيدليات التي فيها ≥ 1 دواء محدد */
   const selectedPharmacies = useMemo(
     () =>
       Object.entries(selectedMedicines)
@@ -82,6 +85,7 @@ export const useCheckout = () => {
     [selectedMedicines],
   );
 
+  /** إجمالي الأصناف المختارة (مش الكميات) */
   const totalSelectedItems = useMemo(
     () =>
       Object.values(selectedMedicines).reduce(
@@ -91,68 +95,50 @@ export const useCheckout = () => {
     [selectedMedicines],
   );
 
-  // ── Conflict Resolver ──────────────────────────────────────────────────────
-  // يشيل الدواء من كل الصيدليات الأخرى لو اتحدد في صيدلية جديدة
-  const resolveConflict = (prevState, targetPharmacyId, medicineId) => {
-    const newState = { ...prevState };
-    Object.keys(newState).forEach((pid) => {
-      if (pid !== targetPharmacyId && medicineId in (newState[pid] ?? {})) {
-        const { [medicineId]: _removed, ...rest } = newState[pid];
-        newState[pid] = rest;
-      }
-    });
-    return newState;
-  };
-
-  // ── Handler: Toggle Medicine ───────────────────────────────────────────────
-  const handleToggleMedicine = useCallback(
-    (pharmacyId, medicine) => {
-      let hadConflict = false;
-
-      setSelectedMedicines((prev) => {
-        const current = prev[pharmacyId] ?? {};
-        const exists = medicine.medicineId in current;
-
-        if (exists) {
-          // إلغاء تحديد الدواء
-          const { [medicine.medicineId]: _removed, ...rest } = current;
-          return { ...prev, [pharmacyId]: rest };
-        }
-
-        // فحص لو نفس الدواء موجود في صيدلية تانية
-        Object.keys(prev).forEach((pid) => {
-          if (pid !== pharmacyId && medicine.medicineId in (prev[pid] ?? {})) {
-            hadConflict = true;
-          }
-        });
-
-        // حل الـ conflict + إضافة الدواء
-        const resolved = resolveConflict(prev, pharmacyId, medicine.medicineId);
-        return {
-          ...resolved,
-          [pharmacyId]: {
-            ...(resolved[pharmacyId] ?? {}),
-            [medicine.medicineId]: getAvailableQty(medicine),
-          },
-        };
+  /**
+   * ✅ الكمية الإجمالية المحددة لكل دواء عبر كل الصيدليات
+   * { [medicineId]: totalQtyAcrossAllPharmacies }
+   * بيُستخدم لحساب effectiveMax في الـ stepper
+   */
+  const totalSelectedQtyPerMedicine = useMemo(() => {
+    const result = {};
+    Object.values(selectedMedicines).forEach((medsMap) => {
+      Object.entries(medsMap).forEach(([medicineId, qty]) => {
+        result[medicineId] = (result[medicineId] ?? 0) + qty;
       });
+    });
+    return result;
+  }, [selectedMedicines]);
 
-      // Toast بعد setState
-      if (hadConflict) {
-        setTimeout(
-          () =>
-            showToast(
-              "warning",
-              "⚠️ تم نقل الدواء تلقائياً من الصيدلية الأخرى لتفادي التكرار",
-            ),
-          50,
-        );
+  // ── Handler: Toggle Single Medicine ───────────────────────────────────────
+  /**
+   * ✅ لا يوجد conflict resolution
+   *    المستخدم مسموح له يطلب نفس الدواء من صيدليتين لتغطية الكمية المطلوبة
+   *    مثال: Ahmed عنده 45 من 50 → Mohamed عنده 3 → إجمالي 48 ✅
+   */
+  const handleToggleMedicine = useCallback((pharmacyId, medicine) => {
+    setSelectedMedicines((prev) => {
+      const current = prev[pharmacyId] ?? {};
+      const exists = medicine.medicineId in current;
+
+      if (exists) {
+        // ── إلغاء التحديد ──────────────────────────────────────
+        const { [medicine.medicineId]: _removed, ...rest } = current;
+        return { ...prev, [pharmacyId]: rest };
       }
-    },
-    [showToast],
-  );
 
-  // ── Handler: Update Medicine Quantity ─────────────────────────────────────
+      // ── تحديد الدواء بكميته المتاحة في هذه الصيدلية ──────────
+      return {
+        ...prev,
+        [pharmacyId]: {
+          ...current,
+          [medicine.medicineId]: getAvailableQty(medicine),
+        },
+      };
+    });
+  }, []);
+
+  // ── Handler: Update Medicine Quantity (Stepper) ────────────────────────────
   const handleUpdateQty = useCallback(
     (pharmacyId, medicineId, newQty, maxQty) => {
       const clamped = Math.min(Math.max(1, newQty), maxQty);
@@ -168,31 +154,34 @@ export const useCheckout = () => {
   );
 
   // ── Handler: Toggle All Medicines in Pharmacy ─────────────────────────────
+  /**
+   * ✅ لا يمس تحديدات الصيدليات الأخرى إطلاقاً
+   *    toggle-all خاص بهذه الصيدلية فقط
+   */
   const handleTogglePharmacy = useCallback((pharmacyId, allMedicines = []) => {
     setSelectedMedicines((prev) => {
       const current = prev[pharmacyId] ?? {};
+
       const allSelected =
         allMedicines.length > 0 &&
         allMedicines.every((m) => m.medicineId in current);
 
+      // ── Deselect all ──────────────────────────────────────────
       if (allSelected) {
-        // شيل كل أدوية الصيدلية
         return { ...prev, [pharmacyId]: {} };
       }
 
-      // حدد كل الأدوية مع حل الـ conflicts
-      let newState = { ...prev };
+      // ── Select all ───────────────────────────────────────────
+      const newMeds = { ...current };
       allMedicines.forEach((m) => {
-        newState = resolveConflict(newState, pharmacyId, m.medicineId);
+        // لو الدواء مش محدد في الصيدلية دي → أضفه
+        if (!(m.medicineId in current)) {
+          newMeds[m.medicineId] = getAvailableQty(m);
+        }
+        // لو كان محدد → خليه زي ما هو (مش نغير الكمية)
       });
 
-      const newMeds = { ...(newState[pharmacyId] ?? {}) };
-      allMedicines.forEach((m) => {
-        // لو الدواء كان محدد قبل كده، خلي الكمية زي ما هي
-        newMeds[m.medicineId] = current[m.medicineId] ?? getAvailableQty(m);
-      });
-
-      return { ...newState, [pharmacyId]: newMeds };
+      return { ...prev, [pharmacyId]: newMeds };
     });
   }, []);
 
@@ -201,11 +190,11 @@ export const useCheckout = () => {
     const allMedicines = pharmacy.foundMedicines;
     setSelectedPharmacyForPayment(pharmacy);
 
-    // حدد كل أدوية الصيدلية دي فقط وامسح الباقي
     const newMeds = {};
     allMedicines.forEach((m) => {
       newMeds[m.medicineId] = getAvailableQty(m);
     });
+
     setSelectedMedicines({ [pharmacy.pharmacyId]: newMeds });
     setShowPaymentModal(true);
   };
@@ -219,6 +208,7 @@ export const useCheckout = () => {
 
       setRouteData((prev) => {
         if (prev[cacheKey]) return prev;
+
         const url =
           `https://router.project-osrm.org/route/v1/driving/` +
           `${start.lng},${start.lat};${pharmacy.longitude},${pharmacy.latitude}` +
@@ -323,6 +313,7 @@ export const useCheckout = () => {
     try {
       if (cart.length > 0)
         await fetchPharmacies(cart, selectedAddressId, pharmaciesRange);
+
       const fullAddress = await fetchById(selectedAddressId);
       if (fullAddress?.latitude && fullAddress?.longitude) {
         setDeliveryAddressLocation({
@@ -367,7 +358,6 @@ export const useCheckout = () => {
         DeliveryAddressId: selectedAddressId,
         OrderItems: items.map((m) => ({
           MedicineID: m.medicineId,
-          // ✅ الكمية المختارة من الـ stepper مش requestedQuantity الكاملة
           Quantity: selectedMedsMap[m.medicineId],
         })),
       });
@@ -453,7 +443,6 @@ export const useCheckout = () => {
         State: fullAddress?.governorate || "Cairo",
       };
 
-      // ✅ الحساب بناءً على الكمية المختارة من الـ stepper
       const totalAmount = selectedPharmacies.reduce((total, pharmacyId) => {
         const pharmacy = pharmacies.find((p) => p.pharmacyId === pharmacyId);
         if (!pharmacy) return total;
@@ -527,6 +516,7 @@ export const useCheckout = () => {
     totalSelectedItems,
     creatingOrder,
     selectedMedicines,
+    totalSelectedQtyPerMedicine, // ← جديد: للـ effectiveMax في الـ stepper
     initiatingPayment,
     showPaymentIframe,
     paymentResult,
@@ -536,6 +526,7 @@ export const useCheckout = () => {
     hoveredPharmacyId,
     routeData,
     toast,
+    // ── Setters ──
     setSelectedAddressId,
     setShowNewAddressForm,
     setNewAddressForm,
@@ -545,6 +536,7 @@ export const useCheckout = () => {
     setHoveredPharmacyId,
     setToast,
     setShowAddressSelection,
+    // ── Handlers ──
     handleSetLocation,
     handleNewAddressChange,
     handleAddNewAddress,
@@ -552,7 +544,7 @@ export const useCheckout = () => {
     handleExpandRange,
     handleTogglePharmacy,
     handleToggleMedicine,
-    handleUpdateQty, // ← جديد
+    handleUpdateQty,
     handleOrderClick,
     handlePaymentConfirm,
     handleCloseIframe,

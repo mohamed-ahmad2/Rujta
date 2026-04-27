@@ -27,14 +27,15 @@ const PharmacyList = ({
   expandedPharmacies,
   setExpandedPharmacies,
   selectedPharmacies,
-  selectedMedicines, // ← { [pharmacyId]: { [medicineId]: qty } }
-  totalSelectedItems, // ← جديد
+  selectedMedicines,
+  totalSelectedItems,
+  totalSelectedQtyPerMedicine, // ← جديد
   routeData,
   creatingOrder,
   showAddressSelection,
   onTogglePharmacy,
   onToggleMedicine,
-  onUpdateQty, // ← جديد
+  onUpdateQty,
   onOrderClick,
   onExpandRange,
   onOpenPaymentModal,
@@ -87,7 +88,8 @@ const PharmacyList = ({
               index={i}
               isExpanded={expandedPharmacies[pharmacy.pharmacyId] || false}
               routeInfo={routeData[pharmacy.pharmacyId]}
-              selectedMedicinesMap={medsMap} // ← { [medicineId]: qty }
+              selectedMedicinesMap={medsMap}
+              totalSelectedQtyPerMedicine={totalSelectedQtyPerMedicine} // ← جديد
               onToggleExpand={() =>
                 setExpandedPharmacies((prev) => ({
                   ...prev,
@@ -96,7 +98,7 @@ const PharmacyList = ({
               }
               onTogglePharmacy={onTogglePharmacy}
               onToggleMedicine={onToggleMedicine}
-              onUpdateQty={onUpdateQty} // ← جديد
+              onUpdateQty={onUpdateQty}
               onOrderClick={onOrderClick}
               onMouseEnter={() => setHoveredPharmacyId(pharmacy.pharmacyId)}
               onMouseLeave={() => setHoveredPharmacyId(null)}
