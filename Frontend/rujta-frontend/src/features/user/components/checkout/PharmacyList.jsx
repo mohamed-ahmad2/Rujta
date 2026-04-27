@@ -29,7 +29,7 @@ const PharmacyList = ({
   selectedPharmacies,
   selectedMedicines,
   totalSelectedItems,
-  totalSelectedQtyPerMedicine, // ← جديد
+  totalSelectedQtyPerMedicine,
   routeData,
   creatingOrder,
   showAddressSelection,
@@ -58,7 +58,7 @@ const PharmacyList = ({
         </div>
       )}
 
-      {/* ── Selection Summary Banner ─────────────────────────────── */}
+      {/*Selection Summary Banner*/}
       {totalSelectedItems > 0 && (
         <div className="mb-4 flex items-center justify-between rounded-xl border border-secondary/30 bg-secondary/5 px-4 py-2.5">
           <div className="flex items-center gap-2 text-sm text-secondary">
@@ -76,7 +76,7 @@ const PharmacyList = ({
         </div>
       )}
 
-      {/* ── Pharmacy Cards ───────────────────────────────────────── */}
+      {/*Pharmacy Cards*/}
       <div className="space-y-4">
         {pharmacies.map((pharmacy, i) => {
           const medsMap = selectedMedicines[pharmacy.pharmacyId] ?? {};
@@ -89,7 +89,7 @@ const PharmacyList = ({
               isExpanded={expandedPharmacies[pharmacy.pharmacyId] || false}
               routeInfo={routeData[pharmacy.pharmacyId]}
               selectedMedicinesMap={medsMap}
-              totalSelectedQtyPerMedicine={totalSelectedQtyPerMedicine} // ← جديد
+              totalSelectedQtyPerMedicine={totalSelectedQtyPerMedicine}
               onToggleExpand={() =>
                 setExpandedPharmacies((prev) => ({
                   ...prev,
@@ -107,7 +107,7 @@ const PharmacyList = ({
         })}
       </div>
 
-      {/* ── Action Buttons ───────────────────────────────────────── */}
+      {/* Action Buttons */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
         <button
           onClick={onExpandRange}

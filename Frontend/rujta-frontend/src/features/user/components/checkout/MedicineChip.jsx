@@ -5,8 +5,8 @@ const MedicineChip = ({
   medicine,
   checked,
   quantity,
-  effectiveMax, // ← الـ max الذكي بعد حساب الصيدليات الأخرى
-  selectedInOtherPharmacies, // ← كمية نفس الدواء محددة في صيدليات أخرى
+  effectiveMax,
+  selectedInOtherPharmacies,
   pharmacyColor,
   onToggle,
   onQtyChange,
@@ -15,16 +15,14 @@ const MedicineChip = ({
   const shortageQty = medicine.shortageQuantity ?? 0;
   const requestedQty = medicine.requestedQuantity;
 
-  // الكمية الإجمالية المغطاة (هذه الصيدلية + غيرها)
   const totalCovered = (checked ? quantity : 0) + selectedInOtherPharmacies;
   const isFulfilledElsewhere = selectedInOtherPharmacies >= requestedQty;
 
-  // ── ألوان ──────────────────────────────────────────────────
   const chipColor = checked
     ? pharmacyColor
     : isFullyAvailable
       ? "#10B981"
-      : "#F59E0B"; // amber للـ partial
+      : "#F59E0B";
 
   const bgColor = checked
     ? `${chipColor}12`
@@ -53,7 +51,6 @@ const MedicineChip = ({
         opacity: isFulfilledElsewhere && !checked ? 0.55 : 1,
       }}
     >
-      {/* ── Checkbox ──────────────────────────────────────────── */}
       <input
         type="checkbox"
         checked={checked}
@@ -67,7 +64,6 @@ const MedicineChip = ({
         }}
       />
 
-      {/* ── Image ─────────────────────────────────────────────── */}
       {medicine.imageUrl ? (
         <img
           src={medicine.imageUrl}
@@ -102,7 +98,6 @@ const MedicineChip = ({
         </div>
       )}
 
-      {/* ── Name + Badges ─────────────────────────────────────── */}
       <div
         style={{
           flex: 1,
@@ -129,7 +124,6 @@ const MedicineChip = ({
           {medicine.medicineName}
         </span>
 
-        {/* Warning: partial availability */}
         {!isFullyAvailable && shortageQty > 0 && (
           <div
             style={{
@@ -150,7 +144,6 @@ const MedicineChip = ({
           </div>
         )}
 
-        {/* ✅ Coverage indicator: لو نفس الدواء متحدد في صيدليات أخرى */}
         {selectedInOtherPharmacies > 0 && (
           <div
             style={{
@@ -184,7 +177,7 @@ const MedicineChip = ({
         )}
       </div>
 
-      {/* ── Stepper ───────────────────────────────────────────── */}
+      {/* Stepper*/}
       {checked && (
         <div
           style={{
@@ -269,7 +262,7 @@ const MedicineChip = ({
         </div>
       )}
 
-      {/* ── Max / Coverage Badge ──────────────────────────────── */}
+      {/* Max / Coverage Badge*/}
       <div
         style={{
           display: "flex",

@@ -41,8 +41,8 @@ const PharmacyCard = ({
   index,
   isExpanded,
   routeInfo,
-  selectedMedicinesMap, // { [medicineId]: qty } لهذه الصيدلية
-  totalSelectedQtyPerMedicine, // { [medicineId]: totalQty } عبر كل الصيدليات
+  selectedMedicinesMap,
+  totalSelectedQtyPerMedicine,
   onToggleExpand,
   onTogglePharmacy,
   onToggleMedicine,
@@ -66,7 +66,6 @@ const PharmacyCard = ({
 
   const pharmacyColor = getPharmacyColor(index);
 
-  // ── Indeterminate checkbox ───────────────────────────────────
   const checkboxRef = useRef(null);
   useEffect(() => {
     if (checkboxRef.current) checkboxRef.current.indeterminate = someSelected;
@@ -74,7 +73,6 @@ const PharmacyCard = ({
 
   useEffect(() => {
     if (selectedCount > 0 && !isExpanded) onToggleExpand();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCount]);
 
   const borderColor =
@@ -95,7 +93,7 @@ const PharmacyCard = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {/* ── Header ──────────────────────────────────────────────── */}
+      {/*  Header  */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-1 gap-3">
           {/* Color dot + Checkbox */}
@@ -225,7 +223,7 @@ const PharmacyCard = ({
         </button>
       </div>
 
-      {/* ── Expanded Details ─────────────────────────────────────── */}
+      {/*Expanded Details*/}
       {isExpanded && (
         <div className="mt-4 space-y-5 border-t pt-4">
           {/* Summary Bar */}
@@ -284,22 +282,19 @@ const PharmacyCard = ({
 
               <div className="grid grid-cols-1 gap-2">
                 {pharmacy.foundMedicines.map((m) => {
-                  // ✅ effectiveMax الذكي
-                  // الكمية المتاحة في هذه الصيدلية
                   const pharmacyAvailableQty = Math.max(
                     m.requestedQuantity - (m.shortageQuantity ?? 0),
                     1,
                   );
-                  // الكمية المحددة من صيدليات أخرى لنفس الدواء
+
                   const selectedInOtherPharmacies =
                     (totalSelectedQtyPerMedicine[m.medicineId] ?? 0) -
                     (selectedMedicinesMap[m.medicineId] ?? 0);
-                  // الكمية المتبقية المطلوبة
+
                   const remainingNeeded = Math.max(
                     m.requestedQuantity - selectedInOtherPharmacies,
                     1,
                   );
-                  // الـ max الفعلي = أقل قيمة بين المتاح والمتبقي
                   const effectiveMax = Math.min(
                     pharmacyAvailableQty,
                     remainingNeeded,

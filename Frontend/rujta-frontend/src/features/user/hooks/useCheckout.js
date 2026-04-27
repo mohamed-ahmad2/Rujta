@@ -8,7 +8,6 @@ import { usePayment } from "../../payment/hooks/usePayment";
 import apiClient from "../../../shared/api/apiClient";
 import { decodePolyline } from "../../../utils/decodePolyline";
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
 const getAvailableQty = (medicine) => {
   const shortage = medicine.shortageQuantity ?? 0;
   return Math.max(medicine.requestedQuantity - shortage, 1);
@@ -57,7 +56,6 @@ export const useCheckout = () => {
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [creatingOrder, setCreatingOrder] = useState(false);
 
-  // ✅ { [pharmacyId]: { [medicineId]: selectedQty } }
   const [selectedMedicines, setSelectedMedicines] = useState({});
 
   const [pendingOrderId, setPendingOrderId] = useState(null);
@@ -68,15 +66,11 @@ export const useCheckout = () => {
   const [routeData, setRouteData] = useState({});
   const [toast, setToast] = useState(null);
 
-  // ── Toast ──────────────────────────────────────────────────────────────────
   const showToast = useCallback((type, message) => {
     setToast({ type, message });
     if (type !== "error") setTimeout(() => setToast(null), 3200);
   }, []);
 
-  // ── Derived State ──────────────────────────────────────────────────────────
-
-  /** الصيدليات التي فيها ≥ 1 دواء محدد */
   const selectedPharmacies = useMemo(
     () =>
       Object.entries(selectedMedicines)
@@ -85,7 +79,6 @@ export const useCheckout = () => {
     [selectedMedicines],
   );
 
-  /** إجمالي الأصناف المختارة (مش الكميات) */
   const totalSelectedItems = useMemo(
     () =>
       Object.values(selectedMedicines).reduce(
@@ -95,11 +88,6 @@ export const useCheckout = () => {
     [selectedMedicines],
   );
 
-  /**
-   * ✅ الكمية الإجمالية المحددة لكل دواء عبر كل الصيدليات
-   * { [medicineId]: totalQtyAcrossAllPharmacies }
-   * بيُستخدم لحساب effectiveMax في الـ stepper
-   */
   const totalSelectedQtyPerMedicine = useMemo(() => {
     const result = {};
     Object.values(selectedMedicines).forEach((medsMap) => {
@@ -110,24 +98,16 @@ export const useCheckout = () => {
     return result;
   }, [selectedMedicines]);
 
-  // ── Handler: Toggle Single Medicine ───────────────────────────────────────
-  /**
-   * ✅ لا يوجد conflict resolution
-   *    المستخدم مسموح له يطلب نفس الدواء من صيدليتين لتغطية الكمية المطلوبة
-   *    مثال: Ahmed عنده 45 من 50 → Mohamed عنده 3 → إجمالي 48 ✅
-   */
   const handleToggleMedicine = useCallback((pharmacyId, medicine) => {
     setSelectedMedicines((prev) => {
       const current = prev[pharmacyId] ?? {};
       const exists = medicine.medicineId in current;
 
       if (exists) {
-        // ── إلغاء التحديد ──────────────────────────────────────
         const { [medicine.medicineId]: _removed, ...rest } = current;
         return { ...prev, [pharmacyId]: rest };
       }
 
-      // ── تحديد الدواء بكميته المتاحة في هذه الصيدلية ──────────
       return {
         ...prev,
         [pharmacyId]: {
@@ -138,7 +118,6 @@ export const useCheckout = () => {
     });
   }, []);
 
-  // ── Handler: Update Medicine Quantity (Stepper) ────────────────────────────
   const handleUpdateQty = useCallback(
     (pharmacyId, medicineId, newQty, maxQty) => {
       const clamped = Math.min(Math.max(1, newQty), maxQty);
@@ -153,11 +132,6 @@ export const useCheckout = () => {
     [],
   );
 
-  // ── Handler: Toggle All Medicines in Pharmacy ─────────────────────────────
-  /**
-   * ✅ لا يمس تحديدات الصيدليات الأخرى إطلاقاً
-   *    toggle-all خاص بهذه الصيدلية فقط
-   */
   const handleTogglePharmacy = useCallback((pharmacyId, allMedicines = []) => {
     setSelectedMedicines((prev) => {
       const current = prev[pharmacyId] ?? {};
@@ -166,26 +140,21 @@ export const useCheckout = () => {
         allMedicines.length > 0 &&
         allMedicines.every((m) => m.medicineId in current);
 
-      // ── Deselect all ──────────────────────────────────────────
       if (allSelected) {
         return { ...prev, [pharmacyId]: {} };
       }
 
-      // ── Select all ───────────────────────────────────────────
       const newMeds = { ...current };
       allMedicines.forEach((m) => {
-        // لو الدواء مش محدد في الصيدلية دي → أضفه
         if (!(m.medicineId in current)) {
           newMeds[m.medicineId] = getAvailableQty(m);
         }
-        // لو كان محدد → خليه زي ما هو (مش نغير الكمية)
       });
 
       return { ...prev, [pharmacyId]: newMeds };
     });
   }, []);
 
-  // ── Handler: Order Click (زر Order على الكارد) ────────────────────────────
   const handleOrderClick = (pharmacy) => {
     const allMedicines = pharmacy.foundMedicines;
     setSelectedPharmacyForPayment(pharmacy);
@@ -199,7 +168,6 @@ export const useCheckout = () => {
     setShowPaymentModal(true);
   };
 
-  // ── Route Fetching ─────────────────────────────────────────────────────────
   const fetchRoute = useCallback(
     (pharmacy) => {
       const start = deliveryAddressLocation || userLocation;
@@ -237,7 +205,6 @@ export const useCheckout = () => {
     [deliveryAddressLocation, userLocation],
   );
 
-  // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (pharmacies.length > 0) pharmacies.forEach(fetchRoute);
   }, [pharmacies, fetchRoute]);
@@ -272,7 +239,6 @@ export const useCheckout = () => {
     }
   }, [paymentResult]);
 
-  // ── Handler: Set Location ──────────────────────────────────────────────────
   const handleSetLocation = () => {
     navigator.geolocation?.getCurrentPosition(async ({ coords }) => {
       try {
@@ -288,7 +254,6 @@ export const useCheckout = () => {
     });
   };
 
-  // ── Handler: Address Form ──────────────────────────────────────────────────
   const handleNewAddressChange = (e) => {
     const { name, value } = e.target;
     setNewAddressForm((prev) => ({ ...prev, [name]: value }));
@@ -337,28 +302,37 @@ export const useCheckout = () => {
       await fetchPharmacies(cart, selectedAddressId, newRange);
   };
 
-  // ── Order Creation ─────────────────────────────────────────────────────────
+  // ✅ الدالة بعد الإصلاح
   const createOrders = async () => {
     if (!cart.length) throw new Error("Your cart is empty!");
     if (!selectedAddressId) throw new Error("No delivery address selected!");
     if (!selectedPharmacies.length) throw new Error("No pharmacies selected!");
 
     const orderDtos = selectedPharmacies.reduce((acc, pharmacyId) => {
-      const pharmacy = pharmacies.find((p) => p.pharmacyId === pharmacyId);
+      // ✅ String comparison لتجنب type mismatch بين string و number
+      const pharmacy = pharmacies.find(
+        (p) => String(p.pharmacyId) === String(pharmacyId),
+      );
       if (!pharmacy) return acc;
 
       const selectedMedsMap = selectedMedicines[pharmacyId] ?? {};
+
+      // ✅ Normalize keys to strings لضمان المقارنة الصحيحة
+      const normalizedMedsMap = Object.fromEntries(
+        Object.entries(selectedMedsMap).map(([k, v]) => [String(k), v]),
+      );
+
       const items = pharmacy.foundMedicines.filter(
-        (m) => m.medicineId in selectedMedsMap,
+        (m) => String(m.medicineId) in normalizedMedsMap,
       );
       if (!items.length) return acc;
 
       acc.push({
-        PharmacyID: pharmacyId,
+        PharmacyID: pharmacy.pharmacyId,
         DeliveryAddressId: selectedAddressId,
         OrderItems: items.map((m) => ({
           MedicineID: m.medicineId,
-          Quantity: selectedMedsMap[m.medicineId],
+          Quantity: normalizedMedsMap[String(m.medicineId)],
         })),
       });
       return acc;
@@ -375,9 +349,9 @@ export const useCheckout = () => {
 
   const clearCartAfterOrder = async (orderDtos) => {
     const orderedIds = new Set(
-      orderDtos.flatMap((d) => d.OrderItems.map((i) => i.MedicineID)),
+      orderDtos.flatMap((d) => d.OrderItems.map((i) => String(i.MedicineID))),
     );
-    const updatedCart = cart.filter((item) => !orderedIds.has(item.id));
+    const updatedCart = cart.filter((item) => !orderedIds.has(String(item.id)));
     localStorage.setItem(`cart_${user.email}`, JSON.stringify(updatedCart));
     window.dispatchEvent(
       new StorageEvent("storage", { key: `cart_${user.email}` }),
@@ -387,7 +361,6 @@ export const useCheckout = () => {
     await fetchUser();
   };
 
-  // ── Order Confirm: Cash ────────────────────────────────────────────────────
   const handleConfirmOrders = async () => {
     setCreatingOrder(true);
     try {
@@ -410,7 +383,6 @@ export const useCheckout = () => {
     }
   };
 
-  // ── Order Confirm: Online Payment ──────────────────────────────────────────
   const handleOnlinePayment = async () => {
     setCreatingOrder(true);
     try {
@@ -444,15 +416,23 @@ export const useCheckout = () => {
       };
 
       const totalAmount = selectedPharmacies.reduce((total, pharmacyId) => {
-        const pharmacy = pharmacies.find((p) => p.pharmacyId === pharmacyId);
+        const pharmacy = pharmacies.find(
+          (p) => String(p.pharmacyId) === String(pharmacyId),
+        );
         if (!pharmacy) return total;
+
         const selectedMedsMap = selectedMedicines[pharmacyId] ?? {};
+        const normalizedMedsMap = Object.fromEntries(
+          Object.entries(selectedMedsMap).map(([k, v]) => [String(k), v]),
+        );
+
         return (
           total +
           pharmacy.foundMedicines
-            .filter((m) => m.medicineId in selectedMedsMap)
+            .filter((m) => String(m.medicineId) in normalizedMedsMap)
             .reduce(
-              (sum, m) => sum + m.price * selectedMedsMap[m.medicineId],
+              (sum, m) =>
+                sum + m.price * normalizedMedsMap[String(m.medicineId)],
               0,
             )
         );
@@ -476,7 +456,6 @@ export const useCheckout = () => {
     }
   };
 
-  // ── Payment Confirm ────────────────────────────────────────────────────────
   const handlePaymentConfirm = async () => {
     if (paymentMethod === "Cash") {
       setShowPaymentModal(false);
@@ -492,7 +471,6 @@ export const useCheckout = () => {
     setPendingOrderId(null);
   };
 
-  // ── Return ─────────────────────────────────────────────────────────────────
   return {
     cart,
     pharmacies,
@@ -516,7 +494,7 @@ export const useCheckout = () => {
     totalSelectedItems,
     creatingOrder,
     selectedMedicines,
-    totalSelectedQtyPerMedicine, // ← جديد: للـ effectiveMax في الـ stepper
+    totalSelectedQtyPerMedicine,
     initiatingPayment,
     showPaymentIframe,
     paymentResult,
@@ -526,7 +504,6 @@ export const useCheckout = () => {
     hoveredPharmacyId,
     routeData,
     toast,
-    // ── Setters ──
     setSelectedAddressId,
     setShowNewAddressForm,
     setNewAddressForm,
@@ -536,7 +513,6 @@ export const useCheckout = () => {
     setHoveredPharmacyId,
     setToast,
     setShowAddressSelection,
-    // ── Handlers ──
     handleSetLocation,
     handleNewAddressChange,
     handleAddNewAddress,

@@ -12,7 +12,6 @@ import React from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-/* ── Palette ─────────────────────────────────────────────────────────────────── */
 const ROUTE_PALETTE = [
   "#10B981",
   "#8B5CF6",
@@ -29,7 +28,6 @@ const ROUTE_PALETTE = [
 ];
 const getPharmacyColor = (i) => ROUTE_PALETTE[i % ROUTE_PALETTE.length];
 
-/* ── Uniform Pin Icon ────────────────────────────────────────────────────────── */
 const makePinIcon = (color, { selected = false, hovered = false } = {}) => {
   const size = hovered ? 40 : selected ? 36 : 30;
   const h = Math.round(size * 1.43);
@@ -64,7 +62,6 @@ const makePinIcon = (color, { selected = false, hovered = false } = {}) => {
   });
 };
 
-/* ── User Dot ────────────────────────────────────────────────────────────────── */
 const USER_ICON = new L.DivIcon({
   className: "",
   html: `
@@ -81,7 +78,6 @@ const USER_ICON = new L.DivIcon({
   popupAnchor: [0, -15],
 });
 
-/* ── Delivery Icon ───────────────────────────────────────────────────────────── */
 const DELIVERY_ICON = new L.DivIcon({
   className: "",
   html: `
@@ -99,7 +95,6 @@ const DELIVERY_ICON = new L.DivIcon({
   popupAnchor: [0, -48],
 });
 
-/* ── Sub-components ──────────────────────────────────────────────────────────── */
 const MapUpdater = ({ center }) => {
   const map = useMap();
   useEffect(() => {
@@ -143,7 +138,6 @@ const PharmacyBoundsUpdater = ({
   return null;
 };
 
-/* ── Main ────────────────────────────────────────────────────────────────────── */
 const PharmacyMap = ({
   userLocation,
   pharmacies,
@@ -163,7 +157,6 @@ const PharmacyMap = ({
         userLocation?.lng ?? defaultLocation.lng,
       ];
 
-  /* ── Color map ───────────────────────────────────────────── */
   const colorMap = useMemo(() => {
     const m = {};
     pharmacies.forEach((p, i) => {
@@ -172,7 +165,6 @@ const PharmacyMap = ({
     return m;
   }, [pharmacies]);
 
-  /* ── Icon cache ──────────────────────────────────────────── */
   const iconCache = useMemo(() => {
     const cache = {};
     pharmacies.forEach((p, i) => {
@@ -188,10 +180,6 @@ const PharmacyMap = ({
     return cache;
   }, [pharmacies]);
 
-  /*
-   * ✅ FIX: نحول كل ID لـ String عشان نضمن مطابقة صحيحة
-   *    سواء الـ backend بعت number أو string
-   */
   const selectedSet = useMemo(
     () => new Set(selectedPharmacies.map(String)),
     [selectedPharmacies],
@@ -224,8 +212,6 @@ const PharmacyMap = ({
           deliveryAddressLocation={deliveryAddressLocation}
         />
 
-        {/* ── Routes — قبل الـ Markers عشان يكونوا تحتهم ─────
-            ✅ يظهر الـ route لكل صيدلية selected أو hovered    */}
         {pharmacies.map((p) => {
           const isSelected = isPharmacySelected(p.pharmacyId);
           const isHovered = isPharmacyHovered(p.pharmacyId);
@@ -239,7 +225,6 @@ const PharmacyMap = ({
 
           const color = colorMap[String(p.pharmacyId)];
 
-          // ── Visual tiers ──────────────────────────────────
           let colorW = 6;
           let outlineW = 10;
           let opacity = 0.95;
@@ -255,11 +240,9 @@ const PharmacyMap = ({
             opacity = 0.92;
             dash = "12,5";
           }
-          // selected فقط → خط صلب واضح (default values أعلاه)
 
           return (
             <React.Fragment key={`route-${p.pharmacyId}`}>
-              {/* White halo — يضمن الوضوح على أي خلفية للخريطة */}
               <Polyline
                 positions={route.coordinates}
                 color="white"
@@ -279,7 +262,7 @@ const PharmacyMap = ({
           );
         })}
 
-        {/* ── User Location ─────────────────────────────────── */}
+        {/* User Location*/}
         {userLocation && (
           <Marker
             position={[userLocation.lat, userLocation.lng]}
@@ -290,7 +273,7 @@ const PharmacyMap = ({
           </Marker>
         )}
 
-        {/* ── Delivery Address ──────────────────────────────── */}
+        {/*Delivery Address */}
         {deliveryAddressLocation && (
           <Marker
             position={[
@@ -309,7 +292,7 @@ const PharmacyMap = ({
           </Marker>
         )}
 
-        {/* ── Pharmacy Markers ──────────────────────────────── */}
+        {/* Pharmacy Markers*/}
         {pharmacies.map((p, index) => {
           const isSelected = isPharmacySelected(p.pharmacyId);
           const isHovered = isPharmacyHovered(p.pharmacyId);
