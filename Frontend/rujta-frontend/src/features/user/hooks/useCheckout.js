@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+// src/features/pharmacies/hooks/useCheckout.js
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
 import { useOrders } from "../../orders/hooks/useOrders";
 import { useAuth } from "../../auth/hooks/useAuth";
@@ -6,6 +7,11 @@ import useAddress from "../../address/hook/useAddress";
 import { usePayment } from "../../payment/hooks/usePayment";
 import apiClient from "../../../shared/api/apiClient";
 import { decodePolyline } from "../../../utils/decodePolyline";
+
+const getAvailableQty = (medicine) => {
+  const shortage = medicine.shortageQuantity ?? 0;
+  return Math.max(medicine.requestedQuantity - shortage, 1);
+};
 
 export const useCheckout = () => {
   const [cart, setCart] = useState([]);
@@ -47,9 +53,9 @@ export const useCheckout = () => {
   const [expandedPharmacies, setExpandedPharmacies] = useState({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPaymentIframe, setShowPaymentIframe] = useState(false);
-  const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] = useState(null);
+  const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] =
+    useState(null);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
-  const [selectedPharmacies, setSelectedPharmacies] = useState([]);
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [selectedMedicines, setSelectedMedicines] = useState({});
   const [pendingOrderId, setPendingOrderId] = useState(null);
@@ -66,8 +72,107 @@ export const useCheckout = () => {
 
   const showToast = useCallback((type, message) => {
     setToast({ type, message });
-    if (type === "success") setTimeout(() => setToast(null), 3200);
+    if (type !== "error") setTimeout(() => setToast(null), 3200);
   }, []);
+
+  // ── Selected Pharmacies (derived) ───────────────────────────────
+  const selectedPharmacies = useMemo(
+    () =>
+      Object.entries(selectedMedicines)
+        .filter(([, meds]) => Object.keys(meds).length > 0)
+        .map(([pharmacyId]) => pharmacyId),
+    [selectedMedicines],
+  );
+
+  const totalSelectedItems = useMemo(
+    () =>
+      Object.values(selectedMedicines).reduce(
+        (sum, meds) => sum + Object.keys(meds).length,
+        0,
+      ),
+    [selectedMedicines],
+  );
+
+  const totalSelectedQtyPerMedicine = useMemo(() => {
+    const result = {};
+    Object.values(selectedMedicines).forEach((medsMap) => {
+      Object.entries(medsMap).forEach(([medicineId, qty]) => {
+        result[medicineId] = (result[medicineId] ?? 0) + qty;
+      });
+    });
+    return result;
+  }, [selectedMedicines]);
+
+  // ── Medicine / Pharmacy Toggles ─────────────────────────────────
+  const handleToggleMedicine = useCallback((pharmacyId, medicine) => {
+    setSelectedMedicines((prev) => {
+      const current = prev[pharmacyId] ?? {};
+      const exists = medicine.medicineId in current;
+
+      if (exists) {
+        const { [medicine.medicineId]: _removed, ...rest } = current;
+        return { ...prev, [pharmacyId]: rest };
+      }
+
+      return {
+        ...prev,
+        [pharmacyId]: {
+          ...current,
+          [medicine.medicineId]: getAvailableQty(medicine),
+        },
+      };
+    });
+  }, []);
+
+  const handleUpdateQty = useCallback(
+    (pharmacyId, medicineId, newQty, maxQty) => {
+      const clamped = Math.min(Math.max(1, newQty), maxQty);
+      setSelectedMedicines((prev) => ({
+        ...prev,
+        [pharmacyId]: {
+          ...(prev[pharmacyId] ?? {}),
+          [medicineId]: clamped,
+        },
+      }));
+    },
+    [],
+  );
+
+  const handleTogglePharmacy = useCallback((pharmacyId, allMedicines = []) => {
+    setSelectedMedicines((prev) => {
+      const current = prev[pharmacyId] ?? {};
+
+      const allSelected =
+        allMedicines.length > 0 &&
+        allMedicines.every((m) => m.medicineId in current);
+
+      if (allSelected) {
+        return { ...prev, [pharmacyId]: {} };
+      }
+
+      const newMeds = { ...current };
+      allMedicines.forEach((m) => {
+        if (!(m.medicineId in current)) {
+          newMeds[m.medicineId] = getAvailableQty(m);
+        }
+      });
+
+      return { ...prev, [pharmacyId]: newMeds };
+    });
+  }, []);
+
+  const handleOrderClick = (pharmacy) => {
+    const allMedicines = pharmacy.foundMedicines;
+    setSelectedPharmacyForPayment(pharmacy);
+
+    const newMeds = {};
+    allMedicines.forEach((m) => {
+      newMeds[m.medicineId] = getAvailableQty(m);
+    });
+
+    setSelectedMedicines({ [pharmacy.pharmacyId]: newMeds });
+    setShowPaymentModal(true);
+  };
 
   // ── Route Fetching ──────────────────────────────────────────────
   const fetchRoute = useCallback(
@@ -78,10 +183,12 @@ export const useCheckout = () => {
 
       setRouteData((prev) => {
         if (prev[cacheKey]) return prev;
+
         const url =
           `https://router.project-osrm.org/route/v1/driving/` +
           `${start.lng},${start.lat};${pharmacy.longitude},${pharmacy.latitude}` +
           `?overview=full&geometries=polyline`;
+
         fetch(url)
           .then((res) => res.json())
           .then((data) => {
@@ -95,11 +202,14 @@ export const useCheckout = () => {
               }));
             }
           })
-          .catch((err) => console.error("OSRM error:", pharmacy.pharmacyId, err));
+          .catch((err) =>
+            console.error("OSRM error:", pharmacy.pharmacyId, err),
+          );
+
         return prev;
       });
     },
-    [deliveryAddressLocation, userLocation]
+    [deliveryAddressLocation, userLocation],
   );
 
   // ── Effects ─────────────────────────────────────────────────────
@@ -117,8 +227,11 @@ export const useCheckout = () => {
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
       (pos) =>
-        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => console.error("Geolocation error:", err)
+        setUserLocation({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        }),
+      (err) => console.error("Geolocation error:", err),
     );
   }, []);
 
@@ -127,7 +240,6 @@ export const useCheckout = () => {
     if (msg.includes("location not set")) setShowLocationPrompt(true);
   }, [error]);
 
-  // When paymentResult arrives → close payment modal, open iframe
   useEffect(() => {
     if (paymentResult?.iframeUrl) {
       setShowPaymentModal(false);
@@ -175,6 +287,7 @@ export const useCheckout = () => {
     try {
       if (cart.length > 0)
         await fetchPharmacies(cart, selectedAddressId, pharmaciesRange);
+
       const fullAddress = await fetchById(selectedAddressId);
       if (fullAddress?.latitude && fullAddress?.longitude) {
         setDeliveryAddressLocation({
@@ -198,41 +311,6 @@ export const useCheckout = () => {
       await fetchPharmacies(cart, selectedAddressId, newRange);
   };
 
-  const handleTogglePharmacy = (pharmacyId, allMedicineIds = []) => {
-    const isCurrentlySelected = selectedPharmacies.includes(pharmacyId);
-    if (isCurrentlySelected) {
-      setSelectedPharmacies((prev) => prev.filter((id) => id !== pharmacyId));
-      setSelectedMedicines((prev) => {
-        const updated = { ...prev };
-        delete updated[pharmacyId];
-        return updated;
-      });
-    } else {
-      setSelectedPharmacies((prev) => [...prev, pharmacyId]);
-      setSelectedMedicines((prev) => ({ ...prev, [pharmacyId]: allMedicineIds }));
-    }
-  };
-
-  const handleToggleMedicine = (pharmacyId, medicineId) => {
-    setSelectedMedicines((prev) => {
-      const meds = prev[pharmacyId] || [];
-      return {
-        ...prev,
-        [pharmacyId]: meds.includes(medicineId)
-          ? meds.filter((id) => id !== medicineId)
-          : [...meds, medicineId],
-      };
-    });
-  };
-
-  const handleOrderClick = (pharmacy) => {
-    const allMedicineIds = pharmacy.foundMedicines.map((m) => m.medicineId);
-    setSelectedPharmacyForPayment(pharmacy);
-    setSelectedPharmacies([pharmacy.pharmacyId]);
-    setSelectedMedicines({ [pharmacy.pharmacyId]: allMedicineIds });
-    setShowPaymentModal(true);
-  };
-
   // ── Core order creation ─────────────────────────────────────────
   const createOrders = async () => {
     if (!cart.length) throw new Error("Your cart is empty!");
@@ -240,25 +318,36 @@ export const useCheckout = () => {
     if (!selectedPharmacies.length) throw new Error("No pharmacies selected!");
 
     const orderDtos = selectedPharmacies.reduce((acc, pharmacyId) => {
-      const pharmacy = pharmacies.find((p) => p.pharmacyId === pharmacyId);
+      const pharmacy = pharmacies.find(
+        (p) => String(p.pharmacyId) === String(pharmacyId),
+      );
       if (!pharmacy) return acc;
-      const items = pharmacy.foundMedicines.filter((m) =>
-        selectedMedicines[pharmacyId]?.includes(m.medicineId)
+
+      const selectedMedsMap = selectedMedicines[pharmacyId] ?? {};
+      const normalizedMedsMap = Object.fromEntries(
+        Object.entries(selectedMedsMap).map(([k, v]) => [String(k), v]),
+      );
+
+      const items = pharmacy.foundMedicines.filter(
+        (m) => String(m.medicineId) in normalizedMedsMap,
       );
       if (!items.length) return acc;
+
       acc.push({
-        PharmacyID: pharmacyId,
+        PharmacyID: pharmacy.pharmacyId,
         DeliveryAddressId: selectedAddressId,
         OrderItems: items.map((m) => ({
           MedicineID: m.medicineId,
-          Quantity: m.requestedQuantity,
+          Quantity: normalizedMedsMap[String(m.medicineId)],
         })),
       });
       return acc;
     }, []);
 
     if (!orderDtos.length)
-      throw new Error("No valid orders. Check selected medicines & quantities.");
+      throw new Error(
+        "No valid orders. Check selected medicines & quantities.",
+      );
 
     const { data: results } = await apiClient.post("/orders", orderDtos);
     return { results, orderDtos };
@@ -267,13 +356,14 @@ export const useCheckout = () => {
   // ── Clear cart after successful order ───────────────────────────
   const clearCartAfterOrder = async (orderDtos) => {
     const orderedIds = new Set(
-      orderDtos.flatMap((d) => d.OrderItems.map((i) => i.MedicineID))
+      orderDtos.flatMap((d) => d.OrderItems.map((i) => String(i.MedicineID))),
     );
-    const updatedCart = cart.filter((item) => !orderedIds.has(item.id));
+    const updatedCart = cart.filter((item) => !orderedIds.has(String(item.id)));
     localStorage.setItem(`cart_${user.email}`, JSON.stringify(updatedCart));
-    window.dispatchEvent(new StorageEvent("storage", { key: `cart_${user.email}` }));
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: `cart_${user.email}` }),
+    );
     setCart(updatedCart);
-    setSelectedPharmacies([]);
     setSelectedMedicines({});
     await fetchUser();
   };
@@ -287,7 +377,7 @@ export const useCheckout = () => {
         await clearCartAfterOrder(orderDtos);
         showToast(
           "success",
-          `${results.length} order${results.length > 1 ? "s" : ""} placed! 🎉`
+          `${results.length} order${results.length > 1 ? "s" : ""} placed! 🎉`,
         );
         setTimeout(() => window.location.reload(), 3200);
       } else {
@@ -312,7 +402,6 @@ export const useCheckout = () => {
         return;
       }
 
-      // Get order ID — backend returns it as `id` or `orderId`
       const firstOrderId = results[0]?.id ?? results[0]?.orderId ?? results[0];
       setPendingOrderId(firstOrderId);
 
@@ -321,7 +410,8 @@ export const useCheckout = () => {
 
       const billingData = {
         FirstName: user?.firstName || user?.name?.split(" ")[0] || "Customer",
-        LastName: user?.lastName || user?.name?.split(" ").slice(1).join(" ") || "User",
+        LastName:
+          user?.lastName || user?.name?.split(" ").slice(1).join(" ") || "User",
         Email: user?.email || "customer@email.com",
         PhoneNumber: user?.phone || "01000000000",
         Apartment: "N/A",
@@ -338,7 +428,7 @@ export const useCheckout = () => {
       // Use totalPrice from the order response — foundMedicines don't carry price
       const totalAmount = results.reduce(
         (sum, order) => sum + (order.totalPrice ?? 0),
-        0
+        0,
       );
 
       await initiate({
@@ -398,8 +488,10 @@ export const useCheckout = () => {
     selectedPharmacyForPayment,
     paymentMethod,
     selectedPharmacies,
+    totalSelectedItems,
     creatingOrder,
     selectedMedicines,
+    totalSelectedQtyPerMedicine,
     // payment states
     initiatingPayment,
     showPaymentIframe,
@@ -430,6 +522,7 @@ export const useCheckout = () => {
     handleExpandRange,
     handleTogglePharmacy,
     handleToggleMedicine,
+    handleUpdateQty,
     handleOrderClick,
     handlePaymentConfirm,
     handleCloseIframe,
