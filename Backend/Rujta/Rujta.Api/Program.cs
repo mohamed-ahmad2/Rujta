@@ -118,8 +118,6 @@ namespace Rujta.API
 
             app.UseCors("AllowReactApp");
 
-            //app.UseWebSockets();
-
             app.UseWebSockets(new WebSocketOptions
             {
                 KeepAliveInterval = TimeSpan.FromSeconds(60),

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Rujta.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using Rujta.Infrastructure.Data;
 namespace Rujta.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260429144424_AddFixCompanyAndDiscountAndAdV2")]
+    partial class AddFixCompanyAndDiscountAndAdV2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -492,11 +495,7 @@ namespace Rujta.Infrastructure.Migrations
                     b.ToTable("Devices");
                 });
 
-<<<<<<< HEAD
-            modelBuilder.Entity("Rujta.Domain.Entities.DrugRequest", b =>
-=======
             modelBuilder.Entity("Rujta.Domain.Entities.Discount", b =>
->>>>>>> 896bbc8022ddff80bd9b4fb72e029f789592c37b
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -504,62 +503,6 @@ namespace Rujta.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-<<<<<<< HEAD
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DrugName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("ExpiryDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Manufacturer")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("PharmacyId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RejectionReason")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ReviewedByAdminId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<string>("SubmittedByUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Supplier")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("DrugRequests");
-=======
                     b.Property<int?>("CategoryId")
                         .HasColumnType("int");
 
@@ -629,7 +572,6 @@ namespace Rujta.Infrastructure.Migrations
 
                             t.HasCheckConstraint("CK_Discounts_PositiveValue", "[Value] >= 0");
                         });
->>>>>>> 896bbc8022ddff80bd9b4fb72e029f789592c37b
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.InventoryItem", b =>
