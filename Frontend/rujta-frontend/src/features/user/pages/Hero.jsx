@@ -146,6 +146,7 @@ const PharmacyBadge = ({ imageUrl, name, pharmacyId, navigate }) => {
 };
 
 // ─── Dynamic Slide ─────────────────────────────────────────────────────────────
+// ─── Dynamic Slide ─────────────────────────────────────────────────────────────
 const DynamicSlide = ({ ad, pharmacyMap, navigate }) => {
   const pid = ad.pharmacyId || ad.PharmacyId || null;
   const livePharmacy = pid ? pharmacyMap[pid] : null;
@@ -236,15 +237,46 @@ const DynamicSlide = ({ ad, pharmacyMap, navigate }) => {
             </h1>
             <div className="h-1 w-24 bg-white/40 inline-block rounded-full" />
 
-            {/* ── Subtext — large, plain white, no highlight ── */}
-            {ad.subtext && (
-              <p
-                className="text-white font-black leading-snug max-w-lg"
-                style={{ fontSize: "clamp(1.6rem, 3vw, 2.8rem)" }}
-              >
-                {ad.subtext}
-              </p>
-            )}
+            {/* ── Subtext — Large and 3D Popped Effect ── */}
+            {/* ── Enhanced 3D Popped Subtext ── */}
+{ad.subtext && (
+  <div className="relative group">
+    <p
+      className="text-white font-black leading-none max-w-lg select-none"
+      style={{ 
+        fontSize: "clamp(2.5rem, 6vw, 5rem)", // Larger size
+        textTransform: "uppercase",
+        letterSpacing: "-0.02em",
+        // The 3D perspective and tilting
+        transform: "perspective(1000px) rotateX(15deg) rotateY(-5deg)",
+        // Multi-layered "Extrusion" shadow for that solid 3D look
+        textShadow: `
+          1px 1px 0px #d1d1d1,
+          2px 2px 0px #c1c1c1,
+          3px 3px 0px #b1b1b1,
+          4px 4px 0px #a1a1a1,
+          5px 5px 0px #919191,
+          6px 6px 10px rgba(0,0,0,0.4),
+          0px 10px 20px rgba(0,0,0,0.3)
+        `,
+        // Subtle stroke to make it pop against any background
+        WebkitTextStroke: "1px rgba(255,255,255,0.1)",
+        // Animation
+        animation: "float 4s ease-in-out infinite"
+      }}
+    >
+      {ad.subtext}
+    </p>
+
+    {/* Inline CSS for the floating animation */}
+    <style>{`
+      @keyframes float {
+        0%, 100% { transform: perspective(1000px) rotateX(15deg) rotateY(-5deg) translateY(0px); }
+        50% { transform: perspective(1000px) rotateX(15deg) rotateY(-5deg) translateY(-15px); }
+      }
+    `}</style>
+  </div>
+)}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start items-center">
@@ -276,7 +308,6 @@ const DynamicSlide = ({ ad, pharmacyMap, navigate }) => {
     </section>
   );
 };
-
 // --- Static Slide ---
 const StaticSlide = ({ ad }) => (
   <section

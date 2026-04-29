@@ -492,11 +492,9 @@ namespace Rujta.Infrastructure.Migrations
                     b.ToTable("Devices");
                 });
 
-<<<<<<< HEAD
             modelBuilder.Entity("Rujta.Domain.Entities.DrugRequest", b =>
-=======
+
             modelBuilder.Entity("Rujta.Domain.Entities.Discount", b =>
->>>>>>> 896bbc8022ddff80bd9b4fb72e029f789592c37b
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -504,7 +502,6 @@ namespace Rujta.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-<<<<<<< HEAD
                     b.Property<string>("Category")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -559,7 +556,6 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("DrugRequests");
-=======
                     b.Property<int?>("CategoryId")
                         .HasColumnType("int");
 
@@ -629,8 +625,8 @@ namespace Rujta.Infrastructure.Migrations
 
                             t.HasCheckConstraint("CK_Discounts_PositiveValue", "[Value] >= 0");
                         });
->>>>>>> 896bbc8022ddff80bd9b4fb72e029f789592c37b
-                });
+
+                }));
 
             modelBuilder.Entity("Rujta.Domain.Entities.InventoryItem", b =>
                 {

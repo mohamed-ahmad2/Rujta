@@ -44,11 +44,8 @@ namespace Rujta.Infrastructure.Data
 
         // Subscriptions & Payments
         public DbSet<Subscription> Subscriptions { get; set; } = null!;
-<<<<<<< HEAD
         public DbSet<DrugRequest> DrugRequests { get; set; } = null!;
-        public DbSet<Ad> Ads { get; set; } = null!;
-=======
->>>>>>> 896bbc8022ddff80bd9b4fb72e029f789592c37b
+        
         public DbSet<Payment> Payments { get; set; } = null!;
         public DbSet<Ad> Ads { get; set; } = null!;
 
