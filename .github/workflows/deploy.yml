@@ -1,58 +1,31 @@
-name: Build and Deploy to MonsterASP.NET
-
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-    types: [ closed ]
-  workflow_dispatch:
-
-env:
-  DOTNET_VERSION: '8.0.x'
-  SOLUTION_PATH: 'Backend/Rujta/Rujta.sln'
-  API_PROJECT_PATH: 'Backend/Rujta/Rujta.Api/Rujta.API.csproj'
-  PUBLISH_DIR: ${{ github.workspace }}\publish
-
-jobs:
-  build-and-deploy:
-    runs-on: windows-latest
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Restore dependencies
-        run: dotnet restore ${{ env.SOLUTION_PATH }}
-
-      - name: Build
-        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
-
-      - name: Publish API
-        run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.PUBLISH_DIR }} --no-build /p:UseAppHost=false
-
-      - name: Save Publish Profile
-        run: |
-          $profile = @'
-          ${{ secrets.PUBLISH_PROFILE }}
-          '@
-          $profile | Out-File -FilePath "${{ github.workspace }}\publish-profile.pubxml" -Encoding utf8
-        shell: pwsh
-
       - name: Deploy with MSDeploy
+        shell: pwsh
+        env:
+          SITE_NAME: ${{ secrets.MONSTER_SITE_NAME }}
+          SERVER: ${{ secrets.MONSTER_SERVER }}
+          USERNAME: ${{ secrets.MONSTER_USERNAME }}
+          PASSWORD: ${{ secrets.MONSTER_PASSWORD }}
         run: |
           $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+          $publishDir = "${{ env.PUBLISH_DIR }}"
+          $computerName = "https://$env:SERVER`:8172/msdeploy.axd?site=$env:SITE_NAME"
+          
+          $destArg = "-dest:contentPath=`"$env:SITE_NAME`",ComputerName=`"$computerName`",UserName=`"$env:USERNAME`",Password=`"$env:PASSWORD`",AuthType=`"Basic`""
+          $sourceArg = "-source:contentPath=`"$publishDir`""
+          
+          Write-Host "Starting MSDeploy..."
+          Write-Host "Source: $publishDir"
+          Write-Host "Target Site: $env:SITE_NAME"
+          
           & $msdeploy `
-            -verb:sync `
-            -source:contentPath="${{ env.PUBLISH_DIR }}" `
-            -dest:contentPath="${{ secrets.MONSTER_SITE_NAME }}",ComputerName="https://${{ secrets.MONSTER_SERVER }}:8172/msdeploy.axd?site=${{ secrets.MONSTER_SITE_NAME }}",UserName="${{ secrets.MONSTER_USERNAME }}",Password="${{ secrets.MONSTER_PASSWORD }}",AuthType="Basic" `
-            -allowUntrusted:true `
-            -enableRule:AppOffline `
-            -enableRule:DoNotDeleteRule
-        shell: pwsh
+            "-verb:sync" `
+            $sourceArg `
+            $destArg `
+            "-allowUntrusted" `
+            "-enableRule:AppOffline" `
+            "-enableRule:DoNotDeleteRule"
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "MSDeploy failed with exit code $LASTEXITCODE"
+            exit $LASTEXITCODE
+          }
