@@ -56,8 +56,7 @@ export default function Products() {
     fetchCategories();
     fetchMedicines();
   }, [fetchAll, fetchCategories, fetchMedicines]);
-
-  // Close filter panel on outside click
+// Close filter panel on outside click
   useEffect(() => {
     const handler = (e) => {
       if (filterRef.current && !filterRef.current.contains(e.target))
@@ -67,6 +66,18 @@ export default function Products() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // ✅ ADD THIS — was missing entirely
+  const filtered = items.filter((p) => {
+    const matchesSearch =
+      !q ||
+      p.name?.toLowerCase().includes(q.toLowerCase()) ||
+      p.id?.toLowerCase().includes(q.toLowerCase());
+    const matchesCategory =
+      filterCategory === "All" || p.category === filterCategory;
+    const matchesStatus =
+      filterStatus === "All" || p.status === filterStatus;
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
 
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));

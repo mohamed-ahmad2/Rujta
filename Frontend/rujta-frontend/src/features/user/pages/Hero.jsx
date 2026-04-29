@@ -146,6 +146,7 @@ const PharmacyBadge = ({ imageUrl, name, pharmacyId, navigate }) => {
 };
 
 // ─── Dynamic Slide ─────────────────────────────────────────────────────────────
+// ─── Dynamic Slide ─────────────────────────────────────────────────────────────
 const DynamicSlide = ({ ad, pharmacyMap, navigate }) => {
   const pid = ad.pharmacyId || ad.PharmacyId || null;
   const livePharmacy = pid ? pharmacyMap[pid] : null;
@@ -173,6 +174,49 @@ const DynamicSlide = ({ ad, pharmacyMap, navigate }) => {
       <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-white/10 blur-[120px] animate-pulse" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] rounded-full bg-black/20 blur-[100px]" />
 
+      {/* ── Corner ribbon — top left, touches both edges ── */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          zIndex: 30,
+          width: "180px",
+          height: "180px",
+          overflow: "hidden",
+          pointerEvents: "none",
+          userSelect: "none",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: "42px",
+            left: "-48px",
+            width: "210px",
+            padding: "10px 0",
+            background: "linear-gradient(135deg, #1a5c2a 0%, #2d8c45 100%)",
+            transform: "rotate(-45deg)",
+            textAlign: "center",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.35)",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "clamp(0.75rem, 1.2vw, 0.95rem)",
+              fontWeight: 900,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "#fff",
+              textShadow: "0 1px 4px rgba(0,0,0,0.4)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {ad.badge || "NEW ARRIVAL"}
+          </span>
+        </div>
+      </div>
+
       {resolvedPharmacy && (
         <PharmacyBadge
           imageUrl={resolvedPharmacy.imageUrl}
@@ -185,17 +229,56 @@ const DynamicSlide = ({ ad, pharmacyMap, navigate }) => {
       <div className="relative z-10 w-full max-w-7xl mx-auto px-8 grid md:grid-cols-2 gap-16 items-center">
         <div className="order-2 md:order-1 space-y-8 text-center md:text-left">
           <div className="space-y-4">
-            <span className="inline-block px-4 py-1.5 rounded-lg text-xs font-black tracking-widest uppercase bg-white text-gray-900 shadow-xl">
-              {ad.badge || "NEW ARRIVAL"}
-            </span>
-            <h1 className="text-white font-extrabold leading-[1.1] drop-shadow-md" style={{ fontSize: "clamp(3rem, 5vw, 5.5rem)" }}>
+            <h1
+              className="text-white font-extrabold leading-[1.1] drop-shadow-md"
+              style={{ fontSize: "clamp(3rem, 5vw, 5.5rem)" }}
+            >
               {ad.headline}
             </h1>
             <div className="h-1 w-24 bg-white/40 inline-block rounded-full" />
-            <p className="text-white/90 text-lg md:text-xl font-light max-w-lg leading-relaxed md:mr-auto">
-              {ad.subtext}
-            </p>
+
+            {/* ── Subtext — Large and 3D Popped Effect ── */}
+            {/* ── Enhanced 3D Popped Subtext ── */}
+{ad.subtext && (
+  <div className="relative group">
+    <p
+      className="text-white font-black leading-none max-w-lg select-none"
+      style={{ 
+        fontSize: "clamp(2.5rem, 6vw, 5rem)", // Larger size
+        textTransform: "uppercase",
+        letterSpacing: "-0.02em",
+        // The 3D perspective and tilting
+        transform: "perspective(1000px) rotateX(15deg) rotateY(-5deg)",
+        // Multi-layered "Extrusion" shadow for that solid 3D look
+        textShadow: `
+          1px 1px 0px #d1d1d1,
+          2px 2px 0px #c1c1c1,
+          3px 3px 0px #b1b1b1,
+          4px 4px 0px #a1a1a1,
+          5px 5px 0px #919191,
+          6px 6px 10px rgba(0,0,0,0.4),
+          0px 10px 20px rgba(0,0,0,0.3)
+        `,
+        // Subtle stroke to make it pop against any background
+        WebkitTextStroke: "1px rgba(255,255,255,0.1)",
+        // Animation
+        animation: "float 4s ease-in-out infinite"
+      }}
+    >
+      {ad.subtext}
+    </p>
+
+    {/* Inline CSS for the floating animation */}
+    <style>{`
+      @keyframes float {
+        0%, 100% { transform: perspective(1000px) rotateX(15deg) rotateY(-5deg) translateY(0px); }
+        50% { transform: perspective(1000px) rotateX(15deg) rotateY(-5deg) translateY(-15px); }
+      }
+    `}</style>
+  </div>
+)}
           </div>
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start items-center">
             <button
               onClick={handleShopNow}
@@ -204,7 +287,6 @@ const DynamicSlide = ({ ad, pharmacyMap, navigate }) => {
               <span className="relative z-10">SHOP NOW</span>
               <span className="absolute left-6 opacity-0 transition-all group-hover:opacity-100 group-hover:left-8">→</span>
             </button>
-          
           </div>
         </div>
 
@@ -226,7 +308,6 @@ const DynamicSlide = ({ ad, pharmacyMap, navigate }) => {
     </section>
   );
 };
-
 // --- Static Slide ---
 const StaticSlide = ({ ad }) => (
   <section
@@ -255,10 +336,6 @@ const Hero = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [allSlides,    setAllSlides]    = useState(staticAds);
 
-  // ── ONE-TIME fetch on mount only ──────────────────────────────────────────
-  // We use a ref guard so that even if fetchAll / fetchAllPharmacies are
-  // unstable references (recreated every render by their hooks), we only
-  // fire the network calls once. This is the root fix for "too many requests".
   const fetchedRef = useRef(false);
   useEffect(() => {
     if (fetchedRef.current) return;
@@ -267,14 +344,12 @@ const Hero = () => {
     fetchAllPharmacies();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Build pharmacy lookup map
   const pharmacyMap = React.useMemo(() => {
     const map = {};
     (pharmacies || []).forEach((ph) => { map[ph.id] = ph; });
     return map;
   }, [pharmacies]);
 
-  // Merge backend ads into slides (only when backendAds actually changes)
   useEffect(() => {
     if (!backendAds || !Array.isArray(backendAds) || backendAds.length === 0) return;
     const dynamicSlides = backendAds.map((ad) => ({
@@ -285,7 +360,6 @@ const Hero = () => {
     setAllSlides([...staticAds, ...dynamicSlides]);
   }, [backendAds]);
 
-  // Autoplay
   useEffect(() => {
     if (allSlides.length <= 1) return;
     const interval = setInterval(() => {
