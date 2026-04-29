@@ -35,8 +35,7 @@ namespace Rujta.Infrastructure.Data
         public DbSet<Notification> Notifications { get; set; } = null!;
         public DbSet<Log> Logs { get; set; } = null!;
         public DbSet<Subscription> Subscriptions { get; set; } = null!;
-
-
+        public DbSet<DrugRequest> DrugRequests { get; set; } = null!;
         public DbSet<Ad> Ads { get; set; } = null!;
         public DbSet<Payment> Payments { get; set; } = null!;
 
