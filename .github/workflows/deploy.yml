@@ -35,13 +35,24 @@ jobs:
         run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
 
       - name: Publish API
-        run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.PUBLISH_DIR }} --no-build
+        run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.PUBLISH_DIR }} --no-build /p:UseAppHost=false
 
-      - name: Deploy to MonsterASP.NET via Web Deploy
-        uses: rasmusbuchholdt/simply-web-deploy@2.1.0
-        with:
-          website-name: ${{ secrets.MONSTER_SITE_NAME }}
-          server-computer-name: 'https://${{ secrets.MONSTER_SERVER }}:8172/msdeploy.axd?site=${{ secrets.MONSTER_SITE_NAME }}'
-          server-username: ${{ secrets.MONSTER_USERNAME }}
-          server-password: ${{ secrets.MONSTER_PASSWORD }}
-          source-path: ${{ env.PUBLISH_DIR }}
+      - name: Save Publish Profile
+        run: |
+          $profile = @'
+          ${{ secrets.PUBLISH_PROFILE }}
+          '@
+          $profile | Out-File -FilePath "${{ github.workspace }}\publish-profile.pubxml" -Encoding utf8
+        shell: pwsh
+
+      - name: Deploy with MSDeploy
+        run: |
+          $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+          & $msdeploy `
+            -verb:sync `
+            -source:contentPath="${{ env.PUBLISH_DIR }}" `
+            -dest:contentPath="${{ secrets.MONSTER_SITE_NAME }}",ComputerName="https://${{ secrets.MONSTER_SERVER }}:8172/msdeploy.axd?site=${{ secrets.MONSTER_SITE_NAME }}",UserName="${{ secrets.MONSTER_USERNAME }}",Password="${{ secrets.MONSTER_PASSWORD }}",AuthType="Basic" `
+            -allowUntrusted:true `
+            -enableRule:AppOffline `
+            -enableRule:DoNotDeleteRule
+        shell: pwsh
