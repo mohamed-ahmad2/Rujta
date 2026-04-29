@@ -38,34 +38,22 @@ jobs:
         run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.PUBLISH_DIR }} --no-build /p:UseAppHost=false
 
       - name: Deploy with MSDeploy
-        shell: pwsh
+        shell: cmd
         env:
           SITE_NAME: ${{ secrets.MONSTER_SITE_NAME }}
           SERVER: ${{ secrets.MONSTER_SERVER }}
           USERNAME: ${{ secrets.MONSTER_USERNAME }}
           PASSWORD: ${{ secrets.MONSTER_PASSWORD }}
+          PUBLISH_PATH: ${{ env.PUBLISH_DIR }}
         run: |
-          $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
-          $publishDir = "${{ env.PUBLISH_DIR }}"
-          $computerName = "https://$env:SERVER`:8172/msdeploy.axd?site=$env:SITE_NAME"
+          echo Starting MSDeploy...
+          echo Source: %PUBLISH_PATH%
+          echo Target Site: %SITE_NAME%
           
-          $destArg = "-dest:contentPath=`"$env:SITE_NAME`",ComputerName=`"$computerName`",UserName=`"$env:USERNAME`",Password=`"$env:PASSWORD`",AuthType=`"Basic`""
-          $sourceArg = "-source:contentPath=`"$publishDir`""
-          
-          Write-Host "Starting MSDeploy..."
-          Write-Host "Source: $publishDir"
-          Write-Host "Target Site: $env:SITE_NAME"
-          Write-Host "Computer: $computerName"
-          
-          & $msdeploy `
-            "-verb:sync" `
-            $sourceArg `
-            $destArg `
-            "-allowUntrusted" `
-            "-enableRule:AppOffline" `
-            "-enableRule:DoNotDeleteRule"
-          
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "MSDeploy failed with exit code $LASTEXITCODE"
-            exit $LASTEXITCODE
-          }
+          "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" ^
+            -verb:sync ^
+            -source:contentPath="%PUBLISH_PATH%" ^
+            -dest:contentPath="%SITE_NAME%",ComputerName="https://%SERVER%:8172/msdeploy.axd?site=%SITE_NAME%",UserName="%USERNAME%",Password="%PASSWORD%",AuthType="Basic" ^
+            -allowUntrusted ^
+            -enableRule:AppOffline ^
+            -enableRule:DoNotDeleteRule
