@@ -1,3 +1,42 @@
+name: Build and Deploy to MonsterASP.NET
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+    types: [ closed ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  SOLUTION_PATH: 'Backend/Rujta/Rujta.sln'
+  API_PROJECT_PATH: 'Backend/Rujta/Rujta.Api/Rujta.API.csproj'
+  PUBLISH_DIR: ${{ github.workspace }}\publish
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
+
+      - name: Publish API
+        run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.PUBLISH_DIR }} --no-build /p:UseAppHost=false
+
       - name: Deploy with MSDeploy
         shell: pwsh
         env:
@@ -16,6 +55,7 @@
           Write-Host "Starting MSDeploy..."
           Write-Host "Source: $publishDir"
           Write-Host "Target Site: $env:SITE_NAME"
+          Write-Host "Computer: $computerName"
           
           & $msdeploy `
             "-verb:sync" `
