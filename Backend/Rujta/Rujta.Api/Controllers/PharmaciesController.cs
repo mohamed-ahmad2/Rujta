@@ -72,7 +72,6 @@ namespace Rujta.API.Controllers
                 Dosage = m.Dosage,
                 Price = m.Price,
                 ExpiryDate = m.ExpiryDate,
-                CompanyName = m.CompanyName,
                 CategoryId = m.CategoryId,
                 ActiveIngredient = m.ActiveIngredient,
                 ImageUrl = m.ImageUrl
