@@ -15,22 +15,15 @@ namespace Rujta.API
 
             builder.Logging.AddConsole();
 
-            // -------------------------------
             // Add services
-            // -------------------------------
             builder.Services.AddControllers()
-            .AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-            });
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                });
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddCustomSwagger();
-
-            builder.Services.AddAutoMapper(cfg =>
-            {
-                cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies());
-            });
 
             // Database
             builder.Services.AddCustomDatabase(builder.Configuration);
@@ -46,34 +39,17 @@ namespace Rujta.API
             // CORS
             builder.Services.AddCustomCors();
 
-
-
             // FluentValidation
             builder.Services.AddCustomFluentValidation();
 
             // Application Services
             builder.Services.AddApplicationServices(builder.Configuration);
             builder.Services.AddSingleton<INotificationPublisher, SignalRNotificationPublisher>();
-            builder.Services.AddSingleton<INotificationService, NotificationService>();
             builder.Services.AddScoped<IOrderNotificationService, OrderNotificationService>();
             builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
             builder.Services.AddScoped<IReportService, ReportService>();
             builder.Services.AddScoped<ISuperAdminService, SuperAdminService>();
             builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
-
-            // 🔥🔥🔥 ADD THIS (SignalR Registration)
-            builder.Services.AddSignalR();
-
-            // Firebase Initialization
-            try
-            {
-                FirebaseInitializer.Initialize();
-                Console.WriteLine("Firebase initialized successfully!");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error initializing Firebase: {ex.Message}");
-            }
 
             builder.Services.AddCustomRateLimiting();
 
@@ -83,10 +59,25 @@ namespace Rujta.API
             });
 
             builder.Services.AddHttpClient("Default")
-                    .SetHandlerLifetime(TimeSpan.FromMinutes(5))
-                    .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(10));
+                .SetHandlerLifetime(TimeSpan.FromMinutes(5))
+                .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(10));
 
             var app = builder.Build();
+
+            var logger = app.Services
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger("Rujta.API");
+
+
+            try
+            {
+                FirebaseInitializer.Initialize();
+                logger.LogInformation("Firebase initialized successfully.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Firebase initialization failed.");
+            }
 
             app.Use(async (context, next) =>
             {
@@ -95,9 +86,6 @@ namespace Rujta.API
                 await next();
             });
 
-            // -------------------------------
-            // Middleware
-            // -------------------------------
             if (app.Environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -109,57 +97,62 @@ namespace Rujta.API
                 app.UseExceptionHandler("/api/error");
                 app.UseHsts();
             }
- 
+
             app.UseHttpsRedirection();
-
             app.UseRouting();
-
             app.UseRateLimiter();
-
             app.UseCors("AllowReactApp");
 
             app.UseWebSockets(new WebSocketOptions
             {
                 KeepAliveInterval = TimeSpan.FromSeconds(60),
                 AllowedOrigins =
-                    {
-                        "https://localhost:5173",
-                        "http://localhost:5173",
-                        "https://rujta.vercel.app"
-                    }
+                {
+                    "https://localhost:5173",
+                    "http://localhost:5173",
+                    "https://rujta.vercel.app"
+                }
             });
-
 
             app.UseAuthentication();
             app.UseAuthorization();
 
-            // 🔥 Standardized Hub Routes
             app.MapHub<PresenceHub>("/hubs/presence");
             app.MapHub<NotificationHub>("/hubs/notifications");
             app.MapHub<OrderHub>("/hubs/orders");
 
             app.MapControllers();
 
-            // -------------------------------
-            // Role seeding
-            // -------------------------------
-            using (var scope = app.Services.CreateScope())
+            await using var scope = app.Services.CreateAsyncScope();
+            var scopedServices = scope.ServiceProvider;
+
+            try
             {
-                var services = scope.ServiceProvider;
-                var roleManager =
-                    services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                var roleManager = scopedServices
+                    .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
                 await IdentitySeeder.SeedRolesAsync(roleManager);
+
+                logger.LogInformation("Role seeding completed successfully.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Role seeding failed. App will continue without seeding.");
             }
 
-            using (var scope = app.Services.CreateScope())
+            try
             {
-                var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-                var autocomplete =
-                    scope.ServiceProvider.GetRequiredService<IMedicineAutocompleteIndex>();
+                var unitOfWork = scopedServices.GetRequiredService<IUnitOfWork>();
+                var autocomplete = scopedServices.GetRequiredService<IMedicineAutocompleteIndex>();
 
                 var medicines = await unitOfWork.Medicines.GetAllAsync();
                 autocomplete.Build(medicines.Select(m => m.Name!));
+
+                logger.LogInformation("Medicine autocomplete index built successfully.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Autocomplete index build failed. App will continue without it.");
             }
 
             await app.RunAsync();

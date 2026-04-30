@@ -7,7 +7,7 @@ namespace Rujta.Application.Services.OrderS
         IMapper _mapper,
         ILogger<OrderService> _logger,
         IOrderNotificationService _notificationService,
-        INotificationService NotifyService) : IOrderService
+        INotificationService NotifyService, IDiscountService _discountService) : IOrderService
     {
         
     }

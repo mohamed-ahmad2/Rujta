@@ -1,21 +1,11 @@
-﻿using Rujta.Domain.Entities;
-
-namespace Rujta.Application.Interfaces.InterfaceRepositories
+﻿namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
     public interface IInventoryRepository : IGenericRepository<InventoryItem, int>
     {
-        Task<IEnumerable<InventoryItem>> GetByPharmacyAsync(
-            int pharmacyId,
-            CancellationToken cancellationToken = default);
+        Task<IEnumerable<InventoryItem>> GetByPharmacyAsync(int pharmacyId,CancellationToken cancellationToken = default);
 
-        Task<bool> ExistsAsync(
-            int id,
-            int pharmacyId,
-            CancellationToken cancellationToken = default);
+        Task<bool> ExistsAsync(int id,int pharmacyId,CancellationToken cancellationToken = default);
 
-        Task<InventoryItem?> GetByMedicineAndPharmacyAsync(
-            int medicineId,
-            int pharmacyId,
-            CancellationToken cancellationToken = default);
+        Task<InventoryItem?> GetByMedicineAndPharmacyAsync(int medicineId,int pharmacyId,CancellationToken cancellationToken = default);
     }
 }
