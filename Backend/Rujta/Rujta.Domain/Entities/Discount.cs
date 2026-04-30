@@ -14,6 +14,13 @@ namespace Rujta.Domain.Entities
         public DiscountScope Scope { get; set; } 
         public int? MedicineId { get; set; } 
         public int? CategoryId { get; set; } 
-        public int? CompanyId { get; set; } 
+        public int? CompanyId { get; set; }
+
+        public Medicine? Medicine { get; set; }
+        public Category? Category { get; set; }
+        public Company? Company { get; set; }
+
+        public int PharmacyId { get; set; }
+        public Pharmacy Pharmacy { get; set; } = null!;
     }
 }

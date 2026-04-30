@@ -56,7 +56,7 @@ export default function Products() {
     fetchCategories();
     fetchMedicines();
   }, [fetchAll, fetchCategories, fetchMedicines]);
-// Close filter panel on outside click
+
   useEffect(() => {
     const handler = (e) => {
       if (filterRef.current && !filterRef.current.contains(e.target))
@@ -66,7 +66,6 @@ export default function Products() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ✅ ADD THIS — was missing entirely
   const filtered = items.filter((p) => {
     const matchesSearch =
       !q ||

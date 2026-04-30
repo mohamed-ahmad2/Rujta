@@ -27,5 +27,6 @@ namespace Rujta.Domain.Entities
         public ICollection<InventoryItem>? InventoryItems { get; set; }
         public ICollection<SellDrugViaPharmacy>? SellDrugViaPharmacies { get; set; }
         public ICollection<OrderItem>? OrderItems { get; set; }
+        public ICollection<Discount>? Discounts { get; set; }
     }
 }

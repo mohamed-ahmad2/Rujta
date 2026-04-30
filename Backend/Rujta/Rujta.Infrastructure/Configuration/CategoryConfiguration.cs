@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
+﻿// CategoryConfiguration
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Rujta.Infrastructure.Configuration
 {
@@ -15,7 +16,7 @@ namespace Rujta.Infrastructure.Configuration
             builder.HasMany(c => c.Medicines)
                    .WithOne(m => m.Category)
                    .HasForeignKey(m => m.CategoryId)
-                   .OnDelete(DeleteBehavior.Restrict);
+                   .OnDelete(DeleteBehavior.SetNull);
 
             builder.ToTable("Categories");
         }

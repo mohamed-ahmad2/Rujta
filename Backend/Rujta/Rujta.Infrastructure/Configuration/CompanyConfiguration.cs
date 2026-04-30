@@ -13,7 +13,7 @@ namespace Rujta.Infrastructure.Configuration
                    .HasMaxLength(150);
 
             builder.HasIndex(c => c.Name)
-                   .IsUnique()                   
+                   .IsUnique()
                    .HasDatabaseName("IX_Companies_Name");
 
             builder.HasMany(c => c.Medicines)
