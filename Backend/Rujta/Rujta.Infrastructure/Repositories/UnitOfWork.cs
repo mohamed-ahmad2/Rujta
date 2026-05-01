@@ -26,6 +26,7 @@ namespace Rujta.Infrastructure.Repositories
         private ISubscriptionRepository? _subscriptions;
         private IAdRepository? _ads;
         private IDiscountRepository? _discount;
+        private ICompanyRepository? _company;
 
         public UnitOfWork(AppDbContext context, IServiceProvider serviceProvider)
         {
@@ -68,6 +69,9 @@ namespace Rujta.Infrastructure.Repositories
 
         public IDiscountRepository Discount =>
             _discount ??= _serviceProvider.GetRequiredService<IDiscountRepository>();
+
+        public ICompanyRepository Companies =>
+            _company ??= _serviceProvider.GetRequiredService<ICompanyRepository>();
 
         public ILogRepository Logs =>
             _logs ??= _serviceProvider.GetRequiredService<ILogRepository>();

@@ -1,19 +1,266 @@
-import React, { useEffect, useState } from "react";
+// src/features/pharmacies/pages/PharmacyDetails.jsx
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import imge1 from "../../../assets/hero/img1.png";
-import {
-  getAllPharmacies,
-  getPharmacyMedicines,
-} from "../../pharmacies/api/pharmaciesApi";
+import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
 import useCampaigns from "../../campaigns/hook/useCampaigns";
+import useCategory from "../../category/hook/useCategory";
 
-const categoryOptions = [
-  { id: "All", name: "All" },
-  { id: 1, name: "Pain Relief" },
-  { id: 2, name: "Antibiotics" },
-  { id: 3, name: "Allergy & Respiratory" },
-];
+// ─────────────────────────────────────────────
+// 🛠️ Normalize medicine — includes discount fields
+// ─────────────────────────────────────────────
+const normalizeMedicine = (med = {}) => {
+  const price = Number(med.price ?? med.Price ?? 0);
+  const discountedPrice = Number(
+    med.discountedPrice ?? med.DiscountedPrice ?? 0,
+  );
+  const discountValue = Number(med.discountValue ?? med.DiscountValue ?? 0);
+  const hasDiscount = med.hasDiscount ?? med.HasDiscount ?? false;
 
+  const discountName =
+    med.discountName ??
+    med.DiscountName ??
+    med.discount?.name ??
+    med.Discount?.Name ??
+    null;
+
+  const discountType = med.discountType ?? med.DiscountType ?? null;
+
+  return {
+    ...med,
+    id: med.id ?? med.Id ?? med.medicineId ?? med.MedicineId,
+    name: med.name ?? med.Name ?? "Unknown",
+    imageUrl: med.imageUrl ?? med.ImageUrl ?? null,
+    description: med.description ?? med.Description ?? "",
+    categoryId: med.categoryId ?? med.CategoryId ?? null,
+    price,
+    discountedPrice,
+    discountValue,
+    hasDiscount,
+    discountName,
+    discountType,
+    effectivePrice:
+      hasDiscount && discountedPrice > 0 ? discountedPrice : price,
+  };
+};
+
+// ═════════════════════════════════════════════
+// 📂 Scrollable Categories Strip
+// ═════════════════════════════════════════════
+function CategoryStrip({ categories, selected, onSelect }) {
+  const scrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollState = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 5);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 5);
+  };
+
+  useEffect(() => {
+    updateScrollState();
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateScrollState);
+    window.addEventListener("resize", updateScrollState);
+    return () => {
+      el.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("resize", updateScrollState);
+    };
+  }, [categories.length]);
+
+  const scroll = (direction) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.7;
+    el.scrollBy({
+      left: direction === "left" ? -amount : amount,
+      behavior: "smooth",
+    });
+  };
+
+  return (
+    <div className="relative flex-1" style={{ minWidth: 0 }}>
+      {canScrollLeft && (
+        <button
+          onClick={() => scroll("left")}
+          className="absolute left-0 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md transition hover:bg-gray-50"
+          style={{ border: "1px solid #e8eee2" }}
+          aria-label="Scroll left"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#5a8a1f"
+            strokeWidth="2.5"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+      )}
+
+      {canScrollRight && (
+        <button
+          onClick={() => scroll("right")}
+          className="absolute right-0 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md transition hover:bg-gray-50"
+          style={{ border: "1px solid #e8eee2" }}
+          aria-label="Scroll right"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#5a8a1f"
+            strokeWidth="2.5"
+          >
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </button>
+      )}
+
+      {canScrollLeft && (
+        <div
+          className="pointer-events-none absolute left-0 top-0 z-[5] h-full w-12"
+          style={{
+            background: "linear-gradient(to right, #f5f8f2, transparent)",
+          }}
+        />
+      )}
+      {canScrollRight && (
+        <div
+          className="pointer-events-none absolute right-0 top-0 z-[5] h-full w-12"
+          style={{
+            background: "linear-gradient(to left, #f5f8f2, transparent)",
+          }}
+        />
+      )}
+
+      <div
+        ref={scrollRef}
+        className="flex gap-2 overflow-x-auto px-1 py-1"
+        style={{
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        <style>{`div::-webkit-scrollbar { display: none; }`}</style>
+        {categories.map((cat) => {
+          const active = selected === cat.id;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => onSelect(cat.id)}
+              className="flex-shrink-0 text-sm font-medium transition-all duration-200"
+              style={{
+                borderRadius: 999,
+                border: `1.5px solid ${active ? "#5a8a1f" : "#e8eee2"}`,
+                background: active ? "#5a8a1f" : "#fff",
+                color: active ? "#fff" : "#7a8472",
+                padding: "8px 18px",
+                fontFamily: "'DM Sans', sans-serif",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                boxShadow: active ? "0 4px 12px rgba(90,138,31,0.25)" : "none",
+              }}
+              onMouseEnter={(e) => {
+                if (!active) {
+                  e.currentTarget.style.borderColor = "#5a8a1f";
+                  e.currentTarget.style.color = "#5a8a1f";
+                  e.currentTarget.style.background = "#EAF3DE";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!active) {
+                  e.currentTarget.style.borderColor = "#e8eee2";
+                  e.currentTarget.style.color = "#7a8472";
+                  e.currentTarget.style.background = "#fff";
+                }
+              }}
+            >
+              {cat.name}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════
+// 🏷️ Discount Percentage Ribbon (only the % badge)
+// ═════════════════════════════════════════════
+function DiscountBadge({ discountValue }) {
+  return (
+    <div
+      className="absolute left-0 top-3 flex items-center"
+      style={{ zIndex: 2 }}
+    >
+      <div
+        className="flex items-center gap-1 px-3 py-1.5 text-xs font-extrabold text-white"
+        style={{
+          background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+          borderTopRightRadius: 8,
+          borderBottomRightRadius: 8,
+          boxShadow: "0 4px 14px rgba(239,68,68,0.4)",
+          letterSpacing: "0.04em",
+          position: "relative",
+        }}
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+        >
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+          <line x1="7" y1="7" x2="7.01" y2="7" />
+        </svg>
+        SAVE {discountValue.toFixed(0)}%
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════
+// 🎁 Discount Name Banner (inside card body — visible & readable)
+// ═════════════════════════════════════════════
+function DiscountNameBanner({ discountName }) {
+  if (!discountName) return null;
+
+  return (
+    <div
+      className="mb-2 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
+      style={{
+        background: "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)",
+        border: "1px dashed #fca5a5",
+      }}
+    >
+      <span style={{ fontSize: 13 }}>🎁</span>
+      <span
+        className="flex-1 truncate text-[11px] font-bold uppercase"
+        style={{
+          color: "#b91c1c",
+          letterSpacing: "0.04em",
+        }}
+        title={discountName}
+      >
+        {discountName}
+      </span>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════
+// 🎨 Ad Banner
+// ═════════════════════════════════════════════
 function AdBanner({ ad }) {
   return (
     <div
@@ -26,7 +273,6 @@ function AdBanner({ ad }) {
         boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
       }}
     >
-      {/* Background Decorative Circles */}
       <div
         className="pointer-events-none absolute -right-8 -top-8 h-56 w-56 rounded-full"
         style={{ background: "rgba(255,255,255,0.15)" }}
@@ -40,7 +286,6 @@ function AdBanner({ ad }) {
         style={{ background: "rgba(255,255,255,0.06)" }}
       />
 
-      {/* ── Updated Image Section ── */}
       {ad.adMode === "medicine" && ad.medicineImage && (
         <div
           className="absolute right-10 top-1/2 flex -translate-y-1/2 items-center justify-center overflow-hidden transition-transform duration-500 hover:scale-105"
@@ -71,7 +316,6 @@ function AdBanner({ ad }) {
       >
         {ad.badge}
       </span>
-
       <h3
         className="font-semibold leading-snug text-white"
         style={{
@@ -82,14 +326,12 @@ function AdBanner({ ad }) {
       >
         {ad.headline}
       </h3>
-
       <p
         className="mt-2 leading-relaxed text-white/75"
         style={{ maxWidth: "58%", fontSize: "0.95rem" }}
       >
         {ad.subtext}
       </p>
-
       <button
         className="mt-6 rounded-xl font-semibold transition hover:opacity-90"
         style={{
@@ -103,7 +345,6 @@ function AdBanner({ ad }) {
       >
         {ad.ctaLabel} →
       </button>
-
       <span className="pointer-events-none absolute bottom-3 right-4 text-xs text-white/20">
         Rujta™
       </span>
@@ -111,49 +352,74 @@ function AdBanner({ ad }) {
   );
 }
 
-/* ─────────────────────────── Main Page ─────────────────────────── */
+// ═════════════════════════════════════════════
+// 🏥 Main Page
+// ═════════════════════════════════════════════
 const PharmacyDetails = ({ cart, setCart }) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { ads, fetchByPharmacy } = useCampaigns();
 
-  const [pharmacy, setPharmacy] = useState(null);
-  const [medicines, setMedicines] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const {
+    pharmacies,
+    medicines: rawMedicines,
+    loading,
+    error,
+    fetchAllPharmacies,
+    fetchPharmacyMedicines,
+  } = usePharmacies();
+
+  const { ads, fetchByPharmacy } = useCampaigns();
+  const { pharmacyCategories, fetchCategoriesByPharmacy } = useCategory();
+
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [expanded, setExpanded] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [addedIds, setAddedIds] = useState({});
-
-  // Slide State
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const res = await getAllPharmacies();
-        const found = res.data.find((ph) => ph.id === Number(id));
-        if (!found) {
-          setError("Pharmacy not found.");
-          return;
-        }
-        setPharmacy(found);
-        const [medsRes] = await Promise.all([
-          getPharmacyMedicines(found.id),
-          fetchByPharmacy(found.id),
-        ]);
-        setMedicines(medsRes.data || []);
-      } catch (err) {
-        setError("Failed to load pharmacy data.");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [id, fetchByPharmacy]);
+    fetchAllPharmacies();
+  }, [fetchAllPharmacies]);
+
+  const pharmacy = useMemo(
+    () => pharmacies?.find((ph) => ph.id === Number(id)) ?? null,
+    [pharmacies, id],
+  );
+
+  useEffect(() => {
+    if (pharmacy?.id) {
+      fetchPharmacyMedicines(pharmacy.id);
+      fetchByPharmacy(pharmacy.id);
+      fetchCategoriesByPharmacy(pharmacy.id);
+    }
+  }, [
+    pharmacy?.id,
+    fetchPharmacyMedicines,
+    fetchByPharmacy,
+    fetchCategoriesByPharmacy,
+  ]);
+
+  const medicines = useMemo(
+    () => (rawMedicines || []).map(normalizeMedicine),
+    [rawMedicines],
+  );
+
+  const categoryOptions = useMemo(
+    () => [
+      { id: "All", name: "All" },
+      ...pharmacyCategories.map((c) => ({ id: c.id, name: c.name })),
+    ],
+    [pharmacyCategories],
+  );
+
+  useEffect(() => {
+    if (
+      selectedCategory !== "All" &&
+      !pharmacyCategories.some((c) => c.id === selectedCategory)
+    ) {
+      setSelectedCategory("All");
+    }
+  }, [pharmacyCategories, selectedCategory]);
 
   useEffect(() => {
     if (ads.length > 1) {
@@ -164,8 +430,12 @@ const PharmacyDetails = ({ cart, setCart }) => {
     }
   }, [ads]);
 
+  useEffect(() => {
+    setCurrentAdIndex(0);
+  }, [ads.length]);
+
   const handleAddToCart = (product) => {
-    if (!setCart) return;
+    if (!setCart || !pharmacy) return;
     setCart((prev) => {
       const exists = (prev || []).find(
         (i) => i.id === product.id && i.pharmacyId === pharmacy.id,
@@ -181,23 +451,26 @@ const PharmacyDetails = ({ cart, setCart }) => {
         { ...product, pharmacyId: pharmacy.id, quantity: 1 },
       ];
     });
-
     setAddedIds((p) => ({ ...p, [product.id]: true }));
     setTimeout(() => setAddedIds((p) => ({ ...p, [product.id]: false })), 1200);
   };
 
-  const filteredMedicines = medicines.filter(
-    (med) =>
-      (selectedCategory === "All" || med.categoryId === selectedCategory) &&
-      med.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredMedicines = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return medicines.filter(
+      (med) =>
+        (selectedCategory === "All" || med.categoryId === selectedCategory) &&
+        (med.name || "").toLowerCase().includes(q),
+    );
+  }, [medicines, selectedCategory, searchQuery]);
 
-  if (loading)
+  if (loading && !pharmacy)
     return (
       <div className="flex items-center justify-center py-32">
         <div className="h-9 w-9 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
       </div>
     );
+
   if (error) return <p className="py-24 text-center text-red-500">{error}</p>;
   if (!pharmacy)
     return (
@@ -281,7 +554,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
           </span>
         </div>
 
-        {/* ── Dynamic Ad Slider ── */}
+        {/* ── Ad Slider ── */}
         {ads.length > 0 && (
           <div className="mb-8">
             <div className="mb-3 flex items-center justify-between">
@@ -313,9 +586,9 @@ const PharmacyDetails = ({ cart, setCart }) => {
           </div>
         )}
 
-        {/* ── Search + Categories ── */}
-        <div className="mb-7 flex flex-wrap items-center gap-3">
-          <div className="relative flex-1" style={{ minWidth: 200 }}>
+        {/* ── Search Bar ── */}
+        <div className="mb-4">
+          <div className="relative">
             <svg
               className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
               width="15"
@@ -350,54 +623,39 @@ const PharmacyDetails = ({ cart, setCart }) => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+        </div>
 
-          <div className="flex flex-wrap gap-2">
-            {categoryOptions.map((cat) => {
-              const active = selectedCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className="text-sm font-medium transition-all duration-200"
-                  style={{
-                    borderRadius: 12,
-                    border: `1.5px solid ${active ? "#5a8a1f" : "#e8eee2"}`,
-                    background: active ? "#5a8a1f" : "#fff",
-                    color: active ? "#fff" : "#7a8472",
-                    padding: "8px 18px",
-                    fontFamily: "'DM Sans', sans-serif",
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.borderColor = "#5a8a1f";
-                      e.currentTarget.style.color = "#5a8a1f";
-                      e.currentTarget.style.background = "#EAF3DE";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.borderColor = "#e8eee2";
-                      e.currentTarget.style.color = "#7a8472";
-                      e.currentTarget.style.background = "#fff";
-                    }
-                  }}
-                >
-                  {cat.name}
-                </button>
-              );
-            })}
-          </div>
+        {/* ── Categories ── */}
+        <div className="mb-7">
+          <CategoryStrip
+            categories={categoryOptions}
+            selected={selectedCategory}
+            onSelect={setSelectedCategory}
+          />
         </div>
 
         {/* ── Medicines Grid ── */}
-        {filteredMedicines.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
+          </div>
+        ) : filteredMedicines.length > 0 ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {filteredMedicines.map((med) => {
               const desc = med.description || "No description available";
               const isLong = desc.length > 70;
               const isExpanded = expanded[med.id];
               const isAdded = addedIds[med.id];
+
+              const {
+                hasDiscount,
+                discountValue,
+                discountName,
+                price,
+                effectivePrice,
+              } = med;
+
+              const showDiscount = hasDiscount && discountValue > 0;
 
               return (
                 <div
@@ -406,25 +664,36 @@ const PharmacyDetails = ({ cart, setCart }) => {
                   className="group flex cursor-pointer flex-col overflow-hidden bg-white transition-all duration-300"
                   style={{
                     borderRadius: 20,
-                    border: "1.5px solid #e8eee2",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                    border: showDiscount
+                      ? "1.5px solid rgba(239,68,68,0.25)"
+                      : "1.5px solid #e8eee2",
+                    boxShadow: showDiscount
+                      ? "0 2px 12px rgba(239,68,68,0.08)"
+                      : "0 1px 4px rgba(0,0,0,0.04)",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 12px 40px rgba(90,138,31,0.13)";
-                    e.currentTarget.style.borderColor = "rgba(90,138,31,0.25)";
+                    e.currentTarget.style.boxShadow = showDiscount
+                      ? "0 12px 40px rgba(239,68,68,0.18)"
+                      : "0 12px 40px rgba(90,138,31,0.13)";
+                    e.currentTarget.style.borderColor = showDiscount
+                      ? "rgba(239,68,68,0.45)"
+                      : "rgba(90,138,31,0.25)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow =
-                      "0 1px 4px rgba(0,0,0,0.04)";
-                    e.currentTarget.style.borderColor = "#e8eee2";
+                    e.currentTarget.style.boxShadow = showDiscount
+                      ? "0 2px 12px rgba(239,68,68,0.08)"
+                      : "0 1px 4px rgba(0,0,0,0.04)";
+                    e.currentTarget.style.borderColor = showDiscount
+                      ? "rgba(239,68,68,0.25)"
+                      : "#e8eee2";
                   }}
                 >
+                  {/* ── Image Section ── */}
                   <div
-                    className="flex h-44 items-center justify-center overflow-hidden"
-                    style={{ background: "#EAF3DE", position: "relative" }}
+                    className="relative flex h-44 items-center justify-center overflow-hidden"
+                    style={{ background: "#EAF3DE" }}
                   >
                     <img
                       src={med.imageUrl || imge1}
@@ -439,9 +708,20 @@ const PharmacyDetails = ({ cart, setCart }) => {
                           "linear-gradient(to top, rgba(234,243,222,0.6), transparent)",
                       }}
                     />
+
+                    {/* ✅ Only the % badge on the image */}
+                    {showDiscount && (
+                      <DiscountBadge discountValue={discountValue} />
+                    )}
                   </div>
 
+                  {/* ── Card Body ── */}
                   <div className="flex flex-1 flex-col p-4">
+                    {/* ✅ Discount Name Banner — clearly visible above the title */}
+                    {showDiscount && (
+                      <DiscountNameBanner discountName={discountName} />
+                    )}
+
                     <h3
                       className="font-semibold"
                       style={{
@@ -474,10 +754,27 @@ const PharmacyDetails = ({ cart, setCart }) => {
                       </button>
                     )}
 
+                    {/* ── Price + Add to Cart ── */}
                     <div
                       className="mt-4 flex items-center justify-between pt-3"
                       style={{ borderTop: "1px solid #e8eee2" }}
                     >
+                      <div className="flex flex-col">
+                        {showDiscount && price > 0 && (
+                          <span className="text-[11px] text-gray-400 line-through">
+                            ${price.toFixed(2)}
+                          </span>
+                        )}
+                        <span
+                          className="text-base font-extrabold"
+                          style={{
+                            color: showDiscount ? "#dc2626" : "#3e6013",
+                          }}
+                        >
+                          ${effectivePrice.toFixed(2)}
+                        </span>
+                      </div>
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

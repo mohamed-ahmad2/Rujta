@@ -388,7 +388,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("PersonId");
 
-                    b.ToTable("Addresses");
+                    b.ToTable("Addresses", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Category", b =>
@@ -489,7 +489,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Devices");
+                    b.ToTable("Devices", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Discount", b =>
@@ -638,7 +638,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("DrugRequests");
+                    b.ToTable("DrugRequests", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.InventoryItem", b =>
@@ -723,7 +723,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Logs");
+                    b.ToTable("Logs", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Medicine", b =>
@@ -846,7 +846,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Order", b =>
@@ -908,7 +908,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Orders");
+                    b.ToTable("Orders", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.OrderItem", b =>
@@ -950,7 +950,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("OrderID");
 
-                    b.ToTable("OrderItems");
+                    b.ToTable("OrderItems", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Payment", b =>
@@ -1012,7 +1012,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.Pharmacy", b =>
@@ -1140,7 +1140,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("PatientID");
 
-                    b.ToTable("Prescriptions");
+                    b.ToTable("Prescriptions", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.ProcessPrescription", b =>
@@ -1184,7 +1184,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("PrescriptionID");
 
-                    b.ToTable("ProcessPrescriptions");
+                    b.ToTable("ProcessPrescriptions", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.RefreshToken", b =>
@@ -1279,7 +1279,7 @@ namespace Rujta.Infrastructure.Migrations
                     b.HasIndex("PharmacyId")
                         .IsUnique();
 
-                    b.ToTable("Subscriptions");
+                    b.ToTable("Subscriptions", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Domain.Entities.SellDrugViaPharmacy", b =>
@@ -1332,7 +1332,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("SellerID");
 
-                    b.ToTable("SellDrugViaPharmacies");
+                    b.ToTable("SellDrugViaPharmacies", (string)null);
                 });
 
             modelBuilder.Entity("Rujta.Infrastructure.Identity.ApplicationUser", b =>
@@ -1439,7 +1439,7 @@ namespace Rujta.Infrastructure.Migrations
 
                     b.HasIndex("PharmacyId");
 
-                    b.ToTable("People", t =>
+                    b.ToTable("People", null, t =>
                         {
                             t.Property("PharmacyId")
                                 .HasColumnName("Customer_PharmacyId");

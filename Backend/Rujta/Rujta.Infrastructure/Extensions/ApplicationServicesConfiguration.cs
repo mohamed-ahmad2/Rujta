@@ -63,6 +63,7 @@ namespace Rujta.Infrastructure.Extensions
 
             services.AddScoped<IAddressRepository, AddressRepository>();
             services.AddScoped<ICategoryRepository, CategoryRepository>();
+            services.AddScoped<ICompanyRepository, CompanyRepository>();
             services.AddScoped<ICustomerRepository, CustomerRepository>();
             services.AddScoped<IInventoryRepository, InventoryRepository>();
             services.AddScoped<IPeopleRepository, PeopleRepository>();
@@ -87,11 +88,14 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<ISearchMedicineService, SearchMedicineService>();
             services.AddScoped<IInventoryItemService, InventoryItemService>();
             services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<ICompanyService, CompanyService>();
 
-            services.AddScoped<PharmacyDistanceService>();
+            services.AddScoped<IPharmacyDistanceService, PharmacyDistanceService>();
+            services.AddScoped<IPharmacyService, PharmacyService>();
             services.AddScoped<IPharmacySearchService, PharmacySearchService>();
             services.AddScoped<IPharmacyCartService, PharmacyCartService>();
             services.AddScoped<IPharmacistManagementService, PharmacistManagementService>();
+
 
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<IDiscountService, DiscountService>();

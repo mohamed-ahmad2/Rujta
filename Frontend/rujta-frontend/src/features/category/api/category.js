@@ -9,6 +9,16 @@ export const getCategoryById = (id) => {
   return apiClient.get(`/Category/${id}`);
 };
 
+// 🔒 Pharmacy admin's own pharmacy (uses JWT)
+export const getPharmacyCategories = () => {
+  return apiClient.get("/Category/pharmacy-categories");
+};
+
+// ✅ NEW — Public endpoint for any pharmacy (used in user-facing pages)
+export const getCategoriesByPharmacy = (pharmacyId) => {
+  return apiClient.get(`/Category/by-pharmacy/${pharmacyId}`);
+};
+
 export const addCategory = (data) => {
   return apiClient.post("/Category", data);
 };

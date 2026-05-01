@@ -22,6 +22,7 @@ namespace Rujta.Application.Interfaces
         ISubscriptionRepository Subscriptions { get; }
         IAdRepository Ads { get; }
         IDiscountRepository Discount { get; }
+        ICompanyRepository Companies { get; }
 
         Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
         Task CommitTransactionAsync(IDbContextTransaction transaction);  
