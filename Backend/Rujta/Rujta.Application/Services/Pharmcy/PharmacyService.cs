@@ -101,9 +101,7 @@ namespace Rujta.Application.Services.Pharmcy
             return _mapper.Map<IEnumerable<NearestPharmacyDto>>(results);
         }
 
-        private async Task ApplyDiscountToDtoAsync(
-            MedicineDto dto,
-            InventoryItem entity)
+        private async Task ApplyDiscountToDtoAsync(MedicineDto dto, InventoryItem entity)
         {
             try
             {
@@ -120,7 +118,8 @@ namespace Rujta.Application.Services.Pharmcy
 
                 dto.DiscountedPrice = discountedPrice;
                 dto.HasDiscount = discountedPrice < originalPrice;
-                dto.DiscountValue = CalculateDiscountPercentage(originalPrice, discountedPrice, bestDiscount);
+    
+                dto.DiscountValue = bestDiscount.Value;
                 dto.DiscountName = bestDiscount.Name;
                 dto.DiscountType = bestDiscount.Type;
             }
@@ -148,22 +147,6 @@ namespace Rujta.Application.Services.Pharmcy
             }
 
             return Math.Max(discountedPrice, 0);
-        }
-
-        private static decimal CalculateDiscountPercentage(
-            decimal originalPrice,
-            decimal discountedPrice,
-            Discount discount)
-        {
-            if (discount.Type == DiscountType.Percentage)
-                return discount.Value;
-
-            if (originalPrice <= 0)
-                return 0;
-
-            return Math.Round(
-                (originalPrice - discountedPrice) / originalPrice * 100,
-                0);
         }
 
         private static void SetNoDiscount(MedicineDto dto, decimal originalPrice)

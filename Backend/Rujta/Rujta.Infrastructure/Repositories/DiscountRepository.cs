@@ -36,5 +36,24 @@ namespace Rujta.Infrastructure.Repositories
                     ))
                 .ToListAsync();
         }
+
+        public async Task<bool> HasActiveDiscountAsync(int pharmacyId, DiscountScope scope,int? medicineId,int? categoryId,int? companyId,CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.UtcNow;
+
+            return await _context.Discounts
+                .AsNoTracking()
+                .AnyAsync(d =>
+                    d.PharmacyId == pharmacyId &&
+                    d.Scope == scope &&
+                    d.IsActive &&
+                    d.EndDate >= now &&
+                    (
+                        (scope == DiscountScope.Medicine && d.MedicineId == medicineId) ||
+                        (scope == DiscountScope.Category && d.CategoryId == categoryId) ||
+                        (scope == DiscountScope.Company && d.CompanyId == companyId)
+                    ),
+                    cancellationToken);
+        }
     }
 }

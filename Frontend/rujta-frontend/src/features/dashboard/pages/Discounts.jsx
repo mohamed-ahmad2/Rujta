@@ -1,12 +1,14 @@
 // src/features/dashboard/pages/Discount.jsx
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import {
   useDiscountForm,
   DiscountScope,
   DiscountType,
   scopeLabel,
   scopePlaceholder,
+  nowAsLocalInput,
 } from "../../discounts/hooks/useDiscountForm";
+import Toast from "../components/Toast";
 
 const TEAL = "#9DC873";
 const TEAL_DARK = "#7ab355";
@@ -31,6 +33,7 @@ const Discounts = () => {
     handleScopeChange,
     selectedItem,
     setSelectedItem,
+    selectedMedicinePrice,
     discountName,
     setDiscountName,
     discountValue,
@@ -42,12 +45,15 @@ const Discounts = () => {
     endDate,
     setEndDate,
     submitting,
-    success,
-    submitError,
+    toast,
+    setToast,
     errors,
     setErrors,
     handleSubmit,
   } = useDiscountForm();
+
+  const minDateTime = useMemo(() => nowAsLocalInput(), []);
+  const success = toast?.type === "success";
 
   useEffect(() => {
     const handler = (e) => {
@@ -83,17 +89,40 @@ const Discounts = () => {
     },
   ];
 
+  const maxValue =
+    discountType === DiscountType.Percentage
+      ? 99.99
+      : selectedScope === DiscountScope.Medicine && selectedMedicinePrice > 0
+        ? Number((selectedMedicinePrice - 0.01).toFixed(2))
+        : undefined;
+
+  const valueHint = (() => {
+    if (discountType === DiscountType.Percentage)
+      return "Must be less than 100%";
+    if (
+      discountType === DiscountType.Fixed &&
+      selectedScope === DiscountScope.Medicine &&
+      selectedItem
+    ) {
+      return `Medicine price: $${selectedMedicinePrice.toFixed(2)} (discount must be less)`;
+    }
+    if (discountType === DiscountType.Fixed)
+      return "Must be less than medicine price";
+    return null;
+  })();
+
   return (
     <div style={s.page}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        input[type="date"]::-webkit-calendar-picker-indicator { opacity:0.5; cursor:pointer; }
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator { opacity:0.55; cursor:pointer; }
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
         .drop-item:hover { background:#f4fced !important; }
       `}</style>
 
-      {/*Header*/}
+      <Toast toast={toast} onClose={() => setToast(null)} />
+
       <h2 style={s.title}>Create New Discount Strategy</h2>
       <p style={s.sub}>
         Define precision parameters for new medical pricing rules.
@@ -103,9 +132,6 @@ const Discounts = () => {
         <div style={s.alertError}>⚠️ Failed to load data: {fetchError}</div>
       )}
 
-      {submitError && <div style={s.alertError}>⚠️ {submitError}</div>}
-
-      {/* Scope Cards*/}
       <div style={s.typeCards}>
         {typeOptions.map((t) => (
           <div
@@ -134,7 +160,6 @@ const Discounts = () => {
         ))}
       </div>
 
-      {/*Discount Name*/}
       <div style={{ ...s.formGroup, marginBottom: 20 }}>
         <label style={s.label}>Discount Name</label>
         <input
@@ -147,13 +172,11 @@ const Discounts = () => {
           }}
           style={{
             ...s.dateInput,
-            ...(errors.name ? { borderColor: "#fc8181" } : {}),
+            ...(errors.name ? s.inputError : {}),
           }}
         />
-        {errors.name && <span style={s.errorMsg}>{errors.name}</span>}
       </div>
 
-      {/*ROW: Dropdown + Value + Type*/}
       <div style={{ ...s.row2, flexWrap: "wrap" }}>
         {/* Dropdown */}
         <div style={{ ...s.formGroup, flex: 2, minWidth: 200 }}>
@@ -163,7 +186,7 @@ const Discounts = () => {
               style={{
                 ...s.dropTrigger,
                 ...(dropdownOpen ? { borderColor: TEAL } : {}),
-                ...(errors.item ? { borderColor: "#fc8181" } : {}),
+                ...(errors.item ? s.inputError : {}),
                 ...(loadingData ? { opacity: 0.6 } : {}),
               }}
               onClick={() => !loadingData && setDropdownOpen((p) => !p)}
@@ -179,6 +202,19 @@ const Discounts = () => {
                   </span>
                   <span style={{ color: "#1a202c", fontSize: 14 }}>
                     {selectedItem.name}
+                    {selectedScope === DiscountScope.Medicine &&
+                      selectedMedicinePrice > 0 && (
+                        <span
+                          style={{
+                            color: "#7ab355",
+                            fontWeight: 600,
+                            marginLeft: 8,
+                            fontSize: 13,
+                          }}
+                        >
+                          (${selectedMedicinePrice.toFixed(2)})
+                        </span>
+                      )}
                   </span>
                 </span>
               ) : (
@@ -198,8 +234,6 @@ const Discounts = () => {
                 ▼
               </span>
             </div>
-
-            {errors.item && <span style={s.errorMsg}>{errors.item}</span>}
 
             {dropdownOpen && (
               <div style={s.dropMenu}>
@@ -233,7 +267,19 @@ const Discounts = () => {
                       <span style={{ ...s.itemIcon, background: "#dff5c8" }}>
                         {getIcon(selectedScope)}
                       </span>
-                      {item.name}
+                      <span style={{ flex: 1 }}>{item.name}</span>
+                      {selectedScope === DiscountScope.Medicine &&
+                        (item.price ?? item.Price) && (
+                          <span
+                            style={{
+                              fontSize: 12,
+                              color: "#7ab355",
+                              fontWeight: 600,
+                            }}
+                          >
+                            ${Number(item.price ?? item.Price).toFixed(2)}
+                          </span>
+                        )}
                     </div>
                   ))
                 )}
@@ -242,14 +288,14 @@ const Discounts = () => {
           </div>
         </div>
 
-        {/* Discount Value */}
-        <div style={{ ...s.formGroup, width: 140 }}>
+        <div style={{ ...s.formGroup, width: 160 }}>
           <label style={s.label}>Value</label>
           <div style={s.discountWrap}>
             <input
               type="number"
               min={0}
-              max={discountType === DiscountType.Percentage ? 100 : undefined}
+              max={maxValue}
+              step={discountType === DiscountType.Percentage ? "1" : "0.01"}
               value={discountValue}
               placeholder="0"
               onChange={(e) => {
@@ -258,17 +304,20 @@ const Discounts = () => {
               }}
               style={{
                 ...s.discountInput,
-                ...(errors.discount ? { borderColor: "#fc8181" } : {}),
+                ...(errors.discount ? s.inputError : {}),
               }}
             />
             <span style={s.discountSuffix}>
               {discountType === DiscountType.Percentage ? "%" : "$"}
             </span>
           </div>
-          {errors.discount && <span style={s.errorMsg}>{errors.discount}</span>}
+
+          {valueHint && !errors.discount && (
+            <span style={s.hintMsg}>{valueHint}</span>
+          )}
         </div>
 
-        {/* Discount Type Toggle */}
+        {/* Type Toggle */}
         <div style={{ ...s.formGroup, width: 160 }}>
           <label style={s.label}>Discount Type</label>
           <div style={s.toggleGroup}>
@@ -279,7 +328,10 @@ const Discounts = () => {
                   ? s.toggleBtnActive
                   : {}),
               }}
-              onClick={() => setDiscountType(DiscountType.Percentage)}
+              onClick={() => {
+                setDiscountType(DiscountType.Percentage);
+                setErrors((p) => ({ ...p, discount: null }));
+              }}
             >
               % Percentage
             </button>
@@ -290,7 +342,10 @@ const Discounts = () => {
                   ? s.toggleBtnActive
                   : {}),
               }}
-              onClick={() => setDiscountType(DiscountType.Fixed)}
+              onClick={() => {
+                setDiscountType(DiscountType.Fixed);
+                setErrors((p) => ({ ...p, discount: null }));
+              }}
             >
               $ Fixed
             </button>
@@ -298,52 +353,48 @@ const Discounts = () => {
         </div>
       </div>
 
-      {/*Dates*/}
       <div style={s.row2}>
         <div style={{ ...s.formGroup, flex: 1 }}>
-          <label style={s.label}>Start Date</label>
+          <label style={s.label}>Start Date &amp; Time</label>
           <input
-            type="date"
+            type="datetime-local"
             value={startDate}
+            min={minDateTime}
             onChange={(e) => {
               setStartDate(e.target.value);
               setErrors((p) => ({ ...p, startDate: null }));
             }}
             style={{
               ...s.dateInput,
-              ...(errors.startDate ? { borderColor: "#fc8181" } : {}),
+              ...(errors.startDate ? s.inputError : {}),
             }}
           />
-          {errors.startDate && (
-            <span style={s.errorMsg}>{errors.startDate}</span>
+          {!errors.startDate && (
+            <span style={s.hintMsg}>You can pick the exact hour & minute</span>
           )}
         </div>
 
         <div style={{ ...s.formGroup, flex: 1 }}>
-          <label style={s.label}>
-            End Date{" "}
-            <span style={{ color: "#9ca3af", fontWeight: 400 }}>
-              (optional)
-            </span>
-          </label>
+          <label style={s.label}>End Date &amp; Time</label>
           <input
-            type="date"
+            type="datetime-local"
             value={endDate}
-            min={startDate || undefined}
+            min={startDate || minDateTime}
             onChange={(e) => {
               setEndDate(e.target.value);
               setErrors((p) => ({ ...p, endDate: null }));
             }}
             style={{
               ...s.dateInput,
-              ...(errors.endDate ? { borderColor: "#fc8181" } : {}),
+              ...(errors.endDate ? s.inputError : {}),
             }}
           />
-          {errors.endDate && <span style={s.errorMsg}>{errors.endDate}</span>}
+          {!errors.endDate && (
+            <span style={s.hintMsg}>Must be after start date</span>
+          )}
         </div>
       </div>
 
-      {/*Footer / Submit*/}
       <div style={s.footer}>
         <button
           style={{
@@ -395,6 +446,11 @@ const s = {
     marginBottom: 16,
   },
 
+  inputError: {
+    borderColor: "#fc8181",
+    boxShadow: "0 0 0 3px rgba(252,129,129,0.12)",
+  },
+
   typeCards: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr 1fr",
@@ -440,7 +496,7 @@ const s = {
   },
   formGroup: { display: "flex", flexDirection: "column", gap: 6 },
   label: { fontSize: 13, fontWeight: 600, color: "#374151" },
-  errorMsg: { fontSize: 12, color: "#e53e3e", marginTop: 2 },
+  hintMsg: { fontSize: 11, color: "#718096", marginTop: 2 },
 
   dropWrap: { position: "relative" },
   dropTrigger: {
@@ -454,7 +510,7 @@ const s = {
     cursor: "pointer",
     background: "#fff",
     userSelect: "none",
-    transition: "border-color .2s",
+    transition: "border-color .2s, box-shadow .2s",
   },
   selectedDisplay: { display: "flex", alignItems: "center", gap: 8 },
   dropMenu: {
@@ -508,7 +564,7 @@ const s = {
     fontWeight: 600,
     color: "#1a202c",
     outline: "none",
-    transition: "border-color .2s",
+    transition: "border-color .2s, box-shadow .2s",
     boxSizing: "border-box",
   },
   discountSuffix: {
@@ -554,9 +610,10 @@ const s = {
     fontSize: 14,
     color: "#1a202c",
     outline: "none",
-    transition: "border-color .2s",
+    transition: "border-color .2s, box-shadow .2s",
     background: "#fff",
     boxSizing: "border-box",
+    fontFamily: "inherit",
   },
 
   footer: { display: "flex", justifyContent: "flex-end" },

@@ -32,24 +32,39 @@ const toNumber = (value, fallback = 0) => {
 const extractErrorMessage = (err) => {
   if (!err) return "An unknown error occurred";
 
-  if (err?.response?.data?.message) return err.response.data.message;
+  const data = err?.response?.data;
 
-  if (err?.response?.data) {
-    if (typeof err.response.data === "string") return err.response.data;
+  if (data?.message) return data.message;
+
+  if (data?.detail) return data.detail;
+
+  if (data?.title && typeof data.title === "string" && data.title.length < 200)
+    return data.title;
+
+  if (data?.errors && typeof data.errors === "object") {
+    const messages = Object.values(data.errors).flat().filter(Boolean);
+    if (messages.length > 0) return messages.join(" • ");
   }
+
+  if (typeof data === "string" && data.trim().length > 0) return data;
 
   if (err?.response?.status) {
     const status = err.response.status;
+    if (status === 400)
+      return "Invalid discount data. Please check your input.";
     if (status === 401) return "Unauthorized: Please log in again";
     if (status === 403) return "Forbidden: You don't have permission";
     if (status === 404) return "Discount not found";
+    if (status === 409)
+      return "Conflict: An active discount already exists for this target.";
+    if (status === 422) return "Validation failed. Please review your inputs.";
     if (status === 500) return "Server error: Please contact support";
     return `Request failed with status ${status}`;
   }
 
   if (err?.message) return err.message;
 
-  return "Failed to load discounts";
+  return "Failed to process discount";
 };
 
 const mapDiscount = (discount = {}) => {
@@ -65,15 +80,10 @@ const mapDiscount = (discount = {}) => {
   const isExpired = endDate ? endDate < today : false;
 
   let status;
-  if (!isActive) {
-    status = "Inactive";
-  } else if (isExpired) {
-    status = "Expired";
-  } else if (startDate && startDate > today) {
-    status = "Upcoming";
-  } else {
-    status = "Active";
-  }
+  if (!isActive) status = "Inactive";
+  else if (isExpired) status = "Expired";
+  else if (startDate && startDate > today) status = "Upcoming";
+  else status = "Active";
 
   const typeLabel = DiscountType[typeRaw] ?? "Unknown";
   const scopeLabel = DiscountScope[scopeRaw] ?? "Unknown";
@@ -91,15 +101,16 @@ const mapDiscount = (discount = {}) => {
     displayValue:
       typeRaw === DiscountType.Percentage
         ? `${value.toFixed(0)}%`
-        : `$${value.toFixed(2)}`,
+        : `
+$${value.toFixed(2)}`,
 
     type: typeRaw,
     typeLabel,
     scope: scopeRaw,
     scopeLabel,
 
-    startDate: startDate ? startDate.toLocaleDateString("en-GB") : "-",
-    endDate: endDate ? endDate.toLocaleDateString("en-GB") : "-",
+    startDate: startDate ? startDate.toLocaleString("en-GB") : "-",
+    endDate: endDate ? endDate.toLocaleString("en-GB") : "-",
     startDateRaw: startDate,
     endDateRaw: endDate,
 
@@ -151,11 +162,13 @@ export default function useDiscounts() {
     try {
       const res = await createDiscount(data);
       await fetchAll();
-      return mapDiscount(res?.data ?? res);
+      setError(null);
+      return { ok: true, data: mapDiscount(res?.data ?? res) };
     } catch (err) {
       console.error("❌ create discount error:", err);
-      setError(extractErrorMessage(err));
-      return null;
+      const message = extractErrorMessage(err);
+      setError(message);
+      return { ok: false, error: message };
     } finally {
       setLoading(false);
     }

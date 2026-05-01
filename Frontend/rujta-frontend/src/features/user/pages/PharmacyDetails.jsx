@@ -24,7 +24,14 @@ const normalizeMedicine = (med = {}) => {
     med.Discount?.Name ??
     null;
 
-  const discountType = med.discountType ?? med.DiscountType ?? null;
+  // ✅ Backend ممكن يبعت Enum كـ string ("Percentage"/"Fixed") أو رقم (0/1)
+  const rawType = med.discountType ?? med.DiscountType ?? null;
+  const discountType =
+    rawType === 0 || rawType === "Percentage"
+      ? "Percentage"
+      : rawType === 1 || rawType === "Fixed"
+        ? "Fixed"
+        : null;
 
   return {
     ...med,
@@ -39,8 +46,8 @@ const normalizeMedicine = (med = {}) => {
     hasDiscount,
     discountName,
     discountType,
-    effectivePrice:
-      hasDiscount && discountedPrice > 0 ? discountedPrice : price,
+    // ✅ شيلنا شرط discountedPrice > 0 — لو السعر بقى 0 بسبب fixed كبير يفضل يبان
+    effectivePrice: hasDiscount ? discountedPrice : price,
   };
 };
 
@@ -193,9 +200,14 @@ function CategoryStrip({ categories, selected, onSelect }) {
 }
 
 // ═════════════════════════════════════════════
-// 🏷️ Discount Percentage Ribbon (only the % badge)
+// 🏷️ Discount Badge — يدعم Percentage و Fixed
 // ═════════════════════════════════════════════
-function DiscountBadge({ discountValue }) {
+function DiscountBadge({ discountValue, discountType }) {
+  const isPercentage = discountType === "Percentage";
+  const label = isPercentage
+    ? `SAVE ${Number(discountValue).toFixed(0)}%`
+    : `SAVE $${Number(discountValue).toFixed(2)}`;
+
   return (
     <div
       className="absolute left-0 top-3 flex items-center"
@@ -223,14 +235,14 @@ function DiscountBadge({ discountValue }) {
           <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
           <line x1="7" y1="7" x2="7.01" y2="7" />
         </svg>
-        SAVE {discountValue.toFixed(0)}%
+        {label}
       </div>
     </div>
   );
 }
 
 // ═════════════════════════════════════════════
-// 🎁 Discount Name Banner (inside card body — visible & readable)
+// 🎁 Discount Name Banner (inside card body)
 // ═════════════════════════════════════════════
 function DiscountNameBanner({ discountName }) {
   if (!discountName) return null;
@@ -651,6 +663,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
                 hasDiscount,
                 discountValue,
                 discountName,
+                discountType,
                 price,
                 effectivePrice,
               } = med;
@@ -709,15 +722,17 @@ const PharmacyDetails = ({ cart, setCart }) => {
                       }}
                     />
 
-                    {/* ✅ Only the % badge on the image */}
+                    {/* ✅ Badge ديناميك حسب نوع الخصم */}
                     {showDiscount && (
-                      <DiscountBadge discountValue={discountValue} />
+                      <DiscountBadge
+                        discountValue={discountValue}
+                        discountType={discountType}
+                      />
                     )}
                   </div>
 
                   {/* ── Card Body ── */}
                   <div className="flex flex-1 flex-col p-4">
-                    {/* ✅ Discount Name Banner — clearly visible above the title */}
                     {showDiscount && (
                       <DiscountNameBanner discountName={discountName} />
                     )}

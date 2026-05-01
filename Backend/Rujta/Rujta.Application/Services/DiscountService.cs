@@ -88,7 +88,10 @@ namespace Rujta.Application.Services
             CreateDiscountDto dto,
             int pharmacyId)
         {
+            ValidateDiscountDates(dto);
             await ValidateDiscountScopeAsync(dto, pharmacyId);
+            await ValidateNoDuplicateDiscountAsync(dto, pharmacyId); 
+            await ValidateDiscountValueAsync(dto, pharmacyId);
 
             var discount = _mapper.Map<Discount>(dto);
             discount.PharmacyId = pharmacyId;
@@ -117,7 +120,7 @@ namespace Rujta.Application.Services
             await _unitOfWork.Discount.DeleteAsync(discount, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
 
-            InvalidateCache(pharmacyId); 
+            InvalidateCache(pharmacyId);
         }
 
         public async Task DeactivateAsync(
@@ -163,13 +166,15 @@ namespace Rujta.Application.Services
 
             return _mapper.Map<DiscountDto>(discount);
         }
+
         private void InvalidateCache(int pharmacyId)
         {
             _cache.Remove($"InventoryItems_Pharmacy_{pharmacyId}");
-            _cache.Remove($"Medicines_Pharmacy_{pharmacyId}"); 
+            _cache.Remove($"Medicines_Pharmacy_{pharmacyId}");
             _cache.Remove("InventoryItems_All");
         }
 
+        
         private async Task ValidateMedicineScopeAsync(
             CreateDiscountDto dto,
             int pharmacyId)
@@ -225,6 +230,101 @@ namespace Rujta.Application.Services
             if (!exists)
                 throw new NotFoundException(
                     "No medicines from this company in your inventory");
+        }
+
+        
+        private static void ValidateDiscountDates(CreateDiscountDto dto)
+        {
+            if (dto.StartDate >= dto.EndDate)
+                throw new ValidationException("End date must be after start date");
+
+            if (dto.EndDate < DateTime.UtcNow)
+                throw new ValidationException("End date cannot be in the past");
+        }
+
+        
+        private async Task ValidateNoDuplicateDiscountAsync(
+            CreateDiscountDto dto,
+            int pharmacyId)
+        {
+            var hasActive = await _unitOfWork.Discount.HasActiveDiscountAsync(
+                pharmacyId,
+                dto.Scope,
+                dto.MedicineId,
+                dto.CategoryId,
+                dto.CompanyId);
+
+            if (!hasActive) return;
+
+            var target = dto.Scope switch
+            {
+                DiscountScope.Medicine => "this medicine",
+                DiscountScope.Category => "this category",
+                DiscountScope.Company => "this company",
+                _ => "this item"
+            };
+
+            throw new ValidationException(
+                $"An active discount already exists for {target}. " +
+                $"Please deactivate or wait for the existing discount to expire " +
+                $"before creating a new one.");
+        }
+
+        
+        private async Task ValidateDiscountValueAsync(
+            CreateDiscountDto dto,
+            int pharmacyId)
+        {
+            if (dto.Value <= 0)
+                throw new ValidationException(
+                    "Discount value must be greater than 0");
+
+          
+            if (dto.Type == DiscountType.Percentage)
+            {
+                if (dto.Value >= 100)
+                    throw new ValidationException(
+                        "Percentage discount must be less than 100%");
+                return;
+            }
+
+          
+            var minPrice = await GetMinAffectedPriceAsync(dto, pharmacyId);
+
+            if (minPrice is null)
+                return;
+
+            if (dto.Value >= minPrice.Value)
+            {
+                throw new ValidationException(
+                    $"Fixed discount value ({dto.Value:F2}) must be less than " +
+                    $"the medicine price ({minPrice.Value:F2})");
+            }
+        }
+
+        private async Task<decimal?> GetMinAffectedPriceAsync(
+            CreateDiscountDto dto,
+            int pharmacyId)
+        {
+            return dto.Scope switch
+            {
+                DiscountScope.Medicine => await _unitOfWork.InventoryItems
+                    .GetMinMedicinePriceAsync(
+                        i => i.MedicineID == dto.MedicineId
+                          && i.PharmacyID == pharmacyId),
+
+                DiscountScope.Category => await _unitOfWork.InventoryItems
+                    .GetMinMedicinePriceAsync(
+                        i => i.Medicine!.CategoryId == dto.CategoryId
+                          && i.PharmacyID == pharmacyId),
+
+                DiscountScope.Company => await _unitOfWork.InventoryItems
+                    .GetMinMedicinePriceAsync(
+                        i => i.Medicine!.CompanyId == dto.CompanyId
+                          && i.PharmacyID == pharmacyId),
+
+                _ => null
+            };
         }
     }
 }
