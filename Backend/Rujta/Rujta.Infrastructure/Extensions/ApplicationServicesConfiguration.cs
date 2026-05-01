@@ -120,6 +120,7 @@ namespace Rujta.Infrastructure.Extensions
         {
             services.AddHostedService<RefreshTokenCleanupService>();
             services.AddHostedService<AdExpiryService>();
+            services.AddHostedService<DiscountExpirationService>();
 
             return services;
         }

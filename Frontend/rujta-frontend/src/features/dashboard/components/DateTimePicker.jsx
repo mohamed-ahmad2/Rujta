@@ -67,7 +67,6 @@ const startOfDay = (d) => {
   return x;
 };
 
-// تقدير ارتفاع الـ popover (للحساب قبل ما يترسم)
 const ESTIMATED_POPOVER_HEIGHT = 460;
 const POPOVER_GAP = 6;
 
@@ -119,7 +118,6 @@ const DateTimePicker = ({
     return () => window.removeEventListener("keydown", handler);
   }, [open]);
 
-  // ✅ Smart Positioning: يحسب أحسن مكان (فوق/تحت) قبل ما الـ popover يترسم
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) return;
 
@@ -129,7 +127,6 @@ const DateTimePicker = ({
       const spaceBelow = viewportHeight - rect.bottom;
       const spaceAbove = rect.top;
 
-      // لو المساحة تحت أقل من المطلوب والمساحة فوق أكبر → افتح فوق
       const shouldOpenUpward =
         spaceBelow < ESTIMATED_POPOVER_HEIGHT + POPOVER_GAP &&
         spaceAbove > spaceBelow;
@@ -139,7 +136,6 @@ const DateTimePicker = ({
 
     calcPosition();
 
-    // إعادة الحساب لو حصل scroll أو resize
     window.addEventListener("scroll", calcPosition, true);
     window.addEventListener("resize", calcPosition);
 
@@ -541,8 +537,6 @@ const styles = {
     transition: "transform .2s",
   },
 
-  // ✅ Compact popover - عرض ثابت 280px
-  // top/bottom/boxShadow/animationName بتتحدد ديناميكياً من popoverPositionStyle
   popover: {
     position: "absolute",
     left: 0,
@@ -796,9 +790,6 @@ const styles = {
 
 export default DateTimePicker;
 
-// ─────────────────────────────────────────────
-// 🎬 Keyframes (مرة واحدة فقط)
-// ─────────────────────────────────────────────
 if (
   typeof document !== "undefined" &&
   !document.getElementById("dtp-keyframes")

@@ -19,11 +19,16 @@ namespace Rujta.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<List<Discount>> GetMatchedDiscountsAsync(int pharmacyId,int medicineId,int? categoryId,int? companyId)
+        public async Task<List<Discount>> GetMatchedDiscountsAsync(
+            int pharmacyId,
+            int medicineId,
+            int? categoryId,
+            int? companyId)
         {
             var now = DateTime.UtcNow;
 
             return await _context.Discounts
+                .AsNoTracking()
                 .Where(d =>
                     d.PharmacyId == pharmacyId &&
                     d.IsActive &&
@@ -37,7 +42,13 @@ namespace Rujta.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<bool> HasActiveDiscountAsync(int pharmacyId, DiscountScope scope,int? medicineId,int? categoryId,int? companyId,CancellationToken cancellationToken = default)
+        public async Task<bool> HasActiveDiscountAsync(
+            int pharmacyId,
+            DiscountScope scope,
+            int? medicineId,
+            int? categoryId,
+            int? companyId,
+            CancellationToken cancellationToken = default)
         {
             var now = DateTime.UtcNow;
 
@@ -55,5 +66,12 @@ namespace Rujta.Infrastructure.Repositories
                     ),
                     cancellationToken);
         }
+
+        
+        public async Task<List<Discount>> GetExpiredActiveDiscountsAsync(DateTime now,CancellationToken cancellationToken = default)
+            => await _context.Discounts
+                .Where(d => d.IsActive && d.EndDate < now)
+                .ToListAsync(cancellationToken);
+        
     }
 }

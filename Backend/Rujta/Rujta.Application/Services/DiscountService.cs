@@ -32,10 +32,18 @@ namespace Rujta.Application.Services
                 item.Medicine.CategoryId,
                 item.Medicine.CompanyId);
 
-            if (!discounts.Any())
+        
+            var now = DateTime.UtcNow;
+            var validDiscounts = discounts
+                .Where(d => d.IsActive
+                         && d.StartDate <= now
+                         && d.EndDate >= now)
+                .ToList();
+
+            if (!validDiscounts.Any())
                 return null;
 
-            return discounts
+            return validDiscounts
                 .OrderBy(d => d.Scope switch
                 {
                     DiscountScope.Medicine => 0,
@@ -90,7 +98,7 @@ namespace Rujta.Application.Services
         {
             ValidateDiscountDates(dto);
             await ValidateDiscountScopeAsync(dto, pharmacyId);
-            await ValidateNoDuplicateDiscountAsync(dto, pharmacyId); 
+            await ValidateNoDuplicateDiscountAsync(dto, pharmacyId);
             await ValidateDiscountValueAsync(dto, pharmacyId);
 
             var discount = _mapper.Map<Discount>(dto);
@@ -174,7 +182,6 @@ namespace Rujta.Application.Services
             _cache.Remove("InventoryItems_All");
         }
 
-        
         private async Task ValidateMedicineScopeAsync(
             CreateDiscountDto dto,
             int pharmacyId)
@@ -232,7 +239,6 @@ namespace Rujta.Application.Services
                     "No medicines from this company in your inventory");
         }
 
-        
         private static void ValidateDiscountDates(CreateDiscountDto dto)
         {
             if (dto.StartDate >= dto.EndDate)
@@ -242,7 +248,6 @@ namespace Rujta.Application.Services
                 throw new ValidationException("End date cannot be in the past");
         }
 
-        
         private async Task ValidateNoDuplicateDiscountAsync(
             CreateDiscountDto dto,
             int pharmacyId)
@@ -270,7 +275,6 @@ namespace Rujta.Application.Services
                 $"before creating a new one.");
         }
 
-        
         private async Task ValidateDiscountValueAsync(
             CreateDiscountDto dto,
             int pharmacyId)
@@ -279,7 +283,6 @@ namespace Rujta.Application.Services
                 throw new ValidationException(
                     "Discount value must be greater than 0");
 
-          
             if (dto.Type == DiscountType.Percentage)
             {
                 if (dto.Value >= 100)
@@ -288,7 +291,6 @@ namespace Rujta.Application.Services
                 return;
             }
 
-          
             var minPrice = await GetMinAffectedPriceAsync(dto, pharmacyId);
 
             if (minPrice is null)

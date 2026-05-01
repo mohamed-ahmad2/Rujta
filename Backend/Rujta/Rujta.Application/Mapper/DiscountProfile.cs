@@ -25,7 +25,11 @@ namespace Rujta.Application.Mapper
                 .ForMember(dest => dest.PharmacyId,
                     opt => opt.Ignore());
 
-            CreateMap<Discount, DiscountDto>();
+            CreateMap<Discount, DiscountDto>()
+                .ForMember(dest => dest.IsCurrentlyActive,
+                    opt => opt.MapFrom(src => src.IsCurrentlyActive))
+                .ForMember(dest => dest.Status,
+                    opt => opt.MapFrom(src => src.Status));
         }
     }
 }

@@ -9,7 +9,16 @@
         public DiscountScope Scope { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+
+     
         public bool IsActive { get; set; }
+
+    
+        public bool IsCurrentlyActive { get; set; }
+
+        
+        public string Status { get; set; } = "Active";
+
         public int? MedicineId { get; set; }
         public int? CategoryId { get; set; }
         public int? CompanyId { get; set; }
