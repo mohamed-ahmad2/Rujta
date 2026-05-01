@@ -6,9 +6,6 @@ import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
 import useCampaigns from "../../campaigns/hook/useCampaigns";
 import useCategory from "../../category/hook/useCategory";
 
-// ─────────────────────────────────────────────
-// 🛠️ Normalize medicine — includes discount fields
-// ─────────────────────────────────────────────
 const normalizeMedicine = (med = {}) => {
   const price = Number(med.price ?? med.Price ?? 0);
   const discountedPrice = Number(
@@ -24,7 +21,7 @@ const normalizeMedicine = (med = {}) => {
     med.Discount?.Name ??
     null;
 
-  // ✅ Backend ممكن يبعت Enum كـ string ("Percentage"/"Fixed") أو رقم (0/1)
+
   const rawType = med.discountType ?? med.DiscountType ?? null;
   const discountType =
     rawType === 0 || rawType === "Percentage"
@@ -46,14 +43,10 @@ const normalizeMedicine = (med = {}) => {
     hasDiscount,
     discountName,
     discountType,
-    // ✅ شيلنا شرط discountedPrice > 0 — لو السعر بقى 0 بسبب fixed كبير يفضل يبان
     effectivePrice: hasDiscount ? discountedPrice : price,
   };
 };
 
-// ═════════════════════════════════════════════
-// 📂 Scrollable Categories Strip
-// ═════════════════════════════════════════════
 function CategoryStrip({ categories, selected, onSelect }) {
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -199,9 +192,7 @@ function CategoryStrip({ categories, selected, onSelect }) {
   );
 }
 
-// ═════════════════════════════════════════════
-// 🏷️ Discount Badge — يدعم Percentage و Fixed
-// ═════════════════════════════════════════════
+
 function DiscountBadge({ discountValue, discountType }) {
   const isPercentage = discountType === "Percentage";
   const label = isPercentage
@@ -241,9 +232,6 @@ function DiscountBadge({ discountValue, discountType }) {
   );
 }
 
-// ═════════════════════════════════════════════
-// 🎁 Discount Name Banner (inside card body)
-// ═════════════════════════════════════════════
 function DiscountNameBanner({ discountName }) {
   if (!discountName) return null;
 
@@ -270,9 +258,6 @@ function DiscountNameBanner({ discountName }) {
   );
 }
 
-// ═════════════════════════════════════════════
-// 🎨 Ad Banner
-// ═════════════════════════════════════════════
 function AdBanner({ ad }) {
   return (
     <div
@@ -364,9 +349,6 @@ function AdBanner({ ad }) {
   );
 }
 
-// ═════════════════════════════════════════════
-// 🏥 Main Page
-// ═════════════════════════════════════════════
 const PharmacyDetails = ({ cart, setCart }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -495,7 +477,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
       style={{ background: "#f5f8f2", fontFamily: "'DM Sans', sans-serif" }}
     >
       <div className="mx-auto max-w-5xl">
-        {/* ── Pharmacy Hero ── */}
+      
         <div
           className="mb-8 flex items-center gap-5 overflow-hidden rounded-3xl bg-white p-7"
           style={{
@@ -566,7 +548,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
           </span>
         </div>
 
-        {/* ── Ad Slider ── */}
+       
         {ads.length > 0 && (
           <div className="mb-8">
             <div className="mb-3 flex items-center justify-between">
@@ -598,7 +580,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
           </div>
         )}
 
-        {/* ── Search Bar ── */}
+     
         <div className="mb-4">
           <div className="relative">
             <svg
@@ -637,7 +619,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
           </div>
         </div>
 
-        {/* ── Categories ── */}
+       
         <div className="mb-7">
           <CategoryStrip
             categories={categoryOptions}
@@ -646,7 +628,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
           />
         </div>
 
-        {/* ── Medicines Grid ── */}
+       
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
@@ -722,7 +704,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
                       }}
                     />
 
-                    {/* ✅ Badge ديناميك حسب نوع الخصم */}
+                   
                     {showDiscount && (
                       <DiscountBadge
                         discountValue={discountValue}
@@ -731,7 +713,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
                     )}
                   </div>
 
-                  {/* ── Card Body ── */}
+                
                   <div className="flex flex-1 flex-col p-4">
                     {showDiscount && (
                       <DiscountNameBanner discountName={discountName} />

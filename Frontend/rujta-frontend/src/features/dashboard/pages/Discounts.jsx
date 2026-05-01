@@ -9,6 +9,7 @@ import {
   nowAsLocalInput,
 } from "../../discounts/hooks/useDiscountForm";
 import Toast from "../components/Toast";
+import DateTimePicker from "../components/DateTimePicker";
 
 const TEAL = "#9DC873";
 const TEAL_DARK = "#7ab355";
@@ -353,20 +354,18 @@ const Discounts = () => {
         </div>
       </div>
 
+      {/* Dates */}
       <div style={s.row2}>
         <div style={{ ...s.formGroup, flex: 1 }}>
           <label style={s.label}>Start Date &amp; Time</label>
-          <input
-            type="datetime-local"
+          <DateTimePicker
             value={startDate}
             min={minDateTime}
-            onChange={(e) => {
-              setStartDate(e.target.value);
+            hasError={!!errors.startDate}
+            placeholder="Pick start date & time"
+            onChange={(val) => {
+              setStartDate(val);
               setErrors((p) => ({ ...p, startDate: null }));
-            }}
-            style={{
-              ...s.dateInput,
-              ...(errors.startDate ? s.inputError : {}),
             }}
           />
           {!errors.startDate && (
@@ -376,17 +375,14 @@ const Discounts = () => {
 
         <div style={{ ...s.formGroup, flex: 1 }}>
           <label style={s.label}>End Date &amp; Time</label>
-          <input
-            type="datetime-local"
+          <DateTimePicker
             value={endDate}
             min={startDate || minDateTime}
-            onChange={(e) => {
-              setEndDate(e.target.value);
+            hasError={!!errors.endDate}
+            placeholder="Pick end date & time"
+            onChange={(val) => {
+              setEndDate(val);
               setErrors((p) => ({ ...p, endDate: null }));
-            }}
-            style={{
-              ...s.dateInput,
-              ...(errors.endDate ? s.inputError : {}),
             }}
           />
           {!errors.endDate && (
