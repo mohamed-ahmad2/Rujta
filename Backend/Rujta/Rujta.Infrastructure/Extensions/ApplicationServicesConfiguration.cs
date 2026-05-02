@@ -61,7 +61,8 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IAdService, AdService>();
             services.AddScoped<IAdRepository, AdRepository>();
             services.AddMemoryCache();
-
+            services.AddScoped<IDrugRequestRepository, DrugRequestRepository>();
+            services.AddScoped<IDrugRequestService, DrugRequestService>();
 
             services.AddScoped<AuthIdentityContext>(sp =>
             {
