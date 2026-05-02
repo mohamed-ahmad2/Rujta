@@ -5,5 +5,6 @@ namespace Rujta.Application.Interfaces.InterfaceServices
 {
     public interface ICategoryService : IGenericService<CategoryDto, int>
     {
+        public Task<IEnumerable<CategoryDto>> GetCategoriesMedicinesAsync(int pharmacyId, CancellationToken cancellationToken = default);
     }
 }

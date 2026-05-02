@@ -33,24 +33,31 @@ namespace Rujta.Infrastructure.Configuration
             builder.Property(d => d.IsActive)
                    .HasDefaultValue(true);
 
-            builder.HasOne<Medicine>()
-                   .WithMany()
+            builder.HasOne(d => d.Medicine)
+                   .WithMany(m => m.Discounts)
                    .HasForeignKey(d => d.MedicineId)
-                   .OnDelete(DeleteBehavior.Cascade)       
+                   .OnDelete(DeleteBehavior.SetNull)
                    .IsRequired(false);
 
-            builder.HasOne<Category>()
-                   .WithMany()
+            builder.HasOne(d => d.Category)
+                   .WithMany(c => c.Discounts)
                    .HasForeignKey(d => d.CategoryId)
-                   .OnDelete(DeleteBehavior.Cascade)
+                   .OnDelete(DeleteBehavior.SetNull)
                    .IsRequired(false);
 
-            builder.HasOne<Company>()
-                   .WithMany()
+            builder.HasOne(d => d.Company)
+                   .WithMany(c => c.Discounts)
                    .HasForeignKey(d => d.CompanyId)
-                   .OnDelete(DeleteBehavior.Cascade)
+                   .OnDelete(DeleteBehavior.SetNull)
                    .IsRequired(false);
 
+            builder.HasOne(d => d.Pharmacy)
+                   .WithMany(p => p.Discounts)
+                   .HasForeignKey(d => d.PharmacyId)
+                   .OnDelete(DeleteBehavior.Cascade)
+                   .IsRequired();
+
+            // Indexes
             builder.HasIndex(d => d.IsActive)
                    .HasDatabaseName("IX_Discounts_IsActive");
 

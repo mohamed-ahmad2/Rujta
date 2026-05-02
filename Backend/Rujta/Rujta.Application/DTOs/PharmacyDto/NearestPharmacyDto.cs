@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Rujta.Application.DTOs.PharmacyDto
+﻿namespace Rujta.Application.DTOs.PharmacyDtos
 {
     public class NearestPharmacyDto
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string DistanceKm { get; set; } = string.Empty;
-        public string DurationMinutes { get; set; } = string.Empty;
+        public double DistanceMeters { get; set; }
+        public double DurationMinutes { get; set; }
+        public string Mode { get; set; } = string.Empty;
     }
 }

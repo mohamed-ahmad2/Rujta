@@ -1,6 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Rujta.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Rujta.Infrastructure.Configuration
 {
@@ -32,7 +30,6 @@ namespace Rujta.Infrastructure.Configuration
 
             builder.Property(m => m.ImageUrl)
                    .HasMaxLength(500)
-                   .HasColumnType("NVARCHAR(500)")
                    .IsRequired(false);
 
             builder.HasOne(m => m.Company)
@@ -40,13 +37,11 @@ namespace Rujta.Infrastructure.Configuration
                    .HasForeignKey(m => m.CompanyId)
                    .OnDelete(DeleteBehavior.SetNull);
 
-      
             builder.HasOne(m => m.Category)
                    .WithMany(c => c.Medicines)
                    .HasForeignKey(m => m.CategoryId)
-                   .OnDelete(DeleteBehavior.Restrict);
+                   .OnDelete(DeleteBehavior.SetNull);
 
-       
             builder.HasMany(m => m.InventoryItems)
                    .WithOne(i => i.Medicine)
                    .HasForeignKey(i => i.MedicineID)
@@ -74,8 +69,15 @@ namespace Rujta.Infrastructure.Configuration
             builder.HasIndex(m => m.CategoryId)
                    .HasDatabaseName("IX_Medicines_CategoryId");
 
+            builder.HasIndex(m => m.ExpiryDate)
+                   .HasDatabaseName("IX_Medicines_ExpiryDate");
 
-            builder.ToTable("Medicines");
+            builder.ToTable("Medicines", t =>
+            {
+                t.HasCheckConstraint(
+                    "CK_Medicines_PositivePrice",
+                    "[Price] >= 0");
+            });
         }
     }
 }

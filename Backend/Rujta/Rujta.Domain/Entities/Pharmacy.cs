@@ -1,5 +1,4 @@
 ﻿using Rujta.Domain.Common;
-using Rujta.Domain.Entities;
 using Rujta.Domain.Entities.Rujta.Domain.Entities;
 namespace Rujta.Domain.Entities
 {
@@ -31,7 +30,6 @@ namespace Rujta.Domain.Entities
 
         public Subscription? Subscription { get; set; }
 
-
-        public bool RememberMe { get; set; } = false;
+        public ICollection<Discount>? Discounts { get; set; }
     }
 }
