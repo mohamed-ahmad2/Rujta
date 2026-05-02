@@ -50,6 +50,12 @@ const NavbarDashbord = ({ sidebarOpen, setSidebarOpen }) => {
       status: "Active",
       color: "bg-indigo-100 text-indigo-700",
     },
+    "/dashboard/payments": {
+      title: "Payments",
+      subtitle: "Billing & subscription overview",
+      status: "Active",
+      color: "bg-indigo-100 text-indigo-700",
+    },
     "/dashboard/notifications": {
       title: "Notifications",
       subtitle: "Your latest alerts",
