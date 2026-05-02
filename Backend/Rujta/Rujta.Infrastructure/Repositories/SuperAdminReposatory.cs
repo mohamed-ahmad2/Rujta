@@ -1,38 +1,17 @@
 ﻿using Rujta.Application.DTOs.PharmacyDto;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Repositories
 {
-    public class SuperAdminReposatory : ISuperAdminRepository
+    public class SuperAdminReposatory : GenericRepository<Admin,Guid>, ISuperAdminRepository
     {
-        private readonly AppDbContext _context;
 
-        public SuperAdminReposatory(AppDbContext context)
+
+        public SuperAdminReposatory(AppDbContext context)  : base(context)
         {
-            _context = context;
+      
         }
 
-        public async Task AddAsync(Pharmacy pharmacy, CancellationToken cancellationToken)
-        {
-            await _context.Pharmacies.AddAsync(pharmacy, cancellationToken);
-        }
 
-        public async Task<Pharmacy?> GetByIdAsync(int id, CancellationToken cancellationToken)
-        {
-            return await _context.Pharmacies
-                .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
-        }
-
-        public async Task<IEnumerable<Pharmacy>> GetAllAsync(CancellationToken cancellationToken)
-        {
-            return await _context.Pharmacies.ToListAsync(cancellationToken);
-        }
-
-        // 🔥 NEW
         public async Task<int> GetTotalOrdersAsync(int pharmacyId, CancellationToken cancellationToken)
         {
             return await _context.Orders

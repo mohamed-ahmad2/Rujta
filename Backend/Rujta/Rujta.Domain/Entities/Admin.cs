@@ -4,7 +4,8 @@ namespace Rujta.Domain.Entities
 {
     public class Admin : Person
     {
-        public ICollection<Pharmacy>? Pharmacies { get; set; }
-        public ICollection<Manager>? Managers { get; set; }
+        public ICollection<Pharmacy> Pharmacies { get; set; } = new List<Pharmacy>();
+
+        public ICollection<Manager> Managers { get; set; } = new List<Manager>();
     }
 }

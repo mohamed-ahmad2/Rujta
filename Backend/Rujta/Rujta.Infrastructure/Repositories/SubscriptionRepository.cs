@@ -1,19 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Domain.Entities;
-using Rujta.Domain.Entities.Rujta.Domain.Entities;
-using Rujta.Infrastructure.Data;
-
-
-namespace Rujta.Infrastructure.Repositories
+﻿namespace Rujta.Infrastructure.Repositories
 {
-    public class SubscriptionRepository : ISubscriptionRepository
+    public class SubscriptionRepository : GenericRepository<Subscription, int>,ISubscriptionRepository
     {
-        private readonly AppDbContext _context;
 
-        public SubscriptionRepository(AppDbContext context)
+
+        public SubscriptionRepository(AppDbContext context) : base(context)
         {
-            _context = context;
+  
         }
 
         public async Task<Subscription?> GetByPharmacyIdAsync(int pharmacyId)
