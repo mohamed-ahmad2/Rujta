@@ -114,6 +114,8 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IDrugRequestRepository, DrugRequestRepository>();
             services.AddScoped<IDrugRequestService, DrugRequestService>();
 
+            return services;
+        }
 
         //Background Services
         private static IServiceCollection AddBackgroundServices(
