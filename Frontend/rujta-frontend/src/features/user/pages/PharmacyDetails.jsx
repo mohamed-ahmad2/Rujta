@@ -21,7 +21,6 @@ const normalizeMedicine = (med = {}) => {
     med.Discount?.Name ??
     null;
 
-
   const rawType = med.discountType ?? med.DiscountType ?? null;
   const discountType =
     rawType === 0 || rawType === "Percentage"
@@ -192,7 +191,6 @@ function CategoryStrip({ categories, selected, onSelect }) {
   );
 }
 
-
 function DiscountBadge({ discountValue, discountType }) {
   const isPercentage = discountType === "Percentage";
   const label = isPercentage
@@ -207,10 +205,10 @@ function DiscountBadge({ discountValue, discountType }) {
       <div
         className="flex items-center gap-1 px-3 py-1.5 text-xs font-extrabold text-white"
         style={{
-          background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+          background: "linear-gradient(135deg, #84cc16 0%, #5a8a1f 100%)",
           borderTopRightRadius: 8,
           borderBottomRightRadius: 8,
-          boxShadow: "0 4px 14px rgba(239,68,68,0.4)",
+          boxShadow: "0 4px 14px rgba(132,204,22,0.4)",
           letterSpacing: "0.04em",
           position: "relative",
         }}
@@ -239,15 +237,15 @@ function DiscountNameBanner({ discountName }) {
     <div
       className="mb-2 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
       style={{
-        background: "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)",
-        border: "1px dashed #fca5a5",
+        background: "linear-gradient(135deg, #f7fee7 0%, #ecfccb 100%)",
+        border: "1px dashed #a3e635",
       }}
     >
       <span style={{ fontSize: 13 }}>🎁</span>
       <span
         className="flex-1 truncate text-[11px] font-bold uppercase"
         style={{
-          color: "#b91c1c",
+          color: "#3e6013",
           letterSpacing: "0.04em",
         }}
         title={discountName}
@@ -477,7 +475,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
       style={{ background: "#f5f8f2", fontFamily: "'DM Sans', sans-serif" }}
     >
       <div className="mx-auto max-w-5xl">
-      
+        {/* ── Pharmacy Header ── */}
         <div
           className="mb-8 flex items-center gap-5 overflow-hidden rounded-3xl bg-white p-7"
           style={{
@@ -548,7 +546,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
           </span>
         </div>
 
-       
+        {/* ── Ads Carousel ── */}
         {ads.length > 0 && (
           <div className="mb-8">
             <div className="mb-3 flex items-center justify-between">
@@ -580,7 +578,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
           </div>
         )}
 
-     
+        {/* ── Search ── */}
         <div className="mb-4">
           <div className="relative">
             <svg
@@ -619,7 +617,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
           </div>
         </div>
 
-       
+        {/* ── Categories ── */}
         <div className="mb-7">
           <CategoryStrip
             categories={categoryOptions}
@@ -628,7 +626,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
           />
         </div>
 
-       
+        {/* ── Medicines Grid ── */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
@@ -660,28 +658,28 @@ const PharmacyDetails = ({ cart, setCart }) => {
                   style={{
                     borderRadius: 20,
                     border: showDiscount
-                      ? "1.5px solid rgba(239,68,68,0.25)"
+                      ? "1.5px solid rgba(132,204,22,0.35)"
                       : "1.5px solid #e8eee2",
                     boxShadow: showDiscount
-                      ? "0 2px 12px rgba(239,68,68,0.08)"
+                      ? "0 2px 12px rgba(132,204,22,0.1)"
                       : "0 1px 4px rgba(0,0,0,0.04)",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = "translateY(-4px)";
                     e.currentTarget.style.boxShadow = showDiscount
-                      ? "0 12px 40px rgba(239,68,68,0.18)"
+                      ? "0 12px 40px rgba(132,204,22,0.22)"
                       : "0 12px 40px rgba(90,138,31,0.13)";
                     e.currentTarget.style.borderColor = showDiscount
-                      ? "rgba(239,68,68,0.45)"
+                      ? "rgba(132,204,22,0.55)"
                       : "rgba(90,138,31,0.25)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "translateY(0)";
                     e.currentTarget.style.boxShadow = showDiscount
-                      ? "0 2px 12px rgba(239,68,68,0.08)"
+                      ? "0 2px 12px rgba(132,204,22,0.1)"
                       : "0 1px 4px rgba(0,0,0,0.04)";
                     e.currentTarget.style.borderColor = showDiscount
-                      ? "rgba(239,68,68,0.25)"
+                      ? "rgba(132,204,22,0.35)"
                       : "#e8eee2";
                   }}
                 >
@@ -704,7 +702,6 @@ const PharmacyDetails = ({ cart, setCart }) => {
                       }}
                     />
 
-                   
                     {showDiscount && (
                       <DiscountBadge
                         discountValue={discountValue}
@@ -713,7 +710,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
                     )}
                   </div>
 
-                
+                  {/* ── Content Section ── */}
                   <div className="flex flex-1 flex-col p-4">
                     {showDiscount && (
                       <DiscountNameBanner discountName={discountName} />
@@ -765,7 +762,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
                         <span
                           className="text-base font-extrabold"
                           style={{
-                            color: showDiscount ? "#dc2626" : "#3e6013",
+                            color: showDiscount ? "#5a8a1f" : "#3e6013",
                           }}
                         >
                           ${effectivePrice.toFixed(2)}

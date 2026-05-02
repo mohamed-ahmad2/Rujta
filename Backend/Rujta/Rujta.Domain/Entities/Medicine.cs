@@ -18,6 +18,8 @@ namespace Rujta.Domain.Entities
 
         public string? ImageUrl { get; set; }
 
+        public string? Smiles { get; set; }
+
         public int? CompanyId { get; set; }
         public Company? Company { get; set; }
 
