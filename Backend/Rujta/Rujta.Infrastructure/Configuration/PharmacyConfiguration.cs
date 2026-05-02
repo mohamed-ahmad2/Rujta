@@ -1,6 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Rujta.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Rujta.Domain.Entities.Rujta.Domain.Entities;
 
 namespace Rujta.Infrastructure.Configuration
 {
@@ -23,6 +22,13 @@ namespace Rujta.Infrastructure.Configuration
             builder.Property(p => p.OpenHours)
                    .HasMaxLength(100);
 
+
+            builder.Property(p => p.IsActive)
+                   .HasDefaultValue(true);
+
+            builder.Property(p => p.IsDeleted)
+                   .HasDefaultValue(false);
+
             builder.HasOne(p => p.Admin)
                    .WithMany(a => a.Pharmacies)
                    .HasForeignKey(p => p.AdminId)
@@ -33,7 +39,6 @@ namespace Rujta.Infrastructure.Configuration
                    .HasForeignKey(p => p.ParentPharmacyID)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            // Employees relationship (يشمل Pharmacists أيضاً)
             builder.HasMany(p => p.Employees)
                    .WithOne(e => e.Pharmacy)
                    .HasForeignKey(e => e.PharmacyId)
@@ -53,6 +58,26 @@ namespace Rujta.Infrastructure.Configuration
                    .WithOne(s => s.Pharmacy)
                    .HasForeignKey(s => s.PharmacyID)
                    .OnDelete(DeleteBehavior.Restrict);
+
+ 
+            builder.HasMany(p => p.Customers)
+                   .WithOne(c => c.Pharmacy)
+                   .HasForeignKey(c => c.PharmacyId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+
+            builder.HasOne(p => p.Subscription)
+                   .WithOne(s => s.Pharmacy)
+                   .HasForeignKey<Subscription>(s => s.PharmacyId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasIndex(p => p.IsActive)
+                   .HasDatabaseName("IX_Pharmacies_IsActive");
+
+            builder.HasIndex(p => p.IsDeleted)
+                   .HasDatabaseName("IX_Pharmacies_IsDeleted");
+
+            builder.ToTable("Pharmacies"); 
         }
     }
 }

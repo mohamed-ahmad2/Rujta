@@ -21,5 +21,7 @@ namespace Rujta.Application.Interfaces
         );
 
         IQueryable<T> GetQueryable();
+
+        Task<bool> AnyAsync(Expression<Func<T, bool>> predicate,CancellationToken cancellationToken = default);
     }
 }

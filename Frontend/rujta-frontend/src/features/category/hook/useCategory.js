@@ -1,81 +1,164 @@
+// src/features/category/hook/useCategory.js
 import { useState, useCallback } from "react";
 import {
   getAllCategories,
   getCategoryById,
+  getPharmacyCategories,
+  getCategoriesByPharmacy, 
   addCategory,
   updateCategory,
   deleteCategory,
 } from "../api/category";
 
-export default function useCategory() {
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+const extractErrorMessage = (err) => {
+  if (!err) return "An unknown error occurred";
+  if (err?.response?.data?.Message) return err.response.data.Message;
+  if (err?.response?.data?.message) return err.response.data.message;
+  if (err?.response?.data && typeof err.response.data === "string")
+    return err.response.data;
+  if (err?.response?.status) {
+    const s = err.response.status;
+    if (s === 401) return "Unauthorized: Please log in again";
+    if (s === 403) return "Forbidden: You don't have permission";
+    if (s === 404) return "Category not found";
+    if (s === 400) return "Invalid category data";
+    if (s === 500) return "Server error: Please contact support";
+    return `Request failed with status ${s}`;
+  }
+  if (err?.message) return err.message;
+  return "Failed to load categories";
+};
 
-  // fetch all categories
+const mapCategory = (category = {}) => ({
+  id:   category.id   ?? category.Id   ?? "-",
+  name: category.name ?? category.Name ?? "Unnamed Category",
+  raw:  category,
+});
+
+export default function useCategory() {
+  const [categories, setCategories]                 = useState([]);
+  const [pharmacyCategories, setPharmacyCategories] = useState([]);
+  const [loading, setLoading]                       = useState(false);
+  const [error, setError]                           = useState(null);
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getAllCategories();
-      setCategories(res.data || []);
+      const res  = await getAllCategories();
+      const data = res?.data ?? res ?? [];
+      const list = Array.isArray(data) ? data : [];
+      setCategories(list.map(mapCategory));
       setError(null);
     } catch (err) {
-      setError(err?.message || "Failed to load categories");
+      console.error("❌ fetchAll categories error:", err);
+      setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // fetch single category by id
+
+  const fetchPharmacyCategories = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res  = await getPharmacyCategories();
+      const data = res?.data ?? res ?? [];
+      const list = Array.isArray(data) ? data : [];
+      setPharmacyCategories(list.map(mapCategory));
+      setError(null);
+    } catch (err) {
+      if (err?.response?.status === 404) {
+        setPharmacyCategories([]);
+        setError(null);
+      } else {
+        console.error("❌ fetchPharmacyCategories error:", err);
+        setError(extractErrorMessage(err));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchCategoriesByPharmacy = useCallback(async (pharmacyId) => {
+    if (!pharmacyId) return;
+    setLoading(true);
+    try {
+      const res  = await getCategoriesByPharmacy(pharmacyId);
+      const data = res?.data ?? res ?? [];
+      const list = Array.isArray(data) ? data : [];
+      setPharmacyCategories(list.map(mapCategory));
+      setError(null);
+    } catch (err) {
+      if (err?.response?.status === 404) {
+        setPharmacyCategories([]);
+        setError(null);
+      } else {
+        console.error("❌ fetchCategoriesByPharmacy error:", err);
+        setError(extractErrorMessage(err));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const fetchById = async (id) => {
     setLoading(true);
     try {
       const res = await getCategoryById(id);
-      return res.data;
+      return mapCategory(res?.data ?? res);
     } catch (err) {
-      setError(err?.message || "Failed to fetch category");
+      console.error("❌ fetchById category error:", err);
+      setError(extractErrorMessage(err));
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // create new category
   const create = async (data) => {
     setLoading(true);
     try {
       const res = await addCategory(data);
       await fetchAll();
-      return res.data;
+      return mapCategory(res?.data ?? res);
     } catch (err) {
-      setError(err?.message || "Failed to add category");
+      console.error("❌ create category error:", err);
+      setError(extractErrorMessage(err));
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // update existing category
   const update = async (id, data) => {
     setLoading(true);
     try {
       await updateCategory(id, data);
-      await fetchAll();
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? { ...c, name: data.name ?? data.Name ?? c.name, raw: data }
+            : c
+        )
+      );
+      setError(null);
     } catch (err) {
-      setError(err?.message || "Failed to update category");
+      console.error("❌ update category error:", err);
+      setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
-  // delete category
   const remove = async (id) => {
     setLoading(true);
     try {
       await deleteCategory(id);
-      await fetchAll();
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+      setError(null);
     } catch (err) {
-      setError(err?.message || "Failed to delete category");
+      console.error("❌ remove category error:", err);
+      setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -83,9 +166,12 @@ export default function useCategory() {
 
   return {
     categories,
+    pharmacyCategories,
     loading,
     error,
     fetchAll,
+    fetchPharmacyCategories,
+    fetchCategoriesByPharmacy, 
     fetchById,
     create,
     update,

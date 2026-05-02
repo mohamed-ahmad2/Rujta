@@ -69,8 +69,10 @@ namespace Rujta.Infrastructure.Repositories
         }
 
         public IQueryable<T> GetQueryable()
-        {
-            return _dbSet.AsNoTracking();
-        }
+            => _dbSet.AsNoTracking();
+        
+
+        public virtual async Task<bool> AnyAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
+            => await _dbSet.AnyAsync(predicate, cancellationToken);
     }
 }

@@ -9,6 +9,10 @@ export const getInventoryItemById = (id) => {
   return apiClient.get(`/InventoryItem/${id}`);
 };
 
+export const getInventoryProducts = () => {
+  return apiClient.get("/InventoryItem/products");
+};
+
 export const addInventoryItem = (data) => {
   return apiClient.post("/InventoryItem", data);
 };
@@ -19,8 +23,4 @@ export const updateInventoryItem = (id, data) => {
 
 export const deleteInventoryItem = (id) => {
   return apiClient.delete(`/InventoryItem/${id}`);
-};
-
-export const getInventoryProducts = () => {
-  return apiClient.get("/InventoryItem/products");
 };

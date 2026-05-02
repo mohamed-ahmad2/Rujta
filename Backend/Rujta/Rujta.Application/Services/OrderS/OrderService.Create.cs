@@ -1,4 +1,6 @@
-﻿using Rujta.Application.DTOs.OrderDto;
+﻿using Microsoft.EntityFrameworkCore;
+using Rujta.Application.DTOs.OrderDto;
+using Rujta.Application.Interfaces.InterfaceServices;
 
 namespace Rujta.Application.Services.OrderS
 {
@@ -88,29 +90,43 @@ namespace Rujta.Application.Services.OrderS
             return text;
         }
 
-        private async Task<decimal> BuildOrderItemsAsync(
-            Order order,
-            CreateOrderDto createOrderDto,
-            CancellationToken cancellationToken)
+        private async Task<decimal> BuildOrderItemsAsync( Order order,CreateOrderDto createOrderDto,CancellationToken cancellationToken)
         {
-            var medicineIds = createOrderDto.OrderItems.Select(i => i.MedicineID).ToList();
-            var medicines = await _unitOfWork.InventoryItems
-                .FindAsync(m => medicineIds.Contains(m.Id), cancellationToken);
-            var medicineDict = medicines.ToDictionary(m => m.Id);
+            var medicineIds = createOrderDto.OrderItems
+                .Select(i => i.MedicineID)
+                .ToList();
+
+            var inventoryItems = await _unitOfWork.InventoryItems
+                .FindAsync(
+                    i => medicineIds.Contains(i.MedicineID)
+                      && i.PharmacyID == createOrderDto.PharmacyID,
+                    cancellationToken,
+                    include: q => q.Include(i => i.Medicine));
+
+            var inventoryDict = inventoryItems.ToDictionary(i => i.MedicineID);
 
             decimal totalPrice = 0;
 
             foreach (var itemDto in createOrderDto.OrderItems)
             {
-                if (!medicineDict.TryGetValue(itemDto.MedicineID, out var medicine))
-                    throw new InvalidOperationException($"Medicine with ID {itemDto.MedicineID} not found.");
+                if (!inventoryDict.TryGetValue(itemDto.MedicineID, out var inventoryItem))
+                    throw new InvalidOperationException(
+                        $"Medicine with ID {itemDto.MedicineID} not found in pharmacy inventory.");
+
+                if (inventoryItem.Quantity < itemDto.Quantity)
+                    throw new InvalidOperationException(
+                        $"Insufficient stock for Medicine ID {itemDto.MedicineID}. " +
+                        $"Available: {inventoryItem.Quantity}, Requested: {itemDto.Quantity}");
+
+                // ✅ طبّق الـ Discount
+                var pricePerUnit = await _discountService.ApplyDiscountAsync(inventoryItem);
 
                 var orderItem = new OrderItem
                 {
-                    MedicineID = medicine.Id,
+                    MedicineID = inventoryItem.MedicineID,
                     Quantity = itemDto.Quantity,
-                    PricePerUnit = medicine.Price,
-                    SubTotal = itemDto.Quantity * medicine.Price
+                    PricePerUnit = pricePerUnit,            
+                    SubTotal = itemDto.Quantity * pricePerUnit
                 };
 
                 order.OrderItems.Add(orderItem);
