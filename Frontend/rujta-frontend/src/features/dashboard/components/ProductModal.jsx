@@ -1,6 +1,24 @@
-// src/dashboard/components/layouts/ProductModal.jsx
+// src/features/dashboard/components/ProductModal.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { X, Search, Minus, Plus, Upload, ChevronDown } from "lucide-react";
+
+function Toast({ type, message, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3500);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  return (
+    <div className={`fixed bottom-6 left-1/2 z-[9999] flex -translate-x-1/2 items-center gap-3 rounded-2xl px-5 py-3.5 shadow-xl transition-all
+      ${type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>
+      <span className="text-lg">{type === "success" ? "✅" : "❌"}</span>
+      <p className="text-sm font-medium">{message}</p>
+      <button onClick={onClose} className="ml-2 opacity-70 hover:opacity-100">
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
 
 const toNumber = (value, fallback = 0) => {
   const n = Number(value);
@@ -24,7 +42,6 @@ function AddExistingTab({
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Pre-fill when editing
   useEffect(() => {
     if (initialData) {
       setSearch(initialData.medicineName || "");
@@ -33,7 +50,7 @@ function AddExistingTab({
       setSelectedMedicine(
         initialData.medicineId
           ? { id: initialData.medicineId, name: initialData.medicineName }
-          : null
+          : null,
       );
     } else {
       setSearch("");
@@ -43,7 +60,6 @@ function AddExistingTab({
     }
   }, [initialData]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target))
@@ -54,10 +70,11 @@ function AddExistingTab({
   }, []);
 
   const filtered = medicines.filter((m) =>
-    m.name.toLowerCase().includes(search.toLowerCase())
+    m.name.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const selectedCategory = categories.find((c) => c.name === category) || null;
+  const selectedCategory =
+    categories.find((c) => c.name === category) || null;
 
   const handleSubmit = () => {
     if (!selectedMedicine) return alert("Please select a valid medicine.");
@@ -84,7 +101,6 @@ function AddExistingTab({
 
   return (
     <div className="space-y-5">
-      {/* Search Drug */}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-gray-700">
           Search Drug Database
@@ -108,9 +124,13 @@ function AddExistingTab({
           {showDropdown && search && (
             <div className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
               {loadingMedicines ? (
-                <div className="px-4 py-3 text-sm text-gray-500">Loading...</div>
+                <div className="px-4 py-3 text-sm text-gray-500">
+                  Loading...
+                </div>
               ) : filtered.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-gray-500">No medicines found.</div>
+                <div className="px-4 py-3 text-sm text-gray-500">
+                  No medicines found.
+                </div>
               ) : (
                 filtered.map((m) => (
                   <button
@@ -123,12 +143,14 @@ function AddExistingTab({
                     }}
                     className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50"
                   >
-                    <div className="h-8 w-8 flex-shrink-0 rounded-lg bg-gray-100 flex items-center justify-center text-xs text-gray-400">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">
                       💊
                     </div>
                     <div>
                       <p className="font-medium text-gray-800">{m.name}</p>
-                      {m.sku && <p className="text-xs text-gray-400">SKU: {m.sku}</p>}
+                      {m.sku && (
+                        <p className="text-xs text-gray-400">SKU: {m.sku}</p>
+                      )}
                     </div>
                   </button>
                 ))
@@ -137,25 +159,23 @@ function AddExistingTab({
           )}
         </div>
         <p className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-400">
-          <span className="inline-block h-3.5 w-3.5 rounded-full border border-gray-300 text-center leading-3 text-[10px]">i</span>
+          <span className="inline-block h-3.5 w-3.5 rounded-full border border-gray-300 text-center leading-3 text-[10px]">
+            i
+          </span>
           Only drugs already approved in the master database will appear here.
         </p>
       </div>
 
-      {/* Category + Quantity */}
       <div className="grid grid-cols-2 gap-4">
-       
-
-        {/* Quantity */}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">
             Quantity to Add
           </label>
-          <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+          <div className="flex overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
             <button
               type="button"
               onClick={() => setQuantity((q) => Math.max(0, q - 1))}
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-gray-500 hover:bg-gray-100 transition"
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-gray-500 transition hover:bg-gray-100"
             >
               <Minus className="h-4 w-4" />
             </button>
@@ -168,7 +188,7 @@ function AddExistingTab({
             <button
               type="button"
               onClick={() => setQuantity((q) => q + 1)}
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-gray-500 hover:bg-gray-100 transition"
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-gray-500 transition hover:bg-gray-100"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -176,13 +196,12 @@ function AddExistingTab({
         </div>
       </div>
 
-      {/* Selected Medicine Preview */}
       {selectedMedicine && (
         <div className="flex items-center gap-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3">
           <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white text-2xl shadow-sm">
             💊
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="font-semibold text-gray-800">{selectedMedicine.name}</p>
             {selectedMedicine.sku && (
               <p className="text-xs text-gray-400">SKU: {selectedMedicine.sku}</p>
@@ -191,13 +210,14 @@ function AddExistingTab({
           {initialData && (
             <div className="text-right">
               <p className="text-xs text-gray-400">Current Stock</p>
-              <p className="font-bold text-secondary">{initialData.quantity} Units</p>
+              <p className="font-bold text-secondary">
+                {initialData.quantity} Units
+              </p>
             </div>
           )}
         </div>
       )}
 
-      {/* Actions */}
       <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
         <button
           type="button"
@@ -219,174 +239,217 @@ function AddExistingTab({
 }
 
 // ─── Tab: Request New Drug ────────────────────────────────────────────────────
-function RequestNewDrugTab({ categories = [], loadingCategories, onClose }) {
+function RequestNewDrugTab({
+  categories = [],
+  loadingCategories,
+  onClose,
+  onSubmitRequest,
+}) {
   const [form, setForm] = useState({
     drugName: "",
+    description: "",
     category: "",
+    manufacturer: "",
+    supplier: "",
     price: "",
-    notes: "",
-    image: null,
+    quantity: "",
+    expiryDate: "",
   });
-  const [dragOver, setDragOver] = useState(false);
-  const fileRef = useRef(null);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const handleFile = (file) => {
-    if (file && file.size <= 5 * 1024 * 1024) update("image", file);
-    else alert("File must be PNG, JPG or PDF, max 5MB.");
-  };
+  const handleSubmit = async () => {
+    if (!form.drugName)     return setToast({ type: "error", message: "Drug name is required." });
+    if (!form.category)     return setToast({ type: "error", message: "Category is required." });
+    if (!form.manufacturer) return setToast({ type: "error", message: "Manufacturer is required." });
+    if (!form.price)        return setToast({ type: "error", message: "Price is required." });
+    if (!form.quantity)     return setToast({ type: "error", message: "Quantity is required." });
+    if (!form.expiryDate)   return setToast({ type: "error", message: "Expiry date is required." });
 
-  const handleSubmit = () => {
-    if (!form.drugName) return alert("Drug name is required.");
-    if (!form.category) return alert("Category is required.");
-    if (!form.price) return alert("Price is required.");
-    // No API for this — UI only as requested
-    alert("Drug request submitted for approval! (UI only)");
-    onClose();
+    setSaving(true);
+    try {
+      await onSubmitRequest({
+        drugName:     form.drugName,
+        description:  form.description,
+        category:     form.category,
+        manufacturer: form.manufacturer,
+        supplier:     form.supplier,
+        price:        parseFloat(form.price),
+        quantity:     parseInt(form.quantity),
+        expiryDate:   new Date(form.expiryDate).toISOString(),
+      });
+      setToast({ type: "success", message: "Drug request submitted successfully!" });
+      setTimeout(onClose, 1800);
+    } catch {
+      setToast({ type: "error", message: "Failed to submit drug request. Please try again." });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h4 className="text-base font-semibold text-gray-800">New Drug Request</h4>
-        <p className="text-xs text-gray-400 mt-0.5">
-          Fill in the details to submit a new pharmaceutical item for clinical board approval.
-        </p>
-      </div>
-
-      {/* Drug Name */}
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-gray-700">
-          Drug Name <span className="text-red-500">*</span>
-        </label>
-        <input
-          value={form.drugName}
-          onChange={(e) => update("drugName", e.target.value)}
-          placeholder="e.g. Paracetamol Extra Strength"
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
-        />
-      </div>
-
-      {/* Category + Price */}
-      <div className="grid grid-cols-2 gap-4">
+    <>
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
+      <div className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">
-            Category <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <select
-              value={form.category}
-              onChange={(e) => update("category", e.target.value)}
-              className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 pr-8 text-sm text-gray-700 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
-            >
-              <option value="">Select category</option>
-              {loadingCategories ? (
-                <option>Loading...</option>
-              ) : (
-                categories.map((c) => (
-                  <option key={c.id} value={c.name}>{c.name}</option>
-                ))
-              )}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          </div>
+          <h4 className="text-base font-semibold text-gray-800">
+            New Drug Request
+          </h4>
+          <p className="mt-0.5 text-xs text-gray-400">
+            Fill in the details to submit a new pharmaceutical item for approval.
+          </p>
         </div>
 
+        {/* Row 1 — Drug Name */}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">
-            Price/Unit  <span className="text-red-500">*</span>
+            Drug Name <span className="text-red-500">*</span>
           </label>
-          <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 focus-within:border-secondary focus-within:ring-2 focus-within:ring-secondary/20">
-            <span className="mr-1.5 text-gray-400">EGP</span>
+          <input
+            value={form.drugName}
+            onChange={(e) => update("drugName", e.target.value)}
+            placeholder="e.g. Paracetamol Extra Strength"
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
+          />
+        </div>
+
+        {/* Row 2 — Category + Manufacturer */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Category <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <select
+                value={form.category}
+                onChange={(e) => update("category", e.target.value)}
+                className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 pr-8 text-sm text-gray-700 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
+              >
+                <option value="">Select category</option>
+                {loadingCategories ? (
+                  <option>Loading...</option>
+                ) : (
+                  categories.map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))
+                )}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Manufacturer <span className="text-red-500">*</span>
+            </label>
             <input
-              type="number"
-              step="0.01"
-              value={form.price}
-              onChange={(e) => update("price", e.target.value)}
-              placeholder="0.00"
-              className="w-full bg-transparent text-sm outline-none"
+              value={form.manufacturer}
+              onChange={(e) => update("manufacturer", e.target.value)}
+              placeholder="e.g. Pharco"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
             />
           </div>
         </div>
-      </div>
 
-      {/* Image Upload */}
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-gray-700">
-          Product Reference Image
-        </label>
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
-          onClick={() => fileRef.current?.click()}
-          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-8 transition ${
-            dragOver
-              ? "border-secondary bg-secondary/5"
-              : "border-gray-200 bg-gray-50 hover:border-secondary/50 hover:bg-gray-100"
-          }`}
-        >
-          {form.image ? (
-            <>
-              <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center">
-                <Upload className="h-5 w-5 text-secondary" />
-              </div>
-              <p className="text-sm font-medium text-secondary">{form.image.name}</p>
-              <p className="text-xs text-gray-400">Click to change</p>
-            </>
-          ) : (
-            <>
-              <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
-                <Upload className="h-5 w-5 text-gray-400" />
-              </div>
-              <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
-              <p className="text-xs text-gray-400">PNG, JPG or PDF (max. 5MB)</p>
-            </>
-          )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".png,.jpg,.jpeg,.pdf"
-            className="hidden"
-            onChange={(e) => handleFile(e.target.files[0])}
+        {/* Row 3 — Supplier + Price */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Supplier
+            </label>
+            <input
+              value={form.supplier}
+              onChange={(e) => update("supplier", e.target.value)}
+              placeholder="e.g. El Ezaby"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Price / Unit <span className="text-red-500">*</span>
+            </label>
+            <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 focus-within:border-secondary focus-within:ring-2 focus-within:ring-secondary/20">
+              <span className="mr-1.5 text-gray-400">EGP</span>
+              <input
+                type="number"
+                step="0.01"
+                value={form.price}
+                onChange={(e) => update("price", e.target.value)}
+                placeholder="0.00"
+                className="w-full bg-transparent text-sm outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Row 4 — Quantity + Expiry */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Quantity <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              value={form.quantity}
+              onChange={(e) => update("quantity", e.target.value)}
+              placeholder="e.g. 100"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Expiry Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={form.expiryDate}
+              onChange={(e) => update("expiryDate", e.target.value)}
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
+            />
+          </div>
+        </div>
+
+        {/* Description */}
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            Description
+          </label>
+          <textarea
+            value={form.description}
+            onChange={(e) => update("description", e.target.value)}
+            placeholder="Include dosage guidelines, contraindications, or storage requirements..."
+            rows={3}
+            className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
           />
         </div>
-      </div>
 
-      {/* Clinical Notes */}
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-gray-700">
-          Additional Clinical Notes
-        </label>
-        <textarea
-          value={form.notes}
-          onChange={(e) => update("notes", e.target.value)}
-          placeholder="Include dosage guidelines, contraindications, or storage requirements..."
-          rows={3}
-          className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
-        />
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-gray-200 px-5 py-2 text-sm text-gray-600 transition hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={saving}
+            className="flex items-center gap-2 rounded-full bg-secondary px-6 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+          >
+            {saving ? "Submitting..." : "Submit for Approval"}
+            {!saving && <span>→</span>}
+          </button>
+        </div>
       </div>
-
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full border border-gray-200 px-5 py-2 text-sm text-gray-600 transition hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className="flex items-center gap-2 rounded-full bg-secondary px-6 py-2 text-sm font-medium text-white transition hover:opacity-90"
-        >
-          Submit for Approval
-          <span>→</span>
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -395,6 +458,7 @@ export default function ProductModal({
   open,
   onClose,
   onSave,
+  onSubmitRequest,
   categories = [],
   loadingCategories = false,
   medicines = [],
@@ -470,6 +534,7 @@ export default function ProductModal({
               categories={categories}
               loadingCategories={loadingCategories}
               onClose={onClose}
+              onSubmitRequest={onSubmitRequest}
             />
           )}
         </div>

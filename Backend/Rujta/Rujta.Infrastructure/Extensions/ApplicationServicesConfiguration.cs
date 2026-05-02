@@ -109,9 +109,10 @@ namespace Rujta.Infrastructure.Extensions
 
             services.AddScoped<IPrescriptionService, PrescriptionService>();
             services.AddScoped<IAdService, AdService>();
-
-            return services;
-        }
+            services.AddScoped<IAdRepository, AdRepository>();
+            services.AddMemoryCache();
+            services.AddScoped<IDrugRequestRepository, DrugRequestRepository>();
+            services.AddScoped<IDrugRequestService, DrugRequestService>();
 
 
         //Background Services

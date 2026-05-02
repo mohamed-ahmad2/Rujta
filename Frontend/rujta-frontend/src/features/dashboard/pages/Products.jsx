@@ -19,6 +19,7 @@ import ProductModal from "../components/ProductModal";
 import useInventory from "../../inventory item/hook/useInventoryItem";
 import useCategory from "../../category/hook/useCategory";
 import useMedicines from "../../medicines/hook/useMedicines";
+import useDrugRequest from "../../drugRequests/hook/useDrugRequest"; // ✅ ADDED
 
 const statusColor = {
   "In stock": "bg-green-100 text-green-700",
@@ -39,6 +40,8 @@ export default function Products() {
     fetchAll: fetchMedicines,
     loading: loadingMedicines,
   } = useMedicines();
+
+  const { submit } = useDrugRequest(); // ✅ ADDED
 
   const [openModal, setOpenModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -78,7 +81,6 @@ export default function Products() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const pageData = filtered.slice((page - 1) * perPage, page * perPage);
 
@@ -109,7 +111,6 @@ export default function Products() {
     setPage(1);
   };
 
-  // Export CSV
   const handleExport = () => {
     const rows = [
       ["ID", "Name", "Category", "Qty", "Price", "Expiry", "Status"],
@@ -188,7 +189,7 @@ export default function Products() {
 
         {/* Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Add */}
+          {/* Add Product */}
           <button
             onClick={() => {
               setEditingProduct(null);
@@ -452,6 +453,7 @@ export default function Products() {
           setEditingProduct(null);
         }}
         onSave={handleAddOrUpdate}
+        onSubmitRequest={submit} 
         categories={categories}
         loadingCategories={loadingCategories}
         medicines={medicines}
