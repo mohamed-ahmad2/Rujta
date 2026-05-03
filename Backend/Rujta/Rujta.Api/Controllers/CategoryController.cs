@@ -22,6 +22,7 @@ namespace Rujta.API.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<CategoryDto>>> GetAll(CancellationToken cancellationToken)
         {
             var categories = await _categoryService.GetAllAsync(cancellationToken);
