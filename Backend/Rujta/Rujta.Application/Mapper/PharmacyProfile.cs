@@ -1,77 +1,57 @@
 ﻿using Rujta.Application.DTOs.PharmacyDtos;
 using Rujta.Application.Models;
 
-
 namespace Rujta.Application.Mapper
 {
     public class PharmacyProfile : Profile
     {
         public PharmacyProfile()
         {
+            ConfigurePharmacyToDtoMap();
+            ConfigurePharmacyToBranchMap();
+            ConfigurePharmacyToTreeMap();
+            ConfigureRouteResultMap();
+        }
+
+        private void ConfigurePharmacyToDtoMap()
+        {
             CreateMap<Pharmacy, PharmacyDto>()
-                // Orders count
-                .ForMember(dest => dest.TotalOrders,
-                    opt => opt.MapFrom(src => src.Orders != null ? src.Orders.Count : 0))
-
-                // Admin info
-                .ForMember(dest => dest.AdminName,
-                    opt => opt.MapFrom(src => src.Admin != null ? src.Admin.Name : null))
-                .ForMember(dest => dest.AdminEmail,
-                    opt => opt.MapFrom(src => src.Admin != null ? src.Admin.Email : null))
-
-                // Manager info
-                .ForMember(dest => dest.ManagerName,
-                    opt => opt.MapFrom(src => src.Manager != null ? src.Manager.Name : null))
-                .ForMember(dest => dest.ManagerEmail,
-                    opt => opt.MapFrom(src => src.Manager != null ? src.Manager.Email : null))
-                .ForMember(dest => dest.ManagerPhone,
-                    opt => opt.MapFrom(src => src.Manager != null ? src.Manager.PhoneNumber : null))
-
-                // Hierarchy info
-                .ForMember(dest => dest.ParentPharmacyId,
-                    opt => opt.MapFrom(src => src.ParentPharmacyID))
-                .ForMember(dest => dest.ParentPharmacyName,
-                    opt => opt.MapFrom(src => src.ParentPharmacy != null ? src.ParentPharmacy.Name : null))
-                .ForMember(dest => dest.BranchesCount,
-                    opt => opt.MapFrom(src => src.Branches != null ? src.Branches.Count : 0))
-
+                .ForMember(d => d.TotalOrders, o => o.MapFrom(s => s.Orders.Count))
+                .ForMember(d => d.AdminName, o => o.MapFrom(s => s.Admin!.Name))
+                .ForMember(d => d.AdminEmail, o => o.MapFrom(s => s.Admin!.Email))
+                .ForMember(d => d.ManagerName, o => o.MapFrom(s => s.Manager!.Name))
+                .ForMember(d => d.ManagerEmail, o => o.MapFrom(s => s.Manager!.Email))
+                .ForMember(d => d.ManagerPhone, o => o.MapFrom(s => s.Manager!.PhoneNumber))
+                .ForMember(d => d.ParentPharmacyId, o => o.MapFrom(s => s.ParentPharmacyID))
+                .ForMember(d => d.ParentPharmacyName, o => o.MapFrom(s => s.ParentPharmacy!.Name))
+                .ForMember(d => d.BranchesCount, o => o.MapFrom(s => s.Branches.Count))
                 .ReverseMap()
-                .ForMember(dest => dest.Admin, opt => opt.Ignore())
-                .ForMember(dest => dest.Manager, opt => opt.Ignore())
-                .ForMember(dest => dest.Orders, opt => opt.Ignore())
-                .ForMember(dest => dest.Employees, opt => opt.Ignore())
-                .ForMember(dest => dest.InventoryItems, opt => opt.Ignore())
-                .ForMember(dest => dest.Subscription, opt => opt.Ignore())
-                .ForMember(dest => dest.Customers, opt => opt.Ignore())
-                .ForMember(dest => dest.Discounts, opt => opt.Ignore())
-                .ForMember(dest => dest.Branches, opt => opt.Ignore())
-                .ForMember(dest => dest.ParentPharmacy, opt => opt.Ignore())
-                .ForMember(dest => dest.ParentPharmacyID, opt => opt.MapFrom(src => src.ParentPharmacyId))
-                .ForMember(dest => dest.SellDrugViaPharmacy, opt => opt.Ignore());
+                .ForMember(d => d.ParentPharmacyID, o => o.MapFrom(s => s.ParentPharmacyId))
+                .IgnoreNavigationProperties();
+        }
 
-
+        private void ConfigurePharmacyToBranchMap()
+        {
             CreateMap<Pharmacy, BranchDto>()
-                .ForMember(dest => dest.ManagerName,
-                    opt => opt.MapFrom(src => src.Manager != null ? src.Manager.Name : null))
-                .ForMember(dest => dest.ManagerEmail,
-                    opt => opt.MapFrom(src => src.Manager != null ? src.Manager.Email : null));
+                .ForMember(d => d.ManagerName, o => o.MapFrom(s => s.Manager!.Name))
+                .ForMember(d => d.ManagerEmail, o => o.MapFrom(s => s.Manager!.Email));
+        }
 
-
+        private void ConfigurePharmacyToTreeMap()
+        {
             CreateMap<Pharmacy, PharmacyTreeDto>()
-                .ForMember(dest => dest.ManagerName,
-                    opt => opt.MapFrom(src => src.Manager != null ? src.Manager.Name : null))
-                .ForMember(dest => dest.Branches,
-                    opt => opt.MapFrom(src => src.Branches));
+                .ForMember(d => d.ManagerName, o => o.MapFrom(s => s.Manager!.Name))
+                .ForMember(d => d.Branches, o => o.MapFrom(s => s.Branches));
+        }
 
-
+        private void ConfigureRouteResultMap()
+        {
             CreateMap<PharmacyRouteResult, NearestPharmacyDto>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Pharmacy.Id))
-                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Pharmacy.Name))
-                .ForMember(dest => dest.DistanceMeters,
-                    opt => opt.MapFrom(src => Math.Round(src.DistanceMeters, 2)))
-                .ForMember(dest => dest.DurationMinutes,
-                    opt => opt.MapFrom(src => Math.Round(src.DurationMinutes, 1)))
-                .ForMember(dest => dest.Mode, opt => opt.MapFrom(src => src.Mode));
+                .ForMember(d => d.Id, o => o.MapFrom(s => s.Pharmacy.Id))
+                .ForMember(d => d.Name, o => o.MapFrom(s => s.Pharmacy.Name))
+                .ForMember(d => d.DistanceMeters, o => o.MapFrom(s => Math.Round(s.DistanceMeters, 2)))
+                .ForMember(d => d.DurationMinutes, o => o.MapFrom(s => Math.Round(s.DurationMinutes, 1)))
+                .ForMember(d => d.Mode, o => o.MapFrom(s => s.Mode));
         }
     }
 }
