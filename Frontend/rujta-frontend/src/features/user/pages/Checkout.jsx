@@ -1,4 +1,4 @@
-// src/features/pharmacies/pages/Checkout.jsx
+// src/features/user/pages/Checkout.jsx
 import React from "react";
 import clickSound from "../../../assets/audio.wav";
 import PharmacyMap from "../components/PharmacyMap";
@@ -6,7 +6,9 @@ import Toast from "../components/checkout/Toast";
 import AddressSelection from "../components/checkout/AddressSelection";
 import PharmacyList from "../components/checkout/PharmacyList";
 import PaymentModal from "../components/checkout/PaymentModal";
-import PaymentIframeModal from "../components/checkout/PaymentIframeModal"; // ← new
+import PaymentIframeModal from "../components/checkout/PaymentIframeModal";
+// ✅ NEW
+import DrugInteractionModal from "../pages/DrugInteractionModal";
 import { useCheckout } from "../hooks/useCheckout";
 
 const audio = new Audio(clickSound);
@@ -39,9 +41,9 @@ const Checkout = () => {
     selectedPharmacies,
     creatingOrder,
     selectedMedicines,
-    initiatingPayment,     // ← new
-    showPaymentIframe,     // ← new
-    paymentResult,         // ← new
+    initiatingPayment,
+    showPaymentIframe,
+    paymentResult,
     userLocation,
     deliveryAddressLocation,
     deliveryAddress,
@@ -50,6 +52,12 @@ const Checkout = () => {
     routeData,
     toast,
     setToast,
+    // ✅ NEW
+    showInteractionModal,
+    interactionResult,
+    interactionLoading,
+    handleInteractionProceed,
+    handleInteractionBack,
     handleSetLocation,
     handleNewAddressChange,
     handleAddNewAddress,
@@ -59,7 +67,7 @@ const Checkout = () => {
     handleToggleMedicine,
     handleOrderClick,
     handlePaymentConfirm,
-    handleCloseIframe,     // ← new
+    handleCloseIframe,
   } = useCheckout();
 
   const errorMessage = typeof error === "string" ? error : error?.message || "";
@@ -146,6 +154,16 @@ const Checkout = () => {
           )}
         </div>
       </div>
+
+      {/* ✅ NEW: Drug interaction modal — shown before payment modal */}
+      {showInteractionModal && (
+        <DrugInteractionModal
+          result={interactionResult}
+          loading={interactionLoading}
+          onProceed={handleInteractionProceed}
+          onBack={handleInteractionBack}
+        />
+      )}
 
       {/* Payment method selection modal */}
       {showPaymentModal && (

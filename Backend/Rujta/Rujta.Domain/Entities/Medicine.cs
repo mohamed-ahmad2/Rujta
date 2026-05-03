@@ -22,6 +22,7 @@ namespace Rujta.Domain.Entities
 
         public int? CategoryId { get; set; }
         public Category? Category { get; set; }
+        public string? Smiles { get; set; }
 
         public ICollection<InventoryItem>? InventoryItems { get; set; }
         public ICollection<SellDrugViaPharmacy>? SellDrugViaPharmacies { get; set; }

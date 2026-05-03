@@ -6,6 +6,8 @@ import useAddress from "../../address/hook/useAddress";
 import { usePayment } from "../../payment/hooks/usePayment";
 import apiClient from "../../../shared/api/apiClient";
 import { decodePolyline } from "../../../utils/decodePolyline";
+// ✅ NEW: drug interaction hook
+import useDrugInteraction from "../../druginteraction/hook/useDrugInteraction";
 
 export const useCheckout = () => {
   const [cart, setCart] = useState([]);
@@ -27,6 +29,15 @@ export const useCheckout = () => {
     loading: initiatingPayment,
     reset: resetPayment,
   } = usePayment();
+
+  // ✅ NEW: drug interaction state
+  const {
+    result: interactionResult,
+    loading: interactionLoading,
+    checkInteractions,
+    reset: resetInteraction,
+  } = useDrugInteraction();
+  const [showInteractionModal, setShowInteractionModal] = useState(false);
 
   const [pharmaciesRange, setPharmaciesRange] = useState(5);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
@@ -217,12 +228,39 @@ export const useCheckout = () => {
     });
   };
 
-  const handleOrderClick = (pharmacy) => {
+  // ✅ MODIFIED: now triggers interaction check first, then opens PaymentModal
+  const handleOrderClick = async (pharmacy) => {
     const allMedicineIds = pharmacy.foundMedicines.map((m) => m.medicineId);
+
+    // store pharmacy selection (same as before)
     setSelectedPharmacyForPayment(pharmacy);
     setSelectedPharmacies([pharmacy.pharmacyId]);
     setSelectedMedicines({ [pharmacy.pharmacyId]: allMedicineIds });
+
+    // ✅ run interaction check before showing payment modal
+    resetInteraction();
+    setShowInteractionModal(true);
+
+    await checkInteractions(
+      allMedicineIds,
+      user?.id ?? user?.userId ?? user?.sub, // adjust to match your user object shape
+      0.5
+    );
+  };
+
+  // ✅ NEW: user chose to proceed after seeing interactions → open PaymentModal
+  const handleInteractionProceed = () => {
+    setShowInteractionModal(false);
     setShowPaymentModal(true);
+  };
+
+  // ✅ NEW: user chose to go back → close modal, reset selection
+  const handleInteractionBack = () => {
+    setShowInteractionModal(false);
+    resetInteraction();
+    setSelectedPharmacyForPayment(null);
+    setSelectedPharmacies([]);
+    setSelectedMedicines({});
   };
 
   const createOrders = async () => {
@@ -400,6 +438,10 @@ export const useCheckout = () => {
     hoveredPharmacyId,
     routeData,
     toast,
+    // ✅ NEW exports
+    showInteractionModal,
+    interactionResult,
+    interactionLoading,
     setSelectedAddressId,
     setShowNewAddressForm,
     setNewAddressForm,
@@ -419,5 +461,8 @@ export const useCheckout = () => {
     handleOrderClick,
     handlePaymentConfirm,
     handleCloseIframe,
+    // ✅ NEW exports
+    handleInteractionProceed,
+    handleInteractionBack,
   };
 };

@@ -1,8 +1,11 @@
-﻿using Rujta.API.Realtime.Services;
+﻿using Microsoft.EntityFrameworkCore;
+using Rujta.API.Realtime.Services;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices.IAuth;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 using Rujta.Application.Notifications;
+using Rujta.Infrastructure.Data;
+using Rujta.Infrastructure.Repositories;
 using Rujta.Infrastructure.Services;
 
 namespace Rujta.API
@@ -60,7 +63,14 @@ namespace Rujta.API
             builder.Services.AddScoped<IReportService, ReportService>();
             builder.Services.AddScoped<ISuperAdminService, SuperAdminService>();
             builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+            builder.Services.AddScoped<IDrugHistoryRepository, DrugHistoryRepository>();
 
+            builder.Services.AddHttpClient<IDrugInteractionService, DrugInteractionService>(client =>
+            {
+                client.BaseAddress = new Uri(
+                    builder.Configuration["MlService:BaseUrl"] ?? "http://localhost:8000");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
             // 🔥🔥🔥 ADD THIS (SignalR Registration)
             builder.Services.AddSignalR();
 
@@ -165,6 +175,15 @@ namespace Rujta.API
             }
 
             await app.RunAsync();
+
+            builder.Services.AddDbContext<AppDbContext>(options =>
+            {
+                var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+
+                Console.WriteLine("DB USED BY EF: " + conn);
+
+                options.UseSqlServer(conn);
+            });
         }
     }
 }
