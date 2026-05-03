@@ -21,7 +21,6 @@ namespace Rujta.API.Controllers
         }
         [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpPost]
-        [HttpPost]
         public async Task<ActionResult<AdDto>> Create([FromBody] AdDto dto)
         {
             if (dto is null)

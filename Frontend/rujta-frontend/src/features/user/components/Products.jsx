@@ -1,15 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import imge1 from "../../../assets/hero/img1.png";
 import useMedicine from "../../medicines/hook/useMedicines";
 import { useNavigate } from "react-router-dom";
 import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
-
-const categoryOptions = [
-  { id: "All", name: "All" },
-  { id: 1, name: "Pain Relief" },
-  { id: 2, name: "Antibiotics" },
-  { id: 3, name: "Allergy & Respiratory" },
-];
+import useCategory from "../../category/hook/useCategory";
+const ITEMS_PER_PAGE = 16; // 4 columns × 4 rows
 
 const Products = ({ cart, setCart }) => {
   const { medicines, fetchAll, loading, error } = useMedicine();
@@ -22,15 +17,29 @@ const Products = ({ cart, setCart }) => {
     fetchAllPharmacies,
   } = usePharmacies();
 
+const { categories, fetchAll: fetchAllCategories } = useCategory();
+
+useEffect(() => { fetchAllCategories(); }, [fetchAllCategories]);
   const [expanded, setExpanded] = useState({});
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [addedIds, setAddedIds] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchAll();
-    fetchAllPharmacies();
   }, [fetchAll]);
+
+  useEffect(() => {
+    fetchAllPharmacies();
+  }, [fetchAllPharmacies]);
+
+
+
+  // Reset to page 1 when filter/search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery]);
 
   const handleAddToCart = (product) => {
     setCart((prevCart) => {
@@ -45,21 +54,39 @@ const Products = ({ cart, setCart }) => {
     setTimeout(() => setAddedIds((prev) => ({ ...prev, [product.id]: false })), 1200);
   };
 
+  const categoryOptions = useMemo(() => {
+  if (!categories.length) return [{ id: "All", name: "All" }];
+  const usedIds = new Set(
+    medicines.map((med) => String(med.categoryId)).filter(Boolean)
+  );
+  const filtered = categories.filter((cat) => usedIds.has(String(cat.id)));
+  return [{ id: "All", name: "All" }, ...filtered];
+}, [medicines, categories]);
 
+  // Use String() on both sides so number/string mismatches don't break filtering
   const filteredMedicines = medicines.filter(
     (med) =>
-      (selectedCategory === "All" || med.categoryId === selectedCategory) &&
+      (selectedCategory === "All" ||
+        String(med.categoryId) === String(selectedCategory) ||
+        String(med.CategoryId) === String(selectedCategory)) &&
       med.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-``
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredMedicines.length / ITEMS_PER_PAGE));
+  const paginatedMedicines = filteredMedicines.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   /* ── States ── */
   if (loading || pharmaciesLoading)
     return (
       <div className="flex items-center justify-center py-32" style={{ background: "#f5f8f2" }}>
-        <div className="h-9 w-9 animate-spin rounded-full border-4 border-t-transparent"
-          style={{ borderColor: "#5a8a1f", borderTopColor: "transparent" }} />
+        <div
+          className="h-9 w-9 animate-spin rounded-full border-4 border-t-transparent"
+          style={{ borderColor: "#5a8a1f", borderTopColor: "transparent" }}
+        />
       </div>
     );
 
@@ -145,7 +172,7 @@ const Products = ({ cart, setCart }) => {
                 style={{ background: "#EAF3DE", border: "2px solid rgba(90,138,31,0.12)" }}
               >
                 <img
-                src={ph.imageUrl || ph.ImageUrl || imge1}
+                  src={ph.imageUrl || ph.ImageUrl || imge1}
                   alt={ph.name}
                   className="h-12 w-12 object-contain sm:h-14 sm:w-14"
                   onError={(e) => (e.currentTarget.src = imge1)}
@@ -221,7 +248,7 @@ const Products = ({ cart, setCart }) => {
             />
           </div>
 
-          {/* Category pills */}
+          {/* Dynamic Category pills */}
           <div className="flex flex-wrap gap-2">
             {categoryOptions.map((cat) => {
               const active = selectedCategory === cat.id;
@@ -261,118 +288,199 @@ const Products = ({ cart, setCart }) => {
           </div>
         </div>
 
-        {/* ── Medicines Grid ── */}
+        {/* ── Medicines Grid — always 2 columns ── */}
         {filteredMedicines.length === 0 ? (
           <div className="py-20 text-center">
             <div className="mb-3 text-5xl">🔍</div>
             <p className="text-gray-400">No medicines found.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:gap-8 xl:grid-cols-4">
-            {filteredMedicines.map((med) => {
-              const desc = med.description || "No description available";
-              const isLong = desc.length > 70;
-              const isExpanded = expanded[med.id];
-              const isAdded = addedIds[med.id];
+          <>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4 lg:gap-6">
+              {paginatedMedicines.map((med) => {
+                const desc = med.description || "No description available";
+                const isLong = desc.length > 70;
+                const isExpanded = expanded[med.id];
+                const isAdded = addedIds[med.id];
 
-              return (
-                <div
-                  key={med.id}
-                  onClick={() => navigate(`/medicines/${med.id}`)}
-                  className="group flex cursor-pointer flex-col overflow-hidden bg-white transition-all duration-300"
-                  style={{
-                    borderRadius: 24,
-                    border: "1.5px solid #e8eee2",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-6px) scale(1.02)";
-                    e.currentTarget.style.boxShadow = "0 20px 50px rgba(90,138,31,0.15)";
-                    e.currentTarget.style.borderColor = "rgba(90,138,31,0.25)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0) scale(1)";
-                    e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)";
-                    e.currentTarget.style.borderColor = "#e8eee2";
-                  }}
-                >
-                  {/* Image zone */}
+                return (
                   <div
-                    className="flex items-center justify-center overflow-hidden"
-                    style={{ background: "#EAF3DE", position: "relative", height: 170 }}
+                    key={med.id}
+                    onClick={() => navigate(`/medicines/${med.id}`)}
+                    className="group flex cursor-pointer flex-col overflow-hidden bg-white transition-all duration-300"
+                    style={{
+                      borderRadius: 24,
+                      border: "1.5px solid #e8eee2",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-6px) scale(1.02)";
+                      e.currentTarget.style.boxShadow = "0 20px 50px rgba(90,138,31,0.15)";
+                      e.currentTarget.style.borderColor = "rgba(90,138,31,0.25)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0) scale(1)";
+                      e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)";
+                      e.currentTarget.style.borderColor = "#e8eee2";
+                    }}
                   >
-                    <img
-                      src={med.imageUrl || imge1}
-                      alt={med.name}
-                      className="object-contain transition-transform duration-500 group-hover:scale-110"
-                      style={{ height: 120, width: 120 }}
-                      onError={(e) => (e.currentTarget.src = imge1)}
-                    />
+                    {/* Image zone */}
                     <div
-                      className="pointer-events-none absolute bottom-0 left-0 right-0 h-8"
-                      style={{ background: "linear-gradient(to top, rgba(234,243,222,0.6), transparent)" }}
-                    />
-                  </div>
-
-                  {/* Body */}
-                  <div className="flex flex-1 flex-col p-4 sm:p-5">
-                    <h3
-                      className="font-semibold"
-                      style={{ color: "#3e6013", fontSize: 16, letterSpacing: "-0.1px" }}
+                      className="flex items-center justify-center overflow-hidden"
+                      style={{ background: "#EAF3DE", position: "relative", height: 170 }}
                     >
-                      {med.name}
-                    </h3>
-                    <p className="mt-2 flex-1 text-[13px] leading-relaxed text-gray-400">
-                      {isExpanded || !isLong ? desc : desc.slice(0, 70) + "…"}
-                    </p>
-                    {isLong && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpanded((p) => ({ ...p, [med.id]: !p[med.id] }));
-                        }}
-                        className="mt-1 text-left text-[13px] font-semibold hover:underline"
-                        style={{ color: "#5a8a1f", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                      >
-                        {isExpanded ? "↑ Show Less" : "↓ Show More"}
-                      </button>
-                    )}
+                      <img
+                        src={med.imageUrl || imge1}
+                        alt={med.name}
+                        className="object-contain transition-transform duration-500 group-hover:scale-110"
+                        style={{ height: 120, width: 120 }}
+                        onError={(e) => (e.currentTarget.src = imge1)}
+                      />
+                      <div
+                        className="pointer-events-none absolute bottom-0 left-0 right-0 h-8"
+                        style={{ background: "linear-gradient(to top, rgba(234,243,222,0.6), transparent)" }}
+                      />
+                    </div>
 
-                    {/* Footer */}
-                    <div
-                      className="mt-5 flex items-center justify-between pt-4"
-                      style={{ borderTop: "1px solid #e8eee2" }}
-                    >
-                    
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleAddToCart(med); }}
-                        className="flex items-center gap-1.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 active:scale-95"
-                        style={{
-                          background: isAdded ? "#3e6013" : "#5a8a1f",
-                          padding: "10px 20px",
-                          border: "none",
-                          cursor: "pointer",
-                          fontFamily: "'DM Sans', sans-serif",
-                          marginLeft: "auto",
-                        }}
+                    {/* Body */}
+                    <div className="flex flex-1 flex-col p-4 sm:p-5">
+                      <h3
+                        className="font-semibold"
+                        style={{ color: "#3e6013", fontSize: 16, letterSpacing: "-0.1px" }}
                       >
-                        {isAdded ? (
-                          "✓ Added"
-                        ) : (
-                          <>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <path d="M12 5v14M5 12h14" />
-                            </svg>
-                            Add
-                          </>
-                        )}
-                      </button>
+                        {med.name}
+                      </h3>
+                      <p className="mt-2 flex-1 text-[13px] leading-relaxed text-gray-400">
+                        {isExpanded || !isLong ? desc : desc.slice(0, 70) + "…"}
+                      </p>
+                      {isLong && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpanded((p) => ({ ...p, [med.id]: !p[med.id] }));
+                          }}
+                          className="mt-1 text-left text-[13px] font-semibold hover:underline"
+                          style={{ color: "#5a8a1f", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+                        >
+                          {isExpanded ? "↑ Show Less" : "↓ Show More"}
+                        </button>
+                      )}
+
+                      {/* Footer */}
+                      <div
+                        className="mt-5 flex items-center justify-between pt-4"
+                        style={{ borderTop: "1px solid #e8eee2" }}
+                      >
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleAddToCart(med); }}
+                          className="flex items-center gap-1.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 active:scale-95"
+                          style={{
+                            background: isAdded ? "#3e6013" : "#5a8a1f",
+                            padding: "10px 20px",
+                            border: "none",
+                            cursor: "pointer",
+                            fontFamily: "'DM Sans', sans-serif",
+                            marginLeft: "auto",
+                          }}
+                        >
+                          {isAdded ? (
+                            "✓ Added"
+                          ) : (
+                            <>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <path d="M12 5v14M5 12h14" />
+                              </svg>
+                              Add
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+
+            {/* ── Pagination ── */}
+            {totalPages > 1 && (
+              <div className="mt-10 flex items-center justify-center gap-2">
+                {/* Prev */}
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200"
+                  style={{
+                    background: currentPage === 1 ? "#f0f0f0" : "#fff",
+                    border: "1.5px solid #e8eee2",
+                    cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                    color: currentPage === 1 ? "#bbb" : "#5a8a1f",
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M15 18l-6-6 6-6" />
+                  </svg>
+                </button>
+
+                {/* Page numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  const isActive = page === currentPage;
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all duration-200"
+                      style={{
+                        background: isActive ? "#5a8a1f" : "#fff",
+                        border: `1.5px solid ${isActive ? "#5a8a1f" : "#e8eee2"}`,
+                        color: isActive ? "#fff" : "#7a8472",
+                        cursor: "pointer",
+                        fontFamily: "'DM Sans', sans-serif",
+                        boxShadow: isActive ? "0 4px 12px rgba(90,138,31,0.25)" : "none",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.borderColor = "#5a8a1f";
+                          e.currentTarget.style.color = "#5a8a1f";
+                          e.currentTarget.style.background = "#EAF3DE";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.borderColor = "#e8eee2";
+                          e.currentTarget.style.color = "#7a8472";
+                          e.currentTarget.style.background = "#fff";
+                        }
+                      }}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+
+                {/* Next */}
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200"
+                  style={{
+                    background: currentPage === totalPages ? "#f0f0f0" : "#fff",
+                    border: "1.5px solid #e8eee2",
+                    cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+                    color: currentPage === totalPages ? "#bbb" : "#5a8a1f",
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Page count label */}
+            <p className="mt-3 text-center text-[12px]" style={{ color: "#7a8472" }}>
+              Page {currentPage} of {totalPages} · {filteredMedicines.length} results
+            </p>
+          </>
         )}
       </div>
     </div>
