@@ -1,7 +1,6 @@
 ﻿using Rujta.Application.DTOs.PharmacyDto;
 using Rujta.Application.DTOs.PharmacyDtos;
 using Rujta.Application.DTOs.Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices.IAuth;
 
 namespace Rujta.Infrastructure.Identity.Services
 {
@@ -10,18 +9,21 @@ namespace Rujta.Infrastructure.Identity.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<SuperAdminService> _logger;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public SuperAdminService(
             IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager,
-            ILogger<SuperAdminService> logger)
+            ILogger<SuperAdminService> logger,
+            IHttpContextAccessor httpContextAccessor)
         {
             _unitOfWork = unitOfWork;
             _userManager = userManager;
             _logger = logger;
+            _httpContextAccessor = httpContextAccessor;
         }
 
-        // ================= CREATE PHARMACY =================
+
         public async Task<CreatePharmacyResultDto> CreatePharmacyAsync(
             CreatePharmacyDto dto,
             CancellationToken cancellationToken = default)
@@ -30,35 +32,61 @@ namespace Rujta.Infrastructure.Identity.Services
 
             try
             {
-                // ================= CHECK EXISTING ADMIN =================
-                var existingUser = await _userManager.FindByEmailAsync(dto.AdminEmail);
+            
+                var existingUser = await _userManager.FindByEmailAsync(dto.ManagerEmail);
                 if (existingUser != null)
-                    throw new InvalidOperationException("Admin email already exists.");
+                    throw new InvalidOperationException("Manager email already exists.");
 
-                // ================= CREATE ADMIN =================
-                var admin = new Admin
+             
+                Guid? adminId = dto.AdminId ?? await GetCurrentAdminIdAsync();
+
+                Admin? admin = null;
+                if (adminId.HasValue)
+                {
+                    admin = await _unitOfWork.People.GetByIdAsync<Admin>(adminId.Value, cancellationToken);
+                    if (admin == null)
+                        throw new InvalidOperationException(
+                            $"Admin with Id {adminId} not found. The site admin must exist before creating a pharmacy.");
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        "AdminId is required. A site admin must be assigned to the pharmacy.");
+                }
+
+             
+                var manager = new Manager
                 {
                     Id = Guid.NewGuid(),
-                    Name = dto.AdminName,
-                    Email = dto.AdminEmail,
-                    PhoneNumber = dto.AdminPhone,
+                    Name = dto.ManagerName,
+                    Email = dto.ManagerEmail,
+                    PhoneNumber = dto.ManagerPhone,
+                    Qualification = dto.ManagerQualification,
+                    ExperienceYears = dto.ManagerExperienceYears,
+                    WorkStartTime = TimeSpan.FromHours(9),
+                    WorkEndTime = TimeSpan.FromHours(23),
+                    StartDate = DateTime.UtcNow,
+                    EndDate = null,
+                    AdminId = adminId,      
                     CreatedAt = DateTime.UtcNow
                 };
 
-                await _unitOfWork.People.AddAsync(admin, cancellationToken);
+                await _unitOfWork.People.AddAsync(manager, cancellationToken);
 
-                // ================= CREATE IDENTITY USER =================
+           
                 var generatedPassword = GenerateStrongPassword();
 
                 var identityUser = new ApplicationUser
                 {
                     Id = Guid.NewGuid(),
-                    UserName = dto.AdminEmail,
-                    Email = dto.AdminEmail,
-                    FullName = dto.AdminName,
-                    DomainPersonId = admin.Id,
+                    UserName = dto.ManagerEmail,
+                    Email = dto.ManagerEmail,
+                    PhoneNumber = dto.ManagerPhone,
+                    FullName = dto.ManagerName,
+                    DomainPersonId = manager.Id,
                     Location = dto.PharmacyLocation,
-                    IsFirstLogin = true
+                    IsFirstLogin = true,
+                    EmailConfirmed = true
                 };
 
                 var result = await _userManager.CreateAsync(identityUser, generatedPassword);
@@ -66,58 +94,48 @@ namespace Rujta.Infrastructure.Identity.Services
                     throw new InvalidOperationException(
                         string.Join(", ", result.Errors.Select(e => e.Description)));
 
-                await _userManager.AddToRoleAsync(identityUser, "PharmacyAdmin");
+              
+                await _userManager.AddToRoleAsync(identityUser, "PharmacyManager");
 
-                // ================= HANDLE IMAGE UPLOAD =================
-                string? imageUrl = null;
+             
+                string? imageUrl = await SaveImageAsync(dto.Image, cancellationToken);
 
-                if (dto.Image != null)
-                {
-                    var folderPath = Path.Combine("wwwroot", "images", "pharmacies");
-
-                    if (!Directory.Exists(folderPath))
-                        Directory.CreateDirectory(folderPath);
-
-                    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(dto.Image.FileName);
-                    var filePath = Path.Combine(folderPath, fileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await dto.Image.CopyToAsync(stream, cancellationToken);
-                    }
-
-                    imageUrl = $"/images/pharmacies/{fileName}";
-                }
-
-                // ================= CREATE PHARMACY =================
+          
                 var pharmacy = new Pharmacy
                 {
                     Name = dto.PharmacyName,
                     Location = dto.PharmacyLocation,
-                    ContactNumber = dto.AdminPhone,
-                    OpenHours = "9AM - 11PM",
+                    ContactNumber = dto.ManagerPhone,   
+                    OpenHours = string.IsNullOrWhiteSpace(dto.OpenHours) ? "9AM - 11PM" : dto.OpenHours,
                     Latitude = dto.Latitude,
                     Longitude = dto.Longitude,
                     IsActive = true,
-                    AdminId = admin.Id,
+                    IsDeleted = false,
                     ImageUrl = imageUrl,
-                    IsDeleted = false
+
+                    ManagerId = manager.Id,  
+                    AdminId = adminId        
                 };
 
                 await _unitOfWork.Pharmacies.AddAsync(pharmacy, cancellationToken);
 
-                // ================= SAVE =================
+            
+                manager.PharmacyId = pharmacy.Id;
+
+    
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
 
                 _logger.LogInformation(
-                    "Pharmacy created successfully with Admin {Email}",
-                    dto.AdminEmail);
+                    "Pharmacy '{Pharmacy}' created with Manager {Manager} under Admin {Admin}",
+                    dto.PharmacyName, dto.ManagerEmail, adminId);
 
                 return new CreatePharmacyResultDto
                 {
                     PharmacyId = pharmacy.Id,
-                    AdminEmail = dto.AdminEmail,
+                    ManagerId = manager.Id,
+                    AdminId = adminId,
+                    ManagerEmail = dto.ManagerEmail,
                     GeneratedPassword = generatedPassword
                 };
             }
@@ -128,68 +146,54 @@ namespace Rujta.Infrastructure.Identity.Services
             }
         }
 
-        // ================= GET ALL PHARMACIES =================
         public async Task<IEnumerable<PharmacyDto>> GetAllPharmaciesAsync(
             CancellationToken cancellationToken = default)
         {
-            var pharmacies = (await _unitOfWork.Pharmacies.GetAllAsync(cancellationToken))
+            var pharmacies = (await _unitOfWork.Pharmacies
+                                .GetAllWithIncludesAsync(cancellationToken,
+                                    p => p.Manager!,
+                                    p => p.Admin!))
                                 .Where(p => !p.IsDeleted);
 
-            var result = new List<PharmacyDto>();
+            var list = new List<PharmacyDto>();
 
             foreach (var p in pharmacies)
             {
                 var totalOrders = await _unitOfWork.SuperAdmin
                     .GetTotalOrdersAsync(p.Id, cancellationToken);
 
-                result.Add(new PharmacyDto
-                {
-                    Id = p.Id,
-                    Name = p.Name,
-                    Location = p.Location,
-                    ContactNumber = p.ContactNumber,
-                    Latitude = p.Latitude,
-                    Longitude = p.Longitude,
-                    IsActive = p.IsActive,
-                    AdminId = p.AdminId,
-                    TotalOrders = totalOrders,
-                    ImageUrl = p.ImageUrl
-                });
+                list.Add(MapToDto(p, totalOrders));
             }
 
-            return result;
+            return list;
         }
 
-        // ================= GET PHARMACY BY ID =================
         public async Task<PharmacyDto?> GetPharmacyByIdAsync(
             int pharmacyId,
             CancellationToken cancellationToken = default)
         {
-            var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
+            var pharmacy = await _unitOfWork.Pharmacies
+                .GetByIdWithIncludesAsync(pharmacyId, cancellationToken,
+                    p => p.Manager!,
+                    p => p.Admin!);
+
             if (pharmacy == null || pharmacy.IsDeleted)
                 return null;
 
-            return new PharmacyDto
-            {
-                Id = pharmacy.Id,
-                Name = pharmacy.Name,
-                Location = pharmacy.Location,
-                ContactNumber = pharmacy.ContactNumber,
-                Latitude = pharmacy.Latitude,
-                Longitude = pharmacy.Longitude,
-                IsActive = pharmacy.IsActive,
-                AdminId = pharmacy.AdminId,
-                ImageUrl = pharmacy.ImageUrl
-            };
+            var totalOrders = await _unitOfWork.SuperAdmin
+                .GetTotalOrdersAsync(pharmacy.Id, cancellationToken);
+
+            return MapToDto(pharmacy, totalOrders);
         }
 
-        // ================= UPDATE PHARMACY =================
         public async Task<PharmacyDto> UpdatePharmacyAsync(
             int pharmacyId,
             UpdatePharmacyDto dto,
             CancellationToken cancellationToken = default)
         {
-            var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
+            var pharmacy = await _unitOfWork.Pharmacies.GetByIdWithIncludesAsync(pharmacyId, cancellationToken,
+                    p => p.Manager!,
+                    p => p.Admin!);
 
             if (pharmacy == null)
                 throw new KeyNotFoundException("Pharmacy not found.");
@@ -205,75 +209,57 @@ namespace Rujta.Infrastructure.Identity.Services
 
             await _unitOfWork.SaveAsync(cancellationToken);
 
-            return new PharmacyDto
-            {
-                Id = pharmacy.Id,
-                Name = pharmacy.Name,
-                Location = pharmacy.Location,
-                ContactNumber = pharmacy.ContactNumber,
-                Latitude = pharmacy.Latitude,
-                Longitude = pharmacy.Longitude,
-                IsActive = pharmacy.IsActive,
-                AdminId = pharmacy.AdminId
-            };
+            return MapToDto(pharmacy, 0);
         }
 
-        // ================= RESET PHARMACY ADMIN PASSWORD =================
-        public async Task<string> ResetPharmacyAdminPasswordAsync(
-            int pharmacyId,
-            CancellationToken cancellationToken = default)
+
+        public async Task<string> ResetPharmacyManagerPasswordAsync(int pharmacyId,CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
             if (pharmacy == null)
                 throw new KeyNotFoundException("Pharmacy not found.");
 
-            var adminUser = await _userManager.Users
-                .FirstOrDefaultAsync(u => u.DomainPersonId == pharmacy.AdminId, cancellationToken);
+            if (pharmacy.ManagerId == null)
+                throw new InvalidOperationException("This pharmacy has no manager assigned.");
 
-            if (adminUser == null)
-                throw new KeyNotFoundException("Admin user not found.");
+            var managerUser = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.DomainPersonId == pharmacy.ManagerId, cancellationToken);
+
+            if (managerUser == null)
+                throw new KeyNotFoundException("Manager user not found.");
 
             var newPassword = GenerateStrongPassword();
-
-            var token = await _userManager.GeneratePasswordResetTokenAsync(adminUser);
-            var result = await _userManager.ResetPasswordAsync(adminUser, token, newPassword);
+            var token = await _userManager.GeneratePasswordResetTokenAsync(managerUser);
+            var result = await _userManager.ResetPasswordAsync(managerUser, token, newPassword);
 
             if (!result.Succeeded)
                 throw new InvalidOperationException(
                     string.Join(", ", result.Errors.Select(e => e.Description)));
 
+            managerUser.IsFirstLogin = true;
+            await _userManager.UpdateAsync(managerUser);
+
             return newPassword;
         }
 
-        // ================= GET PHARMACY TOTAL ORDERS =================
-        public async Task<int> GetPharmacyTotalOrdersAsync(
-            int pharmacyId,
-            CancellationToken cancellationToken = default)
+        public async Task<int> GetPharmacyTotalOrdersAsync(int pharmacyId, CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
-
             if (pharmacy == null)
                 throw new KeyNotFoundException("Pharmacy not found.");
 
             return await _unitOfWork.SuperAdmin.GetTotalOrdersAsync(pharmacyId, cancellationToken);
         }
 
-        // ================= GET TOP PHARMACIES =================
-        public async Task<List<PharmacyStatsDto>> GetTopPharmaciesAsync(
-            int count,
-            CancellationToken cancellationToken = default)
-        {
-            return await _unitOfWork.SuperAdmin
-                .GetTopPharmaciesAsync(count, cancellationToken);
-        }
+        public Task<List<PharmacyStatsDto>> GetTopPharmaciesAsync(
+            int count, CancellationToken cancellationToken = default)
+            => _unitOfWork.SuperAdmin.GetTopPharmaciesAsync(count, cancellationToken);
 
-        // ================= DELETE PHARMACY =================
+
         public async Task<bool> DeletePharmacyAsync(
-            int pharmacyId,
-            CancellationToken cancellationToken = default)
+            int pharmacyId, CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
-
             if (pharmacy == null)
                 throw new KeyNotFoundException("Pharmacy not found.");
 
@@ -281,21 +267,16 @@ namespace Rujta.Infrastructure.Identity.Services
                 throw new InvalidOperationException("Pharmacy is already deleted.");
 
             pharmacy.IsDeleted = true;
+            pharmacy.IsActive = false;
 
             await _unitOfWork.SaveAsync(cancellationToken);
-
-            _logger.LogInformation("Pharmacy {Id} set to IsDeleted", pharmacyId);
-
+            _logger.LogInformation("Pharmacy {Id} soft-deleted", pharmacyId);
             return true;
         }
 
-        // ================= RESTORE PHARMACY =================
-        public async Task<bool> RestorePharmacyAsync(
-            int pharmacyId,
-            CancellationToken cancellationToken = default)
+        public async Task<bool> RestorePharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
-
             if (pharmacy == null)
                 throw new KeyNotFoundException("Pharmacy not found.");
 
@@ -303,16 +284,63 @@ namespace Rujta.Infrastructure.Identity.Services
                 throw new InvalidOperationException("Pharmacy is already active.");
 
             pharmacy.IsDeleted = false;
+            pharmacy.IsActive = true;
 
             await _unitOfWork.SaveAsync(cancellationToken);
-
             return true;
         }
 
-        // ================= HELPER: GENERATE STRONG PASSWORD =================
-        private static string GenerateStrongPassword()
+        private static PharmacyDto MapToDto(Pharmacy p, int totalOrders) => new()
         {
-            return "Ph@" + Guid.NewGuid().ToString("N")[..8] + "1!";
+            Id = p.Id,
+            Name = p.Name,
+            Location = p.Location,
+            ContactNumber = p.ContactNumber,
+            OpenHours = p.OpenHours,
+            Latitude = p.Latitude,
+            Longitude = p.Longitude,
+            IsActive = p.IsActive,
+            IsDeleted = p.IsDeleted,
+            ImageUrl = p.ImageUrl,
+            TotalOrders = totalOrders,
+
+            AdminId = p.AdminId,
+            AdminName = p.Admin?.Name,
+            AdminEmail = p.Admin?.Email,
+
+            ManagerId = p.ManagerId,
+            ManagerName = p.Manager?.Name,
+            ManagerEmail = p.Manager?.Email,
+            ManagerPhone = p.Manager?.PhoneNumber
+        };
+
+        private async Task<Guid?> GetCurrentAdminIdAsync()
+        {
+            var principal = _httpContextAccessor.HttpContext?.User;
+            if (principal?.Identity?.IsAuthenticated != true) return null;
+
+            var appUser = await _userManager.GetUserAsync(principal);
+            return appUser?.DomainPersonId;
         }
+
+        private static async Task<string?> SaveImageAsync(IFormFile? image, CancellationToken ct)
+        {
+            if (image == null) return null;
+
+            var folderPath = Path.Combine("wwwroot", "images", "pharmacies");
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
+
+            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(image.FileName);
+            var filePath = Path.Combine(folderPath, fileName);
+
+            await using var stream = new FileStream(filePath, FileMode.Create);
+            await image.CopyToAsync(stream, ct);
+
+            return $"/images/pharmacies/{fileName}";
+        }
+
+        private static string GenerateStrongPassword()
+            => "Ph@" + Guid.NewGuid().ToString("N")[..8] + "1!";
     }
 }

@@ -13,5 +13,6 @@
         Task<int> GetMedicineStockAsync(int pharmacyId, int medicineId);
         Task<Pharmacy?> GetByAdminIdAsync(Guid adminId);
         Task<List<Pharmacy>> GetPharmaciesByIdsAsync(List<int> ids);
+
     }
 }
