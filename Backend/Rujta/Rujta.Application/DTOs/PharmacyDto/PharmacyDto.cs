@@ -14,7 +14,6 @@
         public string? ImageUrl { get; set; }
         public int TotalOrders { get; set; }
 
-    
         public Guid? AdminId { get; set; }
         public string? AdminName { get; set; }
         public string? AdminEmail { get; set; }
@@ -23,5 +22,13 @@
         public string? ManagerName { get; set; }
         public string? ManagerEmail { get; set; }
         public string? ManagerPhone { get; set; }
+
+        public int? ParentPharmacyId { get; set; }
+        public string? ParentPharmacyName { get; set; }
+
+        public bool IsMainPharmacy => ParentPharmacyId == null;
+        public bool IsBranch => ParentPharmacyId != null;
+
+        public int BranchesCount { get; set; }
     }
 }

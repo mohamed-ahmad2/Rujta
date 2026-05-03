@@ -17,5 +17,11 @@ namespace Rujta.Application.Interfaces.InterfaceServices.IAuth
         Task<List<PharmacyStatsDto>> GetTopPharmaciesAsync(int count, CancellationToken cancellationToken = default);
         Task<bool> DeletePharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default);
         Task<bool> RestorePharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default);
+
+        Task<IEnumerable<PharmacyDto>> GetMainPharmaciesAsync(CancellationToken cancellationToken = default);
+        Task<IEnumerable<BranchDto>> GetBranchesAsync(int parentId, CancellationToken cancellationToken = default);
+        Task<PharmacyTreeDto?> GetPharmacyTreeAsync(int rootId, CancellationToken cancellationToken = default);
+        Task<bool> DetachBranchAsync(int branchId, CancellationToken cancellationToken = default);
+        Task<bool> AttachBranchAsync(int branchId, int parentId, CancellationToken cancellationToken = default);
     }
 }

@@ -14,5 +14,10 @@
         Task<Pharmacy?> GetByAdminIdAsync(Guid adminId);
         Task<List<Pharmacy>> GetPharmaciesByIdsAsync(List<int> ids);
 
+        Task<List<Pharmacy>> GetBranchesAsync(int parentId, CancellationToken cancellationToken = default);
+        Task<List<Pharmacy>> GetMainPharmaciesAsync(CancellationToken cancellationToken = default);
+        Task<int> CountBranchesAsync(int parentId, CancellationToken cancellationToken = default);
+        Task<bool> IsMainPharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default);
+
     }
 }

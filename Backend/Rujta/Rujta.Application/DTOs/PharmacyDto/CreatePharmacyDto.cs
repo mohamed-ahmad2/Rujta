@@ -18,5 +18,7 @@ namespace Rujta.Application.DTOs.PharmacyDto
         public int ManagerExperienceYears { get; set; }
 
         public Guid? AdminId { get; set; }
+
+        public int? ParentPharmacyId { get; set; }
     }
 }

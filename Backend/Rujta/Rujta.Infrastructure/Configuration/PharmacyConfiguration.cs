@@ -1,6 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Rujta.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Rujta.Infrastructure.Configuration
 {
@@ -45,67 +43,66 @@ namespace Rujta.Infrastructure.Configuration
             builder.Property(p => p.CreatedAt)
                    .HasDefaultValueSql("GETUTCDATE()");
 
-            // Admin
+            
             builder.HasOne(p => p.Admin)
                    .WithMany(a => a.Pharmacies)
                    .HasForeignKey(p => p.AdminId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            // Manager (One-to-One)
+            
             builder.HasOne(p => p.Manager)
                    .WithOne(m => m.ManagedPharmacy)
                    .HasForeignKey<Pharmacy>(p => p.ManagerId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            // Self-Reference
+         
             builder.HasOne(p => p.ParentPharmacy)
                    .WithMany(p => p.Branches)
                    .HasForeignKey(p => p.ParentPharmacyID)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            // Employees
+           
             builder.HasMany(p => p.Employees)
                    .WithOne(e => e.Pharmacy)
                    .HasForeignKey(e => e.PharmacyId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            // InventoryItems
+           
             builder.HasMany(p => p.InventoryItems)
                    .WithOne(i => i.Pharmacy)
                    .HasForeignKey(i => i.PharmacyID)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            // Orders
             builder.HasMany(p => p.Orders)
                    .WithOne(o => o.Pharmacy)
                    .HasForeignKey(o => o.PharmacyId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            // SellDrugViaPharmacy
+          
             builder.HasMany(p => p.SellDrugViaPharmacy)
                    .WithOne(s => s.Pharmacy)
                    .HasForeignKey(s => s.PharmacyID)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            // ✅ Customers (One-to-Many) - بدل الـ Many-to-Many الغلط
+           
             builder.HasMany(p => p.Customers)
                    .WithOne(c => c.Pharmacy)
                    .HasForeignKey(c => c.PharmacyId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            // Subscription (One-to-One)
+           
             builder.HasOne(p => p.Subscription)
                    .WithOne(s => s.Pharmacy)
                    .HasForeignKey<Subscription>(s => s.PharmacyId)
                    .OnDelete(DeleteBehavior.Cascade);
 
-            // Discounts
+          
             builder.HasMany(p => p.Discounts)
                    .WithOne(d => d.Pharmacy)
                    .HasForeignKey(d => d.PharmacyId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            // Indexes
+          
             builder.HasIndex(p => p.IsActive)
                    .HasDatabaseName("IX_Pharmacies_IsActive");
 
