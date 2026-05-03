@@ -17,9 +17,6 @@ import {
   attachBranch,
 } from "../api/superAdmin";
 
-/* ─────────────────────────────────────────────
-   HELPERS
-───────────────────────────────────────────── */
 const toNumber = (value, fallback = 0) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -30,9 +27,8 @@ const extractErrorMessage = (err) => {
 
   if (err?.response?.data?.message) return err.response.data.message;
 
-  if (err?.response?.data) {
-    if (typeof err.response.data === "string") return err.response.data;
-  }
+  if (err?.response?.data && typeof err.response.data === "string")
+    return err.response.data;
 
   if (err?.response?.status) {
     const status = err.response.status;
@@ -46,23 +42,43 @@ const extractErrorMessage = (err) => {
   }
 
   if (err?.message) return err.message;
-
   return "Failed to load pharmacies";
 };
 
-/* ─────────────────────────────────────────────
-   MAPPERS
-───────────────────────────────────────────── */
+const extractAddress = (item = {}) => {
+  const raw = item.address ?? item.Address ?? null;
+  if (!raw) {
+    return {
+      id: null,
+      street: "",
+      buildingNo: "",
+      city: "",
+      governorate: "",
+      latitude: 0,
+      longitude: 0,
+    };
+  }
+
+  return {
+    id: raw.id ?? raw.Id ?? null,
+    street: raw.street ?? raw.Street ?? "",
+    buildingNo: raw.buildingNo ?? raw.BuildingNo ?? "",
+    city: raw.city ?? raw.City ?? "",
+    governorate: raw.governorate ?? raw.Governorate ?? "",
+    latitude: toNumber(raw.latitude ?? raw.Latitude),
+    longitude: toNumber(raw.longitude ?? raw.Longitude),
+  };
+};
+
 const mapPharmacy = (item = {}) => {
   const id = item.id ?? item.Id ?? null;
   const totalOrders = toNumber(item.totalOrders ?? item.TotalOrders);
   const branchesCount = toNumber(item.branchesCount ?? item.BranchesCount);
-  const latitude = toNumber(item.latitude ?? item.Latitude);
-  const longitude = toNumber(item.longitude ?? item.Longitude);
   const isActive = item.isActive ?? item.IsActive ?? true;
   const isDeleted = item.isDeleted ?? item.IsDeleted ?? false;
 
-  // ✅ احسب الـ parentId من كل الصيغ الممكنة
+  const address = extractAddress(item);
+
   const rawParentId =
     item.parentPharmacyId ??
     item.ParentPharmacyId ??
@@ -74,14 +90,12 @@ const mapPharmacy = (item = {}) => {
     item.ParentPharmacy?.Id ??
     null;
 
-  // ✅ تأكد إنه فعلاً null/undefined مش 0 أو ""
   const hasParent =
     rawParentId !== null &&
     rawParentId !== undefined &&
     rawParentId !== 0 &&
     rawParentId !== "";
 
-  // ✅ استخدم الـ flags اللي جاية من الباك إذا متاحة (احتياط)
   const backendIsBranch = item.isBranch ?? item.IsBranch;
   const backendIsMain = item.isMainPharmacy ?? item.IsMainPharmacy;
 
@@ -110,8 +124,14 @@ const mapPharmacy = (item = {}) => {
     contactNumber: item.contactNumber ?? item.ContactNumber ?? "-",
     openHours: item.openHours ?? item.OpenHours ?? "-",
     imageUrl: item.imageUrl ?? item.ImageUrl ?? null,
-    latitude,
-    longitude,
+
+    address,
+    street: address.street,
+    buildingNo: address.buildingNo,
+    city: address.city,
+    governorate: address.governorate,
+    latitude: address.latitude,
+    longitude: address.longitude,
 
     managerId: item.managerId ?? item.ManagerId ?? null,
     managerName: item.managerName ?? item.ManagerName ?? "-",
@@ -163,9 +183,79 @@ const mapTopStat = (item = {}) => ({
   raw: item,
 });
 
-/* ═══════════════════════════════════════════════════
-   HOOK
-═══════════════════════════════════════════════════ */
+const buildCreateFormData = (payload = {}) => {
+  const formData = new FormData();
+
+  const fields = {
+    PharmacyName: payload.pharmacyName ?? payload.PharmacyName,
+    OpenHours: payload.openHours ?? payload.OpenHours ?? "9AM - 11PM",
+    ManagerName: payload.managerName ?? payload.ManagerName,
+    ManagerEmail: payload.managerEmail ?? payload.ManagerEmail,
+    ManagerPhone: payload.managerPhone ?? payload.ManagerPhone,
+    ManagerQualification:
+      payload.managerQualification ?? payload.ManagerQualification ?? "N/A",
+    ManagerExperienceYears:
+      payload.managerExperienceYears ?? payload.ManagerExperienceYears ?? 0,
+    ParentPharmacyId: payload.parentPharmacyId ?? payload.ParentPharmacyId,
+  };
+
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      formData.append(key, value);
+    }
+  });
+
+  const addr = payload.address ?? payload.Address ?? {};
+  const addressFields = {
+    "Address.Street": addr.street ?? addr.Street ?? payload.street,
+    "Address.BuildingNo":
+      addr.buildingNo ?? addr.BuildingNo ?? payload.buildingNo,
+    "Address.City": addr.city ?? addr.City ?? payload.city,
+    "Address.Governorate":
+      addr.governorate ?? addr.Governorate ?? payload.governorate,
+    "Address.Latitude": addr.latitude ?? addr.Latitude ?? payload.latitude ?? 0,
+    "Address.Longitude":
+      addr.longitude ?? addr.Longitude ?? payload.longitude ?? 0,
+  };
+
+  Object.entries(addressFields).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      formData.append(key, value);
+    }
+  });
+
+  const image = payload.image ?? payload.Image;
+  if (image instanceof File || image instanceof Blob) {
+    formData.append("Image", image);
+  }
+
+  return formData;
+};
+
+const buildUpdatePayload = (payload = {}) => {
+  const addr = payload.address ?? payload.Address ?? {};
+
+  return {
+    name: payload.name ?? payload.Name ?? "",
+    contactNumber: payload.contactNumber ?? payload.ContactNumber ?? "",
+    openHours: payload.openHours ?? payload.OpenHours ?? "9AM - 11PM",
+    address: {
+      street: addr.street ?? addr.Street ?? payload.street ?? "",
+      buildingNo:
+        addr.buildingNo ?? addr.BuildingNo ?? payload.buildingNo ?? "",
+      city: addr.city ?? addr.City ?? payload.city ?? "",
+      governorate:
+        addr.governorate ?? addr.Governorate ?? payload.governorate ?? "",
+      latitude: toNumber(
+        addr.latitude ?? addr.Latitude ?? payload.latitude ?? 0,
+      ),
+      longitude: toNumber(
+        addr.longitude ?? addr.Longitude ?? payload.longitude ?? 0,
+      ),
+    },
+  };
+};
+
 export default function useSuperAdmin() {
   const [pharmacies, setPharmacies] = useState([]);
   const [mainPharmacies, setMainPharmacies] = useState([]);
@@ -176,7 +266,7 @@ export default function useSuperAdmin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  /* ──── FETCH ──── */
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
@@ -295,15 +385,11 @@ export default function useSuperAdmin() {
     }
   };
 
-  /* ──── MUTATIONS ──── */
+
   const create = async (payload = {}) => {
     setLoading(true);
     try {
-      const formData = new FormData();
-      Object.entries(payload).forEach(([key, value]) => {
-        if (value === undefined || value === null || value === "") return;
-        formData.append(key, value);
-      });
+      const formData = buildCreateFormData(payload);
 
       const res = await createPharmacy(formData);
       await fetchAll();
@@ -321,7 +407,9 @@ export default function useSuperAdmin() {
   const update = async (id, data) => {
     setLoading(true);
     try {
-      const res = await updatePharmacy(id, data);
+      const body = buildUpdatePayload(data);
+
+      const res = await updatePharmacy(id, body);
       const updated = mapPharmacy(res?.data ?? res);
       setPharmacies((prev) =>
         prev.map((p) => (p.id === id ? { ...updated } : p)),

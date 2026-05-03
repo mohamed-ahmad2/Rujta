@@ -5,14 +5,16 @@ namespace Rujta.Domain.Entities
 {
     public class Address : BaseEntity
     {
-        public Guid? PersonId { get; set; }    
+        public Guid? PersonId { get; set; }
+        public int? PharmacyId { get; set; }
         public string Street { get; set; } = string.Empty;
         public string BuildingNo { get; set; } = string.Empty;
         public string City { get; set; } = string.Empty;
         public string Governorate { get; set; } = string.Empty;
         public double Latitude { get; set; } = 0.0;
         public double Longitude { get; set; } = 0.0;
-        public Person Person { get; set; } = null!;
+        public Person? Person { get; set; }
+        public Pharmacy? Pharmacy { get; set; }
     }
 
 }

@@ -1,4 +1,6 @@
-﻿namespace Rujta.Infrastructure.Extensions
+﻿using Rujta.Application.Resolver;
+
+namespace Rujta.Infrastructure.Extensions
 {
     public static class ApplicationServicesConfiguration
     {
@@ -174,6 +176,8 @@
             var mapsBasePath = Path.Combine(AppContext.BaseDirectory, "Maps");
             var pbfPath = Path.Combine(mapsBasePath, "egypt-251026.osm.pbf");
             var routerDbPath = Path.Combine(mapsBasePath, "egypt.routerdb");
+
+            services.AddScoped<IAddressResolver, AddressResolver>();
 
             services.AddSingleton<IOfflineGeocodingService>(sp =>
             {
