@@ -17,7 +17,8 @@ namespace Rujta.API.Controllers
             _service = service;
         }
 
-      
+        private string GetDomainPersonId() => User.FindFirstValue("domainPersonId") ?? string.Empty;
+
         [HttpPost("pharmacies")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> CreatePharmacy( [FromForm] CreatePharmacyDto dto,CancellationToken cancellationToken)
@@ -25,9 +26,14 @@ namespace Rujta.API.Controllers
             if (dto == null)
                 return BadRequest(new { message = "Invalid request data." });
 
+            var adminId = GetDomainPersonId();
+            if (adminId == null)
+                return Unauthorized(new { message = "AdminId not found in token." });
+
             try
             {
-                var result = await _service.CreatePharmacyAsync(dto, cancellationToken);
+                var adminGuid = Guid.Parse(adminId);
+                var result = await _service.CreatePharmacyAsync(dto, adminGuid, cancellationToken);
                 return Ok(result);
             }
             catch (KeyNotFoundException ex)

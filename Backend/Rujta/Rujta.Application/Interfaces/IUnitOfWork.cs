@@ -28,5 +28,10 @@ namespace Rujta.Application.Interfaces
         Task CommitTransactionAsync(IDbContextTransaction transaction);  
         Task RollbackTransactionAsync(IDbContextTransaction transaction);  
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
+        IExecutionStrategy CreateExecutionStrategy();
+     
+        Task ExecuteInTransactionAsync(Func<CancellationToken, Task> action,CancellationToken cancellationToken = default);
+
+        Task<TResult> ExecuteInTransactionAsync<TResult>(Func<CancellationToken, Task<TResult>> action,CancellationToken cancellationToken = default);
     }
 }

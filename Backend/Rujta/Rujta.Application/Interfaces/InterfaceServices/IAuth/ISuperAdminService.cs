@@ -6,7 +6,7 @@ namespace Rujta.Application.Interfaces.InterfaceServices.IAuth
 {
     public interface ISuperAdminService
     {
-        Task<CreatePharmacyResultDto> CreatePharmacyAsync(CreatePharmacyDto dto, CancellationToken cancellationToken = default);
+        Task<CreatePharmacyResultDto> CreatePharmacyAsync(CreatePharmacyDto dto, Guid adminId, CancellationToken cancellationToken = default);
         Task<IEnumerable<PharmacyDto>> GetAllPharmaciesAsync(CancellationToken cancellationToken = default);
         Task<PharmacyDto?> GetPharmacyByIdAsync(int pharmacyId, CancellationToken cancellationToken = default);
         Task<PharmacyDto> UpdatePharmacyAsync(int pharmacyId, UpdatePharmacyDto dto, CancellationToken cancellationToken = default);

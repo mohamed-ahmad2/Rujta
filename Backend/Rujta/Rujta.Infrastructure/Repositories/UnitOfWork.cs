@@ -104,6 +104,58 @@ namespace Rujta.Infrastructure.Repositories
         public async Task RollbackTransactionAsync(IDbContextTransaction transaction)
             => await transaction.RollbackAsync();
 
+        public IExecutionStrategy CreateExecutionStrategy()
+            => _context.Database.CreateExecutionStrategy();
+
+       
+        public async Task ExecuteInTransactionAsync(
+            Func<CancellationToken, Task> action,
+            CancellationToken cancellationToken = default)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            await strategy.ExecuteAsync(async ct =>
+            {
+                await using var transaction = await _context.Database
+                    .BeginTransactionAsync(ct);
+                try
+                {
+                    await action(ct);
+                    await transaction.CommitAsync(ct);
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(ct);
+                    throw;
+                }
+            }, cancellationToken);
+        }
+
+  
+        public async Task<TResult> ExecuteInTransactionAsync<TResult>(
+            Func<CancellationToken, Task<TResult>> action,
+            CancellationToken cancellationToken = default)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async ct =>
+            {
+                await using var transaction = await _context.Database
+                    .BeginTransactionAsync(ct);
+                try
+                {
+                    var result = await action(ct);
+                    await transaction.CommitAsync(ct);
+                    return result;
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(ct);
+                    throw;
+                }
+            }, cancellationToken);
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposed)
