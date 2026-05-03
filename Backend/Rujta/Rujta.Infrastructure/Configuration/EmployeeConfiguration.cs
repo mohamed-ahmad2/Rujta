@@ -1,31 +1,29 @@
 ﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-
 namespace Rujta.Infrastructure.Configuration
 {
     public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
     {
         public void Configure(EntityTypeBuilder<Employee> builder)
         {
-            builder.Property(p => p.Qualification)
+            builder.Property(e => e.Qualification)
                    .IsRequired()
-                   .HasMaxLength(100); 
+                   .HasMaxLength(100);
 
-            builder.Property(p => p.ExperienceYears)
+            builder.Property(e => e.ExperienceYears)
                    .IsRequired();
 
-            builder.Property(p => p.WorkStartTime)
+            builder.Property(e => e.WorkStartTime)
                    .IsRequired();
 
-            builder.Property(p => p.WorkEndTime)
+            builder.Property(e => e.WorkEndTime)
                    .IsRequired();
 
-            builder.HasMany(p => p.ProcessPrescriptions)
-                   .WithOne(pr => pr.Pharmacist)
-                   .HasForeignKey(pr => pr.PharmacistID)
+  
+            builder.HasOne(e => e.Pharmacy)
+                   .WithMany(p => p.Employees)
+                   .HasForeignKey(e => e.PharmacyId)
                    .OnDelete(DeleteBehavior.Restrict);
-
-            
         }
     }
 }

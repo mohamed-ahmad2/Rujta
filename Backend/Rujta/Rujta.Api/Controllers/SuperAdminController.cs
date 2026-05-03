@@ -1,4 +1,5 @@
 ﻿using Rujta.Application.DTOs.PharmacyDto;
+using Rujta.Application.DTOs.PharmacyDtos;
 using Rujta.Application.DTOs.Rujta.Application.DTOs;
 using Rujta.Application.Interfaces.InterfaceServices.IAuth;
 using Rujta.Infrastructure.Identity;
@@ -7,39 +8,89 @@ namespace Rujta.API.Controllers
 {
     [ApiController]
     [Route("api/super-admin")]
-    [Authorize(Roles = nameof(UserRole.SuperAdmin))] 
+    [Authorize(Roles = nameof(UserRole.SuperAdmin))]
+    [Produces("application/json")]
     public class SuperAdminController : ControllerBase
     {
         private readonly ISuperAdminService _service;
+        private readonly ILogger<SuperAdminController> _logger;
 
-        public SuperAdminController(ISuperAdminService service)
+        public SuperAdminController(
+            ISuperAdminService service,
+            ILogger<SuperAdminController> logger)
         {
             _service = service;
+            _logger = logger;
         }
 
-        // ================= CREATE PHARMACY =================
+        private bool TryGetAdminId(out Guid adminId)
+        {
+            adminId = Guid.Empty;
+            var claim = User.FindFirstValue("domainPersonId");
+
+            if (string.IsNullOrWhiteSpace(claim))
+                return false;
+
+            return Guid.TryParse(claim, out adminId);
+        }
+
+
         [HttpPost("pharmacies")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> CreatePharmacy([FromForm] CreatePharmacyDto dto)
+        [ProducesResponseType(typeof(CreatePharmacyResultDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> CreatePharmacy([FromForm] CreatePharmacyDto dto,CancellationToken cancellationToken)
         {
             if (dto == null)
                 return BadRequest(new { message = "Invalid request data." });
 
-            var result = await _service.CreatePharmacyAsync(dto);
-            return Ok(result);
+            if (!TryGetAdminId(out var adminGuid))
+                return Unauthorized(new { message = "AdminId not found or invalid in token." });
+
+            try
+            {
+                var result = await _service.CreatePharmacyAsync(dto, adminGuid, cancellationToken);
+
+                return CreatedAtAction(
+                    nameof(GetPharmacy),
+                    new { pharmacyId = result.PharmacyId },
+                    result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
-        // ================= GET ALL PHARMACIES =================
-        [HttpGet("Get_pharmacies")]
-        public async Task<IActionResult> GetAllPharmacies()
+        [HttpGet("pharmacies")]
+        [ProducesResponseType(typeof(IEnumerable<PharmacyDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllPharmacies(CancellationToken cancellationToken)
         {
-            var pharmacies = await _service.GetAllPharmaciesAsync();
-            return Ok(pharmacies);
+            try
+            {
+                var pharmacies = await _service.GetAllPharmaciesAsync(cancellationToken);
+                return Ok(pharmacies);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch pharmacies");
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "An unexpected error occurred while fetching pharmacies." });
+            }
         }
 
-        // ================= GET PHARMACY BY ID =================
-        [HttpGet("Get_Pharmacy_By_Id/{pharmacyId:int}")]
-        public async Task<IActionResult> GetPharmacy(int pharmacyId, CancellationToken cancellationToken)
+        [HttpGet("pharmacies/{pharmacyId:int}", Name = nameof(GetPharmacy))]
+        [ProducesResponseType(typeof(PharmacyDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetPharmacy(
+            int pharmacyId,
+            CancellationToken cancellationToken)
         {
             var pharmacy = await _service.GetPharmacyByIdAsync(pharmacyId, cancellationToken);
 
@@ -49,12 +100,11 @@ namespace Rujta.API.Controllers
             return Ok(pharmacy);
         }
 
-        // ================= UPDATE PHARMACY =================
-        [HttpPut("Update_Pharmacy/{pharmacyId:int}")]
-        public async Task<IActionResult> UpdatePharmacy(
-            int pharmacyId,
-            [FromBody] UpdatePharmacyDto dto,
-            CancellationToken cancellationToken)
+        [HttpPut("pharmacies/{pharmacyId:int}")]
+        [ProducesResponseType(typeof(PharmacyDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdatePharmacy(int pharmacyId,[FromBody] UpdatePharmacyDto dto,CancellationToken cancellationToken)
         {
             if (dto == null)
                 return BadRequest(new { message = "Invalid request data." });
@@ -64,58 +114,212 @@ namespace Rujta.API.Controllers
                 var updatedPharmacy = await _service.UpdatePharmacyAsync(pharmacyId, dto, cancellationToken);
                 return Ok(updatedPharmacy);
             }
-            catch (Exception ex)
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
         }
 
-        // ================= RESET PHARMACY ADMIN PASSWORD =================
-        [HttpPost("pharmacies/{pharmacyId:int}/reset-password")]
-        public async Task<IActionResult> ResetAdminPassword(
+        [HttpDelete("pharmacies/{pharmacyId:int}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeletePharmacy(int pharmacyId,CancellationToken cancellationToken)
+        {
+            try
+            {
+                await _service.DeletePharmacyAsync(pharmacyId, cancellationToken);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("pharmacies/{pharmacyId:int}/restore")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> RestorePharmacy(
             int pharmacyId,
             CancellationToken cancellationToken)
         {
             try
             {
-                var newPassword = await _service.ResetPharmacyAdminPasswordAsync(pharmacyId, cancellationToken);
-                return Ok(new { newPassword });
+                await _service.RestorePharmacyAsync(pharmacyId, cancellationToken);
+                return Ok(new { message = "Pharmacy restored successfully." });
             }
-            catch (Exception ex)
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
         }
-        [HttpGet("pharmacies/{pharmacyId:int}/total-orders")]
-        public async Task<IActionResult> GetTotalOrders(int pharmacyId, CancellationToken cancellationToken)
+
+
+
+        [HttpPost("pharmacies/{pharmacyId:int}/reset-password")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ResetManagerPassword(
+            int pharmacyId,
+            CancellationToken cancellationToken)
         {
             try
             {
-                var totalOrders = await _service.GetPharmacyTotalOrdersAsync(pharmacyId, cancellationToken);
-                return Ok(new { totalOrders });
+                var newPassword = await _service.ResetPharmacyManagerPasswordAsync(
+                    pharmacyId, cancellationToken);
+                return Ok(new { newPassword });
             }
-            catch (Exception ex)
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
         }
-        [HttpGet("top-pharmacies")]
-        public async Task<IActionResult> GetTopPharmacies([FromQuery] int count = 5, CancellationToken cancellationToken = default)
+
+
+
+        [HttpGet("pharmacies/{pharmacyId:int}/total-orders")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetTotalOrders(
+            int pharmacyId,
+            CancellationToken cancellationToken)
         {
+            try
+            {
+                var totalOrders = await _service.GetPharmacyTotalOrdersAsync(
+                    pharmacyId, cancellationToken);
+                return Ok(new { totalOrders });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("top-pharmacies")]
+        [ProducesResponseType(typeof(List<PharmacyStatsDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> GetTopPharmacies(
+            [FromQuery] int count = 5,
+            CancellationToken cancellationToken = default)
+        {
+            if (count <= 0 || count > 100)
+                return BadRequest(new { message = "Count must be between 1 and 100." });
+
             var result = await _service.GetTopPharmaciesAsync(count, cancellationToken);
             return Ok(result);
         }
-        [HttpDelete("pharmacies/{id}")]
-        public async Task<IActionResult> DeletePharmacy(int id)
+
+
+        [HttpGet("pharmacies/main")]
+        [ProducesResponseType(typeof(IEnumerable<PharmacyDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetMainPharmacies(CancellationToken cancellationToken)
         {
-            await _service.DeletePharmacyAsync(id);
-            return Ok(new { message = "Pharmacy deleted (inactivated) successfully" });
+            var result = await _service.GetMainPharmaciesAsync(cancellationToken);
+            return Ok(result);
         }
-        [HttpPost("pharmacies/{id}/restore")]
-        public async Task<IActionResult> RestorePharmacy(int id)
+
+        [HttpGet("pharmacies/{parentId:int}/branches")]
+        [ProducesResponseType(typeof(IEnumerable<BranchDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetBranches(
+            int parentId,
+            CancellationToken cancellationToken)
         {
-            await _service.RestorePharmacyAsync(id);
-            return Ok(new { message = "Pharmacy restored successfully" });
+            try
+            {
+                var branches = await _service.GetBranchesAsync(parentId, cancellationToken);
+                return Ok(branches);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("pharmacies/{rootId:int}/tree")]
+        [ProducesResponseType(typeof(PharmacyTreeDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetPharmacyTree(
+            int rootId,
+            CancellationToken cancellationToken)
+        {
+            var tree = await _service.GetPharmacyTreeAsync(rootId, cancellationToken);
+            if (tree == null)
+                return NotFound(new { message = "Pharmacy not found." });
+
+            return Ok(tree);
+        }
+
+        [HttpPost("pharmacies/{branchId:int}/detach")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DetachBranch(
+            int branchId,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await _service.DetachBranchAsync(branchId, cancellationToken);
+                return Ok(new { message = "Branch detached successfully and is now a main pharmacy." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("pharmacies/{branchId:int}/attach/{parentId:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AttachBranch(
+            int branchId,
+            int parentId,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await _service.AttachBranchAsync(branchId, parentId, cancellationToken);
+                return Ok(new { message = "Branch attached successfully." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

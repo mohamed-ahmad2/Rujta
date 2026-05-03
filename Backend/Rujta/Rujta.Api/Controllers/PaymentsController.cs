@@ -150,18 +150,6 @@ namespace Rujta.Api.Controllers
         public async Task<IActionResult> GetAdPayments(CancellationToken cancellationToken)
             => await GetByType(PaymentType.Ad, cancellationToken);
 
-        [Authorize(Roles = nameof(UserRole.SuperAdmin))]
-        [HttpGet]
-        public async Task<IActionResult> GetAll(
-            [FromQuery] PaymentType? type,
-            CancellationToken cancellationToken)
-        {
-            // extend your service/repo with GetAllAsync filtered by type if needed
-            return Ok();
-        }
-
-        // ─── Helpers ────────────────────────────────────────────────────
-
         private async Task<IActionResult> GetByType(PaymentType type, CancellationToken cancellationToken)
         {
             var resolved = await ResolvePharmacyUserAsync();

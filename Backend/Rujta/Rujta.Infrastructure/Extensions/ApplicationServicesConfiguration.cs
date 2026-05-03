@@ -1,7 +1,4 @@
-﻿using Rujta.Application.Services;
-using Rujta.Application.Services.Logging;
-
-namespace Rujta.Infrastructure.Extensions
+﻿namespace Rujta.Infrastructure.Extensions
 {
     public static class ApplicationServicesConfiguration
     {
@@ -69,7 +66,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IPeopleRepository, PeopleRepository>();
             services.AddScoped<IPharmacistRepository, PharmacistRepository>();
             services.AddScoped<IReportRepository, ReportRepository>();
-            services.AddScoped<ISuperAdminRepository, SuperAdminReposatory>();
+            services.AddScoped<ISuperAdminRepository, SuperAdminRepository>();
 
             return services;
         }

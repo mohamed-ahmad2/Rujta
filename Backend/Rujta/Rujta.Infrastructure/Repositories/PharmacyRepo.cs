@@ -47,5 +47,28 @@
             => await _context.Pharmacies
                 .Where(p => ids.Contains(p.Id))
                 .ToListAsync();
+
+        public async Task<List<Pharmacy>> GetBranchesAsync(int parentId, CancellationToken cancellationToken = default)
+            => await _context.Pharmacies
+                .Where(p => p.ParentPharmacyID == parentId && !p.IsDeleted)
+                .Include(p => p.Manager)
+                .Include(p => p.Admin)
+                .ToListAsync(cancellationToken);
+
+        public async Task<List<Pharmacy>> GetMainPharmaciesAsync(CancellationToken cancellationToken = default)
+            => await _context.Pharmacies
+                .Where(p => p.ParentPharmacyID == null && !p.IsDeleted)
+                .Include(p => p.Manager)
+                .Include(p => p.Admin)
+                .Include(p => p.Branches)
+                .ToListAsync(cancellationToken);
+
+        public async Task<int> CountBranchesAsync(int parentId, CancellationToken cancellationToken = default)
+            => await _context.Pharmacies
+                .CountAsync(p => p.ParentPharmacyID == parentId && !p.IsDeleted, cancellationToken);
+
+        public async Task<bool> IsMainPharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default)
+            => await _context.Pharmacies
+                .AnyAsync(p => p.Id == pharmacyId && p.ParentPharmacyID == null, cancellationToken);
     }
 }
