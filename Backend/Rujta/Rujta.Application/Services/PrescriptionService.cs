@@ -22,47 +22,45 @@ namespace Rujta.Application.Services
         }
 
         public async Task<PrescriptionResultDto> AnalyzePrescriptionAsync(
-            Stream imageStream,
-            int pharmacyId,
-            CancellationToken cancellationToken = default)
+      List<Stream> imageStreams,
+      int pharmacyId,
+      CancellationToken cancellationToken = default)
         {
             var apiKey = Environment.GetEnvironmentVariable("API_KEY");
-            if (string.IsNullOrEmpty(apiKey))
+
+            // Convert all images to base64
+            var imageParts = new List<object>();
+            foreach (var imageStream in imageStreams)
             {
-                Console.WriteLine("API_KEY NOT FOUND!");
-            }
-            else
-            {
-                Console.WriteLine($"API_KEY loaded: {apiKey.Substring(0, 5)}...");
+                using var ms = new MemoryStream();
+                await imageStream.CopyToAsync(ms);
+                var base64 = Convert.ToBase64String(ms.ToArray());
+
+                imageParts.Add(new
+                {
+                    inline_data = new
+                    {
+                        mime_type = "image/jpeg",
+                        data = base64
+                    }
+                });
             }
 
-            using var ms = new MemoryStream();
-            await imageStream.CopyToAsync(ms);
-            var base64 = Convert.ToBase64String(ms.ToArray());
+            // Add the prompt as the last part
+            imageParts.Add(new
+            {
+                text = @"Extract medicine names from these prescription images with their full name and dosage.
+Return ONLY a JSON array of strings like:
+[""Panadol 500mg"", ""Augmentin 625mg""]
+No explanation, no extra text, stick strictly to the format given."
+            });
 
             var body = new
             {
                 contents = new[]
                 {
-                    new
-                    {
-                        parts = new object[]
-                        {
-                            new {
-                                inline_data = new {
-                                    mime_type = "image/jpeg",
-                                    data = base64
-                                }
-                            },
-                            new {
-                                text = @"Extract medicine names from this prescription image whole medicine name and its dosage.
-Return ONLY a JSON array of strings like:
-[""Panadol 50mg "",""Augmentin""]
-No explanation dont get any ting extra stick with the forms i gave u."
-                            }
-                        }
-                    }
-                }
+            new { parts = imageParts.ToArray() }
+        }
             };
 
             var modelName = "models/gemini-2.5-flash";
@@ -75,9 +73,8 @@ No explanation dont get any ting extra stick with the forms i gave u."
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await _http.SendAsync(request);
+            var response = await _http.SendAsync(request, cancellationToken);
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
-            Console.WriteLine(json);
 
             using var doc = JsonDocument.Parse(json);
 
@@ -101,11 +98,9 @@ No explanation dont get any ting extra stick with the forms i gave u."
                 .Replace("```", "")
                 .Trim();
 
-            // ✅ التصحيح: تأمين ضد الـ null باستخدام ?? 
             var medicineNames = JsonSerializer.Deserialize<List<string>>(cleanedText)
                                 ?? new List<string>();
 
-            // ✅ إذا القائمة فارغة، ارجع مباشرة
             if (!medicineNames.Any())
             {
                 return new PrescriptionResultDto
@@ -121,9 +116,7 @@ No explanation dont get any ting extra stick with the forms i gave u."
             var result = new PrescriptionResultDto();
 
             foreach (var med in medicines)
-            {
                 result.AvailableMedicines.Add(_mapper.Map<MedicineDto>(med));
-            }
 
             result.NotFoundMedicines =
                 medicineNames.Except(medicines.Select(m => m.Name)).ToList();

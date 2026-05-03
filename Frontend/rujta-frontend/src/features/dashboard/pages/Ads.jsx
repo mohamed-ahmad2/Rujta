@@ -9,6 +9,7 @@ import useMedicines from "../../medicines/hook/useMedicines";
 import useCampaigns from "../../campaigns/hook/useCampaigns";
 import { usePayment } from "../../payment/hooks/usePayment";
 import PaymentIframeModal from "../../user/components/checkout/PaymentIframeModal";
+import useCategory from "../../category/hook/useCategory";
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
@@ -194,7 +195,7 @@ function Toast({ message, onClose }) {
 // ─── Plan Modal ───────────────────────────────────────────────────────────────
 
 function PlanModal({ onSelect, onClose, loading }) {
-  const [selected, setSelected] = useState(AD_PLANS[1]); // default: 2 weeks
+  const [selected, setSelected] = useState(AD_PLANS[1]);
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40">
@@ -252,12 +253,163 @@ function PlanModal({ onSelect, onClose, loading }) {
   );
 }
 
+// ─── Hero-Style Live Preview ──────────────────────────────────────────────────
+
+function HeroPreview({ adMode, selectedProduct, selectedCategory, palette, font, selectedTemplate, previewHeadline, previewSubtext, previewCta }) {
+  const imgSrc = adMode === "medicine" ? getImgSrc(selectedProduct) : null;
+  const isReady = selectedTemplate && (adMode === "medicine" ? !!selectedProduct : !!selectedCategory);
+
+  return (
+    <div
+      className="relative w-full overflow-hidden rounded-2xl shadow-2xl"
+      style={{
+        minHeight: 420,
+        background: `radial-gradient(circle at top left, ${palette.to}, ${palette.from})`,
+        fontFamily: font.value,
+      }}
+    >
+      {/* Ambient glows */}
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-white/10 blur-[80px] animate-pulse pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] rounded-full bg-black/20 blur-[60px] pointer-events-none" />
+
+      {/* Corner ribbon */}
+      <div style={{ position: "absolute", top: 0, left: 0, zIndex: 30, width: 140, height: 140, overflow: "hidden", pointerEvents: "none", userSelect: "none" }}>
+        <div style={{
+          position: "absolute", top: 32, left: -38, width: 170,
+          padding: "8px 0",
+          background: "linear-gradient(135deg, #1a5c2a 0%, #2d8c45 100%)",
+          transform: "rotate(-45deg)",
+          textAlign: "center",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.35)",
+        }}>
+          <span style={{ fontSize: "0.7rem", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff", whiteSpace: "nowrap" }}>
+            {selectedTemplate?.badge || "NEW"}
+          </span>
+        </div>
+      </div>
+
+      {/* Main content grid */}
+      <div className="relative z-10 w-full h-full flex items-center px-8 py-10 gap-6">
+
+        {/* Left: Text */}
+        <div className="flex-1 space-y-5">
+          <div className="space-y-2">
+            <h1
+              className="text-white font-extrabold leading-tight drop-shadow-md"
+              style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.8rem)" }}
+            >
+              {isReady ? previewHeadline : <span className="opacity-30">Headline here</span>}
+            </h1>
+            <div className="h-1 w-16 bg-white/40 rounded-full" />
+          </div>
+
+          {/* 3D Subtext — like Hero */}
+          {isReady && previewSubtext && (
+            <div className="relative">
+              <style>{`
+                @keyframes adFloat {
+                  0%, 100% { transform: perspective(800px) rotateX(12deg) rotateY(-4deg) translateY(0px); }
+                  50%       { transform: perspective(800px) rotateX(12deg) rotateY(-4deg) translateY(-8px); }
+                }
+              `}</style>
+              <p
+                className="text-white font-black leading-none select-none"
+                style={{
+                  fontSize: "clamp(1.1rem, 2.5vw, 1.8rem)",
+                  textTransform: "uppercase",
+                  letterSpacing: "-0.01em",
+                  transform: "perspective(800px) rotateX(12deg) rotateY(-4deg)",
+                  textShadow: `
+                    1px 1px 0px rgba(0,0,0,0.2),
+                    2px 2px 0px rgba(0,0,0,0.18),
+                    3px 3px 0px rgba(0,0,0,0.14),
+                    4px 4px 8px rgba(0,0,0,0.25)
+                  `,
+                  WebkitTextStroke: "0.5px rgba(255,255,255,0.1)",
+                  animation: "adFloat 4s ease-in-out infinite",
+                  maxWidth: "80%",
+                }}
+              >
+                {previewSubtext}
+              </p>
+            </div>
+          )}
+
+          {!isReady && (
+            <p className="text-white/30 text-sm">Select a template &amp; {adMode === "medicine" ? "medicine" : "category"} to preview</p>
+          )}
+
+          {/* CTA Button */}
+          <button
+            className="group relative bg-white px-8 py-3 rounded-full font-black text-sm overflow-hidden transition-all hover:pl-12 active:scale-95 shadow-xl"
+            style={{ color: palette.from }}
+          >
+            <span className="relative z-10">{previewCta}</span>
+            <span className="absolute left-4 opacity-0 transition-all group-hover:opacity-100 group-hover:left-5 text-xs">→</span>
+          </button>
+        </div>
+
+        {/* Right: Product image with spinning ring */}
+        <div className="relative flex items-center justify-center flex-shrink-0 w-[180px] h-[180px]">
+          {/* Spinning ring */}
+          <div
+            className="absolute w-full h-full rounded-full border-2 border-white/20"
+            style={{
+              animation: "spin 10s linear infinite",
+              boxShadow: `0 0 30px ${palette.from}44`,
+            }}
+          />
+          {/* Inner glow */}
+          <div className="absolute w-[70%] h-[70%] rounded-full bg-white/10 blur-xl" />
+
+          {/* Bouncing image */}
+          <div
+            className="relative z-10"
+            style={{ animation: "bounce 4s ease-in-out infinite" }}
+          >
+            {imgSrc ? (
+              <img
+                src={imgSrc}
+                alt={selectedProduct?.name}
+                className="w-[130px] h-[130px] object-contain drop-shadow-2xl transition-transform duration-500 hover:scale-110"
+                style={{ filter: "drop-shadow(0 20px 20px rgba(0,0,0,0.45))" }}
+              />
+            ) : adMode === "category" && selectedCategory ? (
+              <div className="w-[130px] h-[130px] rounded-full flex items-center justify-center border-4 border-white/30"
+                style={{ background: "rgba(255,255,255,0.12)" }}>
+                <MdCategory size={52} style={{ color: "rgba(255,255,255,0.7)" }} />
+              </div>
+            ) : (
+              <div className="w-[130px] h-[130px] rounded-full flex items-center justify-center border-2 border-dashed border-white/20">
+                <MdMedication size={40} style={{ color: "rgba(255,255,255,0.2)" }} />
+              </div>
+            )}
+          </div>
+
+          {/* Ground shadow */}
+          <div className="absolute bottom-0 w-[60%] h-4 bg-black/20 blur-xl rounded-full" />
+        </div>
+      </div>
+
+      {/* Watermark */}
+      <span className="absolute bottom-2 right-3 text-[10px] text-white/15 pointer-events-none select-none">Rujta™</span>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Ads() {
   const { medicines, loading: medsLoading, error: medsError, fetchAll: fetchMeds } = useMedicines();
   const { create: createAd } = useCampaigns();
   const { initiate, paymentResult, loading: initiatingPayment, reset: resetPayment } = usePayment();
+
+  // ── Category hook ──────────────────────────────────────────────
+  const {
+    pharmacyCategories,
+    loading: catsLoading,
+    fetchPharmacyCategories,
+  } = useCategory();
 
   const [adMode,           setAdMode]          = useState("medicine");
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -274,27 +426,22 @@ export default function Ads() {
   const [toast,            setToast]            = useState(null);
   const [publishError,     setPublishError]     = useState(null);
 
-  // ── Plan & Payment states ──────────────────────────────────────
   const [showPlanModal,    setShowPlanModal]    = useState(false);
   const [showIframe,       setShowIframe]       = useState(false);
 
   const canvasRef = useRef(null);
 
   useEffect(() => { fetchMeds(); }, [fetchMeds]);
+  // ── Fetch pharmacy's own categories on mount ──
+  useEffect(() => { fetchPharmacyCategories(); }, [fetchPharmacyCategories]);
   useEffect(() => { fontOptions.forEach(f => loadFont(f.url)); }, []);
 
-  // Open iframe when paymentResult arrives
   useEffect(() => {
     if (paymentResult?.iframeUrl) {
       setShowPlanModal(false);
       setShowIframe(true);
     }
   }, [paymentResult]);
-
-  const categories = useMemo(() => {
-    const cats = medicines.map(m => m.category).filter(Boolean);
-    return [...new Set(cats)].sort();
-  }, [medicines]);
 
   const filteredMeds = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -344,45 +491,46 @@ export default function Ads() {
     setTimeout(() => setPngSaved(false), 2500);
   };
 
-  // ── Step 1: Publish button → show plan modal ──────────────────
   const handlePublishClick = () => {
     if (!isReady || publishing) return;
     setPublishError(null);
     setShowPlanModal(true);
   };
 
-  // ── Step 2: Plan selected → create ad + initiate payment ──────
   const handlePlanSelect = async (plan) => {
-    setPublishing(true);
-    setPublishError(null);
+  setPublishing(true);
+  setPublishError(null);
 
-    try {
-      // Create the ad first (isActive: false until payment succeeds)
-      const payload = {
-        templateId:    selectedTemplate.id,
-        templateName:  selectedTemplate.name,
-        badge:         selectedTemplate.badge,
-        adMode,
-        medicineId:    adMode === "medicine" ? selectedProduct?.id   : null,
-        medicineName:  adMode === "medicine" ? selectedProduct?.name : null,
-        category:      adMode === "category" ? selectedCategory      : null,
-        headline:      previewHeadline,
-        subtext:       previewSubtext,
-        ctaLabel:      previewCta,
-        colorFrom:     palette.from,
-        colorTo:       palette.to,
-        colorAccent:   palette.accent,
-        fontLabel:     font.label,
-        fontValue:     font.value,
-        medicineImage: adMode === "medicine" ? getImgSrc(selectedProduct) : null,
-        durationDays:  plan.days,   // ← new
-        price:         plan.price,  // ← new
-        isActive:      false,       // activated by payment callback
-      };
+  try {
+    const now = new Date();
+    const expires = new Date(now.getTime() + plan.days * 86_400_000);
 
-      const createdAd = await createAd(payload);
+    const payload = {
+      templateName:  selectedTemplate.name,
+      badge:         selectedTemplate.badge,
+      adMode,
+      medicineId:    adMode === "medicine" ? selectedProduct?.id   : null,
+      medicineName:  adMode === "medicine" ? selectedProduct?.name : null,
+      medicineImage: adMode === "medicine" ? getImgSrc(selectedProduct) : null,
+      category:      adMode === "category" ? selectedCategory      : null,
+      headline:      previewHeadline,
+      subtext:       previewSubtext,
+      ctaLabel:      previewCta,
+      colorFrom:     palette.from,
+      colorTo:       palette.to,
+      colorAccent:   palette.accent,
+      fontLabel:     font.label,
+      price:         plan.price,
+      durationDays:  plan.days,
+      startsAt:      now.toISOString(),
+      expiresAt:     expires.toISOString(),
+      isActive:      false,
+    };
 
-      // Initiate Paymob payment for this ad
+    console.log("📤 payload →", JSON.stringify(payload, null, 2)); // verify in console
+
+    const createdAd = await createAd(payload);
+    // ...rest unchanged
       await initiate({
         Type:    "Ad",
         AdId:    createdAd.id,
@@ -391,7 +539,7 @@ export default function Ads() {
         BillingData: {
           FirstName:      "Pharmacy",
           LastName:       "Admin",
-          Email:          "admin@pharmacy.com", // ideally from auth context
+          Email:          "admin@pharmacy.com",
           PhoneNumber:    "01000000000",
           Apartment:      "N/A",
           Floor:          "N/A",
@@ -404,8 +552,6 @@ export default function Ads() {
           State:          "Cairo",
         },
       });
-
-      // paymentResult useEffect will open the iframe
 
     } catch (err) {
       setPublishError(
@@ -430,7 +576,6 @@ export default function Ads() {
 
       {toast && <Toast message={toast.message} onClose={() => setToast(null)} />}
 
-      {/* Plan modal */}
       {showPlanModal && (
         <PlanModal
           loading={publishing || initiatingPayment}
@@ -439,7 +584,6 @@ export default function Ads() {
         />
       )}
 
-      {/* Paymob iframe */}
       {showIframe && paymentResult?.iframeUrl && (
         <PaymentIframeModal
           iframeUrl={paymentResult.iframeUrl}
@@ -530,20 +674,30 @@ export default function Ads() {
             ) : (
               <>
                 <SectionHeader icon={MdCategory} label="3 · Choose Category" />
-                {medsLoading && <div className="flex items-center gap-2 text-sm text-gray-400 py-4"><span className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />Loading…</div>}
-                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
-                  {categories.map(cat => {
-                    const active = selectedCategory === cat;
-                    return (
-                      <button key={cat} onClick={() => setSelectedCategory(cat)}
-                        className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all
-                          ${active ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-600 hover:border-primary/40"}`}
-                      >
-                        {active && <FiCheckCircle className="inline mr-1.5 mb-0.5" size={13} />}{cat}
-                      </button>
-                    );
-                  })}
-                </div>
+                {catsLoading && (
+                  <div className="flex items-center gap-2 text-sm text-gray-400 py-4">
+                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                    Loading categories…
+                  </div>
+                )}
+                {!catsLoading && pharmacyCategories.length === 0 && (
+                  <p className="text-sm text-gray-400 py-4 text-center">No categories found. Add some in your pharmacy settings.</p>
+                )}
+                {!catsLoading && pharmacyCategories.length > 0 && (
+                  <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                    {pharmacyCategories.map(cat => {
+                      const active = selectedCategory === cat.name;
+                      return (
+                        <button key={cat.id} onClick={() => setSelectedCategory(cat.name)}
+                          className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all
+                            ${active ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-600 hover:border-primary/40"}`}
+                        >
+                          {active && <FiCheckCircle className="inline mr-1.5 mb-0.5" size={13} />}{cat.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </>
             )}
           </section>
@@ -607,36 +761,22 @@ export default function Ads() {
           </section>
         </div>
 
-        {/* ══ RIGHT PANEL ══ */}
+        {/* ══ RIGHT PANEL — Hero-Style Preview ══ */}
         <div className="space-y-5 sticky top-6">
           <SectionHeader icon={MdCampaign} label="Live Preview & Export" />
 
-          <div className="relative rounded-2xl overflow-hidden shadow-2xl"
-            style={{ background: `linear-gradient(135deg, ${palette.from}, ${palette.to})`, fontFamily: font.value, minHeight: 340, padding: "2rem" }}
-          >
-            <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 pointer-events-none" style={{ background: palette.accent, transform: "translate(30%,-30%)" }} />
-            <div className="absolute bottom-0 left-0 w-44 h-44 rounded-full opacity-10 pointer-events-none" style={{ background: palette.accent, transform: "translate(-30%,30%)" }} />
-
-            {adMode === "medicine" && selectedProduct && getImgSrc(selectedProduct) && (
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-32 h-32 rounded-full overflow-hidden border-4 shadow-2xl" style={{ borderColor: "rgba(255,255,255,0.35)" }}>
-                <img src={getImgSrc(selectedProduct)} alt={selectedProduct.name} className="w-full h-full object-cover" />
-              </div>
-            )}
-            {adMode === "category" && selectedCategory && (
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-32 h-32 rounded-full flex items-center justify-center shadow-2xl border-4" style={{ background: "rgba(255,255,255,0.15)", borderColor: "rgba(255,255,255,0.3)" }}>
-                <MdCategory size={52} style={{ color: "rgba(255,255,255,0.7)" }} />
-              </div>
-            )}
-
-            <span className="inline-block text-xs font-bold px-3 py-1 rounded-full mb-4" style={{ background: "rgba(255,255,255,0.25)", color: "#fff" }}>
-              {selectedTemplate?.badge ?? "BADGE"}
-            </span>
-            <h2 className="font-black text-white leading-tight" style={{ fontSize: "clamp(1.4rem, 3.5vw, 2.2rem)", maxWidth: "58%" }}>{previewHeadline}</h2>
-            <p className="mt-2 text-white/75 text-sm max-w-[58%] leading-snug">{previewSubtext}</p>
-            <p className="mt-1 text-xs font-semibold" style={{ color: palette.accent }}>— {selectedTemplate?.name ?? "Template"}</p>
-            <button className="mt-5 px-5 py-2.5 rounded-xl font-bold text-sm hover:scale-105 transition" style={{ background: "#fff", color: palette.from }}>{previewCta}</button>
-            <span className="absolute bottom-3 right-4 text-[10px] text-white/20 pointer-events-none">Rujta™</span>
-          </div>
+          {/* Hero-style preview */}
+          <HeroPreview
+            adMode={adMode}
+            selectedProduct={selectedProduct}
+            selectedCategory={selectedCategory}
+            palette={palette}
+            font={font}
+            selectedTemplate={selectedTemplate}
+            previewHeadline={previewHeadline}
+            previewSubtext={previewSubtext}
+            previewCta={previewCta}
+          />
 
           {(customHeadline || customSubtext || customCta) && (
             <p className="text-xs text-primary/70 flex items-center gap-1"><MdEdit size={13} /> Custom text is active.</p>
@@ -664,7 +804,6 @@ export default function Ads() {
 
           {!isReady && <p className="text-xs text-gray-400">↑ Pick a template and {adMode === "medicine" ? "a medicine" : "a category"} to enable.</p>}
 
-          {/* Info box updated to mention payment */}
           <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 text-xs text-blue-600 space-y-1">
             <p className="font-semibold">How does publishing work?</p>
             <p>✅ Choose a plan (7, 14, or 30 days)</p>
