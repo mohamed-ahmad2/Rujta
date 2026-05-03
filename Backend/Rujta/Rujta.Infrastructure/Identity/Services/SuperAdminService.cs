@@ -6,7 +6,6 @@ namespace Rujta.Infrastructure.Identity.Services
 {
     public class SuperAdminService : ISuperAdminService
     {
-        private const string PharmacyManagerRole = "PharmacyManager";
         private const string DefaultOpenHours = "9AM - 11PM";
 
         private readonly IUnitOfWork _unitOfWork;
@@ -26,11 +25,7 @@ namespace Rujta.Infrastructure.Identity.Services
             _mapper = mapper;
         }
 
-      
-        public async Task<CreatePharmacyResultDto> CreatePharmacyAsync(
-            CreatePharmacyDto dto,
-            Guid adminId,
-            CancellationToken cancellationToken = default)
+        public async Task<CreatePharmacyResultDto> CreatePharmacyAsync(CreatePharmacyDto dto,Guid adminId,CancellationToken cancellationToken = default)
         {
             await EnsureManagerEmailIsUniqueAsync(dto.ManagerEmail);
 
@@ -41,18 +36,27 @@ namespace Rujta.Infrastructure.Identity.Services
 
                 await EnsureAdminExistsAsync(effectiveAdminId, ct);
 
+               
                 var manager = CreateManagerEntity(dto, effectiveAdminId);
                 await _unitOfWork.People.AddAsync(manager, ct);
 
+              
                 var generatedPassword = GenerateStrongPassword();
                 await CreateIdentityUserAsync(dto, manager.Id, generatedPassword);
 
                 var imageUrl = await SaveImageAsync(dto.Image, ct);
-                var pharmacy = BuildPharmacyEntity(dto, manager.Id, effectiveAdminId, imageUrl);
+                var pharmacy = BuildPharmacyEntity(
+                    dto, manager.Id, effectiveAdminId, imageUrl);
 
                 await _unitOfWork.Pharmacies.AddAsync(pharmacy, ct);
+
+              
+                await _unitOfWork.SaveAsync(ct);
+
+               
                 manager.PharmacyId = pharmacy.Id;
 
+              
                 await _unitOfWork.SaveAsync(ct);
 
                 LogPharmacyCreated(dto, effectiveAdminId);
@@ -67,8 +71,6 @@ namespace Rujta.Infrastructure.Identity.Services
                 };
             }, cancellationToken);
         }
-
-        
 
         private async Task EnsureManagerEmailIsUniqueAsync(string email)
         {
@@ -157,7 +159,7 @@ namespace Rujta.Infrastructure.Identity.Services
                 throw new InvalidOperationException(
                     string.Join(", ", createResult.Errors.Select(e => e.Description)));
 
-            await _userManager.AddToRoleAsync(identityUser, PharmacyManagerRole);
+            await _userManager.AddToRoleAsync(identityUser, nameof(UserRole.PharmacyAdmin));
         }
 
         private static Pharmacy BuildPharmacyEntity(
@@ -191,7 +193,6 @@ namespace Rujta.Infrastructure.Identity.Services
                 pharmacyType, dto.PharmacyName, dto.ManagerEmail, adminId, dto.ParentPharmacyId);
         }
 
-       
         public async Task<IEnumerable<PharmacyDto>> GetAllPharmaciesAsync(
             CancellationToken cancellationToken = default)
         {
@@ -215,7 +216,6 @@ namespace Rujta.Infrastructure.Identity.Services
             return dtos;
         }
 
-      
         public async Task<PharmacyDto?> GetPharmacyByIdAsync(
             int pharmacyId,
             CancellationToken cancellationToken = default)
@@ -237,7 +237,6 @@ namespace Rujta.Infrastructure.Identity.Services
             return dto;
         }
 
-     
         public async Task<PharmacyDto> UpdatePharmacyAsync(
             int pharmacyId,
             UpdatePharmacyDto dto,
@@ -267,7 +266,6 @@ namespace Rujta.Infrastructure.Identity.Services
             return _mapper.Map<PharmacyDto>(pharmacy);
         }
 
-       
         public async Task<string> ResetPharmacyManagerPasswordAsync(
             int pharmacyId,
             CancellationToken cancellationToken = default)
@@ -299,7 +297,6 @@ namespace Rujta.Infrastructure.Identity.Services
             return newPassword;
         }
 
-      
         public async Task<int> GetPharmacyTotalOrdersAsync(
             int pharmacyId,
             CancellationToken cancellationToken = default)
@@ -311,13 +308,11 @@ namespace Rujta.Infrastructure.Identity.Services
             return await _unitOfWork.SuperAdmin.GetTotalOrdersAsync(pharmacyId, cancellationToken);
         }
 
-      
         public Task<List<PharmacyStatsDto>> GetTopPharmaciesAsync(
             int count,
             CancellationToken cancellationToken = default)
             => _unitOfWork.SuperAdmin.GetTopPharmaciesAsync(count, cancellationToken);
 
-       
         public async Task<bool> DeletePharmacyAsync(
             int pharmacyId,
             CancellationToken cancellationToken = default)
@@ -343,10 +338,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return true;
         }
 
-     
-        public async Task<bool> RestorePharmacyAsync(
-            int pharmacyId,
-            CancellationToken cancellationToken = default)
+        public async Task<bool> RestorePharmacyAsync(int pharmacyId,CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
             if (pharmacy == null)
@@ -362,9 +354,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return true;
         }
 
-       
-        public async Task<IEnumerable<PharmacyDto>> GetMainPharmaciesAsync(
-            CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<PharmacyDto>> GetMainPharmaciesAsync(CancellationToken cancellationToken = default)
         {
             var mains = await _unitOfWork.Pharmacies.GetMainPharmaciesAsync(cancellationToken);
             var dtos = _mapper.Map<List<PharmacyDto>>(mains);
@@ -381,10 +371,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return dtos;
         }
 
-   
-        public async Task<IEnumerable<BranchDto>> GetBranchesAsync(
-            int parentId,
-            CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<BranchDto>> GetBranchesAsync(int parentId,CancellationToken cancellationToken = default)
         {
             var parent = await _unitOfWork.Pharmacies.GetByIdAsync(parentId, cancellationToken);
             if (parent == null)
@@ -400,10 +387,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return _mapper.Map<IEnumerable<BranchDto>>(branches);
         }
 
-   
-        public async Task<PharmacyTreeDto?> GetPharmacyTreeAsync(
-            int rootId,
-            CancellationToken cancellationToken = default)
+        public async Task<PharmacyTreeDto?> GetPharmacyTreeAsync(int rootId,CancellationToken cancellationToken = default)
         {
             var root = await _unitOfWork.Pharmacies
                 .GetByIdWithIncludesAsync(rootId, cancellationToken,
@@ -420,10 +404,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return _mapper.Map<PharmacyTreeDto>(root);
         }
 
-        
-        public async Task<bool> DetachBranchAsync(
-            int branchId,
-            CancellationToken cancellationToken = default)
+        public async Task<bool> DetachBranchAsync( int branchId,CancellationToken cancellationToken = default)
         {
             var branch = await _unitOfWork.Pharmacies.GetByIdAsync(branchId, cancellationToken);
             if (branch == null)
@@ -439,10 +420,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return true;
         }
 
-        public async Task<bool> AttachBranchAsync(
-            int branchId,
-            int parentId,
-            CancellationToken cancellationToken = default)
+        public async Task<bool> AttachBranchAsync( int branchId,int parentId,CancellationToken cancellationToken = default)
         {
             if (branchId == parentId)
                 throw new InvalidOperationException("A pharmacy cannot be a branch of itself.");

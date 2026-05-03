@@ -94,23 +94,11 @@ namespace Rujta.Infrastructure.Repositories
         public async Task<int> SaveAsync(CancellationToken cancellationToken = default)
             => await _context.SaveChangesAsync(cancellationToken);
 
-        public async Task<IDbContextTransaction> BeginTransactionAsync(
-            CancellationToken cancellationToken = default)
-            => await _context.Database.BeginTransactionAsync(cancellationToken);
-    
-        public async Task CommitTransactionAsync(IDbContextTransaction transaction)
-            => await transaction.CommitAsync();
-
-        public async Task RollbackTransactionAsync(IDbContextTransaction transaction)
-            => await transaction.RollbackAsync();
-
         public IExecutionStrategy CreateExecutionStrategy()
             => _context.Database.CreateExecutionStrategy();
 
-       
-        public async Task ExecuteInTransactionAsync(
-            Func<CancellationToken, Task> action,
-            CancellationToken cancellationToken = default)
+
+        public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> action,CancellationToken cancellationToken = default)
         {
             var strategy = _context.Database.CreateExecutionStrategy();
 
@@ -131,10 +119,8 @@ namespace Rujta.Infrastructure.Repositories
             }, cancellationToken);
         }
 
-  
-        public async Task<TResult> ExecuteInTransactionAsync<TResult>(
-            Func<CancellationToken, Task<TResult>> action,
-            CancellationToken cancellationToken = default)
+
+        public async Task<TResult> ExecuteInTransactionAsync<TResult>(Func<CancellationToken, Task<TResult>> action,CancellationToken cancellationToken = default)
         {
             var strategy = _context.Database.CreateExecutionStrategy();
 

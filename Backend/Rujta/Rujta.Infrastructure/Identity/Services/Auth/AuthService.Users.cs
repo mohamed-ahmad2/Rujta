@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
-using Rujta.Application.DTOs.AuthDto;
+﻿using Rujta.Application.DTOs.AuthDto;
 using Rujta.Domain.Common;
 
 namespace Rujta.Infrastructure.Identity.Services.Auth
@@ -37,6 +36,7 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
             var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
             dto.Email = normalizedEmail;
 
+    
             if (await IsEmailExistsAsync(normalizedEmail, cancellationToken))
             {
                 _infra.Logger.LogWarning(
@@ -45,74 +45,73 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
                 throw new InvalidOperationException("Email is already registered.");
             }
 
-            using IDbContextTransaction transaction =
-                await _identity.UnitOfWork.BeginTransactionAsync(cancellationToken);
-
             try
             {
-                Person person = role switch
+                var userId = await _identity.UnitOfWork.ExecuteInTransactionAsync(async ct =>
                 {
-                    UserRole.User => _identity.Mapper.Map<User>(dto),
-                    UserRole.Pharmacist => await CreatePharmacist(dto),
-                    UserRole.SuperAdmin => _identity.Mapper.Map<Admin>(dto),
-                    UserRole.PharmacyAdmin => _identity.Mapper.Map<Manager>(dto),
-                    _ => throw new InvalidOperationException(AuthMessages.UnknownRole)
-                };
+                    Person person = role switch
+                    {
+                        UserRole.User => _identity.Mapper.Map<User>(dto),
+                        UserRole.Pharmacist => await CreatePharmacist(dto),
+                        UserRole.SuperAdmin => _identity.Mapper.Map<Admin>(dto),
+                        UserRole.PharmacyAdmin => _identity.Mapper.Map<Manager>(dto),
+                        _ => throw new InvalidOperationException(AuthMessages.UnknownRole)
+                    };
 
-                person.Email = normalizedEmail;
+                    person.Email = normalizedEmail;
 
-                await _identity.UnitOfWork.People.AddAsync(person);
-                await _identity.UnitOfWork.SaveAsync();
+                    await _identity.UnitOfWork.People.AddAsync(person);
+                    await _identity.UnitOfWork.SaveAsync(ct);
 
-                var user = _identity.Mapper.Map<ApplicationUser>(dto);
-                user.DomainPersonId = person.Id;
-                user.Email = normalizedEmail;
-                user.UserName = normalizedEmail;
+                    var user = _identity.Mapper.Map<ApplicationUser>(dto);
+                    user.DomainPersonId = person.Id;
+                    user.Email = normalizedEmail;
+                    user.UserName = normalizedEmail;
 
-                person.PhoneNumber = user.PhoneNumber ?? string.Empty;
+                    person.PhoneNumber = user.PhoneNumber ?? string.Empty;
 
-                if (!string.IsNullOrWhiteSpace(user.Location))
-                    person.Addresses.Add(new Address { City = user.Location });
+                    if (!string.IsNullOrWhiteSpace(user.Location))
+                        person.Addresses.Add(new Address { City = user.Location });
 
-                var result = await _identity.Identity.UserManager
-                    .CreateAsync(user, dto.CreatePassword);
+                    var result = await _identity.Identity.UserManager
+                        .CreateAsync(user, dto.CreatePassword);
 
-                if (!result.Succeeded)
-                {
-                    string errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                    _infra.Logger.LogError(
-                        "User creation failed for {Email}: {Errors}",
-                        dto.Email, errors);
+                    if (!result.Succeeded)
+                    {
+                        string errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                        _infra.Logger.LogError(
+                            "User creation failed for {Email}: {Errors}",
+                            dto.Email, errors);
 
-                    await SafeRollbackAsync(transaction, dto.Email, cancellationToken);
-                    throw new InvalidOperationException(errors);
-                }
+                    
+                        throw new InvalidOperationException(errors);
+                    }
 
-                var roleResult = await _identity.Identity.UserManager
-                    .AddToRoleAsync(user, role.ToString());
+                    var roleResult = await _identity.Identity.UserManager
+                        .AddToRoleAsync(user, role.ToString());
 
-                if (!roleResult.Succeeded)
-                {
-                    string errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
-                    _infra.Logger.LogError(
-                        "AddToRole failed for {Email}: {Errors}",
-                        dto.Email, errors);
+                    if (!roleResult.Succeeded)
+                    {
+                        string errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                        _infra.Logger.LogError(
+                            "AddToRole failed for {Email}: {Errors}",
+                            dto.Email, errors);
 
-                    await SafeRollbackAsync(transaction, dto.Email, cancellationToken);
-                    throw new InvalidOperationException(errors);
-                }
+                        throw new InvalidOperationException(errors);
+                    }
 
-                await transaction.CommitAsync(cancellationToken);
+                    _infra.Logger.LogInformation(
+                        "User created successfully: {Email}, Role: {Role}",
+                        dto.Email, role);
 
-                _infra.Logger.LogInformation(
-                    "User created successfully: {Email}, Role: {Role}",
-                    dto.Email, role);
+                    return user.Id;
 
-                return user.Id;
+                }, cancellationToken);
+
+                return userId;
             }
             catch (InvalidOperationException)
             {
-                
                 throw;
             }
             catch (Exception ex)
@@ -121,27 +120,9 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
                     "Unexpected error during user creation for {Email}",
                     dto.Email);
 
-                await SafeRollbackAsync(transaction, dto.Email, cancellationToken);
-
-               
                 throw new InvalidOperationException(
                     $"An unexpected error occurred while creating user '{dto.Email}'. See inner exception for details.",
                     ex);
-            }
-        }
-
-        private async Task SafeRollbackAsync(IDbContextTransaction transaction,string email,CancellationToken cancellationToken)
-        {
-            try
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                _infra.Logger.LogInformation(
-                    "Transaction rolled back for {Email}", email);
-            }
-            catch (Exception rollbackEx)
-            {
-                _infra.Logger.LogError(rollbackEx,
-                    "Failed to rollback transaction for {Email}", email);
             }
         }
 

@@ -19,8 +19,12 @@ import {
   Clock,
   User,
   Mail,
+  ChevronDown,
+  ChevronUp,
+  Home,
 } from "lucide-react";
 import useSuperAdmin from "../../super-admin/hook/useSuperAdmin";
+import useAddress from "../../address/hook/useAddress";
 
 /* ─────────────────────────────────────────────
    MODAL WRAPPER
@@ -97,6 +101,34 @@ function CopyButton({ value, label = "Copy" }) {
   );
 }
 
+/* ─────────────────────────────────────────────
+   ADDRESS HELPERS
+───────────────────────────────────────────── */
+const buildLocationText = ({ street, buildingNo, city, governorate }) => {
+  const parts = [];
+  if (street?.trim()) parts.push(street.trim());
+  if (buildingNo?.trim()) parts.push(`Building ${buildingNo.trim()}`);
+  if (city?.trim()) parts.push(city.trim());
+  if (governorate?.trim()) parts.push(governorate.trim());
+  return parts.join(", ");
+};
+
+const parseLocationText = (text = "") => {
+  // Best-effort split for editing legacy location strings
+  const parts = text
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return {
+    street: parts[0] || "",
+    buildingNo: parts[1]?.toLowerCase().startsWith("building")
+      ? parts[1].replace(/building\s*/i, "").trim()
+      : "",
+    city: parts[2] || "",
+    governorate: parts[3] || "",
+  };
+};
+
 /* ═══════════════════════════════════════════════════
    MAIN PAGE
 ═══════════════════════════════════════════════════ */
@@ -115,6 +147,13 @@ export default function Pharmacies() {
     resetPassword,
   } = useSuperAdmin();
 
+  // ✅ استخدام useAddress لجلب العناوين المحفوظة (suggestions)
+  const {
+    addresses,
+    fetchUserAddresses,
+    loading: addressLoading,
+  } = useAddress();
+
   /* ──── states ──── */
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -124,11 +163,18 @@ export default function Pharmacies() {
   const [errorMsg, setErrorMsg] = useState("");
   const [confirmData, setConfirmData] = useState(null);
   const [filterType, setFilterType] = useState("all"); // all | main | branch
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvancedEdit, setShowAdvancedEdit] = useState(false);
 
   /* ──── ADD FORM ──── */
   const emptyForm = {
     pharmacyName: "",
-    pharmacyLocation: "",
+    // ✅ Address fields بدلاً من lat/long يدوية
+    street: "",
+    buildingNo: "",
+    city: "",
+    governorate: "",
+    // اختياري (Advanced)
     latitude: "",
     longitude: "",
     openHours: "9AM - 11PM",
@@ -141,13 +187,17 @@ export default function Pharmacies() {
     isBranch: false,
     image: null,
     imagePreview: null,
+    selectedAddressId: "",
   };
   const [addForm, setAddForm] = useState(emptyForm);
 
   /* ──── EDIT FORM ──── */
   const [editForm, setEditForm] = useState({
     name: "",
-    location: "",
+    street: "",
+    buildingNo: "",
+    city: "",
+    governorate: "",
     contactNumber: "",
     latitude: "",
     longitude: "",
@@ -158,7 +208,8 @@ export default function Pharmacies() {
   useEffect(() => {
     fetchAll();
     fetchMain();
-  }, [fetchAll, fetchMain]);
+    fetchUserAddresses();
+  }, [fetchAll, fetchMain, fetchUserAddresses]);
 
   /* ──── filtering & pagination ──── */
   const filtered = useMemo(() => {
@@ -181,6 +232,27 @@ export default function Pharmacies() {
      HANDLERS
   ════════════════════════════════════════════ */
 
+  // ─── استخدام عنوان محفوظ لملء الحقول تلقائياً (ADD) ───
+  const handleSelectSavedAddress = (addressId) => {
+    if (!addressId) {
+      setAddForm((prev) => ({ ...prev, selectedAddressId: "" }));
+      return;
+    }
+    const addr = addresses.find(
+      (a) => String(a.id ?? a.Id) === String(addressId),
+    );
+    if (!addr) return;
+
+    setAddForm((prev) => ({
+      ...prev,
+      selectedAddressId: addressId,
+      street: addr.street ?? addr.Street ?? "",
+      buildingNo: String(addr.buildingNo ?? addr.BuildingNo ?? ""),
+      city: addr.city ?? addr.City ?? "",
+      governorate: addr.governorate ?? addr.Governorate ?? "",
+    }));
+  };
+
   // ─── ADD ───
   const handleAdd = async () => {
     const {
@@ -189,10 +261,20 @@ export default function Pharmacies() {
       managerEmail,
       managerPhone,
       managerQualification,
+      street,
+      city,
+      governorate,
     } = addForm;
 
     if (!pharmacyName || !managerName || !managerEmail || !managerPhone) {
       setErrorMsg("Please fill all required fields (*)");
+      return;
+    }
+
+    if (!street && !city && !governorate) {
+      setErrorMsg(
+        "Please enter the pharmacy address (street, city, governorate)",
+      );
       return;
     }
 
@@ -202,9 +284,18 @@ export default function Pharmacies() {
     }
 
     try {
+      // ✅ بناء الـ Location من حقول العنوان المنظمة
+      const pharmacyLocation = buildLocationText({
+        street: addForm.street,
+        buildingNo: addForm.buildingNo,
+        city: addForm.city,
+        governorate: addForm.governorate,
+      });
+
       const payload = {
         PharmacyName: addForm.pharmacyName,
-        PharmacyLocation: addForm.pharmacyLocation || "Not provided",
+        PharmacyLocation: pharmacyLocation || "Not provided",
+        // اختياري — لو فاضي يتبعت 0
         Latitude: parseFloat(addForm.latitude) || 0,
         Longitude: parseFloat(addForm.longitude) || 0,
         OpenHours: addForm.openHours || "9AM - 11PM",
@@ -214,6 +305,7 @@ export default function Pharmacies() {
         ManagerQualification: managerQualification || "N/A",
         ManagerExperienceYears: parseInt(addForm.managerExperienceYears) || 0,
       };
+
       if (addForm.isBranch && addForm.parentPharmacyId) {
         payload.ParentPharmacyId = parseInt(addForm.parentPharmacyId);
       }
@@ -233,6 +325,7 @@ export default function Pharmacies() {
       });
 
       setAddForm(emptyForm);
+      setShowAdvanced(false);
       setModal(null);
       fetchAll();
       fetchMain();
@@ -252,13 +345,18 @@ export default function Pharmacies() {
   // ─── EDIT ───
   const openEdit = (p) => {
     setSelected(p);
+    const parsed = parseLocationText(p.location);
     setEditForm({
       name: p.name,
-      location: p.location,
+      street: parsed.street,
+      buildingNo: parsed.buildingNo,
+      city: parsed.city,
+      governorate: parsed.governorate,
       contactNumber: p.contactNumber,
       latitude: p.latitude,
       longitude: p.longitude,
     });
+    setShowAdvancedEdit(false);
     setModal("edit");
   };
 
@@ -267,9 +365,17 @@ export default function Pharmacies() {
       setErrorMsg("Pharmacy name is required");
       return;
     }
+
+    const newLocation = buildLocationText({
+      street: editForm.street,
+      buildingNo: editForm.buildingNo,
+      city: editForm.city,
+      governorate: editForm.governorate,
+    });
+
     const ok = await update(selected.id, {
       name: editForm.name,
-      location: editForm.location,
+      location: newLocation || "Not provided",
       contactNumber: editForm.contactNumber,
       latitude: parseFloat(editForm.latitude) || 0,
       longitude: parseFloat(editForm.longitude) || 0,
@@ -460,7 +566,6 @@ export default function Pharmacies() {
 
               {data.map((p) => (
                 <tr key={p.id} className="border-t hover:bg-gray-50/60">
-                  {/* Logo */}
                   <td className="px-3 py-3">
                     <div className="flex justify-center">
                       {p.imageUrl ? (
@@ -499,7 +604,6 @@ export default function Pharmacies() {
                     {p.totalOrders}
                   </td>
 
-                  {/* Actions */}
                   <td className="px-3 py-3">
                     <div className="flex justify-center gap-1.5">
                       <IconBtn
@@ -573,7 +677,7 @@ export default function Pharmacies() {
 
       {/* ════════ ADD MODAL ════════ */}
       {modal === "add" && (
-        <Modal onClose={() => setModal(null)} width="520px">
+        <Modal onClose={() => setModal(null)} width="560px">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
             <Plus size={18} /> Add New Pharmacy
           </h2>
@@ -590,31 +694,126 @@ export default function Pharmacies() {
               onChange={(v) => setAddForm({ ...addForm, pharmacyName: v })}
             />
             <Field
-              label="Location"
-              placeholder="e.g. Nasr City, Cairo"
-              value={addForm.pharmacyLocation}
-              onChange={(v) => setAddForm({ ...addForm, pharmacyLocation: v })}
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <Field
-                label="Latitude"
-                placeholder="30.0444"
-                value={addForm.latitude}
-                onChange={(v) => setAddForm({ ...addForm, latitude: v })}
-              />
-              <Field
-                label="Longitude"
-                placeholder="31.2357"
-                value={addForm.longitude}
-                onChange={(v) => setAddForm({ ...addForm, longitude: v })}
-              />
-            </div>
-            <Field
               label="Open Hours"
               placeholder="9AM - 11PM"
               value={addForm.openHours}
               onChange={(v) => setAddForm({ ...addForm, openHours: v })}
             />
+          </Section>
+
+          {/* ✅ Address Section */}
+          <Section title="Pharmacy Address">
+            {/* Saved Addresses Suggestions */}
+            {addresses && addresses.length > 0 && (
+              <div className="rounded-lg bg-blue-50 p-3">
+                <label className="mb-1 flex items-center gap-1 text-xs text-blue-700">
+                  <Home size={11} /> Use a saved address (optional)
+                </label>
+                <select
+                  className="w-full rounded-lg border bg-white p-2 text-sm"
+                  value={addForm.selectedAddressId}
+                  onChange={(e) => handleSelectSavedAddress(e.target.value)}
+                  disabled={addressLoading}
+                >
+                  <option value="">
+                    -- {addressLoading ? "Loading..." : "Select to autofill"} --
+                  </option>
+                  {addresses.map((a) => {
+                    const id = a.id ?? a.Id;
+                    const street = a.street ?? a.Street ?? "";
+                    const city = a.city ?? a.City ?? "";
+                    const gov = a.governorate ?? a.Governorate ?? "";
+                    return (
+                      <option key={id} value={id}>
+                        {[street, city, gov].filter(Boolean).join(", ")}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
+
+            <Field
+              label="Street *"
+              placeholder="e.g. El-Tahrir Street"
+              value={addForm.street}
+              onChange={(v) =>
+                setAddForm({ ...addForm, street: v, selectedAddressId: "" })
+              }
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Field
+                label="Building No."
+                placeholder="e.g. 12"
+                value={addForm.buildingNo}
+                onChange={(v) =>
+                  setAddForm({
+                    ...addForm,
+                    buildingNo: v,
+                    selectedAddressId: "",
+                  })
+                }
+              />
+              <Field
+                label="City / Area *"
+                placeholder="e.g. Nasr City"
+                value={addForm.city}
+                onChange={(v) =>
+                  setAddForm({ ...addForm, city: v, selectedAddressId: "" })
+                }
+              />
+            </div>
+            <Field
+              label="Governorate *"
+              placeholder="e.g. Cairo"
+              value={addForm.governorate}
+              onChange={(v) =>
+                setAddForm({
+                  ...addForm,
+                  governorate: v,
+                  selectedAddressId: "",
+                })
+              }
+            />
+
+            {/* Preview */}
+            {(addForm.street || addForm.city || addForm.governorate) && (
+              <div className="rounded-md bg-gray-50 p-2 text-xs text-gray-600">
+                <span className="font-semibold">Preview:</span>{" "}
+                {buildLocationText(addForm) || "—"}
+              </div>
+            )}
+
+            {/* Advanced (Optional Lat/Long) */}
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((s) => !s)}
+              className="flex items-center gap-1 text-xs text-secondary hover:underline"
+            >
+              {showAdvanced ? (
+                <ChevronUp size={12} />
+              ) : (
+                <ChevronDown size={12} />
+              )}
+              Advanced (GPS coordinates - optional)
+            </button>
+
+            {showAdvanced && (
+              <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-3">
+                <Field
+                  label="Latitude"
+                  placeholder="30.0444"
+                  value={addForm.latitude}
+                  onChange={(v) => setAddForm({ ...addForm, latitude: v })}
+                />
+                <Field
+                  label="Longitude"
+                  placeholder="31.2357"
+                  value={addForm.longitude}
+                  onChange={(v) => setAddForm({ ...addForm, longitude: v })}
+                />
+              </div>
+            )}
           </Section>
 
           {/* Manager Section */}
@@ -840,7 +1039,7 @@ export default function Pharmacies() {
 
       {/* ════════ EDIT MODAL ════════ */}
       {modal === "edit" && selected && (
-        <Modal onClose={() => setModal(null)}>
+        <Modal onClose={() => setModal(null)} width="500px">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
             <Edit size={18} /> Edit Pharmacy
           </h2>
@@ -851,32 +1050,80 @@ export default function Pharmacies() {
             value={editForm.name}
             onChange={(v) => setEditForm({ ...editForm, name: v })}
           />
-          <Field
-            label="Location"
-            placeholder="e.g. Nasr City"
-            value={editForm.location}
-            onChange={(v) => setEditForm({ ...editForm, location: v })}
-          />
+
           <Field
             label="Contact Number"
             placeholder="01012345678"
             value={editForm.contactNumber}
             onChange={(v) => setEditForm({ ...editForm, contactNumber: v })}
           />
-          <div className="grid grid-cols-2 gap-3">
+
+          {/* ✅ Address Fields في الـ Edit */}
+          <Section title="Address">
             <Field
-              label="Latitude"
-              placeholder="30.0444"
-              value={editForm.latitude}
-              onChange={(v) => setEditForm({ ...editForm, latitude: v })}
+              label="Street"
+              placeholder="e.g. El-Tahrir Street"
+              value={editForm.street}
+              onChange={(v) => setEditForm({ ...editForm, street: v })}
             />
+            <div className="grid grid-cols-2 gap-3">
+              <Field
+                label="Building No."
+                placeholder="e.g. 12"
+                value={editForm.buildingNo}
+                onChange={(v) => setEditForm({ ...editForm, buildingNo: v })}
+              />
+              <Field
+                label="City / Area"
+                placeholder="e.g. Nasr City"
+                value={editForm.city}
+                onChange={(v) => setEditForm({ ...editForm, city: v })}
+              />
+            </div>
             <Field
-              label="Longitude"
-              placeholder="31.2357"
-              value={editForm.longitude}
-              onChange={(v) => setEditForm({ ...editForm, longitude: v })}
+              label="Governorate"
+              placeholder="e.g. Cairo"
+              value={editForm.governorate}
+              onChange={(v) => setEditForm({ ...editForm, governorate: v })}
             />
-          </div>
+
+            {(editForm.street || editForm.city || editForm.governorate) && (
+              <div className="rounded-md bg-gray-50 p-2 text-xs text-gray-600">
+                <span className="font-semibold">Preview:</span>{" "}
+                {buildLocationText(editForm) || "—"}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowAdvancedEdit((s) => !s)}
+              className="flex items-center gap-1 text-xs text-secondary hover:underline"
+            >
+              {showAdvancedEdit ? (
+                <ChevronUp size={12} />
+              ) : (
+                <ChevronDown size={12} />
+              )}
+              Advanced (GPS coordinates - optional)
+            </button>
+
+            {showAdvancedEdit && (
+              <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-3">
+                <Field
+                  label="Latitude"
+                  placeholder="30.0444"
+                  value={editForm.latitude}
+                  onChange={(v) => setEditForm({ ...editForm, latitude: v })}
+                />
+                <Field
+                  label="Longitude"
+                  placeholder="31.2357"
+                  value={editForm.longitude}
+                  onChange={(v) => setEditForm({ ...editForm, longitude: v })}
+                />
+              </div>
+            )}
+          </Section>
 
           <div className="flex justify-end gap-2 pt-1">
             <button

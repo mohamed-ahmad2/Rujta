@@ -24,9 +24,6 @@ namespace Rujta.Application.Interfaces
         IDiscountRepository Discount { get; }
         ICompanyRepository Companies { get; }
 
-        Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
-        Task CommitTransactionAsync(IDbContextTransaction transaction);  
-        Task RollbackTransactionAsync(IDbContextTransaction transaction);  
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
         IExecutionStrategy CreateExecutionStrategy();
      
