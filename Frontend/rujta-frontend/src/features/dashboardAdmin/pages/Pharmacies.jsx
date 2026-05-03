@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Search,
   Plus,
@@ -25,6 +25,56 @@ import {
 } from "lucide-react";
 import useSuperAdmin from "../../super-admin/hook/useSuperAdmin";
 import useAddress from "../../address/hook/useAddress";
+
+/* ─────────────────────────────────────────────
+   IMAGE URL HELPER — للحماية من الـ legacy data
+───────────────────────────────────────────── */
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://localhost:7001";
+
+const getImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (url.startsWith("blob:") || url.startsWith("data:")) return url;
+  return `${API_URL}${url.startsWith("/") ? url : `/${url}`}`;
+};
+
+/* ─────────────────────────────────────────────
+   PHARMACY AVATAR — صورة + fallback تلقائي
+───────────────────────────────────────────── */
+function PharmacyAvatar({ src, name, size = "md" }) {
+  const [errored, setErrored] = useState(false);
+
+  // ✅ reset لو الـ src اتغير
+  useEffect(() => {
+    setErrored(false);
+  }, [src]);
+
+  const sizeClasses = {
+    sm: "h-10 w-10 text-sm",
+    md: "h-14 w-14 text-lg",
+    lg: "h-20 w-20 text-2xl",
+  };
+
+  const showImage = src && !errored;
+
+  return showImage ? (
+    <img
+      src={getImageUrl(src)}
+      onError={() => setErrored(true)}
+      className={`${sizeClasses[size]} rounded-full border object-cover`}
+      alt={name || "pharmacy"}
+    />
+  ) : (
+    <div
+      className={`${sizeClasses[size]} flex items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100 font-semibold text-blue-700`}
+    >
+      {(name || "?").charAt(0).toUpperCase()}
+    </div>
+  );
+}
 
 /* ─────────────────────────────────────────────
    MODAL WRAPPER
@@ -114,7 +164,6 @@ const buildLocationText = ({ street, buildingNo, city, governorate }) => {
 };
 
 const parseLocationText = (text = "") => {
-  // Best-effort split for editing legacy location strings
   const parts = text
     .split(",")
     .map((p) => p.trim())
@@ -147,7 +196,6 @@ export default function Pharmacies() {
     resetPassword,
   } = useSuperAdmin();
 
-  // ✅ استخدام useAddress لجلب العناوين المحفوظة (suggestions)
   const {
     addresses,
     fetchUserAddresses,
@@ -162,19 +210,17 @@ export default function Pharmacies() {
   const [successData, setSuccessData] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [confirmData, setConfirmData] = useState(null);
-  const [filterType, setFilterType] = useState("all"); // all | main | branch
+  const [filterType, setFilterType] = useState("all");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showAdvancedEdit, setShowAdvancedEdit] = useState(false);
 
   /* ──── ADD FORM ──── */
   const emptyForm = {
     pharmacyName: "",
-    // ✅ Address fields بدلاً من lat/long يدوية
     street: "",
     buildingNo: "",
     city: "",
     governorate: "",
-    // اختياري (Advanced)
     latitude: "",
     longitude: "",
     openHours: "9AM - 11PM",
@@ -211,6 +257,15 @@ export default function Pharmacies() {
     fetchUserAddresses();
   }, [fetchAll, fetchMain, fetchUserAddresses]);
 
+  // ✅ تنظيف blob URL لما يتغير أو يتقفل الـ modal
+  useEffect(() => {
+    return () => {
+      if (addForm.imagePreview && addForm.imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(addForm.imagePreview);
+      }
+    };
+  }, [addForm.imagePreview]);
+
   /* ──── filtering & pagination ──── */
   const filtered = useMemo(() => {
     let list = pharmacies;
@@ -232,26 +287,37 @@ export default function Pharmacies() {
      HANDLERS
   ════════════════════════════════════════════ */
 
-  // ─── استخدام عنوان محفوظ لملء الحقول تلقائياً (ADD) ───
-  const handleSelectSavedAddress = (addressId) => {
-    if (!addressId) {
-      setAddForm((prev) => ({ ...prev, selectedAddressId: "" }));
-      return;
-    }
-    const addr = addresses.find(
-      (a) => String(a.id ?? a.Id) === String(addressId),
-    );
-    if (!addr) return;
+  const handleSelectSavedAddress = useCallback(
+    (addressId) => {
+      if (!addressId) {
+        setAddForm((prev) => ({ ...prev, selectedAddressId: "" }));
+        return;
+      }
+      const addr = addresses.find(
+        (a) => String(a.id ?? a.Id) === String(addressId),
+      );
+      if (!addr) return;
 
-    setAddForm((prev) => ({
-      ...prev,
-      selectedAddressId: addressId,
-      street: addr.street ?? addr.Street ?? "",
-      buildingNo: String(addr.buildingNo ?? addr.BuildingNo ?? ""),
-      city: addr.city ?? addr.City ?? "",
-      governorate: addr.governorate ?? addr.Governorate ?? "",
-    }));
-  };
+      setAddForm((prev) => ({
+        ...prev,
+        selectedAddressId: addressId,
+        street: addr.street ?? addr.Street ?? "",
+        buildingNo: String(addr.buildingNo ?? addr.BuildingNo ?? ""),
+        city: addr.city ?? addr.City ?? "",
+        governorate: addr.governorate ?? addr.Governorate ?? "",
+      }));
+    },
+    [addresses],
+  );
+
+  const resetAddForm = useCallback(() => {
+    if (addForm.imagePreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(addForm.imagePreview);
+    }
+    setAddForm(emptyForm);
+    setShowAdvanced(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addForm.imagePreview]);
 
   // ─── ADD ───
   const handleAdd = async () => {
@@ -284,7 +350,6 @@ export default function Pharmacies() {
     }
 
     try {
-      // ✅ بناء الـ Location من حقول العنوان المنظمة
       const pharmacyLocation = buildLocationText({
         street: addForm.street,
         buildingNo: addForm.buildingNo,
@@ -295,7 +360,6 @@ export default function Pharmacies() {
       const payload = {
         PharmacyName: addForm.pharmacyName,
         PharmacyLocation: pharmacyLocation || "Not provided",
-        // اختياري — لو فاضي يتبعت 0
         Latitude: parseFloat(addForm.latitude) || 0,
         Longitude: parseFloat(addForm.longitude) || 0,
         OpenHours: addForm.openHours || "9AM - 11PM",
@@ -324,8 +388,7 @@ export default function Pharmacies() {
         password: res.generatedPassword ?? res.GeneratedPassword ?? "",
       });
 
-      setAddForm(emptyForm);
-      setShowAdvanced(false);
+      resetAddForm();
       setModal(null);
       fetchAll();
       fetchMain();
@@ -441,6 +504,22 @@ export default function Pharmacies() {
         if (ok) fetchAll();
         else setErrorMsg("Could not restore pharmacy.");
       },
+    });
+  };
+
+  // ─── IMAGE UPLOAD ───
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (addForm.imagePreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(addForm.imagePreview);
+    }
+
+    setAddForm({
+      ...addForm,
+      image: file,
+      imagePreview: URL.createObjectURL(file),
     });
   };
 
@@ -568,17 +647,11 @@ export default function Pharmacies() {
                 <tr key={p.id} className="border-t hover:bg-gray-50/60">
                   <td className="px-3 py-3">
                     <div className="flex justify-center">
-                      {p.imageUrl ? (
-                        <img
-                          src={p.imageUrl}
-                          className="h-10 w-10 rounded-full border object-cover"
-                          alt=""
-                        />
-                      ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100 text-sm font-semibold text-blue-700">
-                          {p.name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                      <PharmacyAvatar
+                        src={p.imageUrl}
+                        name={p.name}
+                        size="sm"
+                      />
                     </div>
                   </td>
 
@@ -701,9 +774,8 @@ export default function Pharmacies() {
             />
           </Section>
 
-          {/* ✅ Address Section */}
+          {/* Address Section */}
           <Section title="Pharmacy Address">
-            {/* Saved Addresses Suggestions */}
             {addresses && addresses.length > 0 && (
               <div className="rounded-lg bg-blue-50 p-3">
                 <label className="mb-1 flex items-center gap-1 text-xs text-blue-700">
@@ -776,7 +848,6 @@ export default function Pharmacies() {
               }
             />
 
-            {/* Preview */}
             {(addForm.street || addForm.city || addForm.governorate) && (
               <div className="rounded-md bg-gray-50 p-2 text-xs text-gray-600">
                 <span className="font-semibold">Preview:</span>{" "}
@@ -784,7 +855,6 @@ export default function Pharmacies() {
               </div>
             )}
 
-            {/* Advanced (Optional Lat/Long) */}
             <button
               type="button"
               onClick={() => setShowAdvanced((s) => !s)}
@@ -880,15 +950,7 @@ export default function Pharmacies() {
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    setAddForm({
-                      ...addForm,
-                      image: file,
-                      imagePreview: URL.createObjectURL(file),
-                    });
-                  }}
+                  onChange={handleImageUpload}
                 />
               </label>
             </div>
@@ -946,7 +1008,10 @@ export default function Pharmacies() {
           {/* Buttons */}
           <div className="flex justify-end gap-2 pt-2">
             <button
-              onClick={() => setModal(null)}
+              onClick={() => {
+                resetAddForm();
+                setModal(null);
+              }}
               className="rounded-lg border px-5 py-2 text-sm hover:bg-gray-50"
             >
               Cancel
@@ -967,17 +1032,11 @@ export default function Pharmacies() {
       {modal === "view" && selected && (
         <Modal onClose={() => setModal(null)} width="500px">
           <div className="flex items-center gap-3 border-b pb-3">
-            {selected.imageUrl ? (
-              <img
-                src={selected.imageUrl}
-                className="h-14 w-14 rounded-full border object-cover"
-                alt=""
-              />
-            ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100 text-lg font-semibold text-blue-700">
-                {selected.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <PharmacyAvatar
+              src={selected.imageUrl}
+              name={selected.name}
+              size="md"
+            />
             <div>
               <h2 className="text-lg font-semibold">{selected.name}</h2>
               <div className="mt-1 flex gap-2">
@@ -1058,7 +1117,6 @@ export default function Pharmacies() {
             onChange={(v) => setEditForm({ ...editForm, contactNumber: v })}
           />
 
-          {/* ✅ Address Fields في الـ Edit */}
           <Section title="Address">
             <Field
               label="Street"
@@ -1143,7 +1201,7 @@ export default function Pharmacies() {
         </Modal>
       )}
 
-      {/* ════════ SUCCESS MODAL (credentials) ════════ */}
+      {/* ════════ SUCCESS MODAL ════════ */}
       {successData && (
         <Modal onClose={() => setSuccessData(null)}>
           <h2 className="flex items-center gap-2 text-lg font-semibold text-green-600">
@@ -1156,7 +1214,6 @@ export default function Pharmacies() {
             won't see them again.
           </p>
 
-          {/* EMAIL */}
           <div className="flex items-center justify-between rounded-lg border bg-gray-50 p-3">
             <div className="min-w-0">
               <p className="flex items-center gap-1 text-xs text-gray-400">
@@ -1167,7 +1224,6 @@ export default function Pharmacies() {
             <CopyButton value={successData.email} />
           </div>
 
-          {/* PASSWORD */}
           <div className="flex items-center justify-between rounded-lg border bg-gray-50 p-3">
             <div className="min-w-0">
               <p className="flex items-center gap-1 text-xs text-gray-400">

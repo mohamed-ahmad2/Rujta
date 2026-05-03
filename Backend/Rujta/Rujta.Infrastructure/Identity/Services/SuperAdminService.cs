@@ -12,20 +12,27 @@ namespace Rujta.Infrastructure.Identity.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<SuperAdminService> _logger;
         private readonly IMapper _mapper;
+        private readonly IHttpContextAccessor _httpContextAccessor; 
 
         public SuperAdminService(
             IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager,
             ILogger<SuperAdminService> logger,
-            IMapper mapper)
+            IMapper mapper,
+            IHttpContextAccessor httpContextAccessor) 
         {
             _unitOfWork = unitOfWork;
             _userManager = userManager;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _mapper = mapper;
+            _httpContextAccessor = httpContextAccessor
+                ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         }
 
-        public async Task<CreatePharmacyResultDto> CreatePharmacyAsync(CreatePharmacyDto dto,Guid adminId,CancellationToken cancellationToken = default)
+        public async Task<CreatePharmacyResultDto> CreatePharmacyAsync(
+            CreatePharmacyDto dto,
+            Guid adminId,
+            CancellationToken cancellationToken = default)
         {
             await EnsureManagerEmailIsUniqueAsync(dto.ManagerEmail);
 
@@ -36,27 +43,24 @@ namespace Rujta.Infrastructure.Identity.Services
 
                 await EnsureAdminExistsAsync(effectiveAdminId, ct);
 
-               
                 var manager = CreateManagerEntity(dto, effectiveAdminId);
                 await _unitOfWork.People.AddAsync(manager, ct);
 
-              
                 var generatedPassword = GenerateStrongPassword();
                 await CreateIdentityUserAsync(dto, manager.Id, generatedPassword);
 
+              
                 var imageUrl = await SaveImageAsync(dto.Image, ct);
+
                 var pharmacy = BuildPharmacyEntity(
                     dto, manager.Id, effectiveAdminId, imageUrl);
 
                 await _unitOfWork.Pharmacies.AddAsync(pharmacy, ct);
 
-              
                 await _unitOfWork.SaveAsync(ct);
 
-               
                 manager.PharmacyId = pharmacy.Id;
 
-              
                 await _unitOfWork.SaveAsync(ct);
 
                 LogPharmacyCreated(dto, effectiveAdminId);
@@ -209,6 +213,9 @@ namespace Rujta.Infrastructure.Identity.Services
 
             foreach (var dto in dtos)
             {
+              
+                dto.ImageUrl = EnsureAbsoluteUrl(dto.ImageUrl);
+
                 dto.TotalOrders = await _unitOfWork.SuperAdmin
                     .GetTotalOrdersAsync(dto.Id, cancellationToken);
             }
@@ -231,6 +238,7 @@ namespace Rujta.Infrastructure.Identity.Services
                 return null;
 
             var dto = _mapper.Map<PharmacyDto>(pharmacy);
+            dto.ImageUrl = EnsureAbsoluteUrl(dto.ImageUrl); 
             dto.TotalOrders = await _unitOfWork.SuperAdmin
                 .GetTotalOrdersAsync(pharmacy.Id, cancellationToken);
 
@@ -263,7 +271,9 @@ namespace Rujta.Infrastructure.Identity.Services
 
             await _unitOfWork.SaveAsync(cancellationToken);
 
-            return _mapper.Map<PharmacyDto>(pharmacy);
+            var result = _mapper.Map<PharmacyDto>(pharmacy);
+            result.ImageUrl = EnsureAbsoluteUrl(result.ImageUrl); 
+            return result;
         }
 
         public async Task<string> ResetPharmacyManagerPasswordAsync(
@@ -338,7 +348,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return true;
         }
 
-        public async Task<bool> RestorePharmacyAsync(int pharmacyId,CancellationToken cancellationToken = default)
+        public async Task<bool> RestorePharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(pharmacyId, cancellationToken);
             if (pharmacy == null)
@@ -361,6 +371,7 @@ namespace Rujta.Infrastructure.Identity.Services
 
             foreach (var dto in dtos)
             {
+                dto.ImageUrl = EnsureAbsoluteUrl(dto.ImageUrl);
                 dto.TotalOrders = await _unitOfWork.SuperAdmin
                     .GetTotalOrdersAsync(dto.Id, cancellationToken);
 
@@ -371,7 +382,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return dtos;
         }
 
-        public async Task<IEnumerable<BranchDto>> GetBranchesAsync(int parentId,CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<BranchDto>> GetBranchesAsync(int parentId, CancellationToken cancellationToken = default)
         {
             var parent = await _unitOfWork.Pharmacies.GetByIdAsync(parentId, cancellationToken);
             if (parent == null)
@@ -387,7 +398,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return _mapper.Map<IEnumerable<BranchDto>>(branches);
         }
 
-        public async Task<PharmacyTreeDto?> GetPharmacyTreeAsync(int rootId,CancellationToken cancellationToken = default)
+        public async Task<PharmacyTreeDto?> GetPharmacyTreeAsync(int rootId, CancellationToken cancellationToken = default)
         {
             var root = await _unitOfWork.Pharmacies
                 .GetByIdWithIncludesAsync(rootId, cancellationToken,
@@ -404,7 +415,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return _mapper.Map<PharmacyTreeDto>(root);
         }
 
-        public async Task<bool> DetachBranchAsync( int branchId,CancellationToken cancellationToken = default)
+        public async Task<bool> DetachBranchAsync(int branchId, CancellationToken cancellationToken = default)
         {
             var branch = await _unitOfWork.Pharmacies.GetByIdAsync(branchId, cancellationToken);
             if (branch == null)
@@ -420,7 +431,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return true;
         }
 
-        public async Task<bool> AttachBranchAsync( int branchId,int parentId,CancellationToken cancellationToken = default)
+        public async Task<bool> AttachBranchAsync(int branchId, int parentId, CancellationToken cancellationToken = default)
         {
             if (branchId == parentId)
                 throw new InvalidOperationException("A pharmacy cannot be a branch of itself.");
@@ -453,7 +464,8 @@ namespace Rujta.Infrastructure.Identity.Services
             return true;
         }
 
-        private static async Task<string?> SaveImageAsync(IFormFile? image, CancellationToken ct)
+ 
+        private async Task<string?> SaveImageAsync(IFormFile? image, CancellationToken ct)
         {
             if (image == null) return null;
 
@@ -467,7 +479,28 @@ namespace Rujta.Infrastructure.Identity.Services
             await using var stream = new FileStream(filePath, FileMode.Create);
             await image.CopyToAsync(stream, ct);
 
-            return $"/images/pharmacies/{fileName}";
+            var relativePath = $"/images/pharmacies/{fileName}";
+            return BuildAbsoluteUrl(relativePath);
+        }
+
+      
+        private string BuildAbsoluteUrl(string relativePath)
+        {
+            var request = _httpContextAccessor.HttpContext?.Request;
+            if (request == null)
+                return relativePath;
+
+            return $"{request.Scheme}://{request.Host}{relativePath}";
+        }
+
+     
+        private string? EnsureAbsoluteUrl(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return url;
+            if (url.StartsWith("http://") || url.StartsWith("https://"))
+                return url;
+
+            return BuildAbsoluteUrl(url.StartsWith('/') ? url : $"/{url}");
         }
 
         private static string GenerateStrongPassword()

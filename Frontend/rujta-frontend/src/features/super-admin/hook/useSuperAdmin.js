@@ -17,6 +17,9 @@ import {
   attachBranch,
 } from "../api/superAdmin";
 
+/* ─────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────── */
 const toNumber = (value, fallback = 0) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -47,6 +50,9 @@ const extractErrorMessage = (err) => {
   return "Failed to load pharmacies";
 };
 
+/* ─────────────────────────────────────────────
+   MAPPERS
+───────────────────────────────────────────── */
 const mapPharmacy = (item = {}) => {
   const id = item.id ?? item.Id ?? null;
   const totalOrders = toNumber(item.totalOrders ?? item.TotalOrders);
@@ -55,7 +61,46 @@ const mapPharmacy = (item = {}) => {
   const longitude = toNumber(item.longitude ?? item.Longitude);
   const isActive = item.isActive ?? item.IsActive ?? true;
   const isDeleted = item.isDeleted ?? item.IsDeleted ?? false;
-  const parentId = item.parentPharmacyID ?? item.ParentPharmacyID ?? null;
+
+  // ✅ احسب الـ parentId من كل الصيغ الممكنة
+  const rawParentId =
+    item.parentPharmacyId ??
+    item.ParentPharmacyId ??
+    item.parentPharmacyID ??
+    item.ParentPharmacyID ??
+    item.parentId ??
+    item.ParentId ??
+    item.parentPharmacy?.id ??
+    item.ParentPharmacy?.Id ??
+    null;
+
+  // ✅ تأكد إنه فعلاً null/undefined مش 0 أو ""
+  const hasParent =
+    rawParentId !== null &&
+    rawParentId !== undefined &&
+    rawParentId !== 0 &&
+    rawParentId !== "";
+
+  // ✅ استخدم الـ flags اللي جاية من الباك إذا متاحة (احتياط)
+  const backendIsBranch = item.isBranch ?? item.IsBranch;
+  const backendIsMain = item.isMainPharmacy ?? item.IsMainPharmacy;
+
+  let isBranch;
+  if (typeof backendIsBranch === "boolean") {
+    isBranch = backendIsBranch;
+  } else if (typeof backendIsMain === "boolean") {
+    isBranch = !backendIsMain;
+  } else {
+    isBranch = hasParent;
+  }
+
+  const parentId = hasParent ? rawParentId : null;
+  const parentName =
+    item.parentPharmacyName ??
+    item.ParentPharmacyName ??
+    item.parentPharmacy?.name ??
+    item.ParentPharmacy?.Name ??
+    null;
 
   return {
     id,
@@ -70,12 +115,18 @@ const mapPharmacy = (item = {}) => {
 
     managerId: item.managerId ?? item.ManagerId ?? null,
     managerName: item.managerName ?? item.ManagerName ?? "-",
+    managerEmail: item.managerEmail ?? item.ManagerEmail ?? null,
+    managerPhone: item.managerPhone ?? item.ManagerPhone ?? null,
+
     adminId: item.adminId ?? item.AdminId ?? null,
     adminName: item.adminName ?? item.AdminName ?? "-",
+    adminEmail: item.adminEmail ?? item.AdminEmail ?? null,
 
     parentPharmacyId: parentId,
-    isBranch: parentId !== null,
-    type: parentId !== null ? "Branch" : "Main Pharmacy",
+    parentPharmacyName: parentName,
+    isBranch,
+    isMainPharmacy: !isBranch,
+    type: isBranch ? "Branch" : "Main Pharmacy",
 
     totalOrders,
     displayTotalOrders: `${totalOrders} Orders`,
@@ -112,6 +163,9 @@ const mapTopStat = (item = {}) => ({
   raw: item,
 });
 
+/* ═══════════════════════════════════════════════════
+   HOOK
+═══════════════════════════════════════════════════ */
 export default function useSuperAdmin() {
   const [pharmacies, setPharmacies] = useState([]);
   const [mainPharmacies, setMainPharmacies] = useState([]);
@@ -122,6 +176,7 @@ export default function useSuperAdmin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  /* ──── FETCH ──── */
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
@@ -240,6 +295,7 @@ export default function useSuperAdmin() {
     }
   };
 
+  /* ──── MUTATIONS ──── */
   const create = async (payload = {}) => {
     setLoading(true);
     try {

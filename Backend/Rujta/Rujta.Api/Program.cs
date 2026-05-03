@@ -1,4 +1,5 @@
-﻿using Rujta.API.Realtime.Services;
+﻿using Microsoft.AspNetCore.HttpOverrides;
+using Rujta.API.Realtime.Services;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices.IAuth;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
@@ -68,6 +69,11 @@ namespace Rujta.API
                 .GetRequiredService<ILoggerFactory>()
                 .CreateLogger("Rujta.API");
 
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor
+                     | ForwardedHeaders.XForwardedProto
+            });
 
             try
             {
@@ -113,6 +119,10 @@ namespace Rujta.API
                     "https://rujta.vercel.app"
                 }
             });
+
+            
+
+            app.UseStaticFiles();
 
             app.UseAuthentication();
             app.UseAuthorization();
