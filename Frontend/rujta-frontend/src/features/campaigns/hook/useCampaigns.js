@@ -67,32 +67,17 @@ export default function useCampaigns() {
     }
   }, []);
 
+  // create now receives durationDays + price in the payload — no changes needed here,
+  // the payload is built in Ads.jsx and passed straight through to the API
   const create = async (data) => {
-    console.group("🚀 [useCampaigns] create()");
-    console.log("📦 Payload being sent:", data);
-    console.log("📏 imageDataUrl length:", data?.imageDataUrl?.length ?? "none");
-    console.log("🎨 colorFrom:", data?.colorFrom, "| colorTo:", data?.colorTo);
-    console.log("💊 medicineId:", data?.medicineId, "| medicineName:", data?.medicineName);
-    console.log("📝 headline:", data?.headline, "| subtext:", data?.subtext);
-
     try {
       setLoading(true);
-      console.log("📡 Calling POST /ads ...");
       const res = await createAd(data);
-      console.log("✅ POST /ads success! Response:", res);
-      console.log("🆔 Created ad ID:", res?.data?.id);
       await fetchAll();
-      console.groupEnd();
-      return res.data;
+      return res.data; // ← returns created ad so caller gets the id
     } catch (err) {
-      console.error("❌ POST /ads FAILED");
-      console.error("📛 Error message:", err.message);
-      console.error("📛 HTTP status:", err?.response?.status);
-      console.error("📛 Server response body:", err?.response?.data);
-      console.error("📛 Full error object:", err);
-      console.groupEnd();
       setError(err.message || "Failed to create ad");
-      throw err;
+      throw err; // re-throw so Ads.jsx can catch and show error
     } finally {
       setLoading(false);
     }

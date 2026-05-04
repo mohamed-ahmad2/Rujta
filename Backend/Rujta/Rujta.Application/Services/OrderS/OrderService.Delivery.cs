@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Services.OrderS
 {
@@ -10,53 +9,59 @@ namespace Rujta.Application.Services.OrderS
             int pharmacyId,
             CancellationToken cancellationToken = default)
         {
-            await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+            _logger.LogInformation("Marking Order {OrderId} as Delivered", id);
+
+            Order? deliveredOrder = null;
 
             try
             {
-                _logger.LogInformation("Marking Order {OrderId} as Delivered", id);
+                var result = await _unitOfWork.ExecuteInTransactionAsync<(bool success, string message)>(
+                    async ct =>
+                    {
+                        var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(id, ct);
 
-                var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(id, cancellationToken);
+                        if (order == null)
+                            return (false, OrderMessages.OrderNotFound);
 
-                if (order == null)
-                    return (false, OrderMessages.OrderNotFound);
+                        if (order.PharmacyId != pharmacyId)
+                            return (false, "Unauthorized pharmacy access");
 
-                if (order.PharmacyId != pharmacyId)
-                    return (false, "Unauthorized pharmacy access");
+                        if (!CanChangeStatus(order.Status, OrderStatus.Delivered))
+                            return (false, OrderMessages.InvalidStateTransition);
 
-                if (!CanChangeStatus(order.Status, OrderStatus.Delivered))
-                    return (false, OrderMessages.InvalidStateTransition);
+                        var stockResult = await DeductInventoryAsync(order, ct);
+                        if (!stockResult.success)
+                            return stockResult;
 
-                var stockResult = await DeductInventoryAsync(order, cancellationToken);
-                if (!stockResult.success)
-                    return stockResult;
+                        order.Status = OrderStatus.Delivered;
 
-                order.Status = OrderStatus.Delivered;
+                        await _unitOfWork.SaveAsync(ct);
 
-                try
+                        deliveredOrder = order;
+
+                        return (true, OrderMessages.OrderMarkAsDelivered);
+                    },
+                    cancellationToken);
+
+
+                if (result.success && deliveredOrder != null)
                 {
-                    await _unitOfWork.SaveAsync(cancellationToken);
-                    await transaction.CommitAsync(cancellationToken);
-                    await SafeNotifyDeliveredAsync(order);
+                    await SafeNotifyDeliveredAsync(deliveredOrder);
+                }
 
-                    return (true, OrderMessages.OrderMarkAsDelivered);
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    await transaction.RollbackAsync(cancellationToken);
-                    _logger.LogWarning("Concurrency conflict when delivering Order {OrderId}", id);
-                    return (false, "Order was modified by another user. Please refresh and try again.");
-                }
+                return result;
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                _logger.LogWarning("Concurrency conflict when delivering Order {OrderId}", id);
+                return (false, "Order was modified by another user. Please refresh and try again.");
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync(cancellationToken);
                 _logger.LogError(ex, "Error delivering Order {OrderId}", id);
                 return (false, "An unexpected error occurred");
             }
         }
-
-        // ── Private Helper ─────────────────────────────────────────────────
 
         private async Task<(bool success, string message)> DeductInventoryAsync(
             Order order,

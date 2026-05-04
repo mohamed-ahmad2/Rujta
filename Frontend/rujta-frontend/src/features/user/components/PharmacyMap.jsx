@@ -1,3 +1,4 @@
+// src/features/pharmacies/components/PharmacyMap.jsx
 import {
   MapContainer,
   TileLayer,
@@ -6,21 +7,92 @@ import {
   Polyline,
   useMap,
 } from "react-leaflet";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import React from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-const greenIcon = new L.Icon({
-  iconUrl: "https://maps.gstatic.com/mapfiles/ms2/micons/green.png",
-  iconSize: [32, 32],
+const ROUTE_PALETTE = [
+  "#10B981",
+  "#8B5CF6",
+  "#F59E0B",
+  "#EF4444",
+  "#3B82F6",
+  "#EC4899",
+  "#14B8A6",
+  "#F97316",
+  "#6366F1",
+  "#84CC16",
+  "#06B6D4",
+  "#A855F7",
+];
+const getPharmacyColor = (i) => ROUTE_PALETTE[i % ROUTE_PALETTE.length];
+
+const makePinIcon = (color, { selected = false, hovered = false } = {}) => {
+  const size = hovered ? 40 : selected ? 36 : 30;
+  const h = Math.round(size * 1.43);
+  const innerR = hovered ? 8 : selected ? 7 : 6;
+  const sw = selected || hovered ? 2.5 : 1.8;
+  const glow = hovered ? 14 : selected ? 10 : 5;
+
+  return new L.DivIcon({
+    className: "",
+    html: `
+      <svg xmlns="http://www.w3.org/2000/svg"
+           width="${size}" height="${h}" viewBox="0 0 28 40"
+           style="filter:drop-shadow(0 2px ${glow}px rgba(0,0,0,.42));
+                  transition:all .18s ease">
+        <path
+          d="M14 .6C6.6.6.6 6.6.6 14 .6 24.7 14 39.4 14 39.4S27.4 24.7 27.4 14C27.4 6.6 21.4.6 14 .6z"
+          fill="${color}" stroke="white" stroke-width="${sw}"
+        />
+        <circle cx="14" cy="14" r="${innerR}" fill="white" opacity=".94"/>
+        ${
+          selected
+            ? `<path d="M10 14l3 3 5-5.5"
+                   stroke="${color}" stroke-width="2.2"
+                   stroke-linecap="round" stroke-linejoin="round"
+                   fill="none"/>`
+            : ""
+        }
+      </svg>`,
+    iconSize: [size, h],
+    iconAnchor: [size / 2, h],
+    popupAnchor: [0, -h],
+  });
+};
+
+const USER_ICON = new L.DivIcon({
+  className: "",
+  html: `
+    <div style="position:relative;width:22px;height:22px">
+      <div style="position:absolute;inset:-8px;border-radius:50%;
+                  background:rgba(59,130,246,.15)"></div>
+      <div style="position:absolute;inset:0;border-radius:50%;
+                  background:#3B82F6;border:3px solid white;
+                  box-shadow:0 0 0 4px rgba(59,130,246,.25),0 2px 8px rgba(0,0,0,.3)">
+      </div>
+    </div>`,
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+  popupAnchor: [0, -15],
 });
-const redIcon = new L.Icon({
-  iconUrl: "https://maps.gstatic.com/mapfiles/ms2/micons/red.png",
-  iconSize: [32, 32],
-});
-const blueIcon = new L.Icon({
-  iconUrl: "https://maps.gstatic.com/mapfiles/ms2/micons/blue.png",
-  iconSize: [32, 32],
+
+const DELIVERY_ICON = new L.DivIcon({
+  className: "",
+  html: `
+    <svg xmlns="http://www.w3.org/2000/svg"
+         width="34" height="48" viewBox="0 0 28 40"
+         style="filter:drop-shadow(0 3px 10px rgba(0,0,0,.45))">
+      <path d="M14 .6C6.6.6.6 6.6.6 14 .6 24.7 14 39.4 14 39.4S27.4 24.7 27.4 14C27.4 6.6 21.4.6 14 .6z"
+            fill="#6366F1" stroke="white" stroke-width="2"/>
+      <circle cx="14" cy="14" r="7.5" fill="white" opacity=".94"/>
+      <path d="M14 8l-6 5.5h1.8v7.2h4.2v-4h2v4h4.2v-7.2H22L14 8z"
+            fill="#6366F1" opacity=".85"/>
+    </svg>`,
+  iconSize: [34, 48],
+  iconAnchor: [17, 48],
+  popupAnchor: [0, -48],
 });
 
 const MapUpdater = ({ center }) => {
@@ -35,9 +107,7 @@ const MapUpdater = ({ center }) => {
 const MapInvalidator = () => {
   const map = useMap();
   useEffect(() => {
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 100);
+    setTimeout(() => map.invalidateSize(), 100);
   }, [map]);
   return null;
 };
@@ -79,12 +149,47 @@ const PharmacyMap = ({
   routeData = {},
 }) => {
   const defaultLocation = { lat: 30.0444, lng: 31.2357 };
+
   const center = selectedPharmacy
     ? [selectedPharmacy.latitude, selectedPharmacy.longitude]
     : [
         userLocation?.lat ?? defaultLocation.lat,
         userLocation?.lng ?? defaultLocation.lng,
       ];
+
+  const colorMap = useMemo(() => {
+    const m = {};
+    pharmacies.forEach((p, i) => {
+      m[String(p.pharmacyId)] = getPharmacyColor(i);
+    });
+    return m;
+  }, [pharmacies]);
+
+  const iconCache = useMemo(() => {
+    const cache = {};
+    pharmacies.forEach((p, i) => {
+      const color = getPharmacyColor(i);
+      const key = String(p.pharmacyId);
+      cache[key] = {
+        normal: makePinIcon(color),
+        selected: makePinIcon(color, { selected: true }),
+        hovered: makePinIcon(color, { hovered: true }),
+        selectedHovered: makePinIcon(color, { selected: true, hovered: true }),
+      };
+    });
+    return cache;
+  }, [pharmacies]);
+
+  const selectedSet = useMemo(
+    () => new Set(selectedPharmacies.map(String)),
+    [selectedPharmacies],
+  );
+
+  /* ── Helper ──────────────────────────────────────────────── */
+  const isPharmacySelected = (pharmacyId) =>
+    selectedSet.has(String(pharmacyId));
+  const isPharmacyHovered = (pharmacyId) =>
+    String(pharmacyId) === String(hoveredPharmacyId);
 
   return (
     <div style={{ height: "100%", width: "100%", minHeight: "400px" }}>
@@ -98,7 +203,7 @@ const PharmacyMap = ({
           attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MapInvalidator /> {/* ✅ أضفه */}
+        <MapInvalidator />
         <MapUpdater center={center} />
         <PharmacyBoundsUpdater
           pharmacies={pharmacies}
@@ -106,85 +211,160 @@ const PharmacyMap = ({
           selectedPharmacy={selectedPharmacy}
           deliveryAddressLocation={deliveryAddressLocation}
         />
+
+        {pharmacies.map((p) => {
+          const isSelected = isPharmacySelected(p.pharmacyId);
+          const isHovered = isPharmacyHovered(p.pharmacyId);
+
+          if (!isSelected && !isHovered) return null;
+
+          const route =
+            routeData[p.pharmacyId] ?? routeData[String(p.pharmacyId)]; // ← type-safe lookup
+
+          if (!route?.coordinates?.length) return null;
+
+          const color = colorMap[String(p.pharmacyId)];
+
+          let colorW = 6;
+          let outlineW = 10;
+          let opacity = 0.95;
+          let dash = undefined;
+
+          if (isHovered && isSelected) {
+            colorW = 8;
+            outlineW = 13;
+            opacity = 1;
+          } else if (isHovered) {
+            colorW = 7;
+            outlineW = 12;
+            opacity = 0.92;
+            dash = "12,5";
+          }
+
+          return (
+            <React.Fragment key={`route-${p.pharmacyId}`}>
+              <Polyline
+                positions={route.coordinates}
+                color="white"
+                weight={outlineW}
+                opacity={0.8}
+                dashArray={dash}
+              />
+              {/* Colored line */}
+              <Polyline
+                positions={route.coordinates}
+                color={color}
+                weight={colorW}
+                opacity={opacity}
+                dashArray={dash}
+              />
+            </React.Fragment>
+          );
+        })}
+
+        {/* User Location*/}
         {userLocation && (
-          <Marker position={[userLocation.lat, userLocation.lng]} />
+          <Marker
+            position={[userLocation.lat, userLocation.lng]}
+            icon={USER_ICON}
+            zIndexOffset={1000}
+          >
+            <Popup>📌 Your Location</Popup>
+          </Marker>
         )}
+
+        {/*Delivery Address */}
         {deliveryAddressLocation && (
           <Marker
             position={[
               deliveryAddressLocation.lat,
               deliveryAddressLocation.lng,
             ]}
-            icon={blueIcon}
+            icon={DELIVERY_ICON}
+            zIndexOffset={900}
           >
             <Popup>
-              📍 My Delivery Address
+              📍 Delivery Address
               <br />
               {deliveryAddress?.street}, {deliveryAddress?.buildingNo},{" "}
               {deliveryAddress?.city}, {deliveryAddress?.governorate}
             </Popup>
           </Marker>
         )}
-        {pharmacies.map((p, index) => (
-          <Marker
-            key={p.pharmacyId}
-            position={[p.latitude, p.longitude]}
-            icon={index === 0 ? greenIcon : redIcon}
-          >
-            <Popup>
-              <strong>
-                #{index + 1} {p.name}
-              </strong>
-              <br />
-              Distance: {p.distanceKm.toFixed(2)} km
-              {index === 0 && <div>⭐ Best Choice</div>}
-            </Popup>
-          </Marker>
-        ))}
-        {(deliveryAddressLocation || userLocation) &&
-          pharmacies.length > 0 &&
-          pharmacies.map((p) => {
-            const start = deliveryAddressLocation || userLocation;
-            if (!start) return null;
 
-            const isTop = pharmacies[0]?.pharmacyId === p.pharmacyId;
-            const isSelected = selectedPharmacies.includes(p.pharmacyId);
-            const isHovered = p.pharmacyId === hoveredPharmacyId;
+        {/* Pharmacy Markers*/}
+        {pharmacies.map((p, index) => {
+          const isSelected = isPharmacySelected(p.pharmacyId);
+          const isHovered = isPharmacyHovered(p.pharmacyId);
+          const key = String(p.pharmacyId);
+          const color = colorMap[key];
+          const icons = iconCache[key];
 
-            if (!isTop && !isSelected && !isHovered) return null;
+          const icon =
+            isHovered && isSelected
+              ? icons.selectedHovered
+              : isHovered
+                ? icons.hovered
+                : isSelected
+                  ? icons.selected
+                  : icons.normal;
 
-            const route = routeData[p.pharmacyId];
-            if (!route?.coordinates) return null;
+          const zOffset = isHovered ? 800 : isSelected ? 600 : index * -1;
 
-            let color = "#9CA3AF";
-            let weight = 3;
-            let opacity = 0.6;
-
-            if (isTop) {
-              color = "#10B981";
-              weight = 6;
-              opacity = 0.95;
-            } else if (isHovered) {
-              color = "#3B82F6";
-              weight = 7;
-              opacity = 1;
-            } else if (isSelected) {
-              color = "#8B5CF6";
-              weight = 5;
-              opacity = 0.85;
-            }
-
-            return (
-              <Polyline
-                key={`route-${p.pharmacyId}`}
-                positions={route.coordinates}
-                color={color}
-                weight={weight}
-                opacity={opacity}
-                dashArray={isSelected ? "8, 4" : null}
-              />
-            );
-          })}
+          return (
+            <Marker
+              key={p.pharmacyId}
+              position={[p.latitude, p.longitude]}
+              icon={icon}
+              zIndexOffset={zOffset}
+            >
+              <Popup>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      backgroundColor: color,
+                      display: "inline-block",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <strong>
+                    #{index + 1} {p.name}
+                  </strong>
+                </div>
+                <div style={{ marginTop: 4, fontSize: 11, color: "#6B7280" }}>
+                  📏 {p.distanceKm?.toFixed(2)} km
+                </div>
+                {index === 0 && (
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#10B981",
+                    }}
+                  >
+                    ⭐ Best Match
+                  </div>
+                )}
+                {isSelected && (
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color,
+                    }}
+                  >
+                    ✓ Selected
+                  </div>
+                )}
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
     </div>
   );

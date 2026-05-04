@@ -9,6 +9,9 @@ namespace Rujta.Domain.Entities
         public TimeSpan WorkStartTime { get; set; }
         public TimeSpan WorkEndTime { get; set; }
         public int? PharmacyId { get; set; }
+
+        [ForeignKey(nameof(PharmacyId))]
+        [InverseProperty(nameof(Pharmacy.Employees))]
         public virtual Pharmacy? Pharmacy { get; set; }
 
         public ICollection<ProcessPrescription>? ProcessPrescriptions { get; set; }

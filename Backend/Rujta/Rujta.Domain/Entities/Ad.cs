@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-
-namespace Rujta.Domain.Entities
+﻿namespace Rujta.Domain.Entities
 {
     public class Ad
     {
@@ -29,5 +22,12 @@ namespace Rujta.Domain.Entities
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
+
+        public int DurationDays { get; set; }        
+        public decimal Price { get; set; }            
+        public DateTime? StartsAt { get; set; }
+        public DateTime? ExpiresAt { get; set; }       
+
+        public bool IsExpired => ExpiresAt.HasValue && ExpiresAt.Value < DateTime.UtcNow;
     }
 }

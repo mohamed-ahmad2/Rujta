@@ -62,10 +62,30 @@ export default function useSuperAdminPharmacies() {
     }
   };
 
-  /* ---------------- CREATE ---------------- */
+  /* ---------------- CREATE ✅ (FormData بدل JSON) ---------------- */
   const create = async (data) => {
     try {
-      const res = await apiClient.post("/super-admin/pharmacies", data);
+      // ✅ بنبني FormData عشان الـ backend يقبل الـ request
+      const formData = new FormData();
+      formData.append("pharmacyName", data.pharmacyName || "");
+      formData.append("pharmacyLocation", data.pharmacyLocation || "Not provided");
+      formData.append("latitude", data.latitude ?? 0);
+      formData.append("longitude", data.longitude ?? 0);
+      formData.append("adminName", data.adminName || "");
+      formData.append("adminEmail", data.adminEmail || "");
+      formData.append("adminPhone", data.adminPhone || "");
+
+      // ✅ لو في logo (file) بنضيفه، لو مفيش مش بنبعت حاجة
+      if (data.logo instanceof File) {
+        formData.append("logo", data.logo);
+      }
+
+      const res = await apiClient.post("/super-admin/pharmacies", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
       return res.data;
     } catch (err) {
       console.log("🔥 CREATE ERROR full:", err);

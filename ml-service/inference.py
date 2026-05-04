@@ -1,219 +1,205 @@
 """
-inference.py — Load MR-GNN weights and run drug-interaction inference.
-
-Usage:
-    from inference import load_model, predict_interactions
-
-    model = load_model("best_mrgnn_v2.pt")
-
-    drugs = [
-        {"id": "DB00001", "name": "Warfarin",   "smiles": "CC..."},
-        {"id": "DB00002", "name": "Aspirin",     "smiles": "CC..."},
-        {"id": "DB00003", "name": "Ibuprofen",   "smiles": "CC..."},
-    ]
-    results = predict_interactions(model, drugs, threshold=0.5)
-    # returns list of dicts: {drug1, drug2, probability, interacts}
+inference.py
+------------
+Load a trained MR-GNN checkpoint and predict drug-drug interaction
+for one or more pairs of SMILES strings.
 """
 
-import itertools
-import logging
-from pathlib import Path
-from typing import List, Dict, Any, Optional
-
 import torch
+import torch.nn.functional as F
+from pathlib import Path
+from typing import Union, Optional
 
-from model import MRGNN, smiles_to_graph, batch_graphs
-
-logger = logging.getLogger(__name__)
-
-# ── Default model config (matches your training CFG) ─────────────────────────
-DEFAULT_CFG = dict(
-    node_dim   = 32,
-    conv_dim   = 384,
-    graph_dim  = 128,
-    hidden_dim = 512,
-    num_layers = 3,
-    num_classes= 2,
-    dropout    = 0.3,
-)
+from model import MRGNN, smiles_to_graph, batch_graphs, NODE_DIM
 
 
-def load_model(
-    weights_path: str,
-    device: Optional[str] = None,
-) -> MRGNN:
+# ── Confidence bands ──────────────────────────────────────────────────────────
+
+def _confidence(prob: float) -> str:
+    if prob >= 0.85 or prob <= 0.15:
+        return "high"
+    if prob >= 0.70 or prob <= 0.30:
+        return "medium"
+    return "low"
+
+
+# ── Predictor class ───────────────────────────────────────────────────────────
+
+class DDIPredictor:
     """
-    Load MR-GNN from a .pt checkpoint saved during training.
-
-    The checkpoint must contain 'model_state_dict'.
-    If it also contains 'cfg', those hyperparameters are used automatically.
-
-    Args:
-        weights_path: Path to best_mrgnn_v2.pt
-        device:       'cuda', 'cpu', or None (auto-detect)
-
-    Returns:
-        model in eval mode, moved to device
+    Load a saved MR-GNN checkpoint and expose a simple .predict() interface.
     """
-    if device is None:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-    device = torch.device(device)
 
-    path = Path(weights_path)
-    if not path.exists():
-        raise FileNotFoundError(f"Weights file not found: {path.resolve()}")
+    def __init__(
+        self,
+        checkpoint_path: Union[str, Path],
+        device: str = None,
+        threshold: float = 0.5,
+    ):
+        self.threshold = threshold
+        self.device = torch.device(
+            device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+        )
+        self.model = self._load_model(checkpoint_path)
 
-    checkpoint = torch.load(path, map_location=device, weights_only=False)
+    def _load_model(self, checkpoint_path: Union[str, Path]) -> MRGNN:
+        path = Path(checkpoint_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Checkpoint not found: {path}")
 
-    # ── Read config from checkpoint if available ──────────────────────────────
-    cfg = checkpoint.get("cfg", DEFAULT_CFG)
-    # cfg from your training code uses the same key names as DEFAULT_CFG
-    model = MRGNN(
-        node_dim   = cfg.get("node_dim",    DEFAULT_CFG["node_dim"]),
-        conv_dim   = cfg.get("conv_dim",    DEFAULT_CFG["conv_dim"]),
-        graph_dim  = cfg.get("graph_dim",   DEFAULT_CFG["graph_dim"]),
-        hidden_dim = cfg.get("hidden_dim",  DEFAULT_CFG["hidden_dim"]),
-        num_layers = cfg.get("num_layers",  DEFAULT_CFG["num_layers"]),
-        num_classes= cfg.get("num_classes", DEFAULT_CFG["num_classes"]),
-        dropout    = cfg.get("dropout",     DEFAULT_CFG["dropout"]),
-    ).to(device)
+        ckpt = torch.load(path, map_location=self.device, weights_only=False)
+        cfg  = ckpt.get("cfg", {})
 
-    model.load_state_dict(checkpoint["model_state_dict"])
-    model.eval()
+        model = MRGNN(
+            node_dim   = cfg.get("node_dim",    NODE_DIM),
+            conv_dim   = cfg.get("conv_dim",    384),
+            graph_dim  = cfg.get("graph_dim",   128),
+            hidden_dim = cfg.get("hidden_dim",  512),
+            num_layers = cfg.get("num_layers",  3),
+            num_classes= cfg.get("num_classes", 2),
+            dropout    = cfg.get("dropout",     0.3),
+        ).to(self.device)
 
-    epoch = checkpoint.get("epoch", "?")
-    auc   = checkpoint.get("best_val_auc", "?")
-    logger.info(f"✅ Model loaded | epoch={epoch} | best_val_auc={auc} | device={device}")
-    print(f"✅ Model loaded | epoch={epoch} | best_val_auc={auc} | device={device}")
+        model.load_state_dict(ckpt["model_state_dict"])
+        model.eval()
 
-    return model
+        epoch = ckpt.get("epoch", "?")
+        auc   = ckpt.get("best_val_auc", float("nan"))
+        print(f"✅ Model loaded | epoch={epoch} | val_AUC={auc:.4f} | device={self.device}")
+        return model
+
+    # ── Single pair ──────────────────────────────────────────────────────────
+
+    def predict(
+        self, 
+        smiles1: str, 
+        smiles2: str, 
+        name1: Optional[str] = "drug_1", 
+        name2: Optional[str] = "drug_2"
+    ) -> dict:
+        """
+        Predict interaction between two drugs given their SMILES and optional names.
+
+        Returns
+        -------
+        dict with keys:
+            drug_1, drug_2 – names provided
+            interaction    – bool
+            probability    – float
+            confidence     – str
+            label          – int
+            error          – str | None
+        """
+        g1 = smiles_to_graph(smiles1)
+        g2 = smiles_to_graph(smiles2)
+
+        if g1 is None or g2 is None:
+            bad = []
+            if g1 is None:
+                bad.append(name1)
+            if g2 is None:
+                bad.append(name2)
+            return {
+                "drug_1": name1,
+                "drug_2": name2,
+                "interaction": None,
+                "probability": None,
+                "confidence":  None,
+                "label":       None,
+                "error":       f"Could not parse SMILES for: {', '.join(bad)}",
+            }
+
+        # Model expects single-graph batches for individual processing
+        g1_batch = batch_graphs([g1]).to(self.device)
+        g2_batch = batch_graphs([g2]).to(self.device)
+
+        with torch.no_grad():
+            logits = self.model(g1_batch, g2_batch)
+            prob   = torch.softmax(logits, dim=1)[0, 1].item()
+
+        label       = int(prob >= self.threshold)
+        interaction = bool(label)
+
+        return {
+            "drug_1": name1,
+            "drug_2": name2,
+            "interaction": interaction,
+            "probability": round(prob, 4),
+            "confidence":  _confidence(prob),
+            "label":       label,
+            "error":       None,
+        }
+
+    # ── Batch of pairs ────────────────────────────────────────────────────────
+
+    def predict_batch(self, pairs: list[tuple[str, str, str, str]]) -> list[dict]:
+        """
+        Predict interactions for a list of (smiles1, smiles2, name1, name2) tuples.
+        """
+        results = []
+        valid_indices  = []
+        valid_g1, valid_g2 = [], []
+
+        for idx, (s1, s2, n1, n2) in enumerate(pairs):
+            g1 = smiles_to_graph(s1)
+            g2 = smiles_to_graph(s2)
+            if g1 is None or g2 is None:
+                bad = []
+                if g1 is None: bad.append(n1)
+                if g2 is None: bad.append(n2)
+                results.append({
+                    "index":       idx,
+                    "drug_1":      n1,
+                    "drug_2":      n2,
+                    "interaction": None,
+                    "probability": None,
+                    "confidence":  None,
+                    "label":       None,
+                    "error":       f"Could not parse SMILES for: {', '.join(bad)}",
+                })
+            else:
+                valid_indices.append(idx)
+                valid_g1.append(g1)
+                valid_g2.append(g2)
+                results.append({"drug_1": n1, "drug_2": n2}) # partial placeholder
+
+        if valid_g1:
+            b1 = batch_graphs(valid_g1).to(self.device)
+            b2 = batch_graphs(valid_g2).to(self.device)
+
+            with torch.no_grad():
+                logits = self.model(b1, b2)
+                probs  = torch.softmax(logits, dim=1)[:, 1].tolist()
+
+            for local_i, global_i in enumerate(valid_indices):
+                prob  = probs[local_i]
+                label = int(prob >= self.threshold)
+                results[global_i].update({
+                    "index":       global_i,
+                    "interaction": bool(label),
+                    "probability": round(prob, 4),
+                    "confidence":  _confidence(prob),
+                    "label":       label,
+                    "error":       None,
+                })
+
+        return results
 
 
-@torch.no_grad()
-def predict_interactions(
-    model: MRGNN,
-    drugs: List[Dict[str, Any]],
-    threshold: float = 0.5,
-    batch_size: int = 64,
-) -> List[Dict[str, Any]]:
-    """
-    Given a list of drugs, check every pair for drug-drug interactions.
+# ── CLI convenience ───────────────────────────────────────────────────────────
 
-    Args:
-        model:      Loaded MR-GNN (from load_model)
-        drugs:      List of dicts, each must have:
-                      - 'id'     (str)  — drug identifier e.g. "DB00001"
-                      - 'name'   (str)  — human-readable name e.g. "Warfarin"
-                      - 'smiles' (str)  — SMILES string
-        threshold:  Probability cutoff to flag an interaction (default 0.5)
-        batch_size: How many pairs to run through model at once
-
-    Returns:
-        List of dicts for pairs WITH interactions (probability >= threshold):
-        [
-          {
-            "drug1_id":    "DB00001",
-            "drug1_name":  "Warfarin",
-            "drug2_id":    "DB00002",
-            "drug2_name":  "Aspirin",
-            "probability": 0.87,
-            "interacts":   True
-          },
-          ...
-        ]
-        Pairs without interaction are excluded from the returned list.
-        If you want ALL pairs, set threshold=0.0.
-    """
-    device = next(model.parameters()).device
-
-    # ── Step 1: Convert every drug SMILES → graph ─────────────────────────────
-    valid_drugs = []
-    skipped = []
-    for drug in drugs:
-        g = smiles_to_graph(drug["smiles"])
-        if g is None:
-            skipped.append(drug.get("id", "?"))
-            logger.warning(f"Could not parse SMILES for drug {drug.get('id','?')} — skipping")
-        else:
-            valid_drugs.append({**drug, "_graph": g})
-
-    if skipped:
-        print(f"⚠️  Skipped {len(skipped)} drug(s) with unparseable SMILES: {skipped}")
-
-    if len(valid_drugs) < 2:
-        print("⚠️  Need at least 2 valid drugs to check interactions.")
-        return []
-
-    # ── Step 2: Generate all unique pairs ─────────────────────────────────────
-    pairs = list(itertools.combinations(valid_drugs, 2))
-    print(f"🔍 Checking {len(pairs)} drug pair(s) from {len(valid_drugs)} drug(s)...")
-
-    # ── Step 3: Run model in batches ──────────────────────────────────────────
-    all_results = []
-
-    for start in range(0, len(pairs), batch_size):
-        batch_pairs = pairs[start : start + batch_size]
-
-        g1_list = [p[0]["_graph"] for p in batch_pairs]
-        g2_list = [p[1]["_graph"] for p in batch_pairs]
-
-        g1_batch = batch_graphs(g1_list).to(device)
-        g2_batch = batch_graphs(g2_list).to(device)
-
-        logits = model(g1_batch, g2_batch)            # [B, 2]
-        probs  = torch.softmax(logits, dim=1)[:, 1]  # [B]  — prob of interaction
-        probs  = probs.cpu().tolist()
-
-        for (d1, d2), prob in zip(batch_pairs, probs):
-            all_results.append({
-                "drug1_id":    d1["id"],
-                "drug1_name":  d1["name"],
-                "drug2_id":    d2["id"],
-                "drug2_name":  d2["name"],
-                "probability": round(prob, 4),
-                "interacts":   prob >= threshold,
-            })
-
-    # ── Step 4: Filter to only interacting pairs ──────────────────────────────
-    interactions = [r for r in all_results if r["interacts"]]
-    interactions.sort(key=lambda x: x["probability"], reverse=True)
-
-    print(f"✅ Found {len(interactions)} interaction(s) out of {len(pairs)} pair(s)")
-    return interactions
-
-
-# ── Quick smoke test ──────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import sys
+    import json
 
-    weights = sys.argv[1] if len(sys.argv) > 1 else "best_mrgnn_v2.pt"
+    if len(sys.argv) < 6:
+        print("Usage: python inference.py <ckpt> <smi1> <name1> <smi2> <name2>")
+        sys.exit(1)
 
-    model = load_model(weights)
+    ckpt_path = sys.argv[1]
+    smi1, name1 = sys.argv[2], sys.argv[3]
+    smi2, name2 = sys.argv[4], sys.argv[5]
 
-    # Warfarin, Aspirin, Ibuprofen — known interacting set
-    test_drugs = [
-        {
-            "id":     "DB00682",
-            "name":   "Warfarin",
-            "smiles": "CC(=O)Oc1ccccc1C(=O)O",   # placeholder — replace with real
-        },
-        {
-            "id":     "DB00945",
-            "name":   "Aspirin",
-            "smiles": "CC(=O)Oc1ccccc1C(=O)O",
-        },
-        {
-            "id":     "DB01050",
-            "name":   "Ibuprofen",
-            "smiles": "CC(C)Cc1ccc(cc1)C(C)C(=O)O",
-        },
-    ]
-
-    results = predict_interactions(model, test_drugs, threshold=0.5)
-
-    print("\n── Interactions found ──")
-    for r in results:
-        print(
-            f"  {r['drug1_name']} ↔ {r['drug2_name']}"
-            f"  prob={r['probability']:.3f}"
-        )
+    predictor = DDIPredictor(ckpt_path)
+    result    = predictor.predict(smi1, smi2, name1, name2)
+    print(json.dumps(result, indent=2))

@@ -164,7 +164,7 @@ const Logs = () => {
     { name: "name", label: "Full Name", type: "text" },
     { name: "email", label: "Email", type: "email" },
     { name: "phone", label: "Phone", type: "text" },
-    { name: "location", label: "Location (e.g., EG)", type: "text" },
+    
     { name: "createPassword", label: "Password", type: "password" },
     { name: "confirmPassword", label: "Confirm Password", type: "password" },
   ];
@@ -419,19 +419,7 @@ const Logs = () => {
               ))}
 
               {/* Role Select */}
-              <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700 sm:text-sm">
-                  Role
-                </label>
-                <select
-                  name="role"
-                  value={newStaff.role}
-                  onChange={handleInputChange}
-                  className="w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
-                >
-                  <option value="Pharmacist">Pharmacist</option>
-                </select>
-              </div>
+             
             </div>
 
             {/* Modal Actions */}

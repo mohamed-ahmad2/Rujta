@@ -15,5 +15,9 @@ namespace Rujta.Application.DTOs.InventoryDto
         public decimal Price { get; set; }
         public ProductStatus Status { get; set; } = ProductStatus.InStock;
         public DateTime ExpiryDate { get; set; }
+
+        public decimal DiscountedPrice { get; set; }
+        public decimal DiscountValue { get; set; }
+        public bool HasDiscount { get; set; }
     }
 }

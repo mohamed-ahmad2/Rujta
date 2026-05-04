@@ -1,44 +1,60 @@
-﻿namespace Rujta.Infrastructure.Repositories
-{
-    public class InventoryRepository : GenericRepository<InventoryItem,int>, IInventoryRepository
-    {
-        
+﻿using System.Linq.Expressions;
 
+namespace Rujta.Infrastructure.Repositories
+{
+    public class InventoryRepository : GenericRepository<InventoryItem, int>, IInventoryRepository
+    {
         public InventoryRepository(AppDbContext context) : base(context)
         {
         }
 
-        public async Task<IEnumerable<InventoryItem>> GetByPharmacyAsync(int pharmacyId,CancellationToken cancellationToken = default) =>
-                await _context.InventoryItems
-                                .AsNoTracking()
-                                .Include(i => i.Medicine)
-                                    .ThenInclude(m => m!.Category)
-                                .Where(i => i.PharmacyID == pharmacyId)
-                                .ToListAsync(cancellationToken);
+        public async Task<IEnumerable<InventoryItem>> GetByPharmacyAsync(int pharmacyId,CancellationToken cancellationToken = default) 
+            => await _context.InventoryItems
+                              .AsNoTracking()
+                              .Include(i => i.Medicine)
+                                  .ThenInclude(m => m!.Category)
+                              .Where(i => i.PharmacyID == pharmacyId)
+                              .ToListAsync(cancellationToken);
 
-        
+        public async Task<bool> ExistsAsync(int id,int pharmacyId,CancellationToken cancellationToken = default) 
+            => await _context.InventoryItems
+                              .AnyAsync(i => i.Id == id && i.PharmacyID == pharmacyId,
+                                        cancellationToken);
 
-        public async Task<bool> ExistsAsync(int id,int pharmacyId,CancellationToken cancellationToken = default) =>
-             await _context.InventoryItems
-                .AnyAsync(i => i.Id == id && i.PharmacyID == pharmacyId, cancellationToken);
-
-        public override async Task<InventoryItem?> GetByIdAsync(int id, CancellationToken cancellationToken = default)=>
-            await _context.InventoryItems
-                                 .AsNoTracking()
-                                 .Include(i => i.Medicine)
-                                     .ThenInclude(m => m!.Category)
-                                 .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
-        
+        public override async Task<InventoryItem?> GetByIdAsync(int id,CancellationToken cancellationToken = default) 
+            => await _context.InventoryItems
+                              .AsNoTracking()
+                              .Include(i => i.Medicine)
+                                  .ThenInclude(m => m!.Category)
+                              .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
 
         public override async Task<IEnumerable<InventoryItem>> GetAllAsync(CancellationToken cancellationToken = default) =>
-            await _context.InventoryItems
-                  .AsNoTracking()
-                  .Include(i => i.Medicine)
-                      .ThenInclude(m => m!.Category)
-                  .ToListAsync(cancellationToken);
+                await _context.InventoryItems
+                              .AsNoTracking()
+                              .Include(i => i.Medicine)
+                                  .ThenInclude(m => m!.Category)
+                              .ToListAsync(cancellationToken);
 
-        public async Task<InventoryItem?> GetByMedicineAndPharmacyAsync(int medicineId,int pharmacyId,CancellationToken cancellationToken = default)=>
-             await _context.InventoryItems
-                .FirstOrDefaultAsync(i => i.MedicineID == medicineId &&i.PharmacyID == pharmacyId, cancellationToken);
+        public async Task<InventoryItem?> GetByMedicineAndPharmacyAsync(int medicineId,int pharmacyId, CancellationToken cancellationToken = default) 
+            => await _context.InventoryItems
+                              .FirstOrDefaultAsync(i => i.MedicineID == medicineId
+                                                     && i.PharmacyID == pharmacyId,
+                                                   cancellationToken);
+
+        public async Task<decimal?> GetMinMedicinePriceAsync(Expression<Func<InventoryItem, bool>> predicate, CancellationToken cancellationToken = default)
+        {
+            var query = _context.InventoryItems
+                                .AsNoTracking()
+                                .Include(i => i.Medicine)
+                                .Where(predicate)
+                                .Where(i => i.Medicine != null);
+
+            if (!await query.AnyAsync(cancellationToken))
+                return null;
+
+            return await query
+                .Select(i => i.Medicine!.Price)
+                .MinAsync(cancellationToken);
+        }
     }
 }

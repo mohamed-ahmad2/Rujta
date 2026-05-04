@@ -14,9 +14,6 @@ namespace Rujta.Infrastructure.Repositories
             _context = context;
         }
 
-        // ============================================
-        // ROOT REPORT FUNCTION
-        // ============================================
         public async Task<PharmacyReportDto> GetPharmacyReportAsync(
             ReportFilterDto filter,
             CancellationToken cancellationToken = default)

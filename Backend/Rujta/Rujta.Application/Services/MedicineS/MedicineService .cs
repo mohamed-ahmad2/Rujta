@@ -41,13 +41,6 @@ namespace Rujta.Application.Services.MedicineS
                         m.ActiveIngredient.Contains(filter.ActiveIngredient));
                 }
 
-                if (!string.IsNullOrWhiteSpace(filter.CompanyName))
-                {
-                    query = query.Where(m =>
-                        m.CompanyName != null &&
-                        m.CompanyName.Contains(filter.CompanyName));
-                }
-
                 var medicines = await query
                     .ToListAsync(cancellationToken);
 

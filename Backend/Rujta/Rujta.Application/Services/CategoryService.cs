@@ -10,11 +10,34 @@ namespace Rujta.Application.Services
         private readonly IMemoryCache _cache;
         private const string AllCategoriesCacheKey = "AllCategories";
 
+        private static string GetPharmacyCategoriesCacheKey(int pharmacyId)
+            => $"PharmacyCategories_{pharmacyId}";
+        private static string GetCategoryCacheKey(int id)
+            => $"Category_{id}";
+
         public CategoryService(IUnitOfWork unitOfWork, IMapper mapper, IMemoryCache cache)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _cache = cache;
+        }
+
+        public async Task<IEnumerable<CategoryDto>> GetCategoriesMedicinesAsync(int pharmacyId,CancellationToken cancellationToken = default)
+        {
+            var cacheKey = GetPharmacyCategoriesCacheKey(pharmacyId);
+
+            if (_cache.TryGetValue<IEnumerable<CategoryDto>>(cacheKey, out var cached) && cached != null)
+                return cached;
+
+            var categories = await _unitOfWork.Categories
+                .GetCategoriesMedicinesAsync(pharmacyId, cancellationToken);
+
+            var result = _mapper.Map<IEnumerable<CategoryDto>>(categories);
+
+            if (result.Any())
+                _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+
+            return result;
         }
 
         public async Task AddAsync(CategoryDto dto, CancellationToken cancellationToken = default)
@@ -87,7 +110,5 @@ namespace Rujta.Application.Services
             _cache.Remove(AllCategoriesCacheKey);
             _cache.Remove(GetCategoryCacheKey(id));
         }
-
-        private static string GetCategoryCacheKey(int id) => $"Category_{id}";
     }
 }

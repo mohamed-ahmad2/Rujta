@@ -1,88 +1,147 @@
 // src/features/pharmacies/hooks/usePharmacies.js
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   getTopPharmacies,
   getAllPharmacies,
+  getNearestPharmacies,
   getPharmacyMedicines,
   getMedicineStockInPharmacy,
 } from "../api/pharmaciesApi";
 
-export const usePharmacies = () => {
-  const [pharmacies, setPharmacies] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [medicines, setMedicines] = useState([]);
-  const [stock, setStock] = useState(null);
+//Error Parser 
+const parseError = (err) => {
+  if (err?.response?.status === 401)
+    return "Unauthorized. Please log in first.";
 
-  const fetchPharmacies = async (
+  if (err?.response?.status === 404)
+    return err?.response?.data?.message ?? "Resource not found.";
+
+  if (err?.response?.status === 400) {
+    const errors = err?.response?.data?.errors;
+    if (errors) {
+      return Object.values(errors).flat().join(" ");
+    }
+    return err?.response?.data?.message ?? "Invalid request.";
+  }
+
+  if (err?.response?.status >= 500)
+    return "Server error. Please try again later.";
+
+  if (!err?.response)
+    return "Network error. Please check your connection.";
+
+  return (
+    err?.response?.data?.message ??
+    err?.message ??
+    "An unexpected error occurred."
+  );
+};
+
+
+export const usePharmacies = () => {
+  const [pharmacies,     setPharmacies]     = useState([]);
+  const [medicines,      setMedicines]      = useState([]);
+  const [stock,          setStock]          = useState(null);
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState(null);
+  const [stockNotFound,  setStockNotFound]  = useState(false); 
+
+  const startLoading = () => {
+    setLoading(true);
+    setError(null);
+  };
+
+  const stopLoading = () => setLoading(false);
+
+  // Top K Pharmacies (Priority)
+  const fetchPharmacies = useCallback(async (
     cartItems,
     addressId,
     topK = 5,
-    maxShortageRange = null,
+    maxShortageRange = null
   ) => {
-    setLoading(true);
-    setError(null);
-
+    startLoading();
     try {
       const dtoItems = cartItems.map((item) => ({
         medicineId: item.id,
-        quantity: item.quantity,
+        quantity:   item.quantity,
         pharmacyId: item.pharmacyId ?? null,
       }));
 
-      const res = await getTopPharmacies(
-        dtoItems,
-        addressId,
-        topK,
-        maxShortageRange,
-      );
+      const res = await getTopPharmacies(dtoItems, addressId, topK, maxShortageRange);
       setPharmacies(res.data);
     } catch (err) {
-      const errorMessage =
-        err?.response?.data?.message ||
-        err?.response?.data ||
-        err?.message ||
-        "An error occurred while fetching pharmacies.";
-
-      setError(errorMessage);
+      setError(parseError(err));
+      setPharmacies([]);
     } finally {
-      setLoading(false);
+      stopLoading();
     }
-  };
+  }, []);
 
-  const fetchAllPharmacies = async () => {
-    setLoading(true);
-    setError(null);
-
+  //All Pharmacies 
+  const fetchAllPharmacies = useCallback(async () => {
+    startLoading();
     try {
       const res = await getAllPharmacies();
       setPharmacies(res.data);
     } catch (err) {
-      setError(err.message);
+      setError(parseError(err)); 
+      setPharmacies([]);
     } finally {
-      setLoading(false);
+      stopLoading();
     }
-  };
+  }, []);
 
-  const fetchPharmacyMedicines = async (pharmacyId) => {
-    setLoading(true);
+
+  const fetchNearestPharmacies = useCallback(async (
+    userLat,
+    userLon,
+    mode = "car",
+    topK = 5
+  ) => {
+    startLoading();
+    try {
+      const res = await getNearestPharmacies(userLat, userLon, mode, topK);
+      setPharmacies(res.data);
+    } catch (err) {
+      setError(parseError(err));
+      setPharmacies([]);
+    } finally {
+      stopLoading();
+    }
+  }, []);
+
+  const fetchPharmacyMedicines = useCallback(async (pharmacyId) => {
+    startLoading();
     try {
       const res = await getPharmacyMedicines(pharmacyId);
       setMedicines(res.data);
+    } catch (err) {
+      setError(parseError(err)); 
+      setMedicines([]);
     } finally {
-      setLoading(false);
+      stopLoading(); 
     }
-  };
+  }, []);
 
-  const fetchMedicineStock = async (pharmacyId, medicineId) => {
-    setLoading(true);
+  // ─── Medicine Stock ───────────────────────────────────────────────────────────
+  const fetchMedicineStock = useCallback(async (pharmacyId, medicineId) => {
+    startLoading();
+    setStockNotFound(false);
     try {
       const res = await getMedicineStockInPharmacy(pharmacyId, medicineId);
-      setStock(res.data.stock);
+      setStock(res.data.stock); 
+    } catch (err) {
+      if (err?.response?.status === 404) {
+        setStockNotFound(true); 
+        setStock(null);
+      } else {
+        setError(parseError(err)); 
+      }
     } finally {
-      setLoading(false);
+      stopLoading(); 
     }
-  };
+  }, []);
 
   return {
     pharmacies,
@@ -90,8 +149,10 @@ export const usePharmacies = () => {
     stock,
     loading,
     error,
+    stockNotFound,         
     fetchPharmacies,
     fetchAllPharmacies,
+    fetchNearestPharmacies,   
     fetchPharmacyMedicines,
     fetchMedicineStock,
   };

@@ -7,7 +7,6 @@ namespace Rujta.Infrastructure.Configuration
         public void Configure(EntityTypeBuilder<User> builder)
         {
             
-
             builder.Property(u => u.MedicalHistory)
                    .HasMaxLength(500);
 

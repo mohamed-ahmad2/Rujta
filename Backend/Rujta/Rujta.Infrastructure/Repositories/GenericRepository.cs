@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 
 namespace Rujta.Infrastructure.Repositories
 {
@@ -69,8 +68,40 @@ namespace Rujta.Infrastructure.Repositories
         }
 
         public IQueryable<T> GetQueryable()
+            => _dbSet.AsNoTracking();
+        
+
+        public virtual async Task<bool> AnyAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
+            => await _dbSet.AnyAsync(predicate, cancellationToken);
+
+        public virtual async Task<IEnumerable<T>> GetAllWithIncludesAsync( CancellationToken cancellationToken = default, params Expression<Func<T, object>>[] includes)
         {
-            return _dbSet.AsNoTracking();
+            IQueryable<T> query = _dbSet.AsNoTracking();
+
+            if (includes != null)
+                foreach (var inc in includes)
+                    query = query.Include(inc);
+
+            return await query.ToListAsync(cancellationToken);
+        }
+
+        public virtual async Task<T?> GetByIdWithIncludesAsync(TKey id,CancellationToken cancellationToken = default,params Expression<Func<T, object>>[] includes)
+        {
+            IQueryable<T> query = _dbSet;
+
+            if (includes != null)
+                foreach (var inc in includes)
+                    query = query.Include(inc);
+
+       
+            var keyName = _context.Model
+                .FindEntityType(typeof(T))!
+                .FindPrimaryKey()!
+                .Properties
+                .Select(p => p.Name)
+                .First();
+
+            return await query.FirstOrDefaultAsync( e => EF.Property<TKey>(e, keyName)!.Equals(id),cancellationToken);
         }
     }
 }

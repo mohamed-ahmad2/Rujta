@@ -21,5 +21,11 @@ namespace Rujta.Application.Interfaces
         );
 
         IQueryable<T> GetQueryable();
+
+        Task<bool> AnyAsync(Expression<Func<T, bool>> predicate,CancellationToken cancellationToken = default);
+
+        Task<IEnumerable<T>> GetAllWithIncludesAsync(CancellationToken cancellationToken = default,params Expression<Func<T, object>>[] includes);
+
+        Task<T?> GetByIdWithIncludesAsync( TKey id, CancellationToken cancellationToken = default, params Expression<Func<T, object>>[] includes);
     }
 }

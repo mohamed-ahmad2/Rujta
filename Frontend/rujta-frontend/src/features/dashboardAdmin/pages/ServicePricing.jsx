@@ -46,7 +46,7 @@ function InputField({ value, onChange }) {
       boxShadow: focused ? `0 0 0 3px rgba(157,200,115,0.15)` : "none",
       transition: "border-color 0.2s, box-shadow 0.2s"
     }}>
-      <span style={{ color: "#9b9b9b", fontSize: 14 }}>$</span>
+      <span style={{ color: "#9b9b9b", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>EGP</span>
       <input
         type="number"
         value={value}
@@ -171,10 +171,8 @@ const ServicePricing = () => {
       </div>
 
       {/* Footer */}
-      <div >
-        
-        <div >
-          
+      <div>
+        <div>
           <button style={styles.btnSave} onClick={handleSave}>
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />

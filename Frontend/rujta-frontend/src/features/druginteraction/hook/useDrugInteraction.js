@@ -65,11 +65,10 @@ export default function useDrugInteraction() {
   const [healthLoading, setHealthLoading] = useState(false);
 
   // ─── check interactions ────────────────────────────────────────────────────
-  const checkInteractions = useCallback(
-    async (medicineIds, patientUserId, threshold = 0.5) => {
+      const checkInteractions = useCallback(async (medicineIds, threshold = 0.7) => {
       setLoading(true);
       try {
-        const res = await checkDrugInteractions({ medicineIds, patientUserId, threshold });
+       const res = await checkDrugInteractions({ medicineIds, threshold });
         // ✅ handle both axios (res.data) and custom apiClient (res directly)
         const data = res?.data ?? res ?? {};
         const mapped = mapResult(data);

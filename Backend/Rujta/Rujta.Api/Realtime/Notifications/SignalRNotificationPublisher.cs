@@ -28,5 +28,11 @@ namespace Rujta.API.Realtime.Services
             await _hubContext.Clients.Group($"Pharmacy-{pharmacyId}").SendAsync("NewNotification", dto);
             Console.WriteLine($"📣 Sent notification to Pharmacy-{pharmacyId}: {dto.Title}");
         }
+        public async Task PublishToGroupAsync(string group, string method, object payload)
+        {
+            Console.WriteLine($">>> PUBLISHER: sending to group = '{group}', method = '{method}'");
+            await _hubContext.Clients.Group(group).SendAsync(method, payload);
+            Console.WriteLine($"📣 Sent '{method}' to group '{group}'");
+        }
     }
 }

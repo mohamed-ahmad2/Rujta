@@ -12,6 +12,9 @@ namespace Rujta.Domain.Entities
         public Guid? AdminId { get; set; } 
         public Admin? Admin { get; set; }
 
+        [InverseProperty(nameof(Entities.Pharmacy.Manager))]
+        public virtual Pharmacy? ManagedPharmacy { get; set; }
+
         public ICollection<Pharmacist> Pharmacists { get; set; } = new List<Pharmacist>();
     }
 }

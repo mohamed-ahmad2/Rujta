@@ -8,7 +8,7 @@ namespace Rujta.Application.Services.OrderS
         IDrugInteractionService _drugInteractionService,
         ILogger<OrderService> _logger,
         IOrderNotificationService _notificationService,
-        INotificationService NotifyService) : IOrderService
+        INotificationService NotifyService, IDiscountService _discountService) : IOrderService
     {
         
     }

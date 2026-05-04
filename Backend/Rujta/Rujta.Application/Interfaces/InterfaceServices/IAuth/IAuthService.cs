@@ -7,6 +7,8 @@ namespace Rujta.Application.Interfaces.InterfaceServices.IAuth
 {
     public interface IAuthService
     {
+        Task<LoginResultDto> LoginAsync(LoginDto dto, CancellationToken cancellationToken = default);
+        Task<LoginResultDto> RegisterAsync(RegisterDto dto, CancellationToken cancellationToken = default);
         Task<bool> IsEmailExistsAsync(string email, CancellationToken cancellationToken = default);
         Task<bool> CheckPasswordAsync(string email, string password, CancellationToken cancellationToken = default);
         Task<Guid> CreateUserAsync(RegisterDto dto, UserRole role, CancellationToken cancellationToken = default);
