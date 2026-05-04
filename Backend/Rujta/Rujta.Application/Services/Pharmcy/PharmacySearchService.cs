@@ -15,11 +15,7 @@ namespace Rujta.Application.Services.Pharmcy
         private readonly IMedicineRepository _medicineRepo;
         private readonly ILogger<PharmacySearchService> _logger;
 
-        public PharmacySearchService(
-            IPharmacyRepository pharmacyRepo,
-            IPharmacyDistanceService distanceService,
-            IMedicineRepository medicineRepo,
-            ILogger<PharmacySearchService> logger)
+        public PharmacySearchService(IPharmacyRepository pharmacyRepo,IPharmacyDistanceService distanceService,IMedicineRepository medicineRepo,ILogger<PharmacySearchService> logger)
         {
             _pharmacyRepo = pharmacyRepo;
             _distanceService = distanceService;
@@ -27,8 +23,7 @@ namespace Rujta.Application.Services.Pharmcy
             _logger = logger;
         }
 
-        public async Task<List<PharmacyMatchResultDto>> GetRankedPharmaciesAsync(
-            ItemDto order, double userLat, double userLng, int topK)
+        public async Task<List<PharmacyMatchResultDto>> GetRankedPharmaciesAsync(ItemDto order, double userLat, double userLng, int topK)
         {
             PharmacySearchLogger.LogStart(_logger, userLat, userLng, topK);
 
@@ -171,19 +166,19 @@ namespace Rujta.Application.Services.Pharmcy
             return results;
         }
 
-        private static List<PharmacyMatchResultDto> RankResults(
-            List<PharmacyMatchResultDto> results,
-            bool hasSpecific, bool hasGeneral, int topK)
+        private static List<PharmacyMatchResultDto> RankResults(List<PharmacyMatchResultDto> results, bool hasSpecific, bool hasGeneral, int topK)
         {
             if (hasSpecific && !hasGeneral)
                 return results
-                    .OrderByDescending(r => r.MatchedDrugs)
+                    .OrderByDescending(r => r.MatchPercentage)   
+                    .ThenByDescending(r => r.MatchedDrugs)
                     .ThenByDescending(r => r.PartialMatches)
                     .ThenBy(r => r.TotalShortage)
                     .ToList();
 
             return results
-                .OrderByDescending(r => r.MatchedDrugs)
+                .OrderByDescending(r => r.MatchPercentage)    
+                .ThenByDescending(r => r.MatchedDrugs)
                 .ThenByDescending(r => r.PartialMatches)
                 .ThenBy(r => r.TotalShortage)
                 .ThenBy(r => r.DistanceKm)

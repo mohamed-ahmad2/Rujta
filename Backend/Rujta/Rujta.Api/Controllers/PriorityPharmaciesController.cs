@@ -28,12 +28,7 @@ namespace Rujta.API.Controllers
 
         [HttpPost("top-k")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetTopPharmaciesForCart(
-            [FromBody] ItemDto order,
-            [FromQuery] int addressId,
-            [FromQuery] int topK = 5,
-            [FromQuery] int? maxShortageRange = null,
-            CancellationToken cancellationToken = default)
+        public async Task<IActionResult> GetTopPharmaciesForCart([FromBody] ItemDto order,[FromQuery] int addressId,[FromQuery] int topK = 5,[FromQuery] int? maxShortageRange = null, CancellationToken cancellationToken = default)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userIdClaim == null)

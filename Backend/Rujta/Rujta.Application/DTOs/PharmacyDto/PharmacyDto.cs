@@ -13,10 +13,9 @@ namespace Rujta.Application.DTOs.PharmacyDtos
         public string? ImageUrl { get; set; }
         public int TotalOrders { get; set; }
 
-        // ✅ Address as DTO
+        
         public AddressDto? Address { get; set; }
 
-        // ✅ Computed fields للـ frontend (backward compatibility)
         public string Location { get; set; } = string.Empty;
         public double Latitude => Address?.Latitude ?? 0;
         public double Longitude => Address?.Longitude ?? 0;
