@@ -1,11 +1,12 @@
 // src/features/pharmacies/hooks/usePharmacies.js
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   getTopPharmacies,
   getAllPharmacies,
   getNearestPharmacies,
   getPharmacyMedicines,
   getMedicineStockInPharmacy,
+  getPagedPharmacyMedicines,
 } from "../api/pharmaciesApi";
 
 const parseError = (err) => {
@@ -43,12 +44,95 @@ export const usePharmacies = () => {
   const [error, setError] = useState(null);
   const [stockNotFound, setStockNotFound] = useState(false);
 
+  const [pagedPharmacyMedicines, setPagedPharmacyMedicines] = useState({
+    items: [],
+    totalCount: 0,
+    pageNumber: 1,
+    pageSize: 16,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
+
+  const pagedCacheRef = useRef(new Map());
+  const MAX_CACHE_ENTRIES = 30;
+
   const startLoading = () => {
     setLoading(true);
     setError(null);
   };
 
   const stopLoading = () => setLoading(false);
+
+  const buildPagedKey = (pharmacyId, params) =>
+    JSON.stringify({
+      ph: pharmacyId,
+      p: params.pageNumber,
+      s: params.pageSize,
+      q: params.searchTerm || "",
+      c: params.categoryId ?? "",
+    });
+
+  const fetchPagedPharmacyMedicines = useCallback(
+    async (pharmacyId, params = {}) => {
+      const finalParams = {
+        pageNumber: params.pageNumber ?? 1,
+        pageSize: params.pageSize ?? 16,
+        searchTerm: params.searchTerm,
+        categoryId: params.categoryId,
+      };
+
+      const key = buildPagedKey(pharmacyId, finalParams);
+
+      if (pagedCacheRef.current.has(key)) {
+        const cached = pagedCacheRef.current.get(key);
+        setPagedPharmacyMedicines(cached);
+        return cached;
+      }
+
+      startLoading();
+      try {
+        const res = await getPagedPharmacyMedicines(pharmacyId, finalParams);
+        const data = {
+          items: res.data.items || [],
+          totalCount: res.data.totalCount || 0,
+          pageNumber: res.data.pageNumber || 1,
+          pageSize: res.data.pageSize || 16,
+          totalPages: res.data.totalPages || 0,
+          hasNextPage: res.data.hasNextPage || false,
+          hasPreviousPage: res.data.hasPreviousPage || false,
+        };
+
+        if (pagedCacheRef.current.size >= MAX_CACHE_ENTRIES) {
+          const firstKey = pagedCacheRef.current.keys().next().value;
+          pagedCacheRef.current.delete(firstKey);
+        }
+        pagedCacheRef.current.set(key, data);
+
+        setPagedPharmacyMedicines(data);
+        return data;
+      } catch (err) {
+        setError(parseError(err));
+        setPagedPharmacyMedicines({
+          items: [],
+          totalCount: 0,
+          pageNumber: 1,
+          pageSize: 16,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        });
+        return null;
+      } finally {
+        stopLoading();
+      }
+    },
+    [],
+  );
+
+  const clearPharmacyMedicinesCache = useCallback(() => {
+    pagedCacheRef.current.clear();
+  }, []);
 
   const fetchPharmacies = useCallback(
     async (cartItems, addressId, topK = 5, maxShortageRange = null) => {
@@ -144,10 +228,15 @@ export const usePharmacies = () => {
     loading,
     error,
     stockNotFound,
+
     fetchPharmacies,
     fetchAllPharmacies,
     fetchNearestPharmacies,
     fetchPharmacyMedicines,
     fetchMedicineStock,
+
+    pagedPharmacyMedicines,
+    fetchPagedPharmacyMedicines,
+    clearPharmacyMedicinesCache,
   };
 };

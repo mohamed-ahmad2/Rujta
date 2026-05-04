@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.DTOs.Common;
 using Rujta.Application.DTOs.MedicineDtos;
 using Rujta.Application.DTOs.PharmacyDtos;
 using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
@@ -66,6 +67,18 @@ namespace Rujta.API.Controllers
                 .GetMedicinesByPharmacyAsync(pharmacyId);
 
             return Ok(medicines);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("{pharmacyId}/medicines/paged")]
+        [ProducesResponseType(typeof(PagedResultDto<MedicineDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetPagedMedicines([Range(1, int.MaxValue)] int pharmacyId,[FromQuery, Range(1, int.MaxValue)] int pageNumber = 1,[FromQuery, Range(1, 100)] int pageSize = 16,[FromQuery] string? searchTerm = null,[FromQuery] int? categoryId = null,CancellationToken cancellationToken = default)
+        {
+            var result = await _pharmacyService.GetPagedMedicinesByPharmacyAsync(
+                pharmacyId, pageNumber, pageSize, searchTerm, categoryId, cancellationToken);
+
+            return Ok(result);
         }
     }
 }
