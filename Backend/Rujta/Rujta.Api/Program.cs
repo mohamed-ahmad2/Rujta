@@ -130,6 +130,7 @@ namespace Rujta.API
             app.MapHub<PresenceHub>("/hubs/presence");
             app.MapHub<NotificationHub>("/hubs/notifications");
             app.MapHub<OrderHub>("/hubs/orders");
+            
 
             app.MapControllers();
 
