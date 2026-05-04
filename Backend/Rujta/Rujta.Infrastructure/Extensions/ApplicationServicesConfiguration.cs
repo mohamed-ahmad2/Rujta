@@ -1,4 +1,5 @@
-﻿using Rujta.Application.Resolver;
+﻿using Rujta.Application.Notifications;
+using Rujta.Application.Resolver;
 
 namespace Rujta.Infrastructure.Extensions
 {
@@ -86,7 +87,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IdentityServices>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ILogService, LogService>();
-
+            
             services.AddScoped<IMedicineService, MedicineService>();
             services.AddScoped<ISearchMedicineService, SearchMedicineService>();
             services.AddScoped<IInventoryItemService, InventoryItemService>();
@@ -148,6 +149,7 @@ namespace Rujta.Infrastructure.Extensions
         {
             services.AddSingleton<IMedicineAutocompleteIndex, MedicineAutocompleteIndex>();
             services.AddSingleton<IUserPresenceService, InMemoryUserPresenceService>();
+
 
             return services;
         }
