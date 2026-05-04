@@ -1,6 +1,5 @@
 ﻿using Rujta.Application.DTOs.PharmacyDto;
 using Rujta.Application.DTOs.PharmacyDtos;
-using Rujta.Application.DTOs.Rujta.Application.DTOs;
 using Rujta.Application.Interfaces.InterfaceServices.IAuth;
 using Rujta.Infrastructure.Identity;
 
@@ -23,6 +22,7 @@ namespace Rujta.API.Controllers
             _logger = logger;
         }
 
+
         private bool TryGetAdminId(out Guid adminId)
         {
             adminId = Guid.Empty;
@@ -34,6 +34,22 @@ namespace Rujta.API.Controllers
             return Guid.TryParse(claim, out adminId);
         }
 
+        private static bool IsAddressValid(CreatePharmacyDto dto)
+        {
+            return dto.Address != null &&
+                   (!string.IsNullOrWhiteSpace(dto.Address.Street) ||
+                    !string.IsNullOrWhiteSpace(dto.Address.City) ||
+                    !string.IsNullOrWhiteSpace(dto.Address.Governorate));
+        }
+
+        private static bool IsAddressValid(UpdatePharmacyDto dto)
+        {
+            return dto.Address != null &&
+                   (!string.IsNullOrWhiteSpace(dto.Address.Street) ||
+                    !string.IsNullOrWhiteSpace(dto.Address.City) ||
+                    !string.IsNullOrWhiteSpace(dto.Address.Governorate));
+        }
+
 
         [HttpPost("pharmacies")]
         [Consumes("multipart/form-data")]
@@ -41,10 +57,32 @@ namespace Rujta.API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> CreatePharmacy([FromForm] CreatePharmacyDto dto,CancellationToken cancellationToken)
+        public async Task<IActionResult> CreatePharmacy(
+            [FromForm] CreatePharmacyDto dto,
+            CancellationToken cancellationToken)
         {
             if (dto == null)
                 return BadRequest(new { message = "Invalid request data." });
+
+         
+            if (string.IsNullOrWhiteSpace(dto.PharmacyName))
+                return BadRequest(new { message = "Pharmacy name is required." });
+
+            if (string.IsNullOrWhiteSpace(dto.ManagerEmail))
+                return BadRequest(new { message = "Manager email is required." });
+
+            if (string.IsNullOrWhiteSpace(dto.ManagerName))
+                return BadRequest(new { message = "Manager name is required." });
+
+            if (string.IsNullOrWhiteSpace(dto.ManagerPhone))
+                return BadRequest(new { message = "Manager phone is required." });
+
+            
+            if (!IsAddressValid(dto))
+                return BadRequest(new
+                {
+                    message = "Address is required (Street, City, or Governorate at minimum)."
+                });
 
             if (!TryGetAdminId(out var adminGuid))
                 return Unauthorized(new { message = "AdminId not found or invalid in token." });
@@ -66,7 +104,14 @@ namespace Rujta.API.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create pharmacy");
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "An unexpected error occurred while creating the pharmacy." });
+            }
         }
+
 
         [HttpGet("pharmacies")]
         [ProducesResponseType(typeof(IEnumerable<PharmacyDto>), StatusCodes.Status200OK)]
@@ -100,18 +145,33 @@ namespace Rujta.API.Controllers
             return Ok(pharmacy);
         }
 
+
         [HttpPut("pharmacies/{pharmacyId:int}")]
+        [Consumes("application/json")]
         [ProducesResponseType(typeof(PharmacyDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdatePharmacy(int pharmacyId,[FromBody] UpdatePharmacyDto dto,CancellationToken cancellationToken)
+        public async Task<IActionResult> UpdatePharmacy(
+            int pharmacyId,
+            [FromBody] UpdatePharmacyDto dto,
+            CancellationToken cancellationToken)
         {
             if (dto == null)
                 return BadRequest(new { message = "Invalid request data." });
 
+            if (string.IsNullOrWhiteSpace(dto.Name))
+                return BadRequest(new { message = "Pharmacy name is required." });
+
+            if (!IsAddressValid(dto))
+                return BadRequest(new
+                {
+                    message = "Address is required (Street, City, or Governorate at minimum)."
+                });
+
             try
             {
-                var updatedPharmacy = await _service.UpdatePharmacyAsync(pharmacyId, dto, cancellationToken);
+                var updatedPharmacy = await _service.UpdatePharmacyAsync(
+                    pharmacyId, dto, cancellationToken);
                 return Ok(updatedPharmacy);
             }
             catch (KeyNotFoundException ex)
@@ -122,13 +182,21 @@ namespace Rujta.API.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update pharmacy {PharmacyId}", pharmacyId);
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "An unexpected error occurred while updating the pharmacy." });
+            }
         }
 
         [HttpDelete("pharmacies/{pharmacyId:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeletePharmacy(int pharmacyId,CancellationToken cancellationToken)
+        public async Task<IActionResult> DeletePharmacy(
+            int pharmacyId,
+            CancellationToken cancellationToken)
         {
             try
             {
@@ -168,8 +236,6 @@ namespace Rujta.API.Controllers
             }
         }
 
-
-
         [HttpPost("pharmacies/{pharmacyId:int}/reset-password")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -193,7 +259,6 @@ namespace Rujta.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-
 
 
         [HttpGet("pharmacies/{pharmacyId:int}/total-orders")]
@@ -228,7 +293,6 @@ namespace Rujta.API.Controllers
             var result = await _service.GetTopPharmaciesAsync(count, cancellationToken);
             return Ok(result);
         }
-
 
         [HttpGet("pharmacies/main")]
         [ProducesResponseType(typeof(IEnumerable<PharmacyDto>), StatusCodes.Status200OK)]

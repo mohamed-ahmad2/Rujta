@@ -5,14 +5,16 @@ namespace Rujta.Domain.Entities
     public class Pharmacy : BaseEntity
     {
         public string Name { get; set; } = string.Empty;
-        public string Location { get; set; } = string.Empty;
         public string ContactNumber { get; set; } = string.Empty;
         public string OpenHours { get; set; } = string.Empty;
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
         public bool IsActive { get; set; }
         public string? ImageUrl { get; set; }
         public bool IsDeleted { get; set; } = false;
+
+        public int? AddressId { get; set; }
+
+        [ForeignKey(nameof(AddressId))]
+        public Address? Address { get; set; }
 
         public Guid? ManagerId { get; set; }
 

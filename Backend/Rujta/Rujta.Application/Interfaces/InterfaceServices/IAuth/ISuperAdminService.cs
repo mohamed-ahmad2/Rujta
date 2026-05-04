@@ -1,6 +1,5 @@
 ﻿using Rujta.Application.DTOs.PharmacyDto;
 using Rujta.Application.DTOs.PharmacyDtos;
-using Rujta.Application.DTOs.Rujta.Application.DTOs;
 
 namespace Rujta.Application.Interfaces.InterfaceServices.IAuth
 {

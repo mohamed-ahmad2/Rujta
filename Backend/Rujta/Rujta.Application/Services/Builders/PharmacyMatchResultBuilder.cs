@@ -9,11 +9,8 @@ namespace Rujta.Application.Services.Builders
         public Pharmacy? Pharmacy { get; set; }
         public ItemDto? Order { get; set; }
         public int Matched { get; set; }
-
         public int PartialMatches { get; set; }
-
         public int TotalShortage { get; set; }
-
         public double DistanceKm { get; set; }
         public double DurationMinutes { get; set; }
         public double DeliveryFee { get; set; }
@@ -25,29 +22,34 @@ namespace Rujta.Application.Services.Builders
     {
         public static PharmacyMatchResultDto Build(PharmacyMatchResultParams param)
         {
-            if (param == null)
-                throw new ArgumentNullException(nameof(param));
+            ArgumentNullException.ThrowIfNull(param);
+            ArgumentNullException.ThrowIfNull(param.Pharmacy);
 
-            var pharmacy = param.Pharmacy ?? throw new ArgumentNullException(nameof(param));
+            var pharmacy = param.Pharmacy;
             var order = param.Order ?? new ItemDto();
             var foundList = param.Found ?? new List<FoundMedicineDto>();
             var notFoundList = param.NotFound ?? new List<NotFoundMedicineDto>();
+
+            var latitude = pharmacy.Address?.Latitude ?? 0d;
+            var longitude = pharmacy.Address?.Longitude ?? 0d;
+
+            var totalRequested = order.Items?.Count ?? 0;
 
             return new PharmacyMatchResultDto
             {
                 PharmacyId = pharmacy.Id,
                 Name = pharmacy.Name ?? string.Empty,
-                Latitude = pharmacy.Latitude,
-                Longitude = pharmacy.Longitude,
+                Latitude = latitude,
+                Longitude = longitude,
                 ContactNumber = pharmacy.ContactNumber ?? string.Empty,
 
                 MatchedDrugs = param.Matched,
                 PartialMatches = param.PartialMatches,
                 TotalShortage = param.TotalShortage,
-                TotalRequestedDrugs = order.Items.Count,
-                MatchPercentage = order.Items.Count > 0
-                                        ? Math.Round((double)param.Matched / order.Items.Count * 100, 1)
-                                        : 0,
+                TotalRequestedDrugs = totalRequested,
+                MatchPercentage = totalRequested > 0
+                    ? Math.Round((double)param.Matched / totalRequested * 100, 1)
+                    : 0,
 
                 DistanceKm = param.DistanceKm,
                 EstimatedDurationMinutes = Math.Round(param.DurationMinutes, 1),

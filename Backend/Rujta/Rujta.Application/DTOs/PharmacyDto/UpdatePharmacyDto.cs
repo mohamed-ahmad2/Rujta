@@ -1,22 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Rujta.Application.DTOs.CustomerDtos;
 
-namespace Rujta.Application.DTOs
+namespace Rujta.Application.DTOs.PharmacyDto
 {
-    namespace Rujta.Application.DTOs
+    public class UpdatePharmacyDto
     {
-        public class UpdatePharmacyDto
-        {
-            public string Name { get; set; } = null!;
-            public string Location { get; set; } = null!;
-            public string ContactNumber { get; set; } = null!;
-            public double Latitude { get; set; }
-            public double Longitude { get; set; }
-        }
+        public string Name { get; set; } = string.Empty;
+        public string ContactNumber { get; set; } = string.Empty;
+        public string OpenHours { get; set; } = string.Empty;
 
+        public AddressDto Address { get; set; } = new();
     }
-
 }
