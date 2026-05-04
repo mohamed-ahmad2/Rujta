@@ -7,6 +7,7 @@ for one or more pairs of SMILES strings.
 
 import torch
 import torch.nn.functional as F
+import numpy as np
 from pathlib import Path
 from typing import Union, Optional
 
@@ -21,6 +22,35 @@ def _confidence(prob: float) -> str:
     if prob >= 0.70 or prob <= 0.30:
         return "medium"
     return "low"
+
+
+# ── Numpy safe-globals helper ─────────────────────────────────────────────────
+
+def _numpy_safe_globals() -> list:
+    """
+    Return all NumPy types that may be embedded in a checkpoint saved before
+    PyTorch 2.6. Works with both numpy < 2.0 and numpy >= 2.0.
+    """
+    candidates = [
+        "numpy.dtype",
+        "numpy.ndarray",
+        "numpy.core.multiarray.scalar",
+        "numpy.core.multiarray._reconstruct",
+        "numpy._core.multiarray.scalar",
+        "numpy._core.multiarray._reconstruct",
+    ]
+    safe = []
+    for dotted in candidates:
+        parts  = dotted.split(".")
+        module = ".".join(parts[:-1])
+        attr   = parts[-1]
+        try:
+            import importlib
+            mod = importlib.import_module(module)
+            safe.append(getattr(mod, attr))
+        except (ImportError, AttributeError):
+            pass
+    return safe
 
 
 # ── Predictor class ───────────────────────────────────────────────────────────
@@ -42,69 +72,62 @@ class DDIPredictor:
         )
         self.model = self._load_model(checkpoint_path)
 
-def _load_model(self, checkpoint_path: Union[str, Path]) -> MRGNN:
-    path = Path(checkpoint_path)
-    if not path.exists():
-        raise FileNotFoundError(f"Checkpoint not found: {path}")
+    def _load_model(self, checkpoint_path: Union[str, Path]) -> MRGNN:
+        path = Path(checkpoint_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Checkpoint not found: {path}")
 
-    # ✅ SAFE loading (no arbitrary code execution)
-    ckpt = torch.load(path, map_location=self.device, weights_only=True)
+        # Try safe load first (weights_only=True + numpy allowlist).
+        # If the checkpoint contains other non-numpy custom types, fall back
+        # to weights_only=False — acceptable since this is a locally trained file.
+        try:
+            with torch.serialization.safe_globals(_numpy_safe_globals()):
+                ckpt = torch.load(path, map_location=self.device, weights_only=True)
+            print("🔒 Checkpoint loaded with weights_only=True")
+        except Exception:
+            print("⚠️  Safe load failed — retrying with weights_only=False (trusted local file)")
+            ckpt = torch.load(path, map_location=self.device, weights_only=False)
 
-    # Handle both formats:
-    # 1) {"model_state_dict": ..., "cfg": ...}
-    # 2) direct state_dict
-    if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
-        state_dict = ckpt["model_state_dict"]
-        cfg = ckpt.get("cfg", {})
-        epoch = ckpt.get("epoch", "?")
-        auc = ckpt.get("best_val_auc", float("nan"))
-    else:
-        # fallback: checkpoint is just state_dict
-        state_dict = ckpt
-        cfg = {}
-        epoch = "?"
-        auc = float("nan")
+        # Handle both formats:
+        # 1) {"model_state_dict": ..., "cfg": ...}
+        # 2) direct state_dict
+        if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
+            state_dict = ckpt["model_state_dict"]
+            cfg        = ckpt.get("cfg", {})
+            epoch      = ckpt.get("epoch", "?")
+            auc        = ckpt.get("best_val_auc", float("nan"))
+        else:
+            state_dict = ckpt
+            cfg        = {}
+            epoch      = "?"
+            auc        = float("nan")
 
-    # Build model safely
-    model = MRGNN(
-        node_dim   = cfg.get("node_dim", NODE_DIM),
-        conv_dim   = cfg.get("conv_dim", 384),
-        graph_dim  = cfg.get("graph_dim", 128),
-        hidden_dim = cfg.get("hidden_dim", 512),
-        num_layers = cfg.get("num_layers", 3),
-        num_classes= cfg.get("num_classes", 2),
-        dropout    = cfg.get("dropout", 0.3),
-    ).to(self.device)
+        # Build model
+        model = MRGNN(
+            node_dim   = cfg.get("node_dim",    NODE_DIM),
+            conv_dim   = cfg.get("conv_dim",    384),
+            graph_dim  = cfg.get("graph_dim",   128),
+            hidden_dim = cfg.get("hidden_dim",  512),
+            num_layers = cfg.get("num_layers",  3),
+            num_classes= cfg.get("num_classes", 2),
+            dropout    = cfg.get("dropout",     0.3),
+        ).to(self.device)
 
-    # Load weights
-    model.load_state_dict(state_dict)
-    model.eval()
+        model.load_state_dict(state_dict)
+        model.eval()
 
-    print(f"✅ Model loaded | epoch={epoch} | val_AUC={auc:.4f} | device={self.device}")
-    return model
+        print(f"✅ Model loaded | epoch={epoch} | val_AUC={auc:.4f} | device={self.device}")
+        return model
 
-    # ── Single pair ──────────────────────────────────────────────────────────
+    # ── Single pair ───────────────────────────────────────────────────────────
 
     def predict(
-        self, 
-        smiles1: str, 
-        smiles2: str, 
-        name1: Optional[str] = "drug_1", 
-        name2: Optional[str] = "drug_2"
+        self,
+        smiles1: str,
+        smiles2: str,
+        name1: Optional[str] = "drug_1",
+        name2: Optional[str] = "drug_2",
     ) -> dict:
-        """
-        Predict interaction between two drugs given their SMILES and optional names.
-
-        Returns
-        -------
-        dict with keys:
-            drug_1, drug_2 – names provided
-            interaction    – bool
-            probability    – float
-            confidence     – str
-            label          – int
-            error          – str | None
-        """
         g1 = smiles_to_graph(smiles1)
         g2 = smiles_to_graph(smiles2)
 
@@ -115,8 +138,8 @@ def _load_model(self, checkpoint_path: Union[str, Path]) -> MRGNN:
             if g2 is None:
                 bad.append(name2)
             return {
-                "drug_1": name1,
-                "drug_2": name2,
+                "drug_1":      name1,
+                "drug_2":      name2,
                 "interaction": None,
                 "probability": None,
                 "confidence":  None,
@@ -124,7 +147,6 @@ def _load_model(self, checkpoint_path: Union[str, Path]) -> MRGNN:
                 "error":       f"Could not parse SMILES for: {', '.join(bad)}",
             }
 
-        # Model expects single-graph batches for individual processing
         g1_batch = batch_graphs([g1]).to(self.device)
         g2_batch = batch_graphs([g2]).to(self.device)
 
@@ -132,13 +154,12 @@ def _load_model(self, checkpoint_path: Union[str, Path]) -> MRGNN:
             logits = self.model(g1_batch, g2_batch)
             prob   = torch.softmax(logits, dim=1)[0, 1].item()
 
-        label       = int(prob >= self.threshold)
-        interaction = bool(label)
+        label = int(prob >= self.threshold)
 
         return {
-            "drug_1": name1,
-            "drug_2": name2,
-            "interaction": interaction,
+            "drug_1":      name1,
+            "drug_2":      name2,
+            "interaction": bool(label),
             "probability": round(prob, 4),
             "confidence":  _confidence(prob),
             "label":       label,
@@ -148,20 +169,21 @@ def _load_model(self, checkpoint_path: Union[str, Path]) -> MRGNN:
     # ── Batch of pairs ────────────────────────────────────────────────────────
 
     def predict_batch(self, pairs: list[tuple[str, str, str, str]]) -> list[dict]:
-        """
-        Predict interactions for a list of (smiles1, smiles2, name1, name2) tuples.
-        """
-        results = []
-        valid_indices  = []
-        valid_g1, valid_g2 = [], []
+        results       = []
+        valid_indices = []
+        valid_g1      = []
+        valid_g2      = []
 
         for idx, (s1, s2, n1, n2) in enumerate(pairs):
             g1 = smiles_to_graph(s1)
             g2 = smiles_to_graph(s2)
+
             if g1 is None or g2 is None:
                 bad = []
-                if g1 is None: bad.append(n1)
-                if g2 is None: bad.append(n2)
+                if g1 is None:
+                    bad.append(n1)
+                if g2 is None:
+                    bad.append(n2)
                 results.append({
                     "index":       idx,
                     "drug_1":      n1,
@@ -176,7 +198,7 @@ def _load_model(self, checkpoint_path: Union[str, Path]) -> MRGNN:
                 valid_indices.append(idx)
                 valid_g1.append(g1)
                 valid_g2.append(g2)
-                results.append({"drug_1": n1, "drug_2": n2}) # partial placeholder
+                results.append({"drug_1": n1, "drug_2": n2})
 
         if valid_g1:
             b1 = batch_graphs(valid_g1).to(self.device)
@@ -211,7 +233,7 @@ if __name__ == "__main__":
         print("Usage: python inference.py <ckpt> <smi1> <name1> <smi2> <name2>")
         sys.exit(1)
 
-    ckpt_path = sys.argv[1]
+    ckpt_path   = sys.argv[1]
     smi1, name1 = sys.argv[2], sys.argv[3]
     smi2, name2 = sys.argv[4], sys.argv[5]
 
