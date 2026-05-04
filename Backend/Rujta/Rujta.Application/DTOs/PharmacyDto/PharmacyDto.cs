@@ -13,10 +13,20 @@ namespace Rujta.Application.DTOs.PharmacyDtos
         public string? ImageUrl { get; set; }
         public int TotalOrders { get; set; }
 
-        
         public AddressDto? Address { get; set; }
 
-        public string Location { get; set; } = string.Empty;
+  
+        public string Location => Address != null
+            ? string.Join(", ", new[]
+              {
+                  Address.BuildingNo,
+                  Address.Street,
+                  Address.City,
+                  Address.Governorate
+              }.Where(s => !string.IsNullOrWhiteSpace(s)))
+            : string.Empty;
+
+  
         public double Latitude => Address?.Latitude ?? 0;
         public double Longitude => Address?.Longitude ?? 0;
 

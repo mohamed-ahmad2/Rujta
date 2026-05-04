@@ -34,9 +34,11 @@ export const getPharmacyMedicines = (pharmacyId) =>
 export const getMedicineStockInPharmacy = (pharmacyId, medicineId) =>
   apiClient.get(`/pharmacies/${pharmacyId}/medicine/${medicineId}/stock`);
 
+
 export const getPagedPharmacyMedicines = (
   pharmacyId,
-  { pageNumber = 1, pageSize = 16, searchTerm, categoryId } = {}
+  { pageNumber = 1, pageSize = 16, searchTerm, categoryId } = {},
+  signal = undefined  
 ) => {
   const params = { pageNumber, pageSize };
 
@@ -50,5 +52,6 @@ export const getPagedPharmacyMedicines = (
 
   return apiClient.get(`/pharmacies/${pharmacyId}/medicines/paged`, {
     params,
+    signal,
   });
 };
