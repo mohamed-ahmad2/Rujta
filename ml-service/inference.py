@@ -8,10 +8,57 @@ for one or more pairs of SMILES strings.
 import torch
 import torch.nn.functional as F
 import numpy as np
+import importlib
 from pathlib import Path
 from typing import Union, Optional
 
 from model import MRGNN, smiles_to_graph, batch_graphs, NODE_DIM
+
+
+# ── Register ALL NumPy globals that may appear in a checkpoint ────────────────
+
+def _register_numpy_safe_globals() -> None:
+    """
+    Allowlist every NumPy type that PyTorch 2.6+ may refuse under
+    weights_only=True.  Covers numpy < 2.0 and numpy >= 2.0 layouts,
+    plus the numpy.dtypes sub-module introduced in NumPy 1.24+.
+    """
+    candidates = [
+        # core scalar / array types
+        "numpy.dtype",
+        "numpy.ndarray",
+        "numpy.core.multiarray.scalar",
+        "numpy.core.multiarray._reconstruct",
+        "numpy._core.multiarray.scalar",        # numpy >= 2.0
+        "numpy._core.multiarray._reconstruct",  # numpy >= 2.0
+    ]
+
+    resolved = []
+
+    # Add every attribute from numpy.dtypes (Float64DType, Int32DType, etc.)
+    for mod_name in ("numpy.dtypes",):
+        try:
+            mod = importlib.import_module(mod_name)
+            for attr in dir(mod):
+                obj = getattr(mod, attr)
+                if isinstance(obj, type):
+                    resolved.append(obj)
+        except ImportError:
+            pass
+
+    # Add the individually listed candidates
+    for dotted in candidates:
+        *mod_parts, attr = dotted.split(".")
+        try:
+            mod = importlib.import_module(".".join(mod_parts))
+            resolved.append(getattr(mod, attr))
+        except (ImportError, AttributeError):
+            pass
+
+    if resolved:
+        torch.serialization.add_safe_globals(resolved)
+
+_register_numpy_safe_globals()
 
 
 # ── Confidence bands ──────────────────────────────────────────────────────────
@@ -22,35 +69,6 @@ def _confidence(prob: float) -> str:
     if prob >= 0.70 or prob <= 0.30:
         return "medium"
     return "low"
-
-
-# ── Numpy safe-globals helper ─────────────────────────────────────────────────
-
-def _numpy_safe_globals() -> list:
-    """
-    Return all NumPy types that may be embedded in a checkpoint saved before
-    PyTorch 2.6. Works with both numpy < 2.0 and numpy >= 2.0.
-    """
-    candidates = [
-        "numpy.dtype",
-        "numpy.ndarray",
-        "numpy.core.multiarray.scalar",
-        "numpy.core.multiarray._reconstruct",
-        "numpy._core.multiarray.scalar",
-        "numpy._core.multiarray._reconstruct",
-    ]
-    safe = []
-    for dotted in candidates:
-        parts  = dotted.split(".")
-        module = ".".join(parts[:-1])
-        attr   = parts[-1]
-        try:
-            import importlib
-            mod = importlib.import_module(module)
-            safe.append(getattr(mod, attr))
-        except (ImportError, AttributeError):
-            pass
-    return safe
 
 
 # ── Predictor class ───────────────────────────────────────────────────────────
@@ -77,20 +95,20 @@ class DDIPredictor:
         if not path.exists():
             raise FileNotFoundError(f"Checkpoint not found: {path}")
 
-        # Try safe load first (weights_only=True + numpy allowlist).
-        # If the checkpoint contains other non-numpy custom types, fall back
-        # to weights_only=False — acceptable since this is a locally trained file.
+        # Try safe load first; if an unexpected type still slips through,
+        # fall back to weights_only=False — safe because this is a locally
+        # trained file you own.
         try:
-            with torch.serialization.safe_globals(_numpy_safe_globals()):
-                ckpt = torch.load(path, map_location=self.device, weights_only=True)
+            ckpt = torch.load(path, map_location=self.device, weights_only=True)
             print("🔒 Checkpoint loaded with weights_only=True")
-        except Exception:
-            print("⚠️  Safe load failed — retrying with weights_only=False (trusted local file)")
+        except Exception as e:
+            print(f"⚠️  Safe load failed ({type(e).__name__}: {e})")
+            print("↩️  Retrying with weights_only=False (trusted local file)")
             ckpt = torch.load(path, map_location=self.device, weights_only=False)
 
-        # Handle both formats:
-        # 1) {"model_state_dict": ..., "cfg": ...}
-        # 2) direct state_dict
+        # Handle both checkpoint formats:
+        # 1) {"model_state_dict": ..., "cfg": ..., "epoch": ..., "best_val_auc": ...}
+        # 2) bare state_dict
         if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
             state_dict = ckpt["model_state_dict"]
             cfg        = ckpt.get("cfg", {})
@@ -102,7 +120,7 @@ class DDIPredictor:
             epoch      = "?"
             auc        = float("nan")
 
-        # Build model
+        # Build model from saved config (or defaults)
         model = MRGNN(
             node_dim   = cfg.get("node_dim",    NODE_DIM),
             conv_dim   = cfg.get("conv_dim",    384),
