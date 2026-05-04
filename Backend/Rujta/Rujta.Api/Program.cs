@@ -63,6 +63,8 @@ namespace Rujta.API
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5))
                 .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(10));
 
+            builder.Logging.AddConsole();
+
             var app = builder.Build();
 
             var logger = app.Services

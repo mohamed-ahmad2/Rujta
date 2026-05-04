@@ -1,36 +1,27 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
 using Rujta.Application.Notifications;
-using Rujta.Domain.Entities;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Services
 {
-    public class NotificationService : INotificationService, IDisposable
+    public class NotificationService : INotificationService, IAsyncDisposable, IDisposable
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly INotificationPublisher _publisher;
         private readonly ILogger<NotificationService> _logger;
 
-        // existing user queue
-        private readonly ConcurrentQueue<(string userId, NotificationDto dto, int attempts)> _notificationQueue = new();
-
-        // ✅ NEW — pharmacy queue
-        private readonly ConcurrentQueue<(string pharmacyId, NotificationDto dto, int attempts)> _pharmacyQueue = new();
+        private readonly ConcurrentQueue<QueuedNotification> _notificationQueue = new();
+        private readonly ConcurrentQueue<QueuedNotification> _pharmacyQueue = new();
 
         private readonly SemaphoreSlim _queueSemaphore = new(1, 1);
+        private readonly CancellationTokenSource _cts = new();
+        private readonly Task _backgroundTask;
 
         private const int MaxRetryPerAttempt = 5;
         private const int MaxTotalRequeues = 3;
+        private const int LoopDelayMs = 2000;
+        private const int BaseRetryDelayMs = 200;
 
-        private readonly CancellationTokenSource _cts = new();
+        private bool _disposed;
 
         public NotificationService(
             IServiceScopeFactory scopeFactory,
@@ -41,58 +32,37 @@ namespace Rujta.Infrastructure.Services
             _publisher = publisher;
             _logger = logger;
 
-            _ = ProcessQueueLoopAsync(_cts.Token);
+            _backgroundTask = Task.Run(() => ProcessQueueLoopAsync(_cts.Token));
         }
 
-        // ─── existing — send to user ───────────────────────────────────────────
-        public async Task SendNotificationAsync(
+        public Task SendNotificationAsync(
             string userId,
             string title,
             string message,
             string? payload = null)
-        {
-            try
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var repo = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
+            => EnqueueNotificationAsync(userId, title, message, payload, _notificationQueue, "User");
 
-                var notification = new Notification
-                {
-                    UserId = userId,
-                    Title = title,
-                    Message = message,
-                    Payload = payload,
-                    CreatedAt = DateTime.UtcNow,
-                    IsRead = false
-                };
-
-                await repo.AddNotificationAsync(notification);
-
-                var dto = new NotificationDto
-                {
-                    Id = notification.Id,
-                    Title = title,
-                    Message = message,
-                    Payload = payload,
-                    CreatedAt = notification.CreatedAt,
-                    IsRead = false
-                };
-
-                _notificationQueue.Enqueue((userId, dto, 0));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to queue notification for User {UserId}", userId);
-            }
-        }
-
-        // ✅ NEW — send to pharmacy group
-        public async Task SendNotificationToPharmacyAsync(
+        public Task SendNotificationToPharmacyAsync(
             string pharmacyId,
             string title,
             string message,
             string? payload = null)
+            => EnqueueNotificationAsync(pharmacyId, title, message, payload, _pharmacyQueue, "Pharmacy");
+
+        private async Task EnqueueNotificationAsync(
+            string targetId,
+            string title,
+            string message,
+            string? payload,
+            ConcurrentQueue<QueuedNotification> queue,
+            string targetType)
         {
+            if (string.IsNullOrWhiteSpace(targetId))
+            {
+                _logger.LogWarning("Attempted to enqueue notification with empty {TargetType} id", targetType);
+                return;
+            }
+
             try
             {
                 using var scope = _scopeFactory.CreateScope();
@@ -100,7 +70,7 @@ namespace Rujta.Infrastructure.Services
 
                 var notification = new Notification
                 {
-                    UserId = pharmacyId, // stored with pharmacyId as userId
+                    UserId = targetId,
                     Title = title,
                     Message = message,
                     Payload = payload,
@@ -120,121 +90,62 @@ namespace Rujta.Infrastructure.Services
                     IsRead = false
                 };
 
-                _pharmacyQueue.Enqueue((pharmacyId, dto, 0));
+                queue.Enqueue(new QueuedNotification(targetId, dto, 0));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to queue pharmacy notification for Pharmacy {PharmacyId}", pharmacyId);
+                _logger.LogError(ex,
+                    "Failed to queue notification for {TargetType} {TargetId}",
+                    targetType, targetId);
             }
         }
 
-        // ─── queue loop ────────────────────────────────────────────────────────
         private async Task ProcessQueueLoopAsync(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
             {
                 try
                 {
-                    await ProcessQueueAsync();
+                    await ProcessQueueAsync(token);
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    break;
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error processing notification queue");
                 }
 
-                await Task.Delay(2000, token);
+                try
+                {
+                    await Task.Delay(LoopDelayMs, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
             }
         }
 
-        private async Task ProcessQueueAsync()
+        private async Task ProcessQueueAsync(CancellationToken token)
         {
-            if (!_queueSemaphore.Wait(0)) return;
+            if (!await _queueSemaphore.WaitAsync(0, token).ConfigureAwait(false))
+                return;
 
             try
             {
-                // ─── existing user queue ───────────────────────────────────────
-                while (_notificationQueue.TryDequeue(out var item))
-                {
-                    int retries = 0;
-                    bool sent = false;
+                await DrainQueueAsync(
+                    _notificationQueue,
+                    (id, dto) => _publisher.PublishAsync(id, dto),
+                    "User",
+                    token);
 
-                    while (!sent && retries < MaxRetryPerAttempt)
-                    {
-                        try
-                        {
-                            await _publisher.PublishAsync(item.userId, item.dto);
-                            sent = true;
-                            _logger.LogInformation(
-                                "Notification {NotificationId} sent to User {UserId}",
-                                item.dto.Id, item.userId);
-                        }
-                        catch
-                        {
-                            retries++;
-                            await Task.Delay(200 * retries);
-                        }
-                    }
-
-                    if (!sent)
-                    {
-                        if (item.attempts < MaxTotalRequeues)
-                        {
-                            int next = item.attempts + 1;
-                            _logger.LogWarning(
-                                "Notification {Id} re-queued (attempt {Attempt}/{Max})",
-                                item.dto.Id, next, MaxTotalRequeues);
-                            _notificationQueue.Enqueue((item.userId, item.dto, next));
-                        }
-                        else
-                        {
-                            _logger.LogError(
-                                "Notification {Id} permanently dropped after all retries",
-                                item.dto.Id);
-                        }
-                    }
-                }
-
-                // ✅ NEW — pharmacy queue ───────────────────────────────────────
-                while (_pharmacyQueue.TryDequeue(out var item))
-                {
-                    int retries = 0;
-                    bool sent = false;
-
-                    while (!sent && retries < MaxRetryPerAttempt)
-                    {
-                        try
-                        {
-                            await _publisher.PublishToPharmacyAsync(item.pharmacyId, item.dto);
-                            sent = true;
-                            _logger.LogInformation(
-                                "Notification {NotificationId} sent to Pharmacy {PharmacyId}",
-                                item.dto.Id, item.pharmacyId);
-                        }
-                        catch
-                        {
-                            retries++;
-                            await Task.Delay(200 * retries);
-                        }
-                    }
-
-                    if (!sent)
-                    {
-                        if (item.attempts < MaxTotalRequeues)
-                        {
-                            int next = item.attempts + 1;
-                            _logger.LogWarning(
-                                "Pharmacy Notification {Id} re-queued (attempt {Attempt}/{Max})",
-                                item.dto.Id, next, MaxTotalRequeues);
-                            _pharmacyQueue.Enqueue((item.pharmacyId, item.dto, next));
-                        }
-                        else
-                        {
-                            _logger.LogError(
-                                "Pharmacy Notification {Id} permanently dropped after all retries",
-                                item.dto.Id);
-                        }
-                    }
-                }
+                await DrainQueueAsync(
+                    _pharmacyQueue,
+                    (id, dto) => _publisher.PublishToPharmacyAsync(id, dto),
+                    "Pharmacy",
+                    token);
             }
             finally
             {
@@ -242,7 +153,85 @@ namespace Rujta.Infrastructure.Services
             }
         }
 
-        // ─── existing read methods — no change ────────────────────────────────
+        private async Task DrainQueueAsync(
+            ConcurrentQueue<QueuedNotification> queue,
+            Func<string, NotificationDto, Task> publishFunc,
+            string targetType,
+            CancellationToken token)
+        {
+            while (!token.IsCancellationRequested && queue.TryDequeue(out var item))
+            {
+                bool sent = await TryPublishWithRetryAsync(item, publishFunc, targetType, token);
+
+                if (!sent && !token.IsCancellationRequested)
+                {
+                    HandleFailedDelivery(queue, item, targetType);
+                }
+            }
+        }
+
+        private async Task<bool> TryPublishWithRetryAsync(
+            QueuedNotification item,
+            Func<string, NotificationDto, Task> publishFunc,
+            string targetType,
+            CancellationToken token)
+        {
+            for (int retries = 0; retries < MaxRetryPerAttempt; retries++)
+            {
+                if (token.IsCancellationRequested) return false;
+
+                try
+                {
+                    await publishFunc(item.TargetId, item.Dto).ConfigureAwait(false);
+
+                    _logger.LogInformation(
+                        "Notification {NotificationId} sent to {TargetType} {TargetId}",
+                        item.Dto.Id, targetType, item.TargetId);
+
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Publish attempt {Attempt}/{Max} failed for Notification {Id} → {TargetType} {TargetId}",
+                        retries + 1, MaxRetryPerAttempt, item.Dto.Id, targetType, item.TargetId);
+
+                    try
+                    {
+                        await Task.Delay(BaseRetryDelayMs * (retries + 1), token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private void HandleFailedDelivery(
+            ConcurrentQueue<QueuedNotification> queue,
+            QueuedNotification item,
+            string targetType)
+        {
+            if (item.Attempts < MaxTotalRequeues)
+            {
+                int next = item.Attempts + 1;
+                _logger.LogWarning(
+                    "{TargetType} Notification {Id} re-queued (attempt {Attempt}/{Max})",
+                    targetType, item.Dto.Id, next, MaxTotalRequeues);
+
+                queue.Enqueue(item with { Attempts = next });
+            }
+            else
+            {
+                _logger.LogError(
+                    "{TargetType} Notification {Id} permanently dropped after all retries",
+                    targetType, item.Dto.Id);
+            }
+        }
+
         public async Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(string userId)
         {
             using var scope = _scopeFactory.CreateScope();
@@ -274,13 +263,79 @@ namespace Rujta.Infrastructure.Services
             return await repo.GetUnreadCountAsync(userId);
         }
 
-        public void Stop() => _cts.Cancel();
+        public async Task StopAsync()
+        {
+            if (!_cts.IsCancellationRequested)
+                await _cts.CancelAsync().ConfigureAwait(false);
+        }
+
+ 
+        public async ValueTask DisposeAsync()
+        {
+            await DisposeAsyncCore().ConfigureAwait(false);
+
+            Dispose(disposing: false);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual async ValueTask DisposeAsyncCore()
+        {
+            if (_disposed) return;
+
+            try
+            {
+                if (!_cts.IsCancellationRequested)
+                    await _cts.CancelAsync().ConfigureAwait(false);
+
+                await _backgroundTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException ex)  
+            {
+                _logger.LogDebug(ex, "NotificationService background task cancelled gracefully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during NotificationService async disposal");
+            }
+        }
 
         public void Dispose()
         {
-            _cts.Cancel();
-            _cts.Dispose();
-            _queueSemaphore.Dispose();
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                try
+                {
+                    if (!_cts.IsCancellationRequested)
+                        _cts.Cancel();
+
+                    _backgroundTask.GetAwaiter().GetResult();
+                }
+                catch (OperationCanceledException ex)   
+                {
+                    _logger.LogDebug(ex, "NotificationService background task cancelled gracefully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error during NotificationService disposal");
+                }
+                finally
+                {
+                    _cts.Dispose();
+                    _queueSemaphore.Dispose();
+                }
+            }
+
+            _disposed = true;
+        }
+
+        private sealed record QueuedNotification(string TargetId, NotificationDto Dto, int Attempts);
     }
 }

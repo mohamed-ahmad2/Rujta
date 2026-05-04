@@ -20,6 +20,8 @@ namespace Rujta.Application.Services.Builders
 
     public static class PharmacyMatchResultBuilder
     {
+        private const double PartialMatchWeight = 0.5;
+
         public static PharmacyMatchResultDto Build(PharmacyMatchResultParams param)
         {
             ArgumentNullException.ThrowIfNull(param);
@@ -33,7 +35,18 @@ namespace Rujta.Application.Services.Builders
             var latitude = pharmacy.Address?.Latitude ?? 0d;
             var longitude = pharmacy.Address?.Longitude ?? 0d;
 
-            var totalRequested = order.Items?.Count ?? 0;
+            var processedCount = foundList.Count + notFoundList.Count;
+            var orderItemsCount = order.Items?.Count ?? 0;
+
+            var totalRequested = Math.Max(processedCount, orderItemsCount);
+
+            double matchScore = param.Matched + (param.PartialMatches * PartialMatchWeight);
+
+            double matchPercentage = totalRequested > 0
+                ? Math.Round(matchScore / totalRequested * 100, 1)
+                : 0;
+
+            matchPercentage = Math.Clamp(matchPercentage, 0, 100);
 
             return new PharmacyMatchResultDto
             {
@@ -47,9 +60,7 @@ namespace Rujta.Application.Services.Builders
                 PartialMatches = param.PartialMatches,
                 TotalShortage = param.TotalShortage,
                 TotalRequestedDrugs = totalRequested,
-                MatchPercentage = totalRequested > 0
-                    ? Math.Round((double)param.Matched / totalRequested * 100, 1)
-                    : 0,
+                MatchPercentage = matchPercentage,
 
                 DistanceKm = param.DistanceKm,
                 EstimatedDurationMinutes = Math.Round(param.DurationMinutes, 1),

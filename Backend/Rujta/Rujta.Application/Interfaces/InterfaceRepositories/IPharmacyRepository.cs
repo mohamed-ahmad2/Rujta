@@ -18,6 +18,7 @@
         Task<List<Pharmacy>> GetMainPharmaciesAsync(CancellationToken cancellationToken = default);
         Task<int> CountBranchesAsync(int parentId, CancellationToken cancellationToken = default);
         Task<bool> IsMainPharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default);
+        Task<(List<InventoryItem> Items, int TotalCount)> GetPagedInventoryByPharmacyAsync(int pharmacyId,int pageNumber,int pageSize,string? searchTerm, int? categoryId,CancellationToken cancellationToken = default);
 
     }
 }
