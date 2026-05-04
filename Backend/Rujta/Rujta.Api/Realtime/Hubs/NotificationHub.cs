@@ -18,13 +18,14 @@ namespace Rujta.API.Realtime.Hubs
         public override async Task OnConnectedAsync()
         {
             foreach (var claim in Context.User?.Claims ?? Enumerable.Empty<Claim>())
-            {
                 Console.WriteLine($">>> CLAIM: {claim.Type} = {claim.Value}");
-            }
 
-            var userId = Context.User?.FindFirst("domainPersonId")?.Value;
+            // ✅ Don't abort — try multiple claim types
+            var userId = Context.User?.FindFirst("domainPersonId")?.Value
+                      ?? Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? Context.User?.FindFirst("sub")?.Value;
+
             Console.WriteLine($">>> HUB userId = '{userId}'");
-            Console.WriteLine($">>> HUB group  = 'User-{userId}'");
 
             if (string.IsNullOrEmpty(userId))
             {
@@ -33,12 +34,23 @@ namespace Rujta.API.Realtime.Hubs
                 return;
             }
 
+            // Personal group
             await Groups.AddToGroupAsync(Context.ConnectionId, $"User-{userId}");
 
-            // ✅ ADD THESE 3 LINES — join pharmacy group if this user is pharmacy admin
+            // Pharmacy group
             var pharmacyId = Context.User?.FindFirst("PharmacyId")?.Value;
             if (!string.IsNullOrEmpty(pharmacyId))
+            {
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"Pharmacy-{pharmacyId}");
+                Console.WriteLine($">>> HUB: joined Pharmacy-{pharmacyId}");
+            }
+
+            // SuperAdmins group
+            if (Context.User?.IsInRole("SuperAdmin") == true)
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, "SuperAdmins");
+                Console.WriteLine($">>> HUB: {userId} joined SuperAdmins group");
+            }
 
             await base.OnConnectedAsync();
         }
@@ -49,13 +61,16 @@ namespace Rujta.API.Realtime.Hubs
             if (!string.IsNullOrEmpty(userId))
             {
                 await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"User-{userId}");
-                Console.WriteLine($"🔹 NotificationHub: User {userId} disconnected.");
+                Console.WriteLine($"🔹 User {userId} disconnected.");
             }
 
-            // ✅ ADD THESE 3 LINES — leave pharmacy group on disconnect
             var pharmacyId = Context.User?.FindFirst("PharmacyId")?.Value;
             if (!string.IsNullOrEmpty(pharmacyId))
                 await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Pharmacy-{pharmacyId}");
+
+            // ✅ Leave SuperAdmins group on disconnect
+            if (Context.User?.IsInRole("SuperAdmin") == true)
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, "SuperAdmins");
 
             await base.OnDisconnectedAsync(exception);
         }

@@ -34,7 +34,11 @@ namespace Rujta.Infrastructure.Extensions
                 );
             });
 
-            services.AddSignalR();
+            services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.PropertyNamingPolicy = null;
+    });
 
             services.AddHttpContextAccessor();
 

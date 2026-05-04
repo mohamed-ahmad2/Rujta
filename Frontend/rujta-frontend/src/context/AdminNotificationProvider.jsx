@@ -4,11 +4,19 @@ import { AdminNotificationContext } from "./AdminNotificationContext";
 import { useAuth } from "../features/auth/hooks/useAuth";
 import { getAccessToken, subscribeTokenChange } from "../authProvider/authTokenProvider";
 
+// ✅ reads "accessToken" — same key as getAccessToken()
 function getStorageKey() {
     try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("accessToken");
         if (!token) return null;
         const payload = JSON.parse(atob(token.split(".")[1]));
+
+        const roles = payload.role || payload.roles || payload.Role || "";
+        if (roles === "SuperAdmin" || roles?.includes?.("SuperAdmin")) {
+            const userId = payload.sub || payload.nameid || payload.userId;
+            return userId ? `superadmin_notifications_${userId}` : null;
+        }
+
         const pharmacyId = payload.PharmacyId || payload.pharmacyId || null;
         return pharmacyId ? `admin_notifications_${pharmacyId}` : null;
     } catch {
@@ -22,9 +30,11 @@ export const AdminNotificationProvider = ({ children }) => {
     const startingRef = useRef(false);
     const [connection, setConnection] = useState(null);
 
-    const isPharmacyAdmin = user?.role === "Pharmacy" ||
-                            user?.role === "Admin" ||
-                            user?.role === "PharmacyAdmin";
+    const isPharmacyAdmin =
+        user?.role === "Pharmacy" ||
+        user?.role === "Admin" ||
+        user?.role === "PharmacyAdmin" ||
+        user?.role === "SuperAdmin";
 
     // ✅ Load from localStorage immediately on first render
     const [notifications, setNotificationsState] = useState(() => {
@@ -71,7 +81,7 @@ export const AdminNotificationProvider = ({ children }) => {
     const startHubConnection = useCallback(async () => {
         if (startingRef.current) return;
         if (!user || loading) return;
-        if (!isPharmacyAdmin) return; // ✅ only connect for pharmacy admin
+        if (!isPharmacyAdmin) return;
         if (connectionRef.current) return;
 
         const token = getAccessToken();

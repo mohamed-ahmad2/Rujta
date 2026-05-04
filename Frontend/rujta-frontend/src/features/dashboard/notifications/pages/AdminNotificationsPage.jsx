@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from "react";
 import { useAdminNotifications } from "../hook/useAdminNotifications";
 
-const FILTERS = ["all", "unread", "order", "cancel"];
+const FILTERS = ["all", "unread", "order", "cancel", "drug"];
 
 const TAG_CLASSES = {
     order:  "bg-[#EAF3DE] text-pr",
     cancel: "bg-[#FAECE7] text-[#993C1D]",
+     drug:   "bg-[#E3F2FD] text-[#1565C0]",
     update: "bg-page text-muted-foreground",
 };
 
@@ -25,10 +26,12 @@ function isToday(dateStr) {
     return new Date(dateStr).toDateString() === new Date().toDateString();
 }
 
+// In AdminNotificationsPage.jsx — update getTag function:
 function getTag(title = "") {
     const t = title.toLowerCase();
     if (t.includes("cancel")) return "cancel";
     if (t.includes("order") || t.includes("new")) return "order";
+    if (t.includes("drug") || t.includes("approved") || t.includes("rejected")) return "drug"; // ✅ ADD
     return "update";
 }
 
@@ -42,6 +45,7 @@ export default function AdminNotificationsPage() {
         if (activeFilter === "unread") return notifications.filter((n) => !n.isRead);
         if (activeFilter === "order") return notifications.filter((n) => getTag(n.title) === "order");
         if (activeFilter === "cancel") return notifications.filter((n) => getTag(n.title) === "cancel");
+        if (activeFilter === "drug")   return notifications.filter((n) => getTag(n.title) === "drug");
         return notifications;
     }, [notifications, activeFilter]);
 
@@ -136,7 +140,14 @@ function Section({ label, items, markAsRead }) {
         </div>
     );
 }
-
+function DrugIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1565C0" strokeWidth="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M3 9h18M9 21V9" />
+        </svg>
+    );
+}
 function NotifCard({ n, markAsRead }) {
     const tag = getTag(n.title);
     const tagClass = TAG_CLASSES[tag] || TAG_CLASSES.update;
@@ -153,11 +164,11 @@ function NotifCard({ n, markAsRead }) {
             `}
         >
             {/* Icon */}
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
-                ${tag === "cancel" ? "bg-[#FAECE7]" : "bg-[#EAF3DE]"}`}
-            >
-                {tag === "cancel" ? <CancelIcon /> : <OrderIcon />}
-            </div>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
+                    ${tag === "cancel" ? "bg-[#FAECE7]" : tag === "drug" ? "bg-[#E3F2FD]" : "bg-[#EAF3DE]"}`}
+                >
+                    {tag === "cancel" ? <CancelIcon /> : tag === "drug" ? <DrugIcon /> : <OrderIcon />}
+                </div>
 
             {/* Body */}
             <div className="flex-1 min-w-0">

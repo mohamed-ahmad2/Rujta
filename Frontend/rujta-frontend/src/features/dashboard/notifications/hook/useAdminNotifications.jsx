@@ -15,6 +15,7 @@ export const useAdminNotifications = () => {
     // ================= Fetch from DB =================
     const fetchNotifications = useCallback(async () => {
         if (!user) return;
+        if (user?.role === "SuperAdmin") return;
         try {
             const res = await getAdminNotifications();
             const fromDb = res.data || [];
@@ -40,12 +41,54 @@ export const useAdminNotifications = () => {
         });
     }, [connection, fetchNotifications]);
 
-    // ================= Listen for real-time notifications =================
+    // ================= Listen for NewDrugRequest (SuperAdmin only) =================
     useEffect(() => {
         if (!connection) return;
+        if (user?.role !== "SuperAdmin") return;
 
-        const handleNewNotification = (dto) => {
-            console.log("🔔 Admin notification received:", dto);
+        const handleNewDrugRequest = (data) => {
+            console.log("💊 New drug request received:", data);
+            const dto = {
+                id: `drug-${data.requestId}-${Date.now()}`,
+                title: "New Drug Request",
+                message: `"${data.drugName}" requested by Pharmacy #${data.pharmacyId}`,
+                createdAt: data.submittedAt,
+                isRead: false,
+            };
+            setNotifications((prev) => {
+                const alreadyExists = prev.some((n) => n.id === dto.id);
+                if (alreadyExists) return prev;
+                return [dto, ...prev];
+            });
+            showToast({ title: dto.title, message: dto.message });
+        };
+
+        connection.off("NewDrugRequest");
+        connection.on("NewDrugRequest", handleNewDrugRequest);
+
+        return () => connection.off("NewDrugRequest", handleNewDrugRequest);
+    }, [connection, user, setNotifications, showToast]);
+
+    // ================= Listen for drug review result (Pharmacist only) =================
+    // ✅ Use `connection` (admin hub) NOT pharmacistConnection (user hub)
+    // ✅ Backend sends raw data — build the dto manually
+    useEffect(() => {
+        if (!connection) return;
+        if (user?.role === "SuperAdmin") return; // SuperAdmin reviews, doesn't receive review results
+
+        const handleReviewed = (data) => {
+            console.log("💊 Drug request reviewed:", data);
+
+            const isApproved = data.status === "Approved";
+            const dto = {
+                id: `drug-review-${data.requestId}-${Date.now()}`,
+                title: isApproved ? "Drug Request Approved ✅" : "Drug Request Rejected ❌",
+                message: isApproved
+                    ? `"${data.drugName}" has been approved and added to the database.`
+                    : `"${data.drugName}" was rejected. Reason: ${data.rejectionReason || "No reason provided"}`,
+                createdAt: new Date().toISOString(),
+                isRead: false,
+            };
 
             setNotifications((prev) => {
                 const alreadyExists = prev.some((n) => n.id === dto.id);
@@ -56,12 +99,30 @@ export const useAdminNotifications = () => {
             showToast({ title: dto.title, message: dto.message });
         };
 
+        connection.off("DrugRequestReviewed");
+        connection.on("DrugRequestReviewed", handleReviewed);
+
+        return () => connection.off("DrugRequestReviewed", handleReviewed);
+    }, [connection, user, setNotifications, showToast]);
+
+    // ================= Listen for real-time notifications =================
+    useEffect(() => {
+        if (!connection) return;
+
+        const handleNewNotification = (dto) => {
+            console.log("🔔 Admin notification received:", dto);
+            setNotifications((prev) => {
+                const alreadyExists = prev.some((n) => n.id === dto.id);
+                if (alreadyExists) return prev;
+                return [dto, ...prev];
+            });
+            showToast({ title: dto.title, message: dto.message });
+        };
+
         connection.off("NewNotification");
         connection.on("NewNotification", handleNewNotification);
 
-        return () => {
-            connection.off("NewNotification", handleNewNotification);
-        };
+        return () => connection.off("NewNotification", handleNewNotification);
     }, [connection, setNotifications, showToast]);
 
     // ================= Mark As Read =================
