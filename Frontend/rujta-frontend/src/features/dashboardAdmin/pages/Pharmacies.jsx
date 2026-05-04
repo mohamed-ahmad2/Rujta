@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect } from "react";
+// src/features/pharmacies/pages/Pharmacies.jsx
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Search,
   Plus,
@@ -25,10 +26,54 @@ import {
 } from "lucide-react";
 import useSuperAdmin from "../../super-admin/hook/useSuperAdmin";
 import useAddress from "../../address/hook/useAddress";
+import TimeRangePicker from "../components/TimeRangePicker";
+
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://localhost:7001";
+
+const getImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (url.startsWith("blob:") || url.startsWith("data:")) return url;
+  return `${API_URL}${url.startsWith("/") ? url : `/${url}`}`;
+};
 
 /* ─────────────────────────────────────────────
-   MODAL WRAPPER
+   COMPONENTS
 ───────────────────────────────────────────── */
+function PharmacyAvatar({ src, name, size = "md" }) {
+  const [errored, setErrored] = useState(false);
+
+  useEffect(() => {
+    setErrored(false);
+  }, [src]);
+
+  const sizeClasses = {
+    sm: "h-10 w-10 text-sm",
+    md: "h-14 w-14 text-lg",
+    lg: "h-20 w-20 text-2xl",
+  };
+
+  const showImage = src && !errored;
+
+  return showImage ? (
+    <img
+      src={getImageUrl(src)}
+      onError={() => setErrored(true)}
+      className={`${sizeClasses[size]} rounded-full border object-cover`}
+      alt={name || "pharmacy"}
+    />
+  ) : (
+    <div
+      className={`${sizeClasses[size]} flex items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100 font-semibold text-blue-700`}
+    >
+      {(name || "?").charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 function Modal({ onClose, children, width = "440px" }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -48,9 +93,6 @@ function Modal({ onClose, children, width = "440px" }) {
   );
 }
 
-/* ─────────────────────────────────────────────
-   STATUS BADGE
-───────────────────────────────────────────── */
 function StatusBadge({ status }) {
   const styles =
     status === "Active"
@@ -65,9 +107,6 @@ function StatusBadge({ status }) {
   );
 }
 
-/* ─────────────────────────────────────────────
-   TYPE BADGE
-───────────────────────────────────────────── */
 function TypeBadge({ isBranch }) {
   return isBranch ? (
     <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-700">
@@ -80,13 +119,10 @@ function TypeBadge({ isBranch }) {
   );
 }
 
-/* ─────────────────────────────────────────────
-   COPY BUTTON
-───────────────────────────────────────────── */
 function CopyButton({ value, label = "Copy" }) {
   const [copied, setCopied] = useState(false);
   const handle = () => {
-    navigator.clipboard.writeText(value);
+    navigator.clipboard.writeText(value ?? "");
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -102,36 +138,21 @@ function CopyButton({ value, label = "Copy" }) {
 }
 
 /* ─────────────────────────────────────────────
-   ADDRESS HELPERS
+   HELPERS
 ───────────────────────────────────────────── */
 const buildLocationText = ({ street, buildingNo, city, governorate }) => {
   const parts = [];
-  if (street?.trim()) parts.push(street.trim());
-  if (buildingNo?.trim()) parts.push(`Building ${buildingNo.trim()}`);
-  if (city?.trim()) parts.push(city.trim());
-  if (governorate?.trim()) parts.push(governorate.trim());
+  if (street?.toString().trim()) parts.push(street.toString().trim());
+  if (buildingNo?.toString().trim())
+    parts.push(`Building ${buildingNo.toString().trim()}`);
+  if (city?.toString().trim()) parts.push(city.toString().trim());
+  if (governorate?.toString().trim()) parts.push(governorate.toString().trim());
   return parts.join(", ");
 };
 
-const parseLocationText = (text = "") => {
-  // Best-effort split for editing legacy location strings
-  const parts = text
-    .split(",")
-    .map((p) => p.trim())
-    .filter(Boolean);
-  return {
-    street: parts[0] || "",
-    buildingNo: parts[1]?.toLowerCase().startsWith("building")
-      ? parts[1].replace(/building\s*/i, "").trim()
-      : "",
-    city: parts[2] || "",
-    governorate: parts[3] || "",
-  };
-};
-
-/* ═══════════════════════════════════════════════════
+/* ─────────────────────────────────────────────
    MAIN PAGE
-═══════════════════════════════════════════════════ */
+───────────────────────────────────────────── */
 export default function Pharmacies() {
   const {
     pharmacies,
@@ -147,14 +168,12 @@ export default function Pharmacies() {
     resetPassword,
   } = useSuperAdmin();
 
-  // ✅ استخدام useAddress لجلب العناوين المحفوظة (suggestions)
   const {
     addresses,
     fetchUserAddresses,
     loading: addressLoading,
   } = useAddress();
 
-  /* ──── states ──── */
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState(null);
@@ -162,19 +181,16 @@ export default function Pharmacies() {
   const [successData, setSuccessData] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [confirmData, setConfirmData] = useState(null);
-  const [filterType, setFilterType] = useState("all"); // all | main | branch
+  const [filterType, setFilterType] = useState("all");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showAdvancedEdit, setShowAdvancedEdit] = useState(false);
 
-  /* ──── ADD FORM ──── */
   const emptyForm = {
     pharmacyName: "",
-    // ✅ Address fields بدلاً من lat/long يدوية
     street: "",
     buildingNo: "",
     city: "",
     governorate: "",
-    // اختياري (Advanced)
     latitude: "",
     longitude: "",
     openHours: "9AM - 11PM",
@@ -191,7 +207,6 @@ export default function Pharmacies() {
   };
   const [addForm, setAddForm] = useState(emptyForm);
 
-  /* ──── EDIT FORM ──── */
   const [editForm, setEditForm] = useState({
     name: "",
     street: "",
@@ -201,6 +216,7 @@ export default function Pharmacies() {
     contactNumber: "",
     latitude: "",
     longitude: "",
+    openHours: "9AM - 11PM",
   });
 
   const perPage = 7;
@@ -211,56 +227,72 @@ export default function Pharmacies() {
     fetchUserAddresses();
   }, [fetchAll, fetchMain, fetchUserAddresses]);
 
-  /* ──── filtering & pagination ──── */
+  useEffect(() => {
+    return () => {
+      if (addForm.imagePreview && addForm.imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(addForm.imagePreview);
+      }
+    };
+  }, [addForm.imagePreview]);
+
   const filtered = useMemo(() => {
     let list = pharmacies;
     if (filterType === "main") list = list.filter((p) => !p.isBranch);
     if (filterType === "branch") list = list.filter((p) => p.isBranch);
     if (!q) return list;
+    const lower = q.toLowerCase();
     return list.filter(
       (p) =>
-        p.name.toLowerCase().includes(q.toLowerCase()) ||
-        p.location.toLowerCase().includes(q.toLowerCase()) ||
-        p.contactNumber.toLowerCase().includes(q.toLowerCase()),
+        p.name?.toLowerCase().includes(lower) ||
+        p.location?.toLowerCase().includes(lower) ||
+        p.contactNumber?.toLowerCase().includes(lower),
     );
   }, [q, pharmacies, filterType]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const data = filtered.slice((page - 1) * perPage, page * perPage);
 
-  /* ════════════════════════════════════════════
-     HANDLERS
-  ════════════════════════════════════════════ */
+  const handleSelectSavedAddress = useCallback(
+    (addressId) => {
+      if (!addressId) {
+        setAddForm((prev) => ({ ...prev, selectedAddressId: "" }));
+        return;
+      }
+      const addr = addresses.find(
+        (a) => String(a.id ?? a.Id) === String(addressId),
+      );
+      if (!addr) return;
 
-  // ─── استخدام عنوان محفوظ لملء الحقول تلقائياً (ADD) ───
-  const handleSelectSavedAddress = (addressId) => {
-    if (!addressId) {
-      setAddForm((prev) => ({ ...prev, selectedAddressId: "" }));
-      return;
+      setAddForm((prev) => ({
+        ...prev,
+        selectedAddressId: addressId,
+        street: addr.street ?? addr.Street ?? "",
+        buildingNo: String(addr.buildingNo ?? addr.BuildingNo ?? ""),
+        city: addr.city ?? addr.City ?? "",
+        governorate: addr.governorate ?? addr.Governorate ?? "",
+      }));
+    },
+    [addresses],
+  );
+
+  const resetAddForm = useCallback(() => {
+    if (addForm.imagePreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(addForm.imagePreview);
     }
-    const addr = addresses.find(
-      (a) => String(a.id ?? a.Id) === String(addressId),
-    );
-    if (!addr) return;
+    setAddForm(emptyForm);
+    setShowAdvanced(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addForm.imagePreview]);
 
-    setAddForm((prev) => ({
-      ...prev,
-      selectedAddressId: addressId,
-      street: addr.street ?? addr.Street ?? "",
-      buildingNo: String(addr.buildingNo ?? addr.BuildingNo ?? ""),
-      city: addr.city ?? addr.City ?? "",
-      governorate: addr.governorate ?? addr.Governorate ?? "",
-    }));
-  };
-
-  // ─── ADD ───
+  /* ─────────────────────────────────────────────
+     ✅ ADD — payload يطابق buildCreateFormData في الـ hook
+  ───────────────────────────────────────────── */
   const handleAdd = async () => {
     const {
       pharmacyName,
       managerName,
       managerEmail,
       managerPhone,
-      managerQualification,
       street,
       city,
       governorate,
@@ -284,33 +316,29 @@ export default function Pharmacies() {
     }
 
     try {
-      // ✅ بناء الـ Location من حقول العنوان المنظمة
-      const pharmacyLocation = buildLocationText({
-        street: addForm.street,
-        buildingNo: addForm.buildingNo,
-        city: addForm.city,
-        governorate: addForm.governorate,
-      });
-
+      // ⚠️ المفاتيح هنا camelCase حتى يتعامل معها buildCreateFormData
       const payload = {
-        PharmacyName: addForm.pharmacyName,
-        PharmacyLocation: pharmacyLocation || "Not provided",
-        // اختياري — لو فاضي يتبعت 0
-        Latitude: parseFloat(addForm.latitude) || 0,
-        Longitude: parseFloat(addForm.longitude) || 0,
-        OpenHours: addForm.openHours || "9AM - 11PM",
-        ManagerName: addForm.managerName,
-        ManagerEmail: addForm.managerEmail,
-        ManagerPhone: addForm.managerPhone,
-        ManagerQualification: managerQualification || "N/A",
-        ManagerExperienceYears: parseInt(addForm.managerExperienceYears) || 0,
+        pharmacyName: addForm.pharmacyName,
+        openHours: addForm.openHours || "9AM - 11PM",
+        managerName: addForm.managerName,
+        managerEmail: addForm.managerEmail,
+        managerPhone: addForm.managerPhone,
+        managerQualification: addForm.managerQualification || "N/A",
+        managerExperienceYears:
+          parseInt(addForm.managerExperienceYears, 10) || 0,
+        address: {
+          street: addForm.street,
+          buildingNo: addForm.buildingNo,
+          city: addForm.city,
+          governorate: addForm.governorate,
+          latitude: parseFloat(addForm.latitude) || 0,
+          longitude: parseFloat(addForm.longitude) || 0,
+        },
+        image: addForm.image, // الـ hook يضيفه فقط إذا كان File/Blob
       };
 
       if (addForm.isBranch && addForm.parentPharmacyId) {
-        payload.ParentPharmacyId = parseInt(addForm.parentPharmacyId);
-      }
-      if (addForm.image) {
-        payload.Image = addForm.image;
+        payload.parentPharmacyId = parseInt(addForm.parentPharmacyId, 10);
       }
 
       const res = await create(payload);
@@ -324,17 +352,18 @@ export default function Pharmacies() {
         password: res.generatedPassword ?? res.GeneratedPassword ?? "",
       });
 
-      setAddForm(emptyForm);
-      setShowAdvanced(false);
+      resetAddForm();
       setModal(null);
-      fetchAll();
+      // fetchAll/fetchMain تم استدعاؤها مسبقًا داخل create() — لكن نحدّث الـ main أيضًا
       fetchMain();
     } catch (err) {
       setErrorMsg(err?.message || "Error creating pharmacy");
     }
   };
 
-  // ─── VIEW ───
+  /* ─────────────────────────────────────────────
+     VIEW
+  ───────────────────────────────────────────── */
   const handleView = async (p) => {
     setSelected(p);
     setModal("view");
@@ -342,19 +371,22 @@ export default function Pharmacies() {
     if (detail) setSelected({ ...p, ...detail });
   };
 
-  // ─── EDIT ───
+  /* ─────────────────────────────────────────────
+     ✅ EDIT — نستخدم الحقول المهيكلة (street/city/...) مباشرةً
+  ───────────────────────────────────────────── */
   const openEdit = (p) => {
     setSelected(p);
-    const parsed = parseLocationText(p.location);
     setEditForm({
-      name: p.name,
-      street: parsed.street,
-      buildingNo: parsed.buildingNo,
-      city: parsed.city,
-      governorate: parsed.governorate,
-      contactNumber: p.contactNumber,
-      latitude: p.latitude,
-      longitude: p.longitude,
+      name: p.name ?? "",
+      street: p.street ?? "",
+      buildingNo: p.buildingNo ?? "",
+      city: p.city ?? "",
+      governorate: p.governorate ?? "",
+      contactNumber: p.contactNumber === "-" ? "" : (p.contactNumber ?? ""),
+      latitude: p.latitude ?? "",
+      longitude: p.longitude ?? "",
+      openHours:
+        p.openHours && p.openHours !== "-" ? p.openHours : "9AM - 11PM",
     });
     setShowAdvancedEdit(false);
     setModal("edit");
@@ -366,22 +398,22 @@ export default function Pharmacies() {
       return;
     }
 
-    const newLocation = buildLocationText({
-      street: editForm.street,
-      buildingNo: editForm.buildingNo,
-      city: editForm.city,
-      governorate: editForm.governorate,
-    });
-
-    const ok = await update(selected.id, {
+    // ⚠️ payload يطابق buildUpdatePayload في الـ hook (يتوقع address ككائن)
+    const updated = await update(selected.id, {
       name: editForm.name,
-      location: newLocation || "Not provided",
       contactNumber: editForm.contactNumber,
-      latitude: parseFloat(editForm.latitude) || 0,
-      longitude: parseFloat(editForm.longitude) || 0,
+      openHours: editForm.openHours || "9AM - 11PM",
+      address: {
+        street: editForm.street,
+        buildingNo: editForm.buildingNo,
+        city: editForm.city,
+        governorate: editForm.governorate,
+        latitude: parseFloat(editForm.latitude) || 0,
+        longitude: parseFloat(editForm.longitude) || 0,
+      },
     });
 
-    if (ok) {
+    if (updated) {
       setModal(null);
       fetchAll();
     } else {
@@ -389,7 +421,9 @@ export default function Pharmacies() {
     }
   };
 
-  // ─── RESET PASSWORD ───
+  /* ─────────────────────────────────────────────
+     RESET PASSWORD
+  ───────────────────────────────────────────── */
   const handleResetPassword = (p) => {
     setConfirmData({
       title: "Reset Password",
@@ -400,7 +434,7 @@ export default function Pharmacies() {
         setConfirmData(null);
         if (newPwd) {
           setSuccessData({
-            email: p.raw?.managerEmail ?? "manager@email",
+            email: p.managerEmail ?? p.raw?.managerEmail ?? "manager@email",
             password: newPwd,
             title: "Password Reset!",
           });
@@ -411,7 +445,9 @@ export default function Pharmacies() {
     });
   };
 
-  // ─── DELETE / RESTORE ───
+  /* ─────────────────────────────────────────────
+     DELETE / RESTORE
+  ───────────────────────────────────────────── */
   const handleDelete = (p) => {
     setConfirmData({
       title: "Delete Pharmacy",
@@ -421,11 +457,11 @@ export default function Pharmacies() {
       onConfirm: async () => {
         const ok = await remove(p.id);
         setConfirmData(null);
-        if (ok) fetchAll();
-        else
+        if (!ok) {
           setErrorMsg(
             "Could not delete pharmacy (it may have active branches).",
           );
+        }
       },
     });
   };
@@ -438,15 +474,32 @@ export default function Pharmacies() {
       onConfirm: async () => {
         const ok = await restore(p.id);
         setConfirmData(null);
-        if (ok) fetchAll();
-        else setErrorMsg("Could not restore pharmacy.");
+        if (!ok) setErrorMsg("Could not restore pharmacy.");
       },
     });
   };
 
-  /* ════════════════════════════════════════════
+  /* ─────────────────────────────────────────────
+     IMAGE UPLOAD
+  ───────────────────────────────────────────── */
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (addForm.imagePreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(addForm.imagePreview);
+    }
+
+    setAddForm({
+      ...addForm,
+      image: file,
+      imagePreview: URL.createObjectURL(file),
+    });
+  };
+
+  /* ─────────────────────────────────────────────
      RENDER
-  ════════════════════════════════════════════ */
+  ───────────────────────────────────────────── */
   return (
     <div className="min-h-screen space-y-6 bg-[#f5f7fb] p-8 lg:p-10">
       {/* HEADER */}
@@ -459,7 +512,6 @@ export default function Pharmacies() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Filter Tabs */}
           <div className="flex rounded-full border bg-white p-1 text-sm">
             {[
               { key: "all", label: "All" },
@@ -483,7 +535,6 @@ export default function Pharmacies() {
             ))}
           </div>
 
-          {/* Search */}
           <div className="flex w-[260px] items-center gap-2 rounded-xl border bg-white px-4 py-2.5">
             <Search size={16} className="text-gray-400" />
             <input
@@ -497,7 +548,6 @@ export default function Pharmacies() {
             />
           </div>
 
-          {/* Add Button */}
           <button
             onClick={() => setModal("add")}
             className="flex items-center gap-2 rounded-full bg-secondary px-5 py-2.5 text-sm text-white shadow-sm transition hover:opacity-90"
@@ -568,17 +618,11 @@ export default function Pharmacies() {
                 <tr key={p.id} className="border-t hover:bg-gray-50/60">
                   <td className="px-3 py-3">
                     <div className="flex justify-center">
-                      {p.imageUrl ? (
-                        <img
-                          src={p.imageUrl}
-                          className="h-10 w-10 rounded-full border object-cover"
-                          alt=""
-                        />
-                      ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100 text-sm font-semibold text-blue-700">
-                          {p.name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                      <PharmacyAvatar
+                        src={p.imageUrl}
+                        name={p.name}
+                        size="sm"
+                      />
                     </div>
                   </td>
 
@@ -586,7 +630,9 @@ export default function Pharmacies() {
                     {p.name}
                   </td>
                   <td className="px-3 py-3 text-gray-600">{p.contactNumber}</td>
-                  <td className="px-3 py-3 text-gray-600">{p.location}</td>
+                  <td className="px-3 py-3 text-gray-600">
+                    {buildLocationText(p) || p.location}
+                  </td>
 
                   <td className="px-3 py-3 text-center">
                     <TypeBadge isBranch={p.isBranch} />
@@ -685,7 +731,6 @@ export default function Pharmacies() {
             Create a new pharmacy with its manager account
           </p>
 
-          {/* Pharmacy Section */}
           <Section title="Pharmacy Info">
             <Field
               label="Pharmacy Name *"
@@ -693,17 +738,19 @@ export default function Pharmacies() {
               value={addForm.pharmacyName}
               onChange={(v) => setAddForm({ ...addForm, pharmacyName: v })}
             />
-            <Field
-              label="Open Hours"
-              placeholder="9AM - 11PM"
-              value={addForm.openHours}
-              onChange={(v) => setAddForm({ ...addForm, openHours: v })}
-            />
+            <div>
+              <label className="mb-1 block text-xs text-gray-500">
+                Open Hours
+              </label>
+              <TimeRangePicker
+                value={addForm.openHours}
+                onChange={(v) => setAddForm({ ...addForm, openHours: v })}
+                placeholder="Select open hours"
+              />
+            </div>
           </Section>
 
-          {/* ✅ Address Section */}
           <Section title="Pharmacy Address">
-            {/* Saved Addresses Suggestions */}
             {addresses && addresses.length > 0 && (
               <div className="rounded-lg bg-blue-50 p-3">
                 <label className="mb-1 flex items-center gap-1 text-xs text-blue-700">
@@ -776,7 +823,6 @@ export default function Pharmacies() {
               }
             />
 
-            {/* Preview */}
             {(addForm.street || addForm.city || addForm.governorate) && (
               <div className="rounded-md bg-gray-50 p-2 text-xs text-gray-600">
                 <span className="font-semibold">Preview:</span>{" "}
@@ -784,7 +830,6 @@ export default function Pharmacies() {
               </div>
             )}
 
-            {/* Advanced (Optional Lat/Long) */}
             <button
               type="button"
               onClick={() => setShowAdvanced((s) => !s)}
@@ -816,7 +861,6 @@ export default function Pharmacies() {
             )}
           </Section>
 
-          {/* Manager Section */}
           <Section title="Manager Info">
             <Field
               label="Manager Name *"
@@ -858,7 +902,6 @@ export default function Pharmacies() {
             </div>
           </Section>
 
-          {/* Logo Upload */}
           <Section title="Logo">
             <div className="flex items-center gap-3">
               <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-gray-100">
@@ -880,21 +923,12 @@ export default function Pharmacies() {
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    setAddForm({
-                      ...addForm,
-                      image: file,
-                      imagePreview: URL.createObjectURL(file),
-                    });
-                  }}
+                  onChange={handleImageUpload}
                 />
               </label>
             </div>
           </Section>
 
-          {/* Branch Toggle */}
           <Section title="Type">
             <label className="flex cursor-pointer select-none items-center gap-3">
               <div
@@ -943,10 +977,12 @@ export default function Pharmacies() {
             )}
           </Section>
 
-          {/* Buttons */}
           <div className="flex justify-end gap-2 pt-2">
             <button
-              onClick={() => setModal(null)}
+              onClick={() => {
+                resetAddForm();
+                setModal(null);
+              }}
               className="rounded-lg border px-5 py-2 text-sm hover:bg-gray-50"
             >
               Cancel
@@ -967,17 +1003,11 @@ export default function Pharmacies() {
       {modal === "view" && selected && (
         <Modal onClose={() => setModal(null)} width="500px">
           <div className="flex items-center gap-3 border-b pb-3">
-            {selected.imageUrl ? (
-              <img
-                src={selected.imageUrl}
-                className="h-14 w-14 rounded-full border object-cover"
-                alt=""
-              />
-            ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100 text-lg font-semibold text-blue-700">
-                {selected.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <PharmacyAvatar
+              src={selected.imageUrl}
+              name={selected.name}
+              size="md"
+            />
             <div>
               <h2 className="text-lg font-semibold">{selected.name}</h2>
               <div className="mt-1 flex gap-2">
@@ -991,7 +1021,7 @@ export default function Pharmacies() {
             <DetailRow
               icon={<MapPin size={14} />}
               label="Location"
-              value={selected.location}
+              value={buildLocationText(selected) || selected.location}
             />
             <DetailRow
               icon={<Phone size={14} />}
@@ -1020,8 +1050,10 @@ export default function Pharmacies() {
             )}
             {selected.parentPharmacyId && (
               <DetailRow
-                label="Parent Pharmacy ID"
-                value={selected.parentPharmacyId}
+                label="Parent Pharmacy"
+                value={
+                  selected.parentPharmacyName || `#${selected.parentPharmacyId}`
+                }
               />
             )}
           </div>
@@ -1058,7 +1090,17 @@ export default function Pharmacies() {
             onChange={(v) => setEditForm({ ...editForm, contactNumber: v })}
           />
 
-          {/* ✅ Address Fields في الـ Edit */}
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">
+              Open Hours
+            </label>
+            <TimeRangePicker
+              value={editForm.openHours}
+              onChange={(v) => setEditForm({ ...editForm, openHours: v })}
+              placeholder="Select open hours"
+            />
+          </div>
+
           <Section title="Address">
             <Field
               label="Street"
@@ -1143,7 +1185,7 @@ export default function Pharmacies() {
         </Modal>
       )}
 
-      {/* ════════ SUCCESS MODAL (credentials) ════════ */}
+      {/* ════════ SUCCESS MODAL ════════ */}
       {successData && (
         <Modal onClose={() => setSuccessData(null)}>
           <h2 className="flex items-center gap-2 text-lg font-semibold text-green-600">
@@ -1156,7 +1198,6 @@ export default function Pharmacies() {
             won't see them again.
           </p>
 
-          {/* EMAIL */}
           <div className="flex items-center justify-between rounded-lg border bg-gray-50 p-3">
             <div className="min-w-0">
               <p className="flex items-center gap-1 text-xs text-gray-400">
@@ -1167,13 +1208,14 @@ export default function Pharmacies() {
             <CopyButton value={successData.email} />
           </div>
 
-          {/* PASSWORD */}
           <div className="flex items-center justify-between rounded-lg border bg-gray-50 p-3">
             <div className="min-w-0">
               <p className="flex items-center gap-1 text-xs text-gray-400">
                 <KeyRound size={11} /> Password
               </p>
-              <p className="font-mono font-medium">{successData.password}</p>
+              <p className="font-mono font-medium">
+                {successData.password || "—"}
+              </p>
             </div>
             <CopyButton value={successData.password} />
           </div>
@@ -1292,7 +1334,7 @@ function Field({ label, value, onChange, placeholder, type = "text" }) {
         type={type}
         placeholder={placeholder}
         className="w-full rounded-lg border p-2 text-sm transition focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30"
-        value={value}
+        value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
       />
     </div>

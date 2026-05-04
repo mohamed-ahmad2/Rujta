@@ -1,13 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-using Rujta.Application.DTOs; 
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
+﻿using Microsoft.AspNetCore.RateLimiting;
 using Rujta.Domain.Enums;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
-using System.Security.Claims;
 
 namespace Rujta.Api.Controllers
 {

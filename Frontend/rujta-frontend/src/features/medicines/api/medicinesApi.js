@@ -1,30 +1,39 @@
 // src/features/medicines/api/medicinesApi.js
 import apiClient from "../../../shared/api/apiClient";
 
-export const getAllMedicines = () => {
-  return apiClient.get("/medicines");
-};
+export const getAllMedicines = () => apiClient.get("/medicines");
 
-export const getMedicineById = (id) => {
-  return apiClient.get(`/medicines/${id}`);
-};
+export const getMedicineById = (id) => apiClient.get(`/medicines/${id}`);
 
-export const addMedicine = (data) => {
-  return apiClient.post("/medicines", data);
-};
+export const addMedicine = (data) => apiClient.post("/medicines", data);
 
-export const updateMedicine = (id, data) => {
-  return apiClient.put(`/medicines/${id}`, data);
-};
+export const updateMedicine = (id, data) => apiClient.put(`/medicines/${id}`, data);
 
-export const deleteMedicine = (id) => {
-  return apiClient.delete(`/medicines/${id}`);
-};
+export const deleteMedicine = (id) => apiClient.delete(`/medicines/${id}`);
 
-export const searchMedicines = (query) => {
-  return apiClient.get(`/medicines/search?query=${query}`);
-};
+export const searchMedicines = (query) =>
+  apiClient.get(`/medicines/search?query=${query}`);
 
-export const filterMedicines = (filter) => {
-  return apiClient.get("/medicines/filter", {params: filter,});
+export const filterMedicines = (filter) =>
+  apiClient.get("/medicines/filter", { params: filter });
+
+export const getPagedMedicines = ({
+  pageNumber = 1,
+  pageSize = 16,
+  searchTerm,
+  categoryIds,
+  activeIngredient,
+} = {}) => {
+  const params = { PageNumber: pageNumber, PageSize: pageSize };
+
+  if (searchTerm?.trim()) params.SearchTerm = searchTerm.trim();
+  if (activeIngredient?.trim()) params.ActiveIngredient = activeIngredient.trim();
+  if (categoryIds && categoryIds.length > 0) params.CategoryIds = categoryIds;
+
+  return apiClient.get("/medicines/paged", {
+    params,
+    paramsSerializer: {
+      indexes: null,
+    },
+  });
 };

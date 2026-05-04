@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Primitives;
+using Rujta.Application.DTOs.Common;
 using Rujta.Application.DTOs.MedicineDtos;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 
@@ -10,8 +12,14 @@ namespace Rujta.Application.Services.MedicineS
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IMemoryCache _cache;
+
         private const int CacheDurationMinutes = 5;
+        private const int SlidingMinutes = 2;
         private const string AllMedicinesCacheKey = "Medicines_All";
+        private const string MedicineByIdPrefix = "Medicine_";
+        private const string MedicinePagePrefix = "Medicines_Page_";
+
+        private static CancellationTokenSource _listCacheToken = new();
 
         public MedicineService(IUnitOfWork unitOfWork, IMapper mapper, IMemoryCache cache)
         {
@@ -20,12 +28,21 @@ namespace Rujta.Application.Services.MedicineS
             _cache = cache;
         }
 
-        public async Task<IEnumerable<MedicineDto>> GetFilteredAsync(MedicineFilterDto filter, CancellationToken cancellationToken = default)
+        public async Task<PagedResultDto<MedicineDto>> GetPagedAsync(
+            MedicineFilterDto filter,
+            CancellationToken cancellationToken = default)
         {
             try
             {
-                var query = _unitOfWork.Medicines
-                    .GetQueryable();
+                filter ??= new MedicineFilterDto();
+                string cacheKey = BuildCacheKey(filter);
+
+             
+                if (_cache.TryGetValue<PagedResultDto<MedicineDto>>(cacheKey, out var cached)
+                    && cached != null)
+                    return cached;
+
+                var query = _unitOfWork.Medicines.GetQueryable(); 
 
                 if (filter.CategoryIds != null && filter.CategoryIds.Any())
                 {
@@ -36,46 +53,91 @@ namespace Rujta.Application.Services.MedicineS
 
                 if (!string.IsNullOrWhiteSpace(filter.ActiveIngredient))
                 {
+                    var ai = filter.ActiveIngredient.Trim();
                     query = query.Where(m =>
                         m.ActiveIngredient != null &&
-                        m.ActiveIngredient.Contains(filter.ActiveIngredient));
+                        EF.Functions.Like(m.ActiveIngredient, $"%{ai}%"));
                 }
 
+                if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+                {
+                    var term = filter.SearchTerm.Trim();
+                    query = query.Where(m =>
+                        (m.Name != null && EF.Functions.Like(m.Name, $"%{term}%")) ||
+                        (m.ActiveIngredient != null && EF.Functions.Like(m.ActiveIngredient, $"%{term}%")));
+                }
+
+                var totalCount = await query.CountAsync(cancellationToken);
+
+         
                 var medicines = await query
+                    .OrderBy(m => m.Id)
+                    .Skip((filter.PageNumber - 1) * filter.PageSize)
+                    .Take(filter.PageSize)
                     .ToListAsync(cancellationToken);
 
-                return _mapper.Map<IEnumerable<MedicineDto>>(medicines);
+                var result = new PagedResultDto<MedicineDto>
+                {
+                    Items = _mapper.Map<IEnumerable<MedicineDto>>(medicines),
+                    TotalCount = totalCount,
+                    PageNumber = filter.PageNumber,
+                    PageSize = filter.PageSize
+                };
+
+
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(CacheDurationMinutes))
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(SlidingMinutes))
+                    .AddExpirationToken(new CancellationChangeToken(_listCacheToken.Token));
+
+                _cache.Set(cacheKey, result, cacheOptions);
+
+                return result;
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    "An error occurred while filtering medicines.",
-                    ex);
+                    "An error occurred while fetching paged medicines.", ex);
             }
         }
 
-        public async Task<IEnumerable<MedicineDto>> GetAllAsync(CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<MedicineDto>> GetFilteredAsync(
+            MedicineFilterDto filter, CancellationToken cancellationToken = default)
+        {
+
+            var paged = await GetPagedAsync(filter, cancellationToken);
+            return paged.Items;
+        }
+
+        public async Task<IEnumerable<MedicineDto>> GetAllAsync(
+            CancellationToken cancellationToken = default)
         {
             try
             {
-                if (_cache.TryGetValue<IEnumerable<MedicineDto>>(AllMedicinesCacheKey, out var cached) && cached != null)
+                if (_cache.TryGetValue<IEnumerable<MedicineDto>>(AllMedicinesCacheKey, out var cached)
+                    && cached != null)
                     return cached;
 
                 var medicines = await _unitOfWork.Medicines.GetAllAsync(cancellationToken);
                 var result = _mapper.Map<IEnumerable<MedicineDto>>(medicines);
 
-                _cache.Set(AllMedicinesCacheKey, result, TimeSpan.FromMinutes(CacheDurationMinutes));
+                var options = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(CacheDurationMinutes))
+                    .AddExpirationToken(new CancellationChangeToken(_listCacheToken.Token));
+
+                _cache.Set(AllMedicinesCacheKey, result, options);
                 return result;
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException("An error occurred while fetching all medicines.", ex);
+                throw new InvalidOperationException(
+                    "An error occurred while fetching all medicines.", ex);
             }
         }
 
         public async Task<MedicineDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            string cacheKey = $"Medicine_{id}";
+            string cacheKey = $"{MedicineByIdPrefix}{id}";
             if (_cache.TryGetValue<MedicineDto>(cacheKey, out var cached) && cached != null)
                 return cached;
 
@@ -91,7 +153,7 @@ namespace Rujta.Application.Services.MedicineS
         public async Task AddAsync(MedicineDto dto, CancellationToken cancellationToken = default)
         {
             if (dto == null)
-                throw new ArgumentNullException(nameof(dto), "Medicine data cannot be null.");
+                throw new ArgumentNullException(nameof(dto));
 
             try
             {
@@ -99,11 +161,12 @@ namespace Rujta.Application.Services.MedicineS
                 await _unitOfWork.Medicines.AddAsync(medicine, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
-                _cache.Remove(AllMedicinesCacheKey);
+                InvalidateListCache(); 
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException("An error occurred while adding a new medicine.", ex);
+                throw new InvalidOperationException(
+                    "An error occurred while adding a new medicine.", ex);
             }
         }
 
@@ -119,12 +182,13 @@ namespace Rujta.Application.Services.MedicineS
                 await _unitOfWork.Medicines.UpdateAsync(medicine, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
-                _cache.Remove(AllMedicinesCacheKey);
-                _cache.Remove($"Medicine_{id}");
+                InvalidateListCache();
+                _cache.Remove($"{MedicineByIdPrefix}{id}");
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"An error occurred while updating medicine ID={id}.", ex);
+                throw new InvalidOperationException(
+                    $"An error occurred while updating medicine ID={id}.", ex);
             }
         }
 
@@ -139,13 +203,35 @@ namespace Rujta.Application.Services.MedicineS
                 await _unitOfWork.Medicines.DeleteAsync(medicine, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
-                _cache.Remove(AllMedicinesCacheKey);
-                _cache.Remove($"Medicine_{id}");
+                InvalidateListCache();
+                _cache.Remove($"{MedicineByIdPrefix}{id}");
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"An error occurred while deleting medicine ID={id}.", ex);
+                throw new InvalidOperationException(
+                    $"An error occurred while deleting medicine ID={id}.", ex);
             }
+        }
+
+
+
+        private static string BuildCacheKey(MedicineFilterDto f)
+        {
+            var cats = f.CategoryIds != null && f.CategoryIds.Any()
+                ? string.Join(",", f.CategoryIds.OrderBy(x => x))
+                : "_";
+
+            return $"{MedicinePagePrefix}p{f.PageNumber}_s{f.PageSize}" +
+                   $"_c{cats}_a{f.ActiveIngredient ?? "_"}_q{f.SearchTerm ?? "_"}";
+        }
+
+    
+        private static void InvalidateListCache()
+        {
+            var oldToken = _listCacheToken;
+            _listCacheToken = new CancellationTokenSource();
+            oldToken.Cancel();
+            oldToken.Dispose();
         }
     }
 }

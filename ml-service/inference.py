@@ -42,31 +42,46 @@ class DDIPredictor:
         )
         self.model = self._load_model(checkpoint_path)
 
-    def _load_model(self, checkpoint_path: Union[str, Path]) -> MRGNN:
-        path = Path(checkpoint_path)
-        if not path.exists():
-            raise FileNotFoundError(f"Checkpoint not found: {path}")
+def _load_model(self, checkpoint_path: Union[str, Path]) -> MRGNN:
+    path = Path(checkpoint_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Checkpoint not found: {path}")
 
-        ckpt = torch.load(path, map_location=self.device, weights_only=False)
-        cfg  = ckpt.get("cfg", {})
+    # ✅ SAFE loading (no arbitrary code execution)
+    ckpt = torch.load(path, map_location=self.device, weights_only=True)
 
-        model = MRGNN(
-            node_dim   = cfg.get("node_dim",    NODE_DIM),
-            conv_dim   = cfg.get("conv_dim",    384),
-            graph_dim  = cfg.get("graph_dim",   128),
-            hidden_dim = cfg.get("hidden_dim",  512),
-            num_layers = cfg.get("num_layers",  3),
-            num_classes= cfg.get("num_classes", 2),
-            dropout    = cfg.get("dropout",     0.3),
-        ).to(self.device)
-
-        model.load_state_dict(ckpt["model_state_dict"])
-        model.eval()
-
+    # Handle both formats:
+    # 1) {"model_state_dict": ..., "cfg": ...}
+    # 2) direct state_dict
+    if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
+        state_dict = ckpt["model_state_dict"]
+        cfg = ckpt.get("cfg", {})
         epoch = ckpt.get("epoch", "?")
-        auc   = ckpt.get("best_val_auc", float("nan"))
-        print(f"✅ Model loaded | epoch={epoch} | val_AUC={auc:.4f} | device={self.device}")
-        return model
+        auc = ckpt.get("best_val_auc", float("nan"))
+    else:
+        # fallback: checkpoint is just state_dict
+        state_dict = ckpt
+        cfg = {}
+        epoch = "?"
+        auc = float("nan")
+
+    # Build model safely
+    model = MRGNN(
+        node_dim   = cfg.get("node_dim", NODE_DIM),
+        conv_dim   = cfg.get("conv_dim", 384),
+        graph_dim  = cfg.get("graph_dim", 128),
+        hidden_dim = cfg.get("hidden_dim", 512),
+        num_layers = cfg.get("num_layers", 3),
+        num_classes= cfg.get("num_classes", 2),
+        dropout    = cfg.get("dropout", 0.3),
+    ).to(self.device)
+
+    # Load weights
+    model.load_state_dict(state_dict)
+    model.eval()
+
+    print(f"✅ Model loaded | epoch={epoch} | val_AUC={auc:.4f} | device={self.device}")
+    return model
 
     # ── Single pair ──────────────────────────────────────────────────────────
 

@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.HttpOverrides;
+
 using Rujta.API.Realtime.Services;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices.IAuth;
@@ -86,12 +88,19 @@ namespace Rujta.API
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5))
                 .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(10));
 
+            builder.Logging.AddConsole();
+
             var app = builder.Build();
 
             var logger = app.Services
                 .GetRequiredService<ILoggerFactory>()
                 .CreateLogger("Rujta.API");
 
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor
+                     | ForwardedHeaders.XForwardedProto
+            });
 
             try
             {
@@ -138,12 +147,17 @@ namespace Rujta.API
                 }
             });
 
+            
+
+            app.UseStaticFiles();
+
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapHub<PresenceHub>("/hubs/presence");
             app.MapHub<NotificationHub>("/hubs/notifications");
             app.MapHub<OrderHub>("/hubs/orders");
+            
 
             app.MapControllers();
 

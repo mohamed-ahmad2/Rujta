@@ -27,9 +27,8 @@ const extractErrorMessage = (err) => {
 
   if (err?.response?.data?.message) return err.response.data.message;
 
-  if (err?.response?.data) {
-    if (typeof err.response.data === "string") return err.response.data;
-  }
+  if (err?.response?.data && typeof err.response.data === "string")
+    return err.response.data;
 
   if (err?.response?.status) {
     const status = err.response.status;
@@ -43,19 +42,79 @@ const extractErrorMessage = (err) => {
   }
 
   if (err?.message) return err.message;
-
   return "Failed to load pharmacies";
+};
+
+const extractAddress = (item = {}) => {
+  const raw = item.address ?? item.Address ?? null;
+  if (!raw) {
+    return {
+      id: null,
+      street: "",
+      buildingNo: "",
+      city: "",
+      governorate: "",
+      latitude: 0,
+      longitude: 0,
+    };
+  }
+
+  return {
+    id: raw.id ?? raw.Id ?? null,
+    street: raw.street ?? raw.Street ?? "",
+    buildingNo: raw.buildingNo ?? raw.BuildingNo ?? "",
+    city: raw.city ?? raw.City ?? "",
+    governorate: raw.governorate ?? raw.Governorate ?? "",
+    latitude: toNumber(raw.latitude ?? raw.Latitude),
+    longitude: toNumber(raw.longitude ?? raw.Longitude),
+  };
 };
 
 const mapPharmacy = (item = {}) => {
   const id = item.id ?? item.Id ?? null;
   const totalOrders = toNumber(item.totalOrders ?? item.TotalOrders);
   const branchesCount = toNumber(item.branchesCount ?? item.BranchesCount);
-  const latitude = toNumber(item.latitude ?? item.Latitude);
-  const longitude = toNumber(item.longitude ?? item.Longitude);
   const isActive = item.isActive ?? item.IsActive ?? true;
   const isDeleted = item.isDeleted ?? item.IsDeleted ?? false;
-  const parentId = item.parentPharmacyID ?? item.ParentPharmacyID ?? null;
+
+  const address = extractAddress(item);
+
+  const rawParentId =
+    item.parentPharmacyId ??
+    item.ParentPharmacyId ??
+    item.parentPharmacyID ??
+    item.ParentPharmacyID ??
+    item.parentId ??
+    item.ParentId ??
+    item.parentPharmacy?.id ??
+    item.ParentPharmacy?.Id ??
+    null;
+
+  const hasParent =
+    rawParentId !== null &&
+    rawParentId !== undefined &&
+    rawParentId !== 0 &&
+    rawParentId !== "";
+
+  const backendIsBranch = item.isBranch ?? item.IsBranch;
+  const backendIsMain = item.isMainPharmacy ?? item.IsMainPharmacy;
+
+  let isBranch;
+  if (typeof backendIsBranch === "boolean") {
+    isBranch = backendIsBranch;
+  } else if (typeof backendIsMain === "boolean") {
+    isBranch = !backendIsMain;
+  } else {
+    isBranch = hasParent;
+  }
+
+  const parentId = hasParent ? rawParentId : null;
+  const parentName =
+    item.parentPharmacyName ??
+    item.ParentPharmacyName ??
+    item.parentPharmacy?.name ??
+    item.ParentPharmacy?.Name ??
+    null;
 
   return {
     id,
@@ -65,17 +124,29 @@ const mapPharmacy = (item = {}) => {
     contactNumber: item.contactNumber ?? item.ContactNumber ?? "-",
     openHours: item.openHours ?? item.OpenHours ?? "-",
     imageUrl: item.imageUrl ?? item.ImageUrl ?? null,
-    latitude,
-    longitude,
+
+    address,
+    street: address.street,
+    buildingNo: address.buildingNo,
+    city: address.city,
+    governorate: address.governorate,
+    latitude: address.latitude,
+    longitude: address.longitude,
 
     managerId: item.managerId ?? item.ManagerId ?? null,
     managerName: item.managerName ?? item.ManagerName ?? "-",
+    managerEmail: item.managerEmail ?? item.ManagerEmail ?? null,
+    managerPhone: item.managerPhone ?? item.ManagerPhone ?? null,
+
     adminId: item.adminId ?? item.AdminId ?? null,
     adminName: item.adminName ?? item.AdminName ?? "-",
+    adminEmail: item.adminEmail ?? item.AdminEmail ?? null,
 
     parentPharmacyId: parentId,
-    isBranch: parentId !== null,
-    type: parentId !== null ? "Branch" : "Main Pharmacy",
+    parentPharmacyName: parentName,
+    isBranch,
+    isMainPharmacy: !isBranch,
+    type: isBranch ? "Branch" : "Main Pharmacy",
 
     totalOrders,
     displayTotalOrders: `${totalOrders} Orders`,
@@ -112,6 +183,79 @@ const mapTopStat = (item = {}) => ({
   raw: item,
 });
 
+const buildCreateFormData = (payload = {}) => {
+  const formData = new FormData();
+
+  const fields = {
+    PharmacyName: payload.pharmacyName ?? payload.PharmacyName,
+    OpenHours: payload.openHours ?? payload.OpenHours ?? "9AM - 11PM",
+    ManagerName: payload.managerName ?? payload.ManagerName,
+    ManagerEmail: payload.managerEmail ?? payload.ManagerEmail,
+    ManagerPhone: payload.managerPhone ?? payload.ManagerPhone,
+    ManagerQualification:
+      payload.managerQualification ?? payload.ManagerQualification ?? "N/A",
+    ManagerExperienceYears:
+      payload.managerExperienceYears ?? payload.ManagerExperienceYears ?? 0,
+    ParentPharmacyId: payload.parentPharmacyId ?? payload.ParentPharmacyId,
+  };
+
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      formData.append(key, value);
+    }
+  });
+
+  const addr = payload.address ?? payload.Address ?? {};
+  const addressFields = {
+    "Address.Street": addr.street ?? addr.Street ?? payload.street,
+    "Address.BuildingNo":
+      addr.buildingNo ?? addr.BuildingNo ?? payload.buildingNo,
+    "Address.City": addr.city ?? addr.City ?? payload.city,
+    "Address.Governorate":
+      addr.governorate ?? addr.Governorate ?? payload.governorate,
+    "Address.Latitude": addr.latitude ?? addr.Latitude ?? payload.latitude ?? 0,
+    "Address.Longitude":
+      addr.longitude ?? addr.Longitude ?? payload.longitude ?? 0,
+  };
+
+  Object.entries(addressFields).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      formData.append(key, value);
+    }
+  });
+
+  const image = payload.image ?? payload.Image;
+  if (image instanceof File || image instanceof Blob) {
+    formData.append("Image", image);
+  }
+
+  return formData;
+};
+
+const buildUpdatePayload = (payload = {}) => {
+  const addr = payload.address ?? payload.Address ?? {};
+
+  return {
+    name: payload.name ?? payload.Name ?? "",
+    contactNumber: payload.contactNumber ?? payload.ContactNumber ?? "",
+    openHours: payload.openHours ?? payload.OpenHours ?? "9AM - 11PM",
+    address: {
+      street: addr.street ?? addr.Street ?? payload.street ?? "",
+      buildingNo:
+        addr.buildingNo ?? addr.BuildingNo ?? payload.buildingNo ?? "",
+      city: addr.city ?? addr.City ?? payload.city ?? "",
+      governorate:
+        addr.governorate ?? addr.Governorate ?? payload.governorate ?? "",
+      latitude: toNumber(
+        addr.latitude ?? addr.Latitude ?? payload.latitude ?? 0,
+      ),
+      longitude: toNumber(
+        addr.longitude ?? addr.Longitude ?? payload.longitude ?? 0,
+      ),
+    },
+  };
+};
+
 export default function useSuperAdmin() {
   const [pharmacies, setPharmacies] = useState([]);
   const [mainPharmacies, setMainPharmacies] = useState([]);
@@ -121,6 +265,7 @@ export default function useSuperAdmin() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -240,14 +385,11 @@ export default function useSuperAdmin() {
     }
   };
 
+
   const create = async (payload = {}) => {
     setLoading(true);
     try {
-      const formData = new FormData();
-      Object.entries(payload).forEach(([key, value]) => {
-        if (value === undefined || value === null || value === "") return;
-        formData.append(key, value);
-      });
+      const formData = buildCreateFormData(payload);
 
       const res = await createPharmacy(formData);
       await fetchAll();
@@ -265,7 +407,9 @@ export default function useSuperAdmin() {
   const update = async (id, data) => {
     setLoading(true);
     try {
-      const res = await updatePharmacy(id, data);
+      const body = buildUpdatePayload(data);
+
+      const res = await updatePharmacy(id, body);
       const updated = mapPharmacy(res?.data ?? res);
       setPharmacies((prev) =>
         prev.map((p) => (p.id === id ? { ...updated } : p)),

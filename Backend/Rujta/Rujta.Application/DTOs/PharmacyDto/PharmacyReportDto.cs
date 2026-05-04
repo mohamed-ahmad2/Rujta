@@ -9,8 +9,8 @@ namespace Rujta.Application.DTOs.PharmacyDto
         public int PharmacyId { get; set; }
         public string PharmacyName { get; set; } = string.Empty;
 
-        public decimal TotalSales { get; set; }                 // إجمالي المبيعات في الفترة
-        public decimal TotalRevenue { get; set; }               // لو عندك فرق بين sales & revenue
+        public decimal TotalSales { get; set; }              
+        public decimal TotalRevenue { get; set; }              
         public int TotalOrders { get; set; }
 
         public SalesSummaryDto SalesSummary { get; set; } = new();
@@ -20,10 +20,10 @@ namespace Rujta.Application.DTOs.PharmacyDto
         public List<LowStockItemDto> LowStockItems { get; set; } = new();
         public List<ExpiredItemDto> ExpiredItems { get; set; } = new();
 
-        // بيانات للسلايد/الفترة الزمنية (chart)
+    
         public List<DailySalesDto> DailySales { get; set; } = new();
 
-        // اختياري: تنبيهات عامة
+     
         public List<string> Alerts { get; set; } = new();
     }
 }

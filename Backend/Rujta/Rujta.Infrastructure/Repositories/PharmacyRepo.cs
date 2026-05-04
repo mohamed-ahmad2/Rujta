@@ -4,9 +4,11 @@
     {
         public PharmacyRepo(AppDbContext context) : base(context) { }
 
-        public async Task<IEnumerable<Pharmacy>> GetAllPharmacies(
-            CancellationToken cancellationToken = default)
-            => await _context.Pharmacies.ToListAsync(cancellationToken);
+        public async Task<IEnumerable<Pharmacy>> GetAllPharmacies(CancellationToken cancellationToken = default)
+            => await _context.Pharmacies
+                .Include(p => p.Address)           
+                .Where(p => !p.IsDeleted)            
+                .ToListAsync(cancellationToken);
 
         public async Task<List<Medicine>> GetAllMedicinesByPharmacyAsync(int pharmacyId)
             => await _context.InventoryItems
@@ -45,6 +47,7 @@
 
         public async Task<List<Pharmacy>> GetPharmaciesByIdsAsync(List<int> ids)
             => await _context.Pharmacies
+                .Include(p => p.Address)          
                 .Where(p => ids.Contains(p.Id))
                 .ToListAsync();
 
@@ -70,5 +73,74 @@
         public async Task<bool> IsMainPharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default)
             => await _context.Pharmacies
                 .AnyAsync(p => p.Id == pharmacyId && p.ParentPharmacyID == null, cancellationToken);
+
+        public async Task<(List<InventoryItem> Items, int TotalCount)> GetPagedInventoryByPharmacyAsync(
+    int pharmacyId,
+    int pageNumber,
+    int pageSize,
+    string? searchTerm,
+    int? categoryId,
+    CancellationToken cancellationToken = default)
+        {
+            
+            var baseQuery = _context.InventoryItems
+                .AsNoTracking()
+                .Where(i => i.PharmacyID == pharmacyId && i.Medicine != null);
+
+           
+            if (categoryId.HasValue)
+            {
+                baseQuery = baseQuery.Where(i =>
+                    i.Medicine!.CategoryId == categoryId.Value);
+            }
+
+         
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var term = searchTerm.Trim();
+                baseQuery = baseQuery.Where(i =>
+                    (i.Medicine!.Name != null && EF.Functions.Like(i.Medicine.Name, $"%{term}%")) ||
+                    (i.Medicine.ActiveIngredient != null &&
+                     EF.Functions.Like(i.Medicine.ActiveIngredient, $"%{term}%")));
+            }
+
+           
+            var distinctInventoryIdsQuery = baseQuery
+                .GroupBy(i => i.MedicineID)
+                .Select(g => g
+                    .OrderByDescending(x => x.Quantity)
+                    .Select(x => x.Id)
+                    .First());
+
+       
+            var totalCount = await distinctInventoryIdsQuery.CountAsync(cancellationToken);
+
+         
+            var pagedIds = await distinctInventoryIdsQuery
+                .OrderBy(id => id)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            
+            if (pagedIds.Count == 0)
+                return (new List<InventoryItem>(), totalCount);
+
+            var items = await _context.InventoryItems
+                .AsNoTracking()
+                .Where(i => pagedIds.Contains(i.Id))
+                .Include(i => i.Medicine)
+                    .ThenInclude(m => m!.Company)
+                .Include(i => i.Medicine)
+                    .ThenInclude(m => m!.Category)
+                .ToListAsync(cancellationToken);
+
+          
+            var orderedItems = pagedIds
+                .Select(id => items.First(i => i.Id == id))
+                .ToList();
+
+            return (orderedItems, totalCount);
+        }
     }
 }

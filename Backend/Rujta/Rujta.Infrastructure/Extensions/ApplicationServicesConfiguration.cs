@@ -1,4 +1,7 @@
-﻿namespace Rujta.Infrastructure.Extensions
+﻿using Rujta.Application.Notifications;
+using Rujta.Application.Resolver;
+
+namespace Rujta.Infrastructure.Extensions
 {
     public static class ApplicationServicesConfiguration
     {
@@ -32,7 +35,11 @@
                 );
             });
 
-            services.AddSignalR();
+            services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.PropertyNamingPolicy = null;
+    });
 
             services.AddHttpContextAccessor();
 
@@ -80,7 +87,7 @@
             services.AddScoped<IdentityServices>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ILogService, LogService>();
-
+            
             services.AddScoped<IMedicineService, MedicineService>();
             services.AddScoped<ISearchMedicineService, SearchMedicineService>();
             services.AddScoped<IInventoryItemService, InventoryItemService>();
@@ -143,6 +150,7 @@
             services.AddSingleton<IMedicineAutocompleteIndex, MedicineAutocompleteIndex>();
             services.AddSingleton<IUserPresenceService, InMemoryUserPresenceService>();
 
+
             return services;
         }
 
@@ -174,6 +182,8 @@
             var mapsBasePath = Path.Combine(AppContext.BaseDirectory, "Maps");
             var pbfPath = Path.Combine(mapsBasePath, "egypt-251026.osm.pbf");
             var routerDbPath = Path.Combine(mapsBasePath, "egypt.routerdb");
+
+            services.AddScoped<IAddressResolver, AddressResolver>();
 
             services.AddSingleton<IOfflineGeocodingService>(sp =>
             {

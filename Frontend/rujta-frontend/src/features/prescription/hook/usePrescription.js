@@ -7,19 +7,16 @@ export const usePrescription = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const scan = async (imageFile) => {
+  // imageFiles: File | File[]
+  const scan = async (imageFiles) => {
     try {
       setLoading(true);
       setError(null);
-
-      const response = await scanPrescription(imageFile);
-
-      // ── DEBUG: remove this log once confirmed working ──
+      const response = await scanPrescription(imageFiles);
       console.log("📦 raw response:", response);
-      console.log("📦 response.data:", response.data);
-
-      // response.data is the object returned by Ok(result) in .NET
-      // Expected shape: { availableMedicines: [...], unavailableMedicines: [...] }
+      console.log("✅ response.data:", response.data);
+    console.log("✅ availableMedicines:", response.data?.availableMedicines);
+    console.log("✅ notFoundMedicines:", response.data?.notFoundMedicines);
       setResult(response.data);
     } catch (err) {
       console.error("❌ scan error:", err);

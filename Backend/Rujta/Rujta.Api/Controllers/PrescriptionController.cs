@@ -16,13 +16,13 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("scan")]
-        public async Task<IActionResult> Scan(IFormFile image)
+        public async Task<IActionResult> Scan(List<IFormFile> images)
         {
-            if (image == null)
-                return BadRequest("Image required");
+            if (images == null || !images.Any())
+                return BadRequest("At least one image is required");
 
             var result = await _service.AnalyzePrescriptionAsync(
-                image.OpenReadStream(),
+                images.Select(i => i.OpenReadStream()).ToList(),
                 0);
 
             return Ok(result);

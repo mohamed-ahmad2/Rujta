@@ -1,23 +1,26 @@
+// src/features/notification/api/notificationsApi.js
 import apiClient from "../../../shared/api/apiClient";
 
-// ================= Get My Notifications =================
 export const getMyNotifications = () => {
-  // لاحظ إننا صححنا ال-route عشان ي match مع controller
   return apiClient.get("/notification");
 };
 
-// ================= Mark As Read =================
+export const getUnreadCount = () => {
+  return apiClient.get("/notification/unread-count");
+};
+
 export const markNotificationAsRead = (id) => {
   return apiClient.put(`/notification/${id}/read`);
 };
 
-// ================= Create Test Notification =================
-export const createTestNotification = (title, message) => {
-  return apiClient.post(
-    "/notification/test",
-    { title, message },
-    {
-      headers: { "Content-Type": "application/json" },
-    }
-  );
+export const getPharmacyNotifications = () => {
+  return apiClient.get("/notification/pharmacy");
+};
+
+export const getPharmacyUnreadCount = () => {
+  return apiClient.get("/notification/pharmacy/unread-count");
+};
+
+export const markPharmacyNotificationAsRead = (id) => {
+  return apiClient.put(`/notification/pharmacy/${id}/read`);
 };
