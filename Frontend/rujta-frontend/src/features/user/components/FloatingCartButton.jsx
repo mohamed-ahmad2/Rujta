@@ -4,27 +4,26 @@ import { FaCartShopping } from "react-icons/fa6";
 const FloatingCartButton = ({ cart, onClick }) => {
   if (!cart) return null;
 
+  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
   return (
     <div
       className="fixed bottom-6 right-6 z-50 cursor-pointer"
       onClick={onClick}
     >
-      <div className="relative group">
-        {/* Floating button */}
-        <div className="w-16 h-16 bg-gradient-to-r from-primary to-secondary 
-                        rounded-full flex items-center justify-center shadow-lg 
-                        hover:shadow-2xl transform hover:scale-110 transition-all duration-300">
-          <FaCartShopping className="text-white text-2xl" />
-        </div>
+      <div
+        className={`flex items-center gap-2.5 rounded-full bg-pr px-4 py-3 shadow-md transition-all duration-300 hover:scale-105 hover:shadow-lg hover:brightness-110 active:scale-95`}
+      >
+        {/* Icon */}
+        <FaCartShopping className="text-xl text-white" />
 
-        {/* Badge */}
-        {cart.length > 0 && (
-          <span
-            className="absolute -top-2 -right-2 bg-red-500 text-white text-xs 
-                       font-bold rounded-full h-6 w-6 flex items-center justify-center 
-                       animate-pulse shadow-md"
-          >
-            {cart.length}
+        {/* Divider */}
+        {itemCount > 0 && <div className="h-4 w-px bg-white/30" />}
+
+        {/* Count */}
+        {itemCount > 0 && (
+          <span className="min-w-[20px] text-center text-sm font-bold text-white">
+            {itemCount}
           </span>
         )}
       </div>

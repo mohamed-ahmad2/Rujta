@@ -15,7 +15,6 @@ const HeroUserWithOrderBanner = ({ children }) => {
 
   return (
     <>
-      {/* الكارد فوق Hero */}
       {!loading && activeOrder && (
         <div className="bg-green-100 text-green-800 text-center p-4 font-semibold">
           🚚 عندك طلب شغال دلوقتي

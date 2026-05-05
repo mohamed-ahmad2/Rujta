@@ -1,132 +1,98 @@
-// src/features/orders/hook/useOrders.js
-import { useState, useCallback } from "react";
+import { useContext, useState, useCallback } from "react";
+import { OrdersContext } from "../../../context/OrdersContext";
 import {
-  getAllOrders,
-  getOrderById,
-  getOrderDetails,
   getUserOrders,
   getPharmacyOrders,
-  createOrder,
-  updateOrder,
-  deleteOrder,
   acceptOrder,
   processOrder,
   outForDelivery,
   markAsDelivered,
-  cancelOrderByUser,
   cancelOrderByPharmacy,
+  cancelOrderByUser,
 } from "../api/ordersApi";
 
 export const useOrders = () => {
-  const [orders, setOrders] = useState([]);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [details, setDetails] = useState(null);
+  const { orders: liveOrders, setOrders: setLiveOrders } =
+    useContext(OrdersContext);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchAll = useCallback(async () => fetchOrders(getAllOrders), []);
-  const fetchUser = useCallback(async () => fetchOrders(getUserOrders), []);
-  const fetchPharmacy = useCallback(
-    async () => fetchOrders(getPharmacyOrders),
-    []
-  );
-
-  const fetchById = useCallback(
-    async (id) => fetchSingle(getOrderById, id, setSelectedOrder),
-    []
-  );
-  const fetchDetailsById = useCallback(
-    async (id) => fetchSingle(getOrderDetails, id, setDetails),
-    []
-  );
-
-  const fetchOrders = async (fetchFn) => {
+  // ── fetchUser ─────────────────────────────────────────────────────────────
+  // API returns array-of-arrays (groups). Sort groups by first order's date.
+  const fetchUser = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchFn();
-      setOrders(res.data);
-      return res.data;
+      const res = await getUserOrders();
+      const sorted = [...res.data].sort(
+        (a, b) => new Date(b[0].orderDate) - new Date(a[0].orderDate)
+      );
+      setLiveOrders(sorted); // already array-of-arrays ✅
     } catch (err) {
-      setError(err.response?.data || err.message);
-      return [];
+      setError(err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [setLiveOrders]);
 
-  const fetchSingle = async (fetchFn, id, setStateFn) => {
+  // ── fetchPharmacy ─────────────────────────────────────────────────────────
+  // API returns flat or grouped. Normalize to array-of-arrays so the shape
+  // always matches what SignalR handlers expect.
+  const fetchPharmacy = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchFn(id);
-      setStateFn(res.data);
-      return res.data;
+      const res = await getPharmacyOrders();
+      const flattened = res.data.flat();
+      const sorted = flattened.sort(
+        (a, b) => new Date(b.orderDate) - new Date(a.orderDate)
+      );
+      // Wrap each order in its own single-item group ✅
+      setLiveOrders(sorted.map((order) => [order]));
     } catch (err) {
-      setError(err.response?.data || err.message);
-      return null;
+      setError(err.response?.data?.message || err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [setLiveOrders]);
 
-  const create = async (data, refreshFn = fetchUser) =>
-    runMutation(createOrder, data, refreshFn);
-  const update = async (id, data, refreshFn = fetchUser) =>
-    runMutation(() => updateOrder(id, data), null, refreshFn);
-  const remove = async (id, refreshFn = fetchUser) =>
-    runMutation(() => deleteOrder(id), null, refreshFn);
-
-  const accept = (id, refreshFn = fetchUser) =>
-    runMutation(() => acceptOrder(id), null, refreshFn);
-  const process = (id, refreshFn = fetchUser) =>
-    runMutation(() => processOrder(id), null, refreshFn);
-  const _outForDelivery = (id, refreshFn = fetchUser) =>
-    runMutation(() => outForDelivery(id), null, refreshFn);
-  const deliver = (id, refreshFn = fetchUser) =>
-    runMutation(() => markAsDelivered(id), null, refreshFn);
-  const cancelByUser = (id, refreshFn = fetchUser) =>
-    runMutation(() => cancelOrderByUser(id), null, refreshFn);
-  const cancelByPharmacy = (id, refreshFn = fetchPharmacy) =>
-    runMutation(() => cancelOrderByPharmacy(id), null, refreshFn);
-
-  const runMutation = async (fn, data = null, refreshFn) => {
+  // ── runMutation ───────────────────────────────────────────────────────────
+  // Optimistic update: replace the matching order inside its group.
+  // SignalR will confirm/override with the real server state.
+  const runMutation = async (fn, id) => {
     setLoading(true);
     setError(null);
     try {
-      const res = data ? await fn(data) : await fn();
-      if (refreshFn) await refreshFn();
-      return res?.data || null;
+      const res = await fn(id);
+      if (res?.data?.id) {
+        setLiveOrders((prevGroups) =>
+          prevGroups.map((group) =>
+            Array.isArray(group)
+              ? group.map((o) => (o.id === res.data.id ? res.data : o))
+              : group
+          )
+        );
+      }
+      return res;
     } catch (err) {
-      setError(err.response?.data || err.message);
-      return null;
+      setError(err.response?.data?.message || err.message);
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
   return {
-    orders,
-    selectedOrder,
-    details,
+    orders: liveOrders,
     loading,
     error,
-
-    fetchAll,
     fetchUser,
     fetchPharmacy,
-    fetchById,
-    fetchDetailsById,
-
-    create,
-    update,
-    remove,
-
-    accept,
-    process,
-    outForDelivery: _outForDelivery,
-    deliver,
-    cancelByUser,
-    cancelByPharmacy,
+    accept: (id) => runMutation(acceptOrder, id),
+    process: (id) => runMutation(processOrder, id),
+    outForDelivery: (id) => runMutation(outForDelivery, id),
+    deliver: (id) => runMutation(markAsDelivered, id),
+    cancelByPharmacy: (id) => runMutation(cancelOrderByPharmacy, id),
+    cancelByUser: (id) => runMutation(cancelOrderByUser, id),
   };
 };

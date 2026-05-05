@@ -1,37 +1,52 @@
 ﻿using Microsoft.OpenApi.Models;
-
+using System.Reflection;
 
 namespace Rujta.Infrastructure.Extensions
 {
     public static class SwaggerExtensions
     {
+        private static readonly OpenApiSecurityScheme BearerSecurityScheme = new()
+        {
+            Reference = new OpenApiReference
+            {
+                Type = ReferenceType.SecurityScheme,
+                Id = "Bearer"
+            }
+        };
+
+        private static readonly OpenApiSecurityRequirement SecurityRequirement = new()
+        {
+            { BearerSecurityScheme, [] }
+        };
+
         public static IServiceCollection AddCustomSwagger(this IServiceCollection services)
         {
-            services.AddSwaggerGen(c =>
+            services.AddSwaggerGen(options =>
             {
-                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "Rujta API",
+                    Version = "v1",
+                    Description = "Rujta Pharmacy Platform API"
+                });
+
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     Name = "Authorization",
                     Type = SecuritySchemeType.Http,
                     Scheme = "bearer",
                     BearerFormat = "JWT",
-                    In = ParameterLocation.Header
+                    In = ParameterLocation.Header,
+                    Description = "Enter your JWT token. Example: Bearer {token}"
                 });
 
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        Array.Empty<string>()
-                    }
-                });
+                options.AddSecurityRequirement(SecurityRequirement);
+
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+
+                if (File.Exists(xmlPath))
+                    options.IncludeXmlComments(xmlPath);
             });
 
             return services;

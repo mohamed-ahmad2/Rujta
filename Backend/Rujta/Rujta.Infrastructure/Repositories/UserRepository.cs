@@ -1,9 +1,10 @@
+using Rujta.Application.DTOs.CustomerDtos;
 using Rujta.Application.Interfaces.InterfaceServices.IGeocoding;
 using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Infrastructure.Repositories
 {
-    public class UserRepository : GenericRepository<User>, IUserRepository
+    public class UserRepository : GenericRepository<User, Guid>, IUserRepository
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMapper _mapper;

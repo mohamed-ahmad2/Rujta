@@ -1,8 +1,7 @@
-﻿using Rujta.Domain.Entities;
-
-namespace Rujta.Application.Interfaces.InterfaceRepositories
+﻿namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
-    public interface ICategoryRepository : IGenericRepository<Category>
+    public interface ICategoryRepository : IGenericRepository<Category, int>
     {
+        public Task<IEnumerable<Category>> GetCategoriesMedicinesAsync(int pharmacyId, CancellationToken cancellationToken = default);
     }
 }

@@ -1,4 +1,7 @@
-﻿namespace Rujta.Application.Interfaces.InterfaceServices
+﻿
+using Rujta.Application.DTOs.CustomerDtos;
+
+namespace Rujta.Application.Interfaces.InterfaceServices
 {
     public interface IUserService
     {

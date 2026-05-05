@@ -3,7 +3,7 @@
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
-    public interface IRefreshTokenRepository : IGenericRepository<RefreshToken>
+    public interface IRefreshTokenRepository : IGenericRepository<RefreshToken, Guid>
     {
         Task<RefreshToken?> GetByTokenAsync(string token);
         Task<RefreshToken?> GetValidTokenAsync(Guid userId, string tokenHash);

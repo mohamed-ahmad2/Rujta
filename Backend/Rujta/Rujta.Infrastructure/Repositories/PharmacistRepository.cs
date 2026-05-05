@@ -2,7 +2,7 @@
 
 namespace Rujta.Infrastructure.Repositories
 {
-    public class PharmacistRepository : GenericRepository<Pharmacist>, IPharmacistRepository
+    public class PharmacistRepository : GenericRepository<Pharmacist, Guid>, IPharmacistRepository
     {
         public PharmacistRepository(AppDbContext context) : base(context){}
 

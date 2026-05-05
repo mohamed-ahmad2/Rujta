@@ -18,7 +18,10 @@ namespace Rujta.Domain.Entities
 
         public string? ImageUrl { get; set; }
 
-        public string? CompanyName { get; set; }
+        public string? Smiles { get; set; }
+
+        public int? CompanyId { get; set; }
+        public Company? Company { get; set; }
 
         public int? CategoryId { get; set; }
         public Category? Category { get; set; }
@@ -26,5 +29,6 @@ namespace Rujta.Domain.Entities
         public ICollection<InventoryItem>? InventoryItems { get; set; }
         public ICollection<SellDrugViaPharmacy>? SellDrugViaPharmacies { get; set; }
         public ICollection<OrderItem>? OrderItems { get; set; }
+        public ICollection<Discount>? Discounts { get; set; }
     }
 }

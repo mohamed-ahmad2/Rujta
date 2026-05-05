@@ -1,6 +1,6 @@
 ﻿namespace Rujta.Infrastructure.Repositories
 {
-    public class DeviceRepository : GenericRepository<Device>, IDeviceRepository
+    public class DeviceRepository : GenericRepository<Device, string>, IDeviceRepository
     {
         public DeviceRepository(AppDbContext context) : base(context)
         {

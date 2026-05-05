@@ -1,9 +1,10 @@
-﻿using Rujta.Application.DTOs;
+﻿using Rujta.Application.DTOs.MedicineDtos;
 using Rujta.Application.Interfaces.InterfaceServices.IGenericS;
 
 namespace Rujta.Application.Interfaces.InterfaceServices
 {
-    public interface ICategoryService : IGenericService<CategoryDto>
+    public interface ICategoryService : IGenericService<CategoryDto, int>
     {
+        public Task<IEnumerable<CategoryDto>> GetCategoriesMedicinesAsync(int pharmacyId, CancellationToken cancellationToken = default);
     }
 }

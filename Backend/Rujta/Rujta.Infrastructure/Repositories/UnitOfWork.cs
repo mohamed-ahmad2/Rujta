@@ -2,13 +2,12 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Rujta.Infrastructure.Repositories
 {
-    public class UnitOfWork : IUnitOfWork
+    public class UnitOfWork : IUnitOfWork, IAsyncDisposable
     {
         private readonly AppDbContext _context;
         private readonly IServiceProvider _serviceProvider;
         private bool _disposed = false;
 
-        // Repositories
         private IMedicineRepository? _medicines;
         private IPharmacyRepository? _pharmacies;
         private IOrderRepository? _orders;
@@ -23,7 +22,11 @@ namespace Rujta.Infrastructure.Repositories
         private IPharmacistRepository? _pharmacists;
         private ICategoryRepository? _category;
         private ICustomerRepository? _customers;
-
+        private ISuperAdminRepository? _superAdminReposatory;
+        private ISubscriptionRepository? _subscriptions;
+        private IAdRepository? _ads;
+        private IDiscountRepository? _discount;
+        private ICompanyRepository? _company;
 
         public UnitOfWork(AppDbContext context, IServiceProvider serviceProvider)
         {
@@ -31,40 +34,120 @@ namespace Rujta.Infrastructure.Repositories
             _serviceProvider = serviceProvider;
         }
 
-        // Repository properties
-        public IMedicineRepository Medicines => _medicines ??= new MedicineRepository(_context);
-        public IPharmacyRepository Pharmacies => _pharmacies ??= new PharmacyRepo(_context);
-        public IOrderRepository Orders => _orders ??= new OrderRepository(_context);
+        public IMedicineRepository Medicines =>
+            _medicines ??= _serviceProvider.GetRequiredService<IMedicineRepository>();
+
+        public IPharmacyRepository Pharmacies =>
+            _pharmacies ??= _serviceProvider.GetRequiredService<IPharmacyRepository>();
+
+        public IOrderRepository Orders =>
+            _orders ??= _serviceProvider.GetRequiredService<IOrderRepository>();
+
         public IAddressRepository Address =>
-    _address ??= ActivatorUtilities.CreateInstance<AddressRepository>(_serviceProvider);
-        public ICategoryRepository Categories => _category ??= new CategoryRepository(_context);
-        public IPeopleRepository People => _people ??= new PeopleRepository(_context);
-        public IDeviceRepository Devices => _device ??= new DeviceRepository(_context);
-        public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(_context);
-        public IUserRepository Users => _users ??= ActivatorUtilities.CreateInstance<UserRepository>(_serviceProvider);
-        public INotificationRepository Notifications => _notifications ??= new NotificationRepository(_context);
-        public IInventoryRepository InventoryItems => _inventoryItems ??= new InventoryRepository(_context);
-        public ILogRepository Logs => _logs ??= new LogRepository(_context);
+            _address ??= _serviceProvider.GetRequiredService<IAddressRepository>();
 
-        public IPharmacistRepository Pharmacists => _pharmacists ??= new PharmacistRepository(_context);
-        public ICustomerRepository Customers => _customers ??= new CustomerRepository(_context);
+        public ICategoryRepository Categories =>
+            _category ??= _serviceProvider.GetRequiredService<ICategoryRepository>();
 
-        // Save changes
+        public IPeopleRepository People =>
+            _people ??= _serviceProvider.GetRequiredService<IPeopleRepository>();
+
+        public IDeviceRepository Devices =>
+            _device ??= _serviceProvider.GetRequiredService<IDeviceRepository>();
+
+        public IRefreshTokenRepository RefreshTokens =>
+            _refreshTokens ??= _serviceProvider.GetRequiredService<IRefreshTokenRepository>();
+
+        public IUserRepository Users =>
+            _users ??= _serviceProvider.GetRequiredService<IUserRepository>();
+
+        public INotificationRepository Notifications =>
+            _notifications ??= _serviceProvider.GetRequiredService<INotificationRepository>();
+
+        public IInventoryRepository InventoryItems =>
+            _inventoryItems ??= _serviceProvider.GetRequiredService<IInventoryRepository>();
+
+        public IDiscountRepository Discount =>
+            _discount ??= _serviceProvider.GetRequiredService<IDiscountRepository>();
+
+        public ICompanyRepository Companies =>
+            _company ??= _serviceProvider.GetRequiredService<ICompanyRepository>();
+
+        public ILogRepository Logs =>
+            _logs ??= _serviceProvider.GetRequiredService<ILogRepository>();
+
+        public IPharmacistRepository Pharmacists =>
+            _pharmacists ??= _serviceProvider.GetRequiredService<IPharmacistRepository>();
+
+        public ICustomerRepository Customers =>
+            _customers ??= _serviceProvider.GetRequiredService<ICustomerRepository>();
+
+        public ISuperAdminRepository SuperAdmin =>
+            _superAdminReposatory ??= _serviceProvider.GetRequiredService<ISuperAdminRepository>();
+
+        public ISubscriptionRepository Subscriptions =>
+            _subscriptions ??= _serviceProvider.GetRequiredService<ISubscriptionRepository>();
+
+        public IAdRepository Ads =>
+            _ads ??= _serviceProvider.GetRequiredService<IAdRepository>();
+
         public async Task<int> SaveAsync(CancellationToken cancellationToken = default)
             => await _context.SaveChangesAsync(cancellationToken);
 
-        public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)=>
-            await _context.Database.BeginTransactionAsync(cancellationToken);
-        
-        // Dispose
+        public IExecutionStrategy CreateExecutionStrategy()
+            => _context.Database.CreateExecutionStrategy();
+
+
+        public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> action,CancellationToken cancellationToken = default)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            await strategy.ExecuteAsync(async ct =>
+            {
+                await using var transaction = await _context.Database
+                    .BeginTransactionAsync(ct);
+                try
+                {
+                    await action(ct);
+                    await transaction.CommitAsync(ct);
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(ct);
+                    throw;
+                }
+            }, cancellationToken);
+        }
+
+
+        public async Task<TResult> ExecuteInTransactionAsync<TResult>(Func<CancellationToken, Task<TResult>> action,CancellationToken cancellationToken = default)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async ct =>
+            {
+                await using var transaction = await _context.Database
+                    .BeginTransactionAsync(ct);
+                try
+                {
+                    var result = await action(ct);
+                    await transaction.CommitAsync(ct);
+                    return result;
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(ct);
+                    throw;
+                }
+            }, cancellationToken);
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposed)
             {
                 if (disposing)
-                {
                     _context.Dispose();
-                }
                 _disposed = true;
             }
         }
@@ -72,6 +155,16 @@ namespace Rujta.Infrastructure.Repositories
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (!_disposed)
+            {
+                await _context.DisposeAsync();
+                _disposed = true;
+            }
             GC.SuppressFinalize(this);
         }
     }

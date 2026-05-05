@@ -12,5 +12,7 @@ namespace Rujta.Domain.Entities
         public string? DeviceInfo { get; set; }
         public string? LastAccessTokenJti { get; set; } = null;
         public DateTime? LastUsedAt { get; set; }
+
+        public bool RememberMe { get; set; } = false;
     }
 }

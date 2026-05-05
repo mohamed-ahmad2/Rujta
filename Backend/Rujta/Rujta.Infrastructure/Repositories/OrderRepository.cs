@@ -2,7 +2,7 @@
 
 namespace Rujta.Infrastructure.Repositories
 {
-    public class OrderRepository : GenericRepository<Order>, IOrderRepository
+    public class OrderRepository : GenericRepository<Order, int>, IOrderRepository
     {
         
 

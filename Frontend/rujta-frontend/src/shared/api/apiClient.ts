@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAccessToken, setAccessToken } from "../../authProvider/authTokenProvider";
 
 export const apiClient = axios.create({
   baseURL: "/api",
@@ -8,7 +9,14 @@ export const apiClient = axios.create({
 /* ================= REQUEST INTERCEPTOR ================= */
 apiClient.interceptors.request.use(
   (request) => {
-    console.log("Outgoing request headers:", request.headers);
+    const token = getAccessToken();
+
+    if (token) {
+      request.headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    console.log("🚀 Request:", request.url, request.headers);
+
     return request;
   },
   (error) => Promise.reject(error)
@@ -25,38 +33,35 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // refresh token (بدون apiClient عشان ما يدخلش loop)
         const refreshResponse = await axios.post(
           "/api/auth/refresh-token",
-          null,
-          { withCredentials: true }
+          {},
+          {
+            withCredentials: true,
+          }
         );
 
         const newAccessToken = refreshResponse.data?.accessToken;
 
         if (newAccessToken) {
-          // تحديث الهيدر الافتراضي
-          apiClient.defaults.headers.common[
-            "Authorization"
-          ] = `Bearer ${newAccessToken}`;
+          setAccessToken(newAccessToken);
 
-          // تحديث الهيدر للطلب الحالي
-          originalRequest.headers[
-            "Authorization"
-          ] = `Bearer ${newAccessToken}`;
+          // تحديث التوكن في axios default headers
+          apiClient.defaults.headers.common["Authorization"] =
+            `Bearer ${newAccessToken}`;
+
+          originalRequest.headers["Authorization"] =
+            `Bearer ${newAccessToken}`;
         }
 
         return apiClient(originalRequest);
       } catch (refreshError) {
-        console.error("Refresh token failed:", refreshError);
+        console.error("❌ Refresh token failed:", refreshError);
         return Promise.reject(refreshError);
       }
     }
 
-    // Error موحد
-    return Promise.reject(
-      error.response?.data || { message: "Network error" }
-    );
+    return Promise.reject(error.response?.data || { message: "Network error" });
   }
 );
 

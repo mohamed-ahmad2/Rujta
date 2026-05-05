@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using Rujta.Application.DTOs.MedicineDtos;
 
 namespace Rujta.Application.Validation
 {

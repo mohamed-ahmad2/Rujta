@@ -2,105 +2,186 @@ import { motion } from "framer-motion";
 import { Mail, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { auth, provider } from "../../../../firebase";
-import { signInWithPopup } from "firebase/auth";
 import { FcGoogle } from "react-icons/fc";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
-const LoginForm = ({ email, setEmail, password, setPassword, onLogin, error, loading }) => {
+import { useState } from "react";
+
+const LoginForm = ({
+  email,
+  setEmail,
+  password,
+  setPassword,
+  onLogin, // (e, rememberMe) => void
+  error,
+  loading,
+  toggleForm,
+}) => {
   const navigate = useNavigate();
   const { handleForgotPassword } = useAuth();
+  const { googleFirebaseLogin } = useGoogleAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
-const { googleFirebaseLogin } = useGoogleAuth();
+  // ✅ rememberMe state هنا في LoginForm
+  const [rememberMe, setRememberMe] = useState(false);
 
- const handleForgotPasswordClick = async () => {
-  if (!email) return alert("Please enter your email first");
-  try {
-    const res = await handleForgotPassword(email);
-    if (res.message === "OTP sent to your email.") {
-      navigate(`/reset-password?email=${encodeURIComponent(email)}`);
-    } else {
-      alert(res.message);
+  const handleForgotPasswordClick = async () => {
+    if (!email) return alert("Please enter your email first");
+    try {
+      const res = await handleForgotPassword(email);
+      if (res.message === "OTP sent to your email.") {
+        navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+      } else {
+        alert(res.message);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Something went wrong.");
     }
-  } catch (err) {
-    alert(err.response?.data?.message || "Something went wrong.");
-  }
-  
-};
+  };
+
+  // ✅ بنبعت rememberMe مع الـ submit event للـ parent
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onLogin(e, rememberMe);
+  };
 
   return (
     <motion.div className="w-full max-w-md">
       {/* Header */}
-      <div className="text-center mb-10">
-        <motion.div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-primary mb-4">
-          <Mail className="w-8 h-8 text-white" />
+      <div className="mb-10 text-center">
+        <motion.div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-primary">
+          <Mail className="h-8 w-8 text-white" />
         </motion.div>
-        <h2 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-3">
-          Welcome Back
-        </h2>
-        <p className="text-muted-foreground text-lg"> to continue your journey</p>
+        <h2 className="text-3xl font-bold md:text-5xl">Welcome Back</h2>
+        <p className="text-lg text-muted-foreground">
+          to continue your journey
+        </p>
       </div>
 
       {/* Login Form */}
-      <form onSubmit={onLogin} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Email */}
         <div className="relative">
-          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="email"
             placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+            autoComplete="email"
+            className="w-full rounded-2xl border-2 border-border py-4 pl-12 pr-4 text-lg outline-none focus:border-primary"
           />
         </div>
 
+        {/* Password */}
         <div className="relative">
-          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full pl-12 pr-4 py-4 border-2 border-border rounded-2xl text-lg focus:border-primary outline-none"
+            autoComplete="current-password"
+            className="w-full rounded-2xl border-2 border-border py-4 pl-12 pr-12 text-lg outline-none focus:border-primary"
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 transition-colors hover:text-secondary"
+            aria-label="Toggle password visibility"
+          >
+            {showPassword ? "🙈" : "👁️"}
+          </button>
         </div>
 
-        <div className="text-right -mt-3">
+        {/* ✅ Remember Me + Forgot Password Row */}
+        <div className="flex items-center justify-between">
+          <label className="flex cursor-pointer select-none items-center gap-2">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="sr-only"
+              />
+              {/* ✅ Custom Checkbox */}
+              <div
+                className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition-colors duration-200 ${
+                  rememberMe
+                    ? "border-primary bg-primary"
+                    : "border-border bg-white"
+                }`}
+              >
+                {rememberMe && (
+                  <svg
+                    className="h-3 w-3 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={3}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                )}
+              </div>
+            </div>
+            <span className="text-sm font-medium text-muted-foreground">
+              Remember me
+            </span>
+          </label>
+
           <button
             type="button"
             onClick={handleForgotPasswordClick}
-            className="text-secondary font-semibold hover:underline"
+            className="text-sm font-semibold text-secondary hover:underline"
           >
             Forgot Password?
           </button>
         </div>
 
-        {error && <p className="text-red-500 text-center">{error}</p>}
+        {error && <p className="text-center text-sm text-red-500">{error}</p>}
 
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           disabled={loading}
           type="submit"
-          className="w-full bg-gradient-primary text-white py-4 text-lg rounded-2xl font-semibold"
+          className="w-full rounded-2xl bg-gradient-primary py-4 text-lg font-semibold text-white disabled:opacity-60"
         >
           {loading ? "Signing In..." : "Sign In"}
         </motion.button>
       </form>
 
-      {/* Social Login Buttons */}
-   <div className="flex flex-col space-y-3 mt-4">
- <button
-  type="button"
-  onClick={googleFirebaseLogin}
-  className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl shadow-md bg-white border border-gray-200 hover:shadow-lg transition-shadow duration-200"
->
-  <FcGoogle className="w-6 h-6" />
-  <span className="text-gray-700 font-medium">Continue with Google</span>
-</button>
-</div>
+      {/* Social Login */}
+      <div className="mt-4 flex flex-col space-y-3">
+        <button
+          type="button"
+          onClick={googleFirebaseLogin}
+          className="flex w-full items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white py-4 shadow-md transition-shadow duration-200 hover:shadow-lg"
+        >
+          <FcGoogle className="h-6 w-6" />
+          <span className="font-medium text-gray-700">
+            Continue with Google
+          </span>
+        </button>
+      </div>
 
+      {/* Sign Up Link */}
+      <div className="mt-6 text-center text-lg">
+        <span className="text-muted-foreground">Don't have an account? </span>
+        <button
+          type="button"
+          onClick={toggleForm}
+          className="font-semibold text-secondary hover:underline"
+        >
+          Sign Up
+        </button>
+      </div>
     </motion.div>
   );
 };

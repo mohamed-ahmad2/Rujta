@@ -1,4 +1,7 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.IdentityModel.Tokens;
+using Rujta.Application.DTOs.AuthDto;
+using Rujta.Application.Interfaces.InterfaceServices.IAuth;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
@@ -11,14 +14,32 @@ namespace Rujta.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
-        private readonly ILogService _logService;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public AuthController(IAuthService authService, ILogService logService)
+        public AuthController(IAuthService authService, IServiceScopeFactory scopeFactory)
         {
             _authService = authService;
-            _logService = logService;
+            _scopeFactory = scopeFactory;
         }
 
+        private void FireAndForgetLog(string user, string action)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var logService = scope.ServiceProvider
+                                               .GetRequiredService<ILogService>();
+                    await logService.AddLogAsync(user, action);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(
+                        $"[FireAndForgetLog] Failed to log: {ex.Message}");
+                }
+            });
+        }
 
         [HttpPost("login")]
         [EnableRateLimiting("LoginPolicy")]
@@ -26,32 +47,30 @@ namespace Rujta.API.Controllers
         {
             try
             {
-                var passwordValid = await _authService.CheckPasswordAsync(dto.Email, dto.Password);
-                if (!passwordValid)
-                {
-                    await _logService.AddLogAsync(dto.Email, LogConstants.FailedLogin);
-                    return Unauthorized();
-                }
+                var result = await _authService.LoginAsync(dto);
 
-                var token = await _authService.GenerateTokensAsync(dto.Email);
-                var user = await _authService.GetUserByEmailAsync(dto.Email);
-                var role = user?.Role ?? "User";
-
-                await _logService.AddLogAsync(dto.Email, LogConstants.UserLoggedIn);
+                FireAndForgetLog(dto.Email, LogConstants.UserLoggedIn);
 
                 return Ok(new
                 {
                     Email = dto.Email,
-                    Role = role,
-                    AccessToken = token.AccessToken
+                    Role = result.Role,
+                    AccessToken = result.AccessToken,
+                    IsFirstLogin = result.IsFirstLogin
                 });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                FireAndForgetLog(dto.Email, LogConstants.FailedLogin);
+                return Unauthorized(new { message = "Invalid email or password." });
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(dto.Email, $"Login error: {ex.Message}");
+                FireAndForgetLog(dto.Email, $"Login error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
+
 
         [HttpPost("register")]
         [EnableRateLimiting("LoginPolicy")]
@@ -59,19 +78,23 @@ namespace Rujta.API.Controllers
         {
             try
             {
-                var userId = await _authService.CreateUserAsync(dto, UserRole.User);
-                var token = await _authService.GenerateTokensAsync(dto.Email);
-                var user = await _authService.GetUserByEmailAsync(dto.Email);
-                var role = user?.Role ?? "User";
+                var result = await _authService.RegisterAsync(dto);
 
+                FireAndForgetLog(dto.Email, LogConstants.NewUserRegistered);
 
-                await _logService.AddLogAsync(dto.Email, LogConstants.NewUserRegistered);
-
-                return CreatedAtAction(nameof(Login), new { UserId = userId, Role = role, email = dto.Email, AccessToken = token.AccessToken });
+                return CreatedAtAction(
+                    nameof(Login),
+                    new { email = dto.Email },
+                    new
+                    {
+                        Role = result.Role,
+                        Email = dto.Email,
+                        AccessToken = result.AccessToken
+                    });
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(dto.Email, $"Registration error: {ex.Message}");
+                FireAndForgetLog(dto.Email, $"Registration error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -93,7 +116,6 @@ namespace Rujta.API.Controllers
                 if (User.IsInRole(nameof(UserRole.PharmacyAdmin)) && roleToAssign != UserRole.Pharmacist)
                     return Forbid("PharmacyAdmin can only create Pharmacist users.");
 
-
                 var pharmacyIdClaim = User.FindFirst("PharmacyId");
 
                 if (User.IsInRole(nameof(UserRole.PharmacyAdmin)))
@@ -104,10 +126,9 @@ namespace Rujta.API.Controllers
                     dto.PharmacyId = int.Parse(pharmacyIdClaim.Value);
                 }
 
-
                 var userId = await _authService.CreateUserAsync(dto, roleToAssign);
 
-                await _logService.AddLogAsync(
+                FireAndForgetLog(
                     dto.Email,
                     $"New user registered by admin with role {roleToAssign}");
 
@@ -120,7 +141,9 @@ namespace Rujta.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(dto?.Email ?? LogConstants.UnknownUser, $"Registration error: {ex.Message}");
+                FireAndForgetLog(
+                    dto?.Email ?? LogConstants.UnknownUser,
+                    $"Registration error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -130,7 +153,7 @@ namespace Rujta.API.Controllers
         public async Task<IActionResult> RegisterStaff([FromBody] RegisterByAdminDto dto)
         {
             if (dto == null)
-                return BadRequest("Invalid request data.");
+                return BadRequest(new { message = "Invalid request data." });
 
             UserRole roleToAssign;
 
@@ -160,71 +183,40 @@ namespace Rujta.API.Controllers
             });
         }
 
-
-        [HttpPost("register-dummy-pharmacyadmin")]
-        public async Task<IActionResult> RegisterDummyPharmacyAdmin(int pharmacyId, string email, string pass)
-        {
-            try
-            {
-                var dummyDto = new RegisterByAdminDto
-                {
-                    Email = email,
-                    CreatePassword = pass,
-                    ConfirmPassword = pass,
-                    Name = "Dummy Pharmacy Admin",
-                    Role = UserRole.PharmacyAdmin,
-                    Location = "EG",
-                    PharmacyId = pharmacyId
-                };
-
-                var userId = await _authService.CreateUserAsync(dummyDto, UserRole.PharmacyAdmin);
-
-                await _logService.AddLogAsync(
-                    dummyDto.Email,
-                    $"Dummy PharmacyAdmin created for testing. UserId: {userId}");
-
-                return Ok(new
-                {
-                    UserId = userId,
-                    Email = dummyDto.Email,
-                    Role = dummyDto.Role.ToString(),
-                    PharmacyId = dummyDto.PharmacyId
-                });
-            }
-            catch (InvalidOperationException ex)
-            {
-                await _logService.AddLogAsync(
-                      LogConstants.UnknownUser,
-                    $"Dummy PharmacyAdmin creation error: {ex.Message}");
-
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-
-
-
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken()
         {
             try
             {
                 var refreshToken = Request.Cookies[CookieKeys.RefreshToken];
-                if (refreshToken == null)
+                if (string.IsNullOrEmpty(refreshToken))
                 {
-                    await _logService.AddLogAsync(LogConstants.UnknownUser, LogConstants.RefreshTokenNotExist);
+                    FireAndForgetLog(
+                        LogConstants.UnknownUser,
+                        LogConstants.RefreshTokenNotExist);
                     return BadRequest(new { message = AuthMessages.RefreshTokenNotExist });
                 }
-                var tokens = await _authService.RefreshAccessTokenAsync(refreshToken);
 
-                await _logService.AddLogAsync(LogConstants.UnknownUser, LogConstants.RefreshTokenUsed);
+                var tokens = await _authService.RefreshAccessTokenAsync(refreshToken);
+                FireAndForgetLog(
+                    LogConstants.UnknownUser,
+                    LogConstants.RefreshTokenUsed);
 
                 return Ok(new { AccessToken = tokens.AccessToken });
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(LogConstants.UnknownUser, $"Refresh token error: {ex.Message}");
+                FireAndForgetLog(
+                    LogConstants.UnknownUser,
+                    $"Refresh token error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
+            }
+            catch (SecurityTokenException ex)
+            {
+                FireAndForgetLog(
+                    LogConstants.UnknownUser,
+                    $"Refresh token security error: {ex.Message}");
+                return Unauthorized(new { message = "Invalid or expired refresh token." });
             }
         }
 
@@ -236,10 +228,10 @@ namespace Rujta.API.Controllers
             {
                 var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null)
-                    return Unauthorized(AuthMessages.UserNotFoundInToken);
+                    return Unauthorized(new { message = AuthMessages.UserNotFoundInToken });
 
                 if (!Guid.TryParse(userIdClaim, out var userId))
-                    return BadRequest(AuthMessages.InvalidUserIdInToken);
+                    return BadRequest(new { message = AuthMessages.InvalidUserIdInToken });
 
                 var refreshToken = Request.Cookies[CookieKeys.RefreshToken];
                 if (!string.IsNullOrEmpty(refreshToken))
@@ -251,7 +243,7 @@ namespace Rujta.API.Controllers
                     await _authService.LogoutAsync(userId);
                 }
 
-                await _logService.AddLogAsync(userId.ToString(), LogConstants.LogoutMessage);
+                FireAndForgetLog(userId.ToString(), LogConstants.LogoutMessage);
 
                 Response.Cookies.Delete(CookieKeys.AccessToken);
                 Response.Cookies.Delete(CookieKeys.RefreshToken);
@@ -260,7 +252,9 @@ namespace Rujta.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(User?.Identity?.Name ?? LogConstants.UnknownUser, $"Logout error: {ex.Message}");
+                FireAndForgetLog(
+                    User?.Identity?.Name ?? LogConstants.UnknownUser,
+                    $"Logout error: {ex.Message}");
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -272,26 +266,22 @@ namespace Rujta.API.Controllers
         {
             var email = User.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
 
-
-            var roles = User.Claims
-                            .Where(c => c.Type == ClaimTypes.Role)
-                            .Select(c => c.Value)
-                            .ToList();
-
-            var role = roles.FirstOrDefault() ?? string.Empty;
-
+            var role = User.Claims
+                           .Where(c => c.Type == ClaimTypes.Role)
+                           .Select(c => c.Value)
+                           .FirstOrDefault() ?? string.Empty;
 
             return Ok(new MeResponse(email, role));
         }
 
+        [Authorize]
         [HttpGet("email")]
         [ProducesResponseType(typeof(EmailResponse), StatusCodes.Status200OK)]
         public IActionResult GetUserEmail()
         {
-            var email = JwtRegisteredClaimNames.Email;
-
-            if (string.IsNullOrEmpty(email))
-                return Ok(new EmailResponse(string.Empty));
+            var email = User.FindFirstValue(ClaimTypes.Email)
+                        ?? User.FindFirstValue(JwtRegisteredClaimNames.Email)
+                        ?? string.Empty;
 
             return Ok(new EmailResponse(email));
         }
@@ -303,7 +293,7 @@ namespace Rujta.API.Controllers
             try
             {
                 await _authService.ResetPasswordAsync(dto);
-                return Ok("Password reset successful.");
+                return Ok(new { message = "Password reset successful." });
             }
             catch (InvalidOperationException ex)
             {
@@ -341,6 +331,70 @@ namespace Rujta.API.Controllers
             }
         }
 
+        [HttpPost("change-password")]
+        [Authorize(Roles = "PharmacyAdmin")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            try
+            {
+                var email = User.FindFirstValue(ClaimTypes.Email);
+
+                if (string.IsNullOrWhiteSpace(email))
+                    return Unauthorized(new { message = "Invalid token." });
+
+                await _authService.ChangePasswordAsync(email, dto.NewPassword);
+
+                return Ok(new { message = "Password changed successfully." });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("register-dummy-pharmacyadmin")]
+        public async Task<IActionResult> RegisterDummyPharmacyAdmin(
+            int pharmacyId, string email, string pass)
+        {
+            try
+            {
+                var dummyDto = new RegisterByAdminDto
+                {
+                    Email = email,
+                    CreatePassword = pass,
+                    ConfirmPassword = pass,
+                    Name = "Dummy Pharmacy Admin",
+                    Role = UserRole.PharmacyAdmin,
+                    Location = "EG",
+                    PharmacyId = pharmacyId
+                };
+
+                var userId = await _authService.CreateUserAsync(dummyDto, UserRole.PharmacyAdmin);
+
+                FireAndForgetLog(
+                    dummyDto.Email,
+                    $"Dummy PharmacyAdmin created for testing. UserId: {userId}");
+
+                return Ok(new
+                {
+                    UserId = userId,
+                    Email = dummyDto.Email,
+                    Role = dummyDto.Role.ToString(),
+                    PharmacyId = dummyDto.PharmacyId
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                FireAndForgetLog(
+                    LogConstants.UnknownUser,
+                    $"Dummy PharmacyAdmin creation error: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
 
         [HttpPost("register-dummy-superadmin")]
         public async Task<IActionResult> RegisterDummySuperAdmin(string email, string pass)
@@ -358,7 +412,7 @@ namespace Rujta.API.Controllers
 
                 var userId = await _authService.CreateUserAsync(dummyDto, UserRole.SuperAdmin);
 
-                await _logService.AddLogAsync(
+                FireAndForgetLog(
                     dummyDto.Email,
                     $"Dummy SuperAdmin created for testing. UserId: {userId}");
 
@@ -371,18 +425,14 @@ namespace Rujta.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                await _logService.AddLogAsync(
-                      LogConstants.UnknownUser,
+                FireAndForgetLog(
+                    LogConstants.UnknownUser,
                     $"Dummy SuperAdmin creation error: {ex.Message}");
-
                 return BadRequest(new { message = ex.Message });
             }
         }
 
-
-
-
         public record MeResponse(string Email, string Role);
-    public record EmailResponse(string Email);
-}
+        public record EmailResponse(string Email);
     }
+}

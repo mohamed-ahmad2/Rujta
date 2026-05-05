@@ -2,7 +2,7 @@
 
 namespace Rujta.Infrastructure.Repositories
 {
-    public class RefreshTokenRepository :GenericRepository<RefreshToken>, IRefreshTokenRepository
+    public class RefreshTokenRepository :GenericRepository<RefreshToken, Guid>, IRefreshTokenRepository
     {
         public RefreshTokenRepository(AppDbContext context) : base(context)
         {

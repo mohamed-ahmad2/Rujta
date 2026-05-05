@@ -2,7 +2,7 @@
 
 namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
-    public interface IMedicineRepository : IGenericRepository<Medicine>
+    public interface IMedicineRepository : IGenericRepository<Medicine, int>
     {
  
         Task<IEnumerable<Medicine>> GetExpiredMedicinesAsync( CancellationToken cancellationToken = default);

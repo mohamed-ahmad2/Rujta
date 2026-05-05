@@ -1,4 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Rujta.Application.DTOs.InventoryDto;
+using Rujta.Application.DTOs.MedicineDtos;
+using Rujta.Application.DTOs.PharmacyDto;
 
 namespace Rujta.Application.Services
 {
@@ -61,7 +64,7 @@ namespace Rujta.Application.Services
             var inventoryItems = await _unitOfWork.InventoryItems
                 .GetQueryable()
                 .Where(i => i.PharmacyID == pharmacy.Id)
-                .Include(i => i.Medicine) // Include medicine to avoid null
+                .Include(i => i.Medicine)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
 
@@ -75,12 +78,12 @@ namespace Rujta.Application.Services
             // ===== Top Selling Products =====
             var topProducts = orders
                 .SelectMany(o => o.OrderItems)
-                .Where(oi => oi.Medicine != null) // only include valid medicines
+                .Where(oi => oi.Medicine != null) 
                 .GroupBy(oi => oi.MedicineID)
                 .Select(g => new TopProductDto
                 {
                     MedicineId = g.Key,
-                    MedicineName = g.First().Medicine.Name, // safe because we filtered null
+                    MedicineName = g.First().Medicine.Name, 
                     QuantitySold = g.Sum(x => x.Quantity),
                     TotalRevenue = g.Sum(x => x.SubTotal)
                 })

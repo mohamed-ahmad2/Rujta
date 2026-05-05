@@ -4,61 +4,97 @@ namespace Rujta.Infrastructure.Extensions
 {
     public static class JwtConfiguration
     {
-        public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
+        private static class HubPaths
+        {
+            public const string Presence = "/hubs/presence";
+            public const string Notifications = "/hubs/notifications";
+            public const string Orders = "/hubs/orders";
+        }
+
+        private static readonly PathString[] SignalRHubPaths =
+        [
+            new(HubPaths.Presence),
+            new(HubPaths.Notifications),
+            new(HubPaths.Orders),
+        ];
+
+        public static IServiceCollection AddJwtAuthentication(
+            this IServiceCollection services,
+            IConfiguration configuration)
         {
             var jwtSection = configuration.GetSection("JWT");
-            var certPath = Path.Combine(AppContext.BaseDirectory, "Certificates", "jwt-cert.pfx");
-            var certPassword = Environment.GetEnvironmentVariable("JWT__CertPassword");
 
-            if (string.IsNullOrWhiteSpace(certPassword))
-                throw new InvalidOperationException("JWT certificate password not found in environment variables.");
+            if (!jwtSection.Exists())
+                throw new InvalidOperationException("JWT configuration section is missing.");
 
-            var certificate = new X509Certificate2(certPath, certPassword);
-            var rsa = certificate.GetRSAPublicKey();
-            var publicKey = new RsaSecurityKey(rsa);
+            var secretKey = Environment.GetEnvironmentVariable("JWT_SIGNING_KEY")
+                           ?? jwtSection["SecretKey"];
 
-            services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer(options =>
-            {
-                options.TokenValidationParameters = new TokenValidationParameters
+            if (string.IsNullOrWhiteSpace(secretKey))
+                throw new InvalidOperationException("JWT SecretKey is missing.");
+
+            var issuer = jwtSection["Issuer"];
+            var audience = jwtSection["Audience"];
+
+            if (string.IsNullOrWhiteSpace(issuer))
+                throw new InvalidOperationException("JWT Issuer is missing.");
+
+            if (string.IsNullOrWhiteSpace(audience))
+                throw new InvalidOperationException("JWT Audience is missing.");
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+
+            services
+                .AddAuthentication(options =>
                 {
-                    ValidateIssuer = true,
-                    ValidIssuer = jwtSection["Issuer"],
-
-                    ValidateAudience = true,
-                    ValidAudience = jwtSection["Audience"],
-
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-
-                    IssuerSigningKey = publicKey,
-                    ClockSkew = TimeSpan.FromSeconds(30),
-                    NameClaimType = JwtRegisteredClaimNames.Sub,
-                    RoleClaimType = ClaimTypes.Role
-                };
-
-                options.Events = new JwtBearerEvents
+                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                })
+                .AddJwtBearer(options =>
                 {
-                    OnMessageReceived = context =>
+                    options.TokenValidationParameters = new TokenValidationParameters
                     {
-                        var accessToken = context.Request.Query["access_token"];
-                        var path = context.HttpContext.Request.Path;
-                        if (!string.IsNullOrEmpty(accessToken) &&
-                            (path.StartsWithSegments("/hubs/presence") || path.StartsWithSegments("/hubs/orders")))
-                        {
-                            context.Token = accessToken;
-                        }
-                        return Task.CompletedTask;
-                    }
-                };
-            });
+                        ValidateIssuer = true,
+                        ValidIssuer = issuer,
+
+                        ValidateAudience = true,
+                        ValidAudience = audience,
+
+                        ValidateLifetime = true,
+
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = key,
+
+                        ClockSkew = TimeSpan.FromSeconds(30),
+
+                        NameClaimType = JwtRegisteredClaimNames.Sub,
+                        RoleClaimType = ClaimTypes.Role
+                    };
+
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = ExtractSignalRToken
+                    };
+                });
 
             return services;
         }
-    }
 
+        private static Task ExtractSignalRToken(MessageReceivedContext context)
+        {
+            var accessToken = context.Request.Query["access_token"];
+
+            if (string.IsNullOrEmpty(accessToken))
+                return Task.CompletedTask;
+
+            var path = context.HttpContext.Request.Path;
+
+            if (SignalRHubPaths.Any(hubPath => path.StartsWithSegments(hubPath)))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
+    }
 }

@@ -1,5 +1,14 @@
+﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.HttpOverrides;
+
+using Rujta.API.Realtime.Services;
 using Rujta.Application.Interfaces;
+using Rujta.Application.Interfaces.InterfaceServices.IAuth;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
+using Rujta.Application.Notifications;
+using Rujta.Infrastructure.Data;
+using Rujta.Infrastructure.Repositories;
+using Rujta.Infrastructure.Services;
 
 namespace Rujta.API
 {
@@ -11,20 +20,15 @@ namespace Rujta.API
 
             builder.Logging.AddConsole();
 
-            // -------------------------------
             // Add services
-            // -------------------------------
             builder.Services.AddControllers()
-            .AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-            });
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                });
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddCustomSwagger();
-
-
-            builder.Services.AddAutoMapper(typeof(StaffProfile).Assembly);
 
             // Database
             builder.Services.AddCustomDatabase(builder.Configuration);
@@ -45,13 +49,22 @@ namespace Rujta.API
 
             // Application Services
             builder.Services.AddApplicationServices(builder.Configuration);
+            builder.Services.AddSingleton<INotificationPublisher, SignalRNotificationPublisher>();
             builder.Services.AddScoped<IOrderNotificationService, OrderNotificationService>();
-
             builder.Services.AddScoped<ICustomerOrderService, CustomerOrderService>();
             builder.Services.AddScoped<IReportService, ReportService>();
             builder.Services.AddScoped<ISuperAdminService, SuperAdminService>();
+            builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+            builder.Services.AddScoped<IDrugHistoryRepository, DrugHistoryRepository>();
 
-
+            builder.Services.AddHttpClient<IDrugInteractionService, DrugInteractionService>(client =>
+            {
+                client.BaseAddress = new Uri(
+                    builder.Configuration["MlService:BaseUrl"] ?? "http://localhost:8000");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+            // 🔥🔥🔥 ADD THIS (SignalR Registration)
+            builder.Services.AddSignalR();
 
             // Firebase Initialization
             try
@@ -72,23 +85,40 @@ namespace Rujta.API
             });
 
             builder.Services.AddHttpClient("Default")
-                    .SetHandlerLifetime(TimeSpan.FromMinutes(5))
-                    .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(10));
+                .SetHandlerLifetime(TimeSpan.FromMinutes(5))
+                .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(10));
 
+            builder.Logging.AddConsole();
 
             var app = builder.Build();
 
+            var logger = app.Services
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger("Rujta.API");
+
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor
+                     | ForwardedHeaders.XForwardedProto
+            });
+
+            try
+            {
+                FirebaseInitializer.Initialize();
+                logger.LogInformation("Firebase initialized successfully.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Firebase initialization failed.");
+            }
+
             app.Use(async (context, next) =>
             {
-                context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'";
+                context.Response.Headers["Content-Security-Policy"] =
+                    "default-src 'self'; script-src 'self'";
                 await next();
             });
 
-
-
-            // -------------------------------
-            // Middleware
-            // -------------------------------
             if (app.Environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -101,44 +131,78 @@ namespace Rujta.API
                 app.UseHsts();
             }
 
-            
-
             app.UseHttpsRedirection();
-
+            app.UseRouting();
+            app.UseRateLimiter();
             app.UseCors("AllowReactApp");
 
-            app.UseRateLimiter();
+            app.UseWebSockets(new WebSocketOptions
+            {
+                KeepAliveInterval = TimeSpan.FromSeconds(60),
+                AllowedOrigins =
+                {
+                    "https://localhost:5173",
+                    "http://localhost:5173",
+                    "https://rujta.vercel.app"
+                }
+            });
+
+            
+
+            app.UseStaticFiles();
 
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapHub<PresenceHub>("/hubs/presence");
-            app.MapHub<NotificationHub>("/notificationHub");
+            app.MapHub<NotificationHub>("/hubs/notifications");
             app.MapHub<OrderHub>("/hubs/orders");
+            
 
             app.MapControllers();
 
-            // -------------------------------
-            // Role seeding
-            // -------------------------------
-            using (var scope = app.Services.CreateScope())
+            await using var scope = app.Services.CreateAsyncScope();
+            var scopedServices = scope.ServiceProvider;
+
+            try
             {
-                var services = scope.ServiceProvider;
-                var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                var roleManager = scopedServices
+                    .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
                 await IdentitySeeder.SeedRolesAsync(roleManager);
+
+                logger.LogInformation("Role seeding completed successfully.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Role seeding failed. App will continue without seeding.");
             }
 
-            using (var scope = app.Services.CreateScope())
+            try
             {
-                var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-                var autocomplete = scope.ServiceProvider.GetRequiredService<IMedicineAutocompleteIndex>();
+                var unitOfWork = scopedServices.GetRequiredService<IUnitOfWork>();
+                var autocomplete = scopedServices.GetRequiredService<IMedicineAutocompleteIndex>();
 
                 var medicines = await unitOfWork.Medicines.GetAllAsync();
                 autocomplete.Build(medicines.Select(m => m.Name!));
+
+                logger.LogInformation("Medicine autocomplete index built successfully.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Autocomplete index build failed. App will continue without it.");
             }
 
-
             await app.RunAsync();
+
+            builder.Services.AddDbContext<AppDbContext>(options =>
+            {
+                var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+
+                Console.WriteLine("DB USED BY EF: " + conn);
+
+                options.UseSqlServer(conn);
+            });
         }
     }
 }

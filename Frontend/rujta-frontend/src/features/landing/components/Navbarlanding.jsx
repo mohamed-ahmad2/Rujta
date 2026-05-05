@@ -1,81 +1,75 @@
 import React from "react";
 import Logo from "../../../assets/Logo2.png";
 import { NavbarMenu } from "../../../mockData/data";
-import { CiSearch } from "react-icons/ci";
-import { PiShoppingCartThin } from "react-icons/pi";
 import { MdMenu } from "react-icons/md";
-import ResponsiveMenulanding from "./ResponsiveMenulanding.jsx";
 import { useNavigate, Link } from "react-router-dom";
+
+import ResponsiveMenulanding from "./ResponsiveMenulanding";
 
 const Navbar = () => {
   const [open, setOpen] = React.useState(false);
   const navigate = useNavigate();
-
+  const authButtonClass =
+    "rounded-md border-2 border-secondary px-6 py-2 font-semibold text-secondary transition duration-200 hover:bg-secondary hover:text-white";
   return (
     <>
-      <nav>
-        <div className="container flex justify-between items-center py-8 bg-page">
-          
+      <nav className="bg-page">
+        <div className="container mx-auto flex items-center justify-between px-4 py-4 md:px-0 md:py-8">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <img
               src={Logo}
               alt="Logo"
-              className="w-16 h-16 object-contain"
+              className="h-12 w-12 object-contain sm:h-16 sm:w-16"
             />
-            <p className="font-extrabold text-2xl text-secondary sm:text-3xl">
+            <p className="text-2xl font-extrabold text-secondary sm:text-3xl">
               Rujta
             </p>
           </Link>
 
-          {/* Menu */}
-          <div
-            className=" rounded-md border-2 hidden md:block"
-            style={{ marginLeft: "70px" }}
-          >
-            <ul className="flex items-center gap-6 ">
-              {NavbarMenu.map((item) => (
-                <li key={item.id}>
-                  <Link
-                    to={item.link}
-                    className="inline-block py-1 px-3 hover:text-secondary font-semibold duration-200"
-                  >
-                    {item.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          {/* Desktop Menu */}
+          <div className="ml-10 hidden items-center gap-6 lg:flex">
+            {NavbarMenu.map((item) => (
+              <Link
+                key={item.id}
+                to={item.link}
+                className="px-3 py-1 font-semibold duration-200 hover:text-secondary"
+              >
+                {item.title}
+              </Link>
+            ))}
           </div>
 
-          {/* Icons */}
-          <div className="flex items-center gap-4">
-           
-
+          {/* Desktop Login/Signup */}
+          <div className="hidden items-center gap-4 lg:flex">
             <button
-              onClick={() => navigate("/auth")}
-              className="hover:bg-secondary text-secondary font-semibold hover:text-white rounded-md border-2 border-secondary px-6 py-2 duration-200 hidden md:block"
+              onClick={() => navigate("/auth?mode=login")}
+              className={authButtonClass}
             >
               Login
             </button>
 
             <button
-              onClick={() => navigate("/auth")}
-              className="hover:bg-secondary text-secondary font-semibold hover:text-white rounded-md border-2 border-secondary px-6 py-2 duration-200 hidden md:block"
+              onClick={() => navigate("/auth?mode=signup")}
+              className={authButtonClass}
             >
               SignUp
             </button>
           </div>
 
-          {/* Mobile menu icon */}
-          <div className="md:hidden" onClick={() => setOpen(!open)}>
-            <MdMenu className="text-4xl" />
+          {/* Mobile Menu Icon */}
+          <div className="lg:hidden">
+            <MdMenu
+              className="cursor-pointer text-4xl"
+              onClick={() => setOpen(!open)}
+            />
           </div>
+
         </div>
       </nav>
 
-      {/* Mobile Sidebar */}
+      {/* Mobile Dropdown Menu */}
       <ResponsiveMenulanding open={open} setOpen={setOpen} />
-
     </>
   );
 };

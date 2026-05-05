@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using Rujta.Application.DTOs.CustomerDtos;
 
 namespace Rujta.Application.Validation
 {

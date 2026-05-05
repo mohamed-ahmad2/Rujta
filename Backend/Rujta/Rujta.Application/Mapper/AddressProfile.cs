@@ -1,4 +1,6 @@
-﻿namespace Rujta.Application.Mapper
+﻿using Rujta.Application.DTOs.CustomerDtos;
+
+namespace Rujta.Application.Mapper
 {
     public class AddressProfile : Profile
     {

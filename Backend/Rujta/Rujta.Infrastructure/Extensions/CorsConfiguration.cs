@@ -12,7 +12,9 @@ namespace Rujta.Infrastructure.Extensions
                     policy.WithOrigins(
                             "https://localhost:5173",
                             "http://localhost:5173",
-                            "http://localhost:3000")
+                            "http://localhost:3000",
+                            "https://rujta.vercel.app",
+                            "https://rujta.runasp.net")
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials());

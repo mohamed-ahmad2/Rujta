@@ -1,11 +1,10 @@
 // src/features/user/pages/Profile.jsx
 import React, { useState, useEffect } from "react";
 import { FiTrash2 } from "react-icons/fi";
-import { useUserProfile } from "../../userProfile/hook/useUserProfile";// Adjusted path to match the hook location
+import { useUserProfile } from "../../userProfile/hook/useUserProfile"; // Adjusted path to match the hook location
 
 export default function Profile() {
-  const { profile, loading, error, updateProfile } =
-    useUserProfile();
+  const { profile, loading, error, updateProfile } = useUserProfile();
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -81,29 +80,38 @@ export default function Profile() {
 
   /* ================= UI ================= */
   return (
-    <section className="min-h-screen bg-[#F3F4F6]">
+    <section className="min-h-screen bg-[#F3F4F6] px-4 py-6 sm:px-6 lg:px-10">
       {/* ================= Profile Card ================= */}
-      <div className="mx-10 mt-8 bg-gradient-to-r from-secondary to-[#e8e0c9] p-6 rounded-xl">
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-3xl text-gray-600">
+      <div className="mt-4 rounded-xl bg-gradient-to-r from-secondary to-[#e8e0c9] p-4 sm:p-6">
+        <div className="rounded-xl bg-white p-4 shadow-md sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            {/* Left */}
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 text-xl text-gray-600 sm:h-16 sm:w-16 sm:text-3xl">
                 {formData.fullName?.charAt(0).toUpperCase()}
               </div>
+
               <div>
-                <h3 className="text-lg font-semibold">{formData.fullName}</h3>
-                <p className="text-sm text-gray-500">{profile?.email}</p>
+                <h3 className="text-base font-semibold sm:text-lg">
+                  {formData.fullName}
+                </h3>
+                <p className="text-xs text-gray-500 sm:text-sm">
+                  {profile?.email}
+                </p>
               </div>
             </div>
 
+            {/* Button */}
             <button
               onClick={() => {
                 if (isEditing) handleSave();
                 else setIsEditing(true);
               }}
-              className={`px-5 py-2 rounded-lg font-semibold text-white shadow-md ${
-                isEditing ? "bg-red-400" : "bg-secondary"
-              }`}
+              className={`w-full rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-md transition-all duration-200 sm:w-auto sm:text-base ${
+                isEditing
+                  ? "bg-red-400 hover:bg-red-500"
+                  : "hover:bg-secondary-dark bg-secondary"
+              } active:scale-95`}
             >
               {isEditing ? "Save" : "Edit"}
             </button>
@@ -112,8 +120,9 @@ export default function Profile() {
       </div>
 
       {/* ================= Profile Form ================= */}
-      <div className="mx-10 mt-6 bg-white p-6 rounded-xl shadow-md">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="mt-6 rounded-xl bg-white p-4 shadow-md sm:p-6">
+        {/* Basic Info */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
           <Input
             label="Full Name"
             value={formData.fullName}
@@ -130,30 +139,38 @@ export default function Profile() {
 
         {/* ================= Addresses ================= */}
         <div className="mt-8">
-          <p className="font-semibold mb-4 text-gray-700">My Addresses</p>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="mb-2 text-sm font-semibold text-gray-700 sm:text-base">
+            My Addresses
+          </p>
+
+          <p className="mb-4 text-xs text-gray-500 sm:text-sm">
             The first address is your primary address used for main purposes.
             Additional addresses can be for other uses.
           </p>
 
           {formData.addresses.map((address, i) => (
-            <div key={i} className="border rounded-xl p-4 mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <p className="font-semibold text-gray-700">
+            <div
+              key={i}
+              className="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5"
+            >
+              {/* Header */}
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-semibold text-gray-700 sm:text-base">
                   {i === 0 ? "Primary Address" : `Additional Address #${i}`}
                 </p>
 
                 {isEditing && formData.addresses.length > 1 && i > 0 && (
                   <button
                     onClick={() => removeAddress(i)}
-                    className="text-red-500"
+                    className="text-red-500 transition hover:text-red-600"
                   >
                     <FiTrash2 />
                   </button>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Fields */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <Input
                   label="Street"
                   value={address.street}
@@ -190,10 +207,11 @@ export default function Profile() {
             </div>
           ))}
 
+          {/* Add Address */}
           {isEditing && (
             <button
               onClick={addAddress}
-              className="bg-secondary text-white px-4 py-2 rounded-lg"
+              className="hover:bg-secondary-dark w-full rounded-lg bg-secondary px-4 py-2 text-sm text-white transition-all duration-200 active:scale-95 sm:w-auto sm:text-base"
             >
               + Add Address
             </button>
@@ -207,13 +225,14 @@ export default function Profile() {
 /* ================= Reusable Input ================= */
 const Input = ({ label, value, disabled, onChange }) => (
   <div>
-    <label className="text-sm text-gray-600">{label}</label>
+    <label className="text-xs text-gray-600 sm:text-sm">{label}</label>
+
     <input
       type="text"
       value={value || ""}
       disabled={disabled}
       onChange={onChange}
-      className="w-full border rounded-lg px-3 py-2 mt-1 disabled:bg-gray-100"
+      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary disabled:cursor-not-allowed disabled:bg-gray-100 sm:text-base"
     />
   </div>
 );

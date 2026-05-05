@@ -29,6 +29,9 @@ namespace Rujta.Domain.Entities
         public decimal TotalPrice { get; set; }
 
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
+        public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Pending;
+
+        public PaymentMethod PaymentMethod { get; set; }
 
         [Timestamp]
         public byte[] RowVersion { get; set; } = null!;

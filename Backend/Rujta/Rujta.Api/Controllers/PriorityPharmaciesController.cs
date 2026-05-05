@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.DTOs.OrderDto;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
 using Rujta.Infrastructure.Constants;
@@ -27,11 +28,7 @@ namespace Rujta.API.Controllers
 
         [HttpPost("top-k")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetTopPharmaciesForCart(
-            [FromBody] ItemDto order,
-            [FromQuery] int addressId,
-            [FromQuery] int topK = 5,
-            CancellationToken cancellationToken = default)
+        public async Task<IActionResult> GetTopPharmaciesForCart([FromBody] ItemDto order,[FromQuery] int addressId,[FromQuery] int topK = 5,[FromQuery] int? maxShortageRange = null, CancellationToken cancellationToken = default)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userIdClaim == null)
@@ -50,6 +47,8 @@ namespace Rujta.API.Controllers
             if (Math.Abs(address.Latitude) < CoordinateTolerance ||
                 Math.Abs(address.Longitude) < CoordinateTolerance)
                 return BadRequest(ApiMessages.UserLocationNotSet);
+
+            order.MaxShortageRange = maxShortageRange;
 
             var pharmacies = await _cartService.GetTopPharmaciesForCartAsync(
                 order,

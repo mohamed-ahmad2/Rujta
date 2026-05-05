@@ -1,134 +1,398 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import useCampaigns from "../../campaigns/hook/useCampaigns";
+import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
 
-// ===== IMAGES =====
+// --- Static Asset Imports ---
 import productImg1 from "../../../assets/hero/pantin.png";
-import modelImg1 from "../../../assets/hero/model.png";
-import bg1 from "../../../assets/hero/bg1.png";
-
-import productImg2 from "../../../assets/hero/i2.png";
-import modelImg2 from "../../../assets/hero/bbb.png";
-import bg2 from "../../../assets/hero/bg22.png";
+import modelImg1   from "../../../assets/hero/model.png";
+import bg1         from "../../../assets/hero/bg1.png";
 
 import productImg3 from "../../../assets/hero/i1.png";
-import modelImg3 from "../../../assets/hero/mod.png";
-import bg3 from "../../../assets/hero/bg3.png";
+import modelImg3   from "../../../assets/hero/mod.png";
+import bg3         from "../../../assets/hero/bg3.png";
 
-// ===== ADS CONFIG =====
-const ads = [
-   {
+// --- Configuration: Static Slides ---
+const staticAds = [
+  {
+    id: "static-1",
+    type: "static",
     text1: "بشرة اجمل مع ",
     text2: "ordenary",
     textColor1: "text-gray-900",
     textColor2: "text-red-900",
     textSize1: "text-3xl sm:text-5xl md:text-8xl",
     textSize2: "text-5xl sm:text-6xl md:text-9xl",
-    bgType: "image",
     bgImage: bg3,
-    showBrand: false,
     productImg: productImg3,
     productSize: "w-[260px] sm:w-[420px] md:w-[900px]",
-    productPosition: `
-      left-1/2 -translate-x-1/2 bottom-[-80px]
-      sm:bottom-[-200px]
-      md:left-[-500px] md:translate-x-0 md:bottom-[-350px]
-    `,
+    productPosition: "left-1/2 -translate-x-1/2 bottom-[-80px] sm:bottom-[-200px] md:left-[-500px] md:translate-x-0 md:bottom-[-350px]",
     modelImg: modelImg3,
     modelSize: "md:w-[450px]",
     modelPosition: "hidden md:block md:right-[-100px] md:bottom-[-280px]",
   },
   {
+    id: "static-2",
+    type: "static",
     text1: "يعالج ويحمي",
     text2: "من تلف الماء",
     textColor1: "text-gray-900",
     textColor2: "text-yellow-600",
     textSize1: "text-4xl sm:text-5xl md:text-8xl",
     textSize2: "text-5xl sm:text-5xl md:text-8xl",
-    bgType: "image",
     bgImage: bg1,
-    showBrand: true,
     productImg: productImg1,
     productSize: "w-[240px] sm:w-[500px] md:w-[700px]",
-    productPosition: `
-      left-1/2 -translate-x-1/2 bottom-[-80px]
-      sm:bottom-[-200px]
-      md:left-[-500px] md:translate-x-0 md:bottom-[-400px]
-    `,
+    productPosition: "left-1/2 -translate-x-1/2 bottom-[-80px] sm:bottom-[-200px] md:left-[-500px] md:translate-x-0 md:bottom-[-400px]",
     modelImg: modelImg1,
     modelSize: "md:w-[650px]",
     modelPosition: "hidden md:block md:right-[-100px] md:bottom-[-380px]",
   },
-  {
-    text1: "سعادة طفلك مع",
-    text2: "SMARTH",
-    textColor1: "text-gray-900",
-    textColor2: "text-[#8124B9]",
-    textSize1: "text-3xl sm:text-4xl md:text-7xl",
-    textSize2: "text-4xl sm:text-5xl md:text-8xl",
-    bgType: "image",
-    bgImage: bg2,
-    showBrand: false,
-    productImg: productImg2,
-    productSize: "w-[260px] sm:w-[320px] md:w-[900px]",
-    productPosition: `
-      left-1/2 -translate-x-1/2 bottom-[-80px]
-      sm:bottom-[-200px]
-      md:left-[-500px] md:translate-x-0 md:bottom-[-400px]
-    `,
-    modelImg: modelImg2,
-    modelSize: "md:w-[450px]",
-    modelPosition: "hidden md:block md:right-[-100px] md:bottom-[-280px]",
-  },
- 
 ];
 
-const HeroPanteneStyle = () => {
-  const [currentAd, setCurrentAd] = useState(0);
+// ─── Pharmacy Badge ────────────────────────────────────────────────────────────
+const PharmacyBadge = ({ imageUrl, name, pharmacyId, navigate }) => {
+  const [hovered, setHovered] = useState(false);
+  if (!imageUrl && !name) return null;
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentAd((prev) => (prev + 1) % ads.length);
-    }, 4500);
-    return () => clearInterval(interval);
-  }, []);
+  const canNavigate = !!pharmacyId;
 
-  const ad = ads[currentAd];
+  return (
+    <div
+      onClick={() => canNavigate && navigate(`/user/pharmacy/${pharmacyId}`)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "absolute",
+        top: "28px",
+        right: "32px",
+        zIndex: 30,
+        display: "flex",
+        alignItems: "center",
+        gap: "16px",
+        background: hovered ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.13)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+        border: `2px solid ${hovered ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)"}`,
+        borderRadius: "100px",
+        padding: "10px 24px 10px 10px",
+        boxShadow: hovered
+          ? "0 20px 60px rgba(0,0,0,0.4), 0 0 0 4px rgba(255,255,255,0.12)"
+          : "0 10px 40px rgba(0,0,0,0.28)",
+        cursor: canNavigate ? "pointer" : "default",
+        transform: hovered ? "translateY(-4px) scale(1.04)" : "translateY(0) scale(1)",
+        transition: "all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)",
+      }}
+    >
+      {imageUrl && (
+        <div
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: "50%",
+            overflow: "hidden",
+            border: "3px solid rgba(255,255,255,0.9)",
+            flexShrink: 0,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+            background: "#fff",
+            transform: hovered ? "scale(1.06)" : "scale(1)",
+            transition: "transform 0.28s ease",
+          }}
+        >
+          <img
+            src={imageUrl}
+            alt={name || "Pharmacy"}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {name && (
+          <span
+            style={{
+              color: "#fff",
+              fontSize: "16px",
+              fontWeight: 800,
+              letterSpacing: "0.01em",
+              textShadow: "0 2px 8px rgba(0,0,0,0.35)",
+              whiteSpace: "nowrap",
+              maxWidth: 180,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              lineHeight: 1.2,
+            }}
+          >
+            {name}
+          </span>
+        )}
+        {canNavigate && (
+          <span
+            style={{
+              color: hovered ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.65)",
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              transition: "color 0.2s",
+            }}
+          >
+            Visit Store →
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Dynamic Slide ─────────────────────────────────────────────────────────────
+// ─── Dynamic Slide ─────────────────────────────────────────────────────────────
+const DynamicSlide = ({ ad, pharmacyMap, navigate }) => {
+  const pid = ad.pharmacyId || ad.PharmacyId || null;
+  const livePharmacy = pid ? pharmacyMap[pid] : null;
+
+  const resolvedPharmacy = livePharmacy
+    ? { imageUrl: livePharmacy.imageUrl || livePharmacy.ImageUrl || null, name: livePharmacy.name || null, pharmacyId: pid }
+    : (ad.pharmacyImage || ad.pharmacyName)
+    ? { imageUrl: ad.pharmacyImage || null, name: ad.pharmacyName || null, pharmacyId: null }
+    : null;
+
+  const medicineId = ad.medicineId || ad.MedicineId || null;
+  const handleShopNow = () => {
+    if (medicineId) navigate(`/medicines/${medicineId}`);
+    else if (ad.category) navigate(`/user/products?category=${encodeURIComponent(ad.category)}`);
+    else navigate("/user/products");
+  };
 
   return (
     <section
-      className="relative w-full min-h-screen overflow-hidden flex items-center"
+      className="relative w-full min-h-screen overflow-hidden flex items-center justify-center"
       style={{
-        backgroundImage: `url(${ad.bgImage})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
+        background: `radial-gradient(circle at top left, ${ad.colorTo || "#0369a1"}, ${ad.colorFrom || "#0ea5e9"})`,
       }}
     >
-      <div className="relative z-20 max-w-7xl mx-auto px-6 grid md:grid-cols-2">
-        {/* TEXT */}
-        <div className="-mt-10 sm:-mt-20 md:-mt-64 space-y-9 md:space-y-11">
-          <p className={`font-medium ${ad.textColor1} ${ad.textSize1}`}>
-            {ad.text1}
-          </p>
-          <p className={`font-extrabold ${ad.textColor2} ${ad.textSize2}`}>
-            {ad.text2}
-          </p>
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-white/10 blur-[120px] animate-pulse" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] rounded-full bg-black/20 blur-[100px]" />
+
+      {/* ── Corner ribbon — top left, touches both edges ── */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          zIndex: 30,
+          width: "180px",
+          height: "180px",
+          overflow: "hidden",
+          pointerEvents: "none",
+          userSelect: "none",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: "42px",
+            left: "-48px",
+            width: "210px",
+            padding: "10px 0",
+            background: "linear-gradient(135deg, #1a5c2a 0%, #2d8c45 100%)",
+            transform: "rotate(-45deg)",
+            textAlign: "center",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.35)",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "clamp(0.75rem, 1.2vw, 0.95rem)",
+              fontWeight: 900,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "#fff",
+              textShadow: "0 1px 4px rgba(0,0,0,0.4)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {ad.badge || "NEW ARRIVAL"}
+          </span>
+        </div>
+      </div>
+
+      {resolvedPharmacy && (
+        <PharmacyBadge
+          imageUrl={resolvedPharmacy.imageUrl}
+          name={resolvedPharmacy.name}
+          pharmacyId={resolvedPharmacy.pharmacyId}
+          navigate={navigate}
+        />
+      )}
+
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-8 grid md:grid-cols-2 gap-16 items-center">
+        <div className="order-2 md:order-1 space-y-8 text-center md:text-left">
+          <div className="space-y-4">
+            <h1
+              className="text-white font-extrabold leading-[1.1] drop-shadow-md"
+              style={{ fontSize: "clamp(3rem, 5vw, 5.5rem)" }}
+            >
+              {ad.headline}
+            </h1>
+            <div className="h-1 w-24 bg-white/40 inline-block rounded-full" />
+
+            {/* ── Subtext — Large and 3D Popped Effect ── */}
+            {/* ── Enhanced 3D Popped Subtext ── */}
+{ad.subtext && (
+  <div className="relative group">
+    <p
+      className="text-white font-black leading-none max-w-lg select-none"
+      style={{ 
+        fontSize: "clamp(2.5rem, 6vw, 5rem)", // Larger size
+        textTransform: "uppercase",
+        letterSpacing: "-0.02em",
+        // The 3D perspective and tilting
+        transform: "perspective(1000px) rotateX(15deg) rotateY(-5deg)",
+        // Multi-layered "Extrusion" shadow for that solid 3D look
+        textShadow: `
+          1px 1px 0px #d1d1d1,
+          2px 2px 0px #c1c1c1,
+          3px 3px 0px #b1b1b1,
+          4px 4px 0px #a1a1a1,
+          5px 5px 0px #919191,
+          6px 6px 10px rgba(0,0,0,0.4),
+          0px 10px 20px rgba(0,0,0,0.3)
+        `,
+        // Subtle stroke to make it pop against any background
+        WebkitTextStroke: "1px rgba(255,255,255,0.1)",
+        // Animation
+        animation: "float 4s ease-in-out infinite"
+      }}
+    >
+      {ad.subtext}
+    </p>
+
+    {/* Inline CSS for the floating animation */}
+    <style>{`
+      @keyframes float {
+        0%, 100% { transform: perspective(1000px) rotateX(15deg) rotateY(-5deg) translateY(0px); }
+        50% { transform: perspective(1000px) rotateX(15deg) rotateY(-5deg) translateY(-15px); }
+      }
+    `}</style>
+  </div>
+)}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start items-center">
+            <button
+              onClick={handleShopNow}
+              className="group relative bg-white text-gray-900 px-12 py-5 rounded-full font-black text-lg overflow-hidden transition-all hover:pl-16 active:scale-95 shadow-2xl"
+            >
+              <span className="relative z-10">SHOP NOW</span>
+              <span className="absolute left-6 opacity-0 transition-all group-hover:opacity-100 group-hover:left-8">→</span>
+            </button>
+          </div>
         </div>
 
-        {/* VISUAL */}
-        <div className="relative flex items-center justify-center mt-20 md:mt-16">
-          <img
-            src={ad.productImg}
-            alt="Product"
-            className={`absolute ${ad.productPosition} ${ad.productSize} z-10`}
+        <div className="relative order-1 md:order-2 flex justify-center items-center group">
+          <div
+            className="absolute w-[80%] h-[80%] rounded-full border-2 border-white/20 animate-[spin_10s_linear_infinite]"
+            style={{ boxShadow: `0 0 50px ${ad.colorFrom}44` }}
           />
-          <img
-            src={ad.modelImg}
-            alt="Model"
-            className={`absolute ${ad.modelPosition} ${ad.modelSize} z-10`}
-          />
+          <div className="relative z-10 animate-[bounce_4s_ease-in-out_infinite]">
+            <img
+              src={ad.medicineImage || ad.imageDataUrl}
+              alt={ad.headline}
+              className="w-[280px] sm:w-[350px] md:w-[500px] object-contain drop-shadow-[0_35px_35px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-105"
+            />
+          </div>
+          <div className="absolute bottom-[-20px] w-1/2 h-10 bg-black/30 blur-2xl rounded-[100%]" />
         </div>
       </div>
     </section>
   );
 };
+// --- Static Slide ---
+const StaticSlide = ({ ad }) => (
+  <section
+    className="relative w-full min-h-screen overflow-hidden flex items-center"
+    style={{ backgroundImage: `url(${ad.bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }}
+  >
+    <div className="relative z-20 max-w-7xl mx-auto px-6 grid md:grid-cols-2">
+      <div className="-mt-20 space-y-8">
+        <p className={`font-medium ${ad.textColor1} ${ad.textSize1}`}>{ad.text1}</p>
+        <p className={`font-extrabold ${ad.textColor2} ${ad.textSize2}`}>{ad.text2}</p>
+      </div>
+      <div className="relative flex items-center justify-center">
+        <img src={ad.productImg} className={`absolute ${ad.productPosition} ${ad.productSize} z-10`} alt="prod" />
+        <img src={ad.modelImg}   className={`absolute ${ad.modelPosition} ${ad.modelSize} z-10`}   alt="mod"  />
+      </div>
+    </div>
+  </section>
+);
 
-export default HeroPanteneStyle;
+// --- Main Hero Page ---
+const Hero = () => {
+  const navigate = useNavigate();
+  const { fetchAll, ads: backendAds } = useCampaigns();
+  const { pharmacies, fetchAllPharmacies } = usePharmacies();
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [allSlides,    setAllSlides]    = useState(staticAds);
+
+  const fetchedRef = useRef(false);
+  useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+    fetchAll();
+    fetchAllPharmacies();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pharmacyMap = React.useMemo(() => {
+    const map = {};
+    (pharmacies || []).forEach((ph) => { map[ph.id] = ph; });
+    return map;
+  }, [pharmacies]);
+
+  useEffect(() => {
+    if (!backendAds || !Array.isArray(backendAds) || backendAds.length === 0) return;
+    const dynamicSlides = backendAds.map((ad) => ({
+      ...ad,
+      id: `dynamic-${ad.id}`,
+      type: "dynamic",
+    }));
+    setAllSlides([...staticAds, ...dynamicSlides]);
+  }, [backendAds]);
+
+  useEffect(() => {
+    if (allSlides.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % allSlides.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [allSlides.length]);
+
+  const activeSlide = allSlides[currentIndex];
+  if (!activeSlide) return null;
+
+  return (
+    <div className="relative w-full min-h-screen">
+      {activeSlide.type === "dynamic" ? (
+        <DynamicSlide ad={activeSlide} pharmacyMap={pharmacyMap} navigate={navigate} />
+      ) : (
+        <StaticSlide ad={activeSlide} />
+      )}
+
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 flex gap-3">
+        {allSlides.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentIndex(i)}
+            className={`transition-all duration-300 rounded-full ${
+              i === currentIndex ? "w-10 h-3 bg-white" : "w-3 h-3 bg-white/40 hover:bg-white/60"
+            }`}
+            aria-label={`Go to slide ${i + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default Hero;

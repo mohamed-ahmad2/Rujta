@@ -1,15 +1,6 @@
-﻿using Google;
-using Microsoft.EntityFrameworkCore;
-using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace Rujta.Infrastructure.Repositories
+﻿namespace Rujta.Infrastructure.Repositories
 {
-    public class CustomerRepository : GenericRepository<Customer>, ICustomerRepository
+    public class CustomerRepository : GenericRepository<Customer,Guid>, ICustomerRepository
     {
         public CustomerRepository(AppDbContext context) : base(context)
         {}

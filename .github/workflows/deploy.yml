@@ -1,0 +1,59 @@
+name: Build and Deploy to MonsterASP.NET
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+    types: [ closed ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  SOLUTION_PATH: 'Backend/Rujta/Rujta.sln'
+  API_PROJECT_PATH: 'Backend/Rujta/Rujta.Api/Rujta.API.csproj'
+  PUBLISH_DIR: ${{ github.workspace }}\publish
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
+
+      - name: Publish API
+        run: dotnet publish ${{ env.API_PROJECT_PATH }} --configuration Release --output ${{ env.PUBLISH_DIR }} --no-build /p:UseAppHost=false
+
+      - name: Deploy with MSDeploy
+        shell: cmd
+        env:
+          SITE_NAME: ${{ secrets.MONSTER_SITE_NAME }}
+          SERVER: ${{ secrets.MONSTER_SERVER }}
+          USERNAME: ${{ secrets.MONSTER_USERNAME }}
+          PASSWORD: ${{ secrets.MONSTER_PASSWORD }}
+          PUBLISH_PATH: ${{ env.PUBLISH_DIR }}
+        run: |
+          echo Starting MSDeploy...
+          echo Source: %PUBLISH_PATH%
+          echo Target Site: %SITE_NAME%
+          
+          "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" ^
+            -verb:sync ^
+            -source:contentPath="%PUBLISH_PATH%" ^
+            -dest:contentPath="%SITE_NAME%",ComputerName="https://%SERVER%:8172/msdeploy.axd?site=%SITE_NAME%",UserName="%USERNAME%",Password="%PASSWORD%",AuthType="Basic" ^
+            -allowUntrusted ^
+            -enableRule:AppOffline ^
+            -enableRule:DoNotDeleteRule

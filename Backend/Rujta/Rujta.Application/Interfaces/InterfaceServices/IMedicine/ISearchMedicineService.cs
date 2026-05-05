@@ -1,4 +1,4 @@
-﻿using Rujta.Application.DTOs;
+﻿using Rujta.Application.DTOs.MedicineDtos;
 
 namespace Rujta.Application.Interfaces.InterfaceServices.IMedicine
 {

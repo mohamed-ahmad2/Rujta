@@ -1,4 +1,6 @@
-﻿namespace Rujta.Application.Services.Logging
+﻿using Rujta.Application.DTOs.OrderDto;
+
+namespace Rujta.Application.Services.Logging
 {
     public static class PharmacySearchLogger
     {

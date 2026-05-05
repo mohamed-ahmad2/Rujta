@@ -1,54 +1,12 @@
-import React from "react";
-import { MoreVertical } from "lucide-react";
-
-export default function CustomersCard({ title, value, sub, percent, variant }) {
+export default function CustomersCard({ title, value, variant }) {
   return (
-    <div
-      className={`rounded-2xl px-6 py-5 shadow-sm flex justify-between items-start transition-all
-        ${
-          variant === "green"
-            ? "bg-gradient-to-br from-secondary to-secondary text-white"
-            : "bg-white text-black"
-        }
-      `}
-    >
-      <div>
-        {/* Title */}
-        <p
-          className={`text-sm ${
-            variant === "green" ? "text-white/80" : "text-gray-400"
-          }`}
-        >
-          {title}
-        </p>
-
-        {/* Value */}
-        <h2 className="text-2xl font-semibold mt-1">{value}</h2>
-
-        {/* Subtitle */}
-        <p
-          className={`text-xs mt-1 ${
-            variant === "green" ? "text-white/80" : "text-gray-400"
-          }`}
-        >
-          {sub}
-        </p>
-
-        {/* Percent */}
-        <span
-          className={`text-xs font-medium mt-2 inline-block ${
-            variant === "green" ? "text-white" : "text-green-600"
-          }`}
-        >
-          {percent}
-        </span>
-      </div>
-
-      {/* Menu Icon */}
-      <MoreVertical
-        size={18}
-        className={`${variant === "green" ? "text-white" : "text-gray-400"}`}
-      />
+    <div className="w-full rounded-xl bg-white p-3 shadow-sm sm:p-4 md:p-5">
+      <h3 className="truncate text-xs text-gray-500 sm:text-sm md:text-base">
+        {title}
+      </h3>
+      <p className="mt-1 truncate text-xl font-bold sm:mt-2 sm:text-2xl md:text-3xl">
+        {value}
+      </p>
     </div>
   );
 }

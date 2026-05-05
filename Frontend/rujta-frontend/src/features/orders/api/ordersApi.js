@@ -1,4 +1,3 @@
-// src/features/orders/api/ordersApi.js
 import apiClient from "../../../shared/api/apiClient";
 
 export const getAllOrders = () => apiClient.get("/orders");
@@ -8,7 +7,7 @@ export const getOrderDetails = (id) => apiClient.get(`/orders/${id}/details`);
 export const getUserOrders = () => apiClient.get("/orders/user");
 export const getPharmacyOrders = () => apiClient.get("/orders/pharmacy/orders");
 
-export const createOrder = (data) => apiClient.post("/orders", data);
+export const createOrder = (data) => apiClient.post("/orders", Array.isArray(data) ? data : [data]); // Wrap in array to match backend List<CreateOrderDto>
 export const updateOrder = (id, data) => apiClient.put(`/orders/${id}`, data);
 export const deleteOrder = (id) => apiClient.delete(`/orders/${id}`);
 

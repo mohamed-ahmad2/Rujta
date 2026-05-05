@@ -1,8 +1,9 @@
-﻿using Rujta.Infrastructure.Identity;
+﻿using Rujta.Application.DTOs.CustomerDtos;
+using Rujta.Infrastructure.Identity;
 
 namespace Rujta.Infrastructure.Repositories
 {
-    public class AddressRepository : GenericRepository<Address>, IAddressRepository
+    public class AddressRepository : GenericRepository<Address, int>, IAddressRepository
     {
         private readonly UserManager<ApplicationUser> _userManager;
         public AddressRepository(AppDbContext context, UserManager<ApplicationUser> userManager) : base(context)
