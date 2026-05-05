@@ -1,8 +1,8 @@
 ﻿namespace Rujta.Application.DTOs.SubscriptionDto
 {
-    public class RenewSubscriptionRequest
+    public class SetStatusManuallyRequest
     {
         public int PharmacyId { get; set; }
-        public SubscriptionPlan Plan { get; set; }
+        public bool Activate { get; set; }
     }
 }
