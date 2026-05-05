@@ -27,15 +27,12 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 bg-gray-50">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
               Order Details
             </p>
-            <h3 className="text-lg font-bold text-gray-800">
-              #{order.id}
-            </h3>
+            <h3 className="text-lg font-bold text-gray-800">#{order.id}</h3>
           </div>
           <button
             onClick={onClose}
@@ -46,7 +43,6 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
         </div>
 
         <div className="p-6 space-y-5">
-          {/* Info Grid */}
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-xl bg-gray-50 p-3">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
@@ -88,7 +84,6 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
             </div>
           </div>
 
-          {/* Status */}
           <div className="flex items-center gap-3">
             <p className="text-sm text-gray-500">Status:</p>
             <span
@@ -98,17 +93,14 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
             </span>
           </div>
 
-          {/* Items */}
           <div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-2">
               <Package className="h-3.5 w-3.5" />
               Items ({items.length})
             </p>
-
             {items.length > 0 ? (
               <ul className="space-y-2 max-h-56 overflow-y-auto pr-1">
                 {items.map((item, i) => {
-                  // دعم الـ structure بتاع الـ API وكمان الـ local orders
                   const name =
                     item.name ||
                     item.medicineName ||
@@ -116,7 +108,6 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
                       ? getMedicineName(item.medicineID)
                       : `Item #${i + 1}`);
                   const qty = item.qty || item.quantity || 0;
-
                   return (
                     <li
                       key={i}
@@ -144,7 +135,6 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="border-t border-gray-100 px-6 py-4 bg-gray-50 flex justify-end">
           <button
             onClick={onClose}
@@ -193,9 +183,8 @@ function AddOrderModal({ open, onClose, onAdd }) {
   const calcTotal = () =>
     form.items
       .reduce(
-        (sum, it) =>
-          sum + (Number(it.price) || 0) * (Number(it.qty) || 1),
-        0,
+        (sum, it) => sum + (Number(it.price) || 0) * (Number(it.qty) || 1),
+        0
       )
       .toFixed(2);
 
@@ -237,7 +226,6 @@ function AddOrderModal({ open, onClose, onAdd }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="max-h-[95vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-xl sm:max-h-[90vh] sm:w-[90%] sm:rounded-2xl md:w-[75%] lg:w-[60%] xl:max-w-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <h3 className="text-base font-semibold text-gray-800 sm:text-lg">
             Add New Order
@@ -251,7 +239,6 @@ function AddOrderModal({ open, onClose, onAdd }) {
         </div>
 
         <div className="space-y-5 p-5">
-          {/* Customer + Pharmacy */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -277,7 +264,6 @@ function AddOrderModal({ open, onClose, onAdd }) {
             </div>
           </div>
 
-          {/* Date + Status */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -311,7 +297,6 @@ function AddOrderModal({ open, onClose, onAdd }) {
             </div>
           </div>
 
-          {/* Order Items */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700">
@@ -374,7 +359,6 @@ function AddOrderModal({ open, onClose, onAdd }) {
             </div>
           </div>
 
-          {/* Total */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
               Total Price (EGP)
@@ -395,7 +379,6 @@ function AddOrderModal({ open, onClose, onAdd }) {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
             <button
               type="button"
@@ -422,7 +405,7 @@ function AddOrderModal({ open, onClose, onAdd }) {
 // ─── Main Orders Page ─────────────────────────────────────────────────────────
 export default function Orders() {
   const {
-    orders: apiOrders,
+    orders: rawOrders,
     loading,
     error,
     fetchPharmacy,
@@ -433,50 +416,39 @@ export default function Orders() {
     cancelByPharmacy,
   } = useOrders();
 
+  // ✅ Added — needed for OrderDetailsModal
   const { medicines, fetchAll } = useMedicines();
 
-  // ✅ جلب أسماء الأدوية لعرضها في modal التفاصيل
-  useEffect(() => {
-    fetchAll();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // rawOrders is order[][] — flatten to order[] for the pharmacy table
+  const apiOrders = useMemo(() => rawOrders.flat(), [rawOrders]);
 
-  const getMedicineName = (id) => {
-    const med = medicines.find((m) => m.id === id);
-    return med ? med.name : `Medicine #${id}`;
-  };
-
-  // Local orders added via modal (UI only)
   const [localOrders, setLocalOrders] = useState([]);
   const orders = useMemo(
     () => [...localOrders, ...apiOrders],
-    [localOrders, apiOrders],
+    [localOrders, apiOrders]
   );
 
   const [openModal, setOpenModal] = useState(false);
-
-  // ✅ state الـ selected order لفتح modal التفاصيل
   const [selectedOrder, setSelectedOrder] = useState(null);
-
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const perPage = 6;
-
   const [showFilters, setShowFilters] = useState(false);
   const [filterOrderId, setFilterOrderId] = useState("");
   const [filterCustomer, setFilterCustomer] = useState("");
   const [filterDate, setFilterDate] = useState("");
-
   const filterRef = useRef(null);
 
   useEffect(() => {
     fetchPharmacy();
-  }, [fetchPharmacy]);
+    fetchAll(); // ✅ Added — load medicines for the details modal
+  }, [fetchPharmacy]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (error) {
       toast.error(
         error?.message ||
-          (typeof error === "string" ? error : "An unexpected error occurred"),
+          (typeof error === "string" ? error : "An unexpected error occurred")
       );
     }
   }, [error]);
@@ -490,6 +462,12 @@ export default function Orders() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // ✅ Added — resolves a medicine ID to its name for the details modal
+  const getMedicineName = (id) => {
+    const med = medicines.find((m) => m.id === id);
+    return med ? med.name : `Medicine #${id}`;
+  };
+
   const filtered = useMemo(() => {
     let list = [...orders];
     if (q.trim()) {
@@ -498,19 +476,18 @@ export default function Orders() {
         (o) =>
           o.userName?.toLowerCase().includes(s) ||
           o.pharmacyName?.toLowerCase().includes(s) ||
-          o.id?.toString().includes(s),
+          o.id?.toString().includes(s)
       );
     }
     if (filterOrderId)
       list = list.filter((o) => o.id?.toString().includes(filterOrderId));
     if (filterCustomer)
       list = list.filter((o) =>
-        o.userName?.toLowerCase().includes(filterCustomer.toLowerCase()),
+        o.userName?.toLowerCase().includes(filterCustomer.toLowerCase())
       );
     if (filterDate)
       list = list.filter(
-        (o) =>
-          new Date(o.orderDate).toLocaleDateString("en-CA") === filterDate,
+        (o) => new Date(o.orderDate).toLocaleDateString("en-CA") === filterDate
       );
     return list;
   }, [orders, q, filterOrderId, filterCustomer, filterDate]);
@@ -549,9 +526,7 @@ export default function Orders() {
       ]),
     ];
     const csv = rows
-      .map((r) =>
-        r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","),
-      )
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -594,7 +569,7 @@ export default function Orders() {
     {
       title: "Pending",
       value: orders.filter((o) =>
-        ["Pending", "Accepted", "Processing"].includes(o.status),
+        ["Pending", "Accepted", "Processing"].includes(o.status)
       ).length,
     },
     {
@@ -614,7 +589,6 @@ export default function Orders() {
 
       {/* Toolbar */}
       <div className="flex flex-col justify-between gap-3 rounded-2xl border bg-white p-3 shadow sm:p-4 md:flex-row md:items-center">
-        {/* Search */}
         <div className="flex w-full items-center gap-2 rounded-full bg-gray-100 px-3 py-2 md:w-1/3">
           <Search className="h-4 w-4 flex-shrink-0 text-gray-400" />
           <input
@@ -628,9 +602,7 @@ export default function Orders() {
           />
         </div>
 
-        {/* Actions */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Add Order Button */}
           <button
             onClick={() => setOpenModal(true)}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-secondary px-3 py-2 text-xs font-medium text-white transition hover:opacity-90 sm:flex-none sm:px-4 sm:text-sm"
@@ -639,7 +611,6 @@ export default function Orders() {
             Add New Order
           </button>
 
-          {/* Filter */}
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -702,7 +673,6 @@ export default function Orders() {
             )}
           </div>
 
-          {/* Export */}
           <button
             onClick={handleExport}
             className="flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs transition hover:bg-gray-50 sm:px-4 sm:text-sm"
@@ -719,22 +689,16 @@ export default function Orders() {
           <table className="w-full min-w-[700px] text-xs sm:text-sm">
             <thead className="bg-gray-50 text-gray-500">
               <tr>
-                {[
-                  "Order",
-                  "User",
-                  "Pharmacy",
-                  "Date",
-                  "Total",
-                  "Status",
-                  "Action",
-                ].map((h, i) => (
-                  <th
-                    key={h}
-                    className={`px-3 py-3 font-semibold sm:px-4 sm:py-4 md:px-6 ${i >= 3 ? "text-center" : "text-left"}`}
-                  >
-                    {h}
-                  </th>
-                ))}
+                {["Order", "User", "Pharmacy", "Date", "Total", "Status", "Action"].map(
+                  (h, i) => (
+                    <th
+                      key={h}
+                      className={`px-3 py-3 font-semibold sm:px-4 sm:py-4 md:px-6 ${i >= 3 ? "text-center" : "text-left"}`}
+                    >
+                      {h}
+                    </th>
+                  )
+                )}
               </tr>
             </thead>
             <tbody>
@@ -743,9 +707,7 @@ export default function Orders() {
                   <td colSpan={7} className="py-10 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-500">
                       <div className="h-6 w-6 animate-spin rounded-full border-2 border-secondary border-t-transparent" />
-                      <span className="text-xs sm:text-sm">
-                        Loading orders...
-                      </span>
+                      <span className="text-xs sm:text-sm">Loading orders...</span>
                     </div>
                   </td>
                 </tr>
@@ -760,11 +722,7 @@ export default function Orders() {
                 </tr>
               ) : (
                 pageData.map((o) => (
-                  <tr
-                    key={o.id}
-                    className="border-t transition hover:bg-gray-50"
-                  >
-                    {/* ✅ رقم الأوردر بقى button يفتح modal التفاصيل */}
+                  <tr key={o.id} className="border-t transition hover:bg-gray-50">
                     <td className="whitespace-nowrap px-3 py-3 sm:px-4 sm:py-4 md:px-6">
                       <button
                         onClick={() => setSelectedOrder(o)}
@@ -807,13 +765,7 @@ export default function Orders() {
                           {o.status === "Pending" && (
                             <button
                               disabled={loading}
-                              onClick={() =>
-                                handleMutation(
-                                  accept,
-                                  o.id,
-                                  "Order accepted",
-                                )
-                              }
+                              onClick={() => handleMutation(accept, o.id, "Order accepted")}
                               className="whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700 transition hover:bg-green-200 disabled:opacity-50 sm:px-3 sm:py-1"
                             >
                               Accept
@@ -822,13 +774,7 @@ export default function Orders() {
                           {o.status === "Accepted" && (
                             <button
                               disabled={loading}
-                              onClick={() =>
-                                handleMutation(
-                                  process,
-                                  o.id,
-                                  "Order processed",
-                                )
-                              }
+                              onClick={() => handleMutation(process, o.id, "Order processed")}
                               className="whitespace-nowrap rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700 transition hover:bg-yellow-200 disabled:opacity-50 sm:px-3 sm:py-1"
                             >
                               Process
@@ -837,13 +783,7 @@ export default function Orders() {
                           {o.status === "Processing" && (
                             <button
                               disabled={loading}
-                              onClick={() =>
-                                handleMutation(
-                                  outForDelivery,
-                                  o.id,
-                                  "Order out for delivery",
-                                )
-                              }
+                              onClick={() => handleMutation(outForDelivery, o.id, "Order out for delivery")}
                               className="whitespace-nowrap rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 transition hover:bg-blue-200 disabled:opacity-50 sm:px-3 sm:py-1"
                             >
                               Out For Delivery
@@ -852,31 +792,17 @@ export default function Orders() {
                           {o.status === "OutForDelivery" && (
                             <button
                               disabled={loading}
-                              onClick={() =>
-                                handleMutation(
-                                  deliver,
-                                  o.id,
-                                  "Order delivered",
-                                )
-                              }
+                              onClick={() => handleMutation(deliver, o.id, "Order delivered")}
                               className="whitespace-nowrap rounded-full bg-green-200 px-2 py-0.5 text-xs text-green-800 transition hover:bg-green-300 disabled:opacity-50 sm:px-3 sm:py-1"
                             >
                               Delivered
                             </button>
                           )}
-                          {!["Delivered", "OutForDelivery"].includes(
-                            o.status,
-                          ) &&
+                          {!["Delivered", "OutForDelivery"].includes(o.status) &&
                             !o.status?.startsWith("Cancelled") && (
                               <button
                                 disabled={loading}
-                                onClick={() =>
-                                  handleMutation(
-                                    cancelByPharmacy,
-                                    o.id,
-                                    "Order cancelled",
-                                  )
-                                }
+                                onClick={() => handleMutation(cancelByPharmacy, o.id, "Order cancelled")}
                                 className="whitespace-nowrap rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 transition hover:bg-red-200 disabled:opacity-50 sm:px-3 sm:py-1"
                               >
                                 Cancel
@@ -917,9 +843,7 @@ export default function Orders() {
               key={p}
               onClick={() => setPage(p)}
               className={`rounded-full px-2 py-1 text-xs transition sm:px-3 sm:text-sm ${
-                page === p
-                  ? "bg-secondary text-white"
-                  : "border hover:bg-gray-50"
+                page === p ? "bg-secondary text-white" : "border hover:bg-gray-50"
               }`}
             >
               {p}
@@ -954,7 +878,7 @@ export default function Orders() {
         }}
       />
 
-      {/* ✅ Order Details Modal */}
+      {/* Order Details Modal */}
       <OrderDetailsModal
         order={selectedOrder}
         onClose={() => setSelectedOrder(null)}
