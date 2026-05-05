@@ -3,7 +3,6 @@
    
         public class CreateSubscriptionRequest
         {
-            public int PharmacyId { get; set; }
             public SubscriptionPlan Plan { get; set; }
         }
     

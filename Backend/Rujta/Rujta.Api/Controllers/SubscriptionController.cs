@@ -17,15 +17,26 @@ namespace Rujta.API.Controllers
             _subscriptionService = subscriptionService;
         }
 
+        private bool TryGetPharmacyId(out int pharmacyId)
+        {
+            pharmacyId = 0;
+            var claim = User.FindFirst("PharmacyId");
+            if (claim == null) return false;
+            return int.TryParse(claim.Value, out pharmacyId);
+        }
+
         [HttpPost("create")]
         [Authorize(Roles = nameof(UserRole.PharmacyAdmin))]
         public async Task<IActionResult> Create([FromBody] CreateSubscriptionRequest request)
         {
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
+
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             var result = await _subscriptionService.CreateSubscriptionAsync(
-                request.PharmacyId,
+                pharmacyId,
                 request.Plan
             );
 
@@ -41,11 +52,30 @@ namespace Rujta.API.Controllers
             });
         }
 
-        [HttpGet("status/{pharmacyId:int}")]
+        [HttpGet("status/{pharmacyId:int?}")]
         [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.SuperAdmin)}")]
-        public async Task<IActionResult> GetStatus(int pharmacyId)
+        public async Task<IActionResult> GetStatus(int? pharmacyId)
         {
-            var result = await _subscriptionService.GetStatusAsync(pharmacyId);
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            int realPharmacyId;
+
+            if (userRole == nameof(UserRole.PharmacyAdmin))
+            {
+                if (!TryGetPharmacyId(out int claimPharmacyId))
+                    return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
+
+                realPharmacyId = claimPharmacyId;
+            }
+            else
+            {
+                if (!pharmacyId.HasValue)
+                    return BadRequest(new { message = "pharmacyId is required for SuperAdmin." });
+
+                realPharmacyId = pharmacyId.Value;
+            }
+
+            var result = await _subscriptionService.GetStatusAsync(realPharmacyId);
 
             if (!result.Found)
                 return NotFound(new { message = "No subscription found for this pharmacy." });
@@ -64,11 +94,14 @@ namespace Rujta.API.Controllers
         [Authorize(Roles = nameof(UserRole.PharmacyAdmin))]
         public async Task<IActionResult> Renew([FromBody] RenewSubscriptionRequest request)
         {
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
+
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             var result = await _subscriptionService.RenewSubscriptionAsync(
-                request.PharmacyId,
+                pharmacyId,
                 request.Plan
             );
 
