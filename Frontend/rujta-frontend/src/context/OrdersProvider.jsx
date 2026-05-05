@@ -1,4 +1,3 @@
-// src/context/OrdersProvider.jsx
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 import { OrdersContext } from "./OrdersContext";
@@ -23,41 +22,26 @@ export const OrdersProvider = ({ children }) => {
   const cleanupConnection = useCallback(async () => {
     const conn = connectionRef.current;
     if (!conn) return;
-
     try {
-      console.log("🔹 Stopping SignalR orders connection...");
       conn.off();
       await conn.stop();
-      console.log("✅ Orders SignalR disconnected");
     } catch (err) {
       console.error("❌ SignalR stop error:", err);
     }
-
     setConnection(null);
     setOrders([]);
   }, []);
 
-  // Logout listener
   useEffect(() => {
     const unsubscribe = subscribeTokenChange(async (token) => {
-      console.log("🔄 Token changed:", token);
-      if (!token) {
-        await cleanupConnection();
-      }
+      if (!token) await cleanupConnection();
     });
-
     return unsubscribe;
   }, [cleanupConnection]);
 
   // ================= START SIGNALR =================
   const startHubConnection = useCallback(async () => {
-    if (!user || loading) {
-      console.log("⏳ User not loaded yet, skipping SignalR start...");
-      return;
-    }
-
-    const token = getAccessToken();
-    console.log("🔑 Access token:", token);
+    if (!user || loading) return;
 
     const hubUrl =
       import.meta.env.MODE === "development"
@@ -72,7 +56,6 @@ export const OrdersProvider = ({ children }) => {
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .build();
 
-    // ===== Status mapping =====
     const statusMap = {
       0: "Pending",
       1: "Accepted",
@@ -83,52 +66,75 @@ export const OrdersProvider = ({ children }) => {
       6: "CancelledByPharmacy",
     };
 
-    // ===== Server events =====
+    // Safe map helper — guards against any flat order accidentally in state
+    const safeMapGroups = (prevGroups, orderId, mapFn) =>
+      prevGroups.map((group) => {
+        if (!Array.isArray(group)) return group;
+        return group.map((order) =>
+          order.id === orderId ? mapFn(order) : order
+        );
+      });
+
     hubConnection.on("NewOrderReceived", async (orderId) => {
-      console.log("📦 NewOrderReceived event:", orderId);
+      console.log("📦 NewOrderReceived:", orderId);
       try {
         const res = await getOrderById(orderId);
-        setOrders((prev) => [res.data, ...prev]);
+        setOrders((prev) => [[res.data], ...prev]);
       } catch (err) {
         console.error("Failed to fetch new order:", err);
-        setOrders((prev) => [...prev, { id: orderId, status: "Pending" }]);
+        setOrders((prev) => [[{ id: orderId, status: "Pending" }], ...prev]);
       }
     });
 
     hubConnection.on("OrderUpdated", async (orderId) => {
-      console.log("✏️ OrderUpdated event:", orderId);
+      console.log("✏️ OrderUpdated:", orderId);
       try {
         const res = await getOrderById(orderId);
-        setOrders((prev) => prev.map((o) => (o.id === orderId ? res.data : o)));
+        setOrders((prev) => safeMapGroups(prev, orderId, () => res.data));
       } catch (err) {
         console.error("Failed to fetch updated order:", err);
       }
     });
-    hubConnection.on("OrderStatusChanged", (orderId, status) => {
-      console.log("🔄 OrderStatusChanged event:", orderId, status);
 
+    hubConnection.on("OrderStatusChanged", (orderId, status) => {
+      console.log("🔄 OrderStatusChanged:", orderId, status);
+      const mappedStatus = statusMap[status] ?? status;
       setOrders((prev) =>
-        prev.map((o) =>
-          o.id === orderId
-            ? { ...o, status: statusMap[status] || status }
-            : o,
-        ),
+        safeMapGroups(prev, orderId, (order) => ({
+          ...order,
+          status: mappedStatus,
+        }))
       );
     });
+
     hubConnection.on("OrderItemChanged", async (orderId) => {
-      console.log("🔄 OrderItemChanged event:", orderId);
+      console.log("🔄 OrderItemChanged:", orderId);
       try {
         const res = await getOrderById(orderId);
         if (res.data) {
-          setOrders((prev) =>
-            prev.map((o) => (o.id === orderId ? res.data : o)),
-          );
+          setOrders((prev) => safeMapGroups(prev, orderId, () => res.data));
         } else {
-          setOrders((prev) => prev.filter((o) => o.id !== orderId));
+          setOrders((prev) =>
+            prev
+              .map((group) =>
+                Array.isArray(group)
+                  ? group.filter((o) => o.id !== orderId)
+                  : group
+              )
+              .filter((group) => Array.isArray(group) && group.length > 0)
+          );
         }
       } catch (err) {
         console.error("Failed to fetch changed order:", err);
-        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+        setOrders((prev) =>
+          prev
+            .map((group) =>
+              Array.isArray(group)
+                ? group.filter((o) => o.id !== orderId)
+                : group
+            )
+            .filter((group) => Array.isArray(group) && group.length > 0)
+        );
       }
     });
 
@@ -137,7 +143,6 @@ export const OrdersProvider = ({ children }) => {
     });
 
     try {
-      console.log("🚀 Starting SignalR orders connection...");
       await hubConnection.start();
       console.log("✅ SignalR orders connected");
       setConnection(hubConnection);
