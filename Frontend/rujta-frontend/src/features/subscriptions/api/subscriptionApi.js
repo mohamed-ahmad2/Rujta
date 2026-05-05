@@ -1,13 +1,13 @@
 import apiClient from "../../../shared/api/apiClient";
 
-export const createSubscription = (pharmacyId, plan) =>
-  apiClient.post("/subscription/create", { pharmacyId, plan });
+export const createSubscription = (plan) =>
+  apiClient.post("/subscription/create", { plan });
 
-export const getSubscriptionStatus = (pharmacyId) =>
-  apiClient.get(`/subscription/status/${pharmacyId}`);
+export const getSubscriptionStatus = () =>
+  apiClient.get("/subscription/status");
 
-export const renewSubscription = (pharmacyId, plan) =>
-  apiClient.post("/subscription/renew", { pharmacyId, plan });
+export const renewSubscription = (plan) =>
+  apiClient.post("/subscription/renew", { plan });
 
 export const getAllSubscriptions = () =>
   apiClient.get("/subscription/all");

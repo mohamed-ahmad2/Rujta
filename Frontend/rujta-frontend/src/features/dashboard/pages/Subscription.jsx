@@ -13,8 +13,7 @@ import { toast } from "react-toastify";
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
-// These must match your C# SubscriptionPlan enum integer values
-const PLAN_ENUM = { monthly: 0, yearly: 1 };
+const PLAN_ENUM   = { monthly: 0, yearly: 1 };
 const PLAN_AMOUNT = { monthly: 1500, yearly: 14400 };
 
 const subPlans = [
@@ -47,9 +46,7 @@ const subPlans = [
 function fmt(dateStr) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
+    year: "numeric", month: "short", day: "numeric",
   });
 }
 
@@ -80,14 +77,12 @@ function PlanCard({ item, selectedId, onSelect }) {
           : "border-gray-200 hover:-translate-y-1 hover:border-[#3C623C] hover:shadow-lg bg-white"
         }`}
     >
-      {/* Selected badge */}
       {isSelected && (
         <div className="absolute top-2.5 left-2.5 bg-[#3C623C] text-white text-[9px] px-2 py-0.5 rounded-full font-bold tracking-wide">
           ✓ Selected
         </div>
       )}
 
-      {/* Ribbon */}
       {item.ribbon && (
         <div className="absolute top-0 right-0 w-[80px] h-[80px] overflow-hidden rounded-tr-2xl pointer-events-none">
           <span className="absolute top-[18px] right-[-20px] bg-[#3C623C] text-white text-[9px] font-extrabold py-1 px-6 rotate-45 whitespace-nowrap shadow tracking-wide">
@@ -111,7 +106,6 @@ function PlanCard({ item, selectedId, onSelect }) {
       <div className="flex-1" />
       <hr className="border-dashed border-[#d4eabb] my-3" />
 
-      {/* Features */}
       <div className="text-left space-y-1.5 mb-4">
         {item.features.map((f) => (
           <div key={f} className="flex items-center gap-2 text-[11px] text-gray-500">
@@ -131,12 +125,12 @@ function PlanCard({ item, selectedId, onSelect }) {
   );
 }
 
-// ─── Live Preview (right panel) ───────────────────────────────────────────────
+// ─── Live Preview ─────────────────────────────────────────────────────────────
 
 function SubscriptionPreview({ selectedPlan, status }) {
   const plan = subPlans.find((p) => p.id === selectedPlan);
   const hasStatus = !!status;
-  const isActive = status?.status === "Active";
+  const isActive  = status?.status === "Active";
 
   return (
     <div
@@ -149,11 +143,9 @@ function SubscriptionPreview({ selectedPlan, status }) {
         fontFamily: "'DM Sans', sans-serif",
       }}
     >
-      {/* Ambient glows */}
       <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-white/10 blur-[80px] animate-pulse pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] rounded-full bg-black/20 blur-[60px] pointer-events-none" />
 
-      {/* Corner ribbon */}
       {plan?.ribbon && (
         <div style={{ position: "absolute", top: 0, left: 0, zIndex: 30, width: 130, height: 130, overflow: "hidden", pointerEvents: "none" }}>
           <div style={{
@@ -172,10 +164,7 @@ function SubscriptionPreview({ selectedPlan, status }) {
       )}
 
       <div className="relative z-10 w-full h-full flex flex-col justify-between px-8 py-8 gap-5">
-
-        {/* Top: plan headline */}
         <div className="space-y-3">
-          {/* Badge row */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-white/20 text-white tracking-widest uppercase">
               {plan ? plan.label : "No Plan Selected"}
@@ -187,19 +176,11 @@ function SubscriptionPreview({ selectedPlan, status }) {
             )}
           </div>
 
-          <h1
-            className="text-white font-extrabold leading-tight drop-shadow-md"
-            style={{ fontSize: "clamp(1.5rem, 3vw, 2.4rem)" }}
-          >
-            {plan
-              ? `${plan.price} EGP`
-              : <span className="opacity-30">Select a plan</span>
-            }
+          <h1 className="text-white font-extrabold leading-tight drop-shadow-md" style={{ fontSize: "clamp(1.5rem, 3vw, 2.4rem)" }}>
+            {plan ? `${plan.price} EGP` : <span className="opacity-30">Select a plan</span>}
           </h1>
 
-          {plan && (
-            <p className="text-white/70 text-sm">{plan.unit}</p>
-          )}
+          {plan && <p className="text-white/70 text-sm">{plan.unit}</p>}
 
           {plan?.equiv && (
             <div className="inline-block bg-white/10 rounded-full px-4 py-1 text-[11px] text-green-200 font-semibold">
@@ -208,7 +189,6 @@ function SubscriptionPreview({ selectedPlan, status }) {
           )}
         </div>
 
-        {/* Middle: features */}
         {plan ? (
           <div className="space-y-2.5">
             {plan.features.map((f) => (
@@ -222,14 +202,13 @@ function SubscriptionPreview({ selectedPlan, status }) {
           <p className="text-white/30 text-sm">Pick a plan on the left to see details here.</p>
         )}
 
-        {/* Bottom: current subscription summary */}
         {hasStatus && (
           <div className="border-t border-white/15 pt-4 grid grid-cols-2 gap-3">
             {[
-              { label: "Start Date",      value: fmt(status.startDate) },
-              { label: "End Date",        value: fmt(status.endDate) },
-              { label: "Plan",            value: status.plan ?? "—" },
-              { label: "Days Remaining",  value: isActive ? `${status.daysRemaining} days` : "Expired",
+              { label: "Start Date",     value: fmt(status.startDate) },
+              { label: "End Date",       value: fmt(status.endDate) },
+              { label: "Plan",           value: status.plan ?? "—" },
+              { label: "Days Remaining", value: isActive ? `${status.daysRemaining} days` : "Expired",
                 highlight: isActive ? "text-green-300" : "text-red-300" },
             ].map(({ label, value, highlight }) => (
               <div key={label} className="bg-white/10 rounded-xl px-3 py-2.5">
@@ -241,7 +220,6 @@ function SubscriptionPreview({ selectedPlan, status }) {
         )}
       </div>
 
-      {/* Watermark */}
       <span className="absolute bottom-2 right-3 text-[10px] text-white/10 pointer-events-none select-none">Rujta™</span>
     </div>
   );
@@ -252,16 +230,13 @@ function SubscriptionPreview({ selectedPlan, status }) {
 export default function Subscription() {
   const { user } = useAuth();
 
-  // ⚠️ Adjust the claim name to match your JWT — may be pharmacyId, PharmacyId, etc.
-  const pharmacyId = user?.pharmacyId;
-
   const {
     loading: subLoading,
     error: subError,
     status,
-    create,
-    renew,
     fetchStatus,
+    create,    
+    renew,
   } = useSubscription();
 
   const {
@@ -275,10 +250,10 @@ export default function Subscription() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showIframe,   setShowIframe]   = useState(false);
 
-  // Fetch current subscription on mount
+  // Fetch current subscription on mount — no pharmacyId, backend reads JWT
   useEffect(() => {
-    if (pharmacyId) fetchStatus(pharmacyId);
-  }, [pharmacyId, fetchStatus]);
+    fetchStatus();
+  }, [fetchStatus]);
 
   // Open iframe the moment we get a payment URL back
   useEffect(() => {
@@ -287,75 +262,58 @@ export default function Subscription() {
 
   // Surface errors as toasts
   useEffect(() => { if (subError) toast.error(subError); }, [subError]);
-  useEffect(() => { if (payError)  toast.error(payError);  }, [payError]);
+  useEffect(() => { if (payError) toast.error(payError); }, [payError]);
 
   const hasExisting = !!status;
   const isLoading   = subLoading || payLoading;
   const selected    = subPlans.find((p) => p.id === selectedPlan);
 
   const handleConfirm = async () => {
-    if (!selectedPlan) {
-      toast.error("Please select a plan first.");
-      return;
-    }
-    if (!pharmacyId) {
-      toast.error("Pharmacy ID not found. Please log out and back in.");
-      console.error("pharmacyId is missing. user object:", user);
-      return;
-    }
+  if (!selectedPlan) { toast.error("Please select a plan first."); return; }
 
-    const planEnum = PLAN_ENUM[selectedPlan];
+  try {
+    const subResult = hasExisting
+      ? await renew(PLAN_ENUM[selectedPlan])
+      : await create(PLAN_ENUM[selectedPlan]);
 
-    try {
-      // Step 1 — persist subscription on the backend (create or renew)
-      if (hasExisting) {
-        await renew(pharmacyId, planEnum);
-      } else {
-        await create(pharmacyId, planEnum);
-      }
+    await initiate({
+      Type: 2,
+      SubscriptionId: subResult.subscriptionId,
+      Amount: PLAN_AMOUNT[selectedPlan],
+      Currency: "EGP",
+      BillingData: {
+        FirstName:      user?.firstName   ?? "NA",
+        LastName:       user?.lastName    ?? "NA",
+        Email:          user?.email       ?? "NA",
+        PhoneNumber:    user?.phoneNumber ?? user?.phone ?? "01000000000",
+        Apartment:      "NA",
+        Floor:          "NA",
+        Street:         "NA",
+        Building:       "NA",
+        ShippingMethod: "PKG",
+        PostalCode:     "11511",
+        City:           "Cairo",
+        Country:        "EG",
+        State:          "Cairo",
+      },
+    });
 
-      // Step 2 — initiate Paymob payment
-      await initiate({
-        type: 1,           // PaymentType enum value for Subscription
-        subscriptionId: null,
-        orderId:        null,
-        adId:           null,
-        amount:         PLAN_AMOUNT[selectedPlan],
-        currency:       "EGP",
-        billingData: {
-          firstName:      user?.firstName   ?? "NA",
-          lastName:       user?.lastName    ?? "NA",
-          email:          user?.email       ?? "NA",
-          phoneNumber:    user?.phoneNumber ?? user?.phone ?? "NA",
-          apartment:      "NA",
-          floor:          "NA",
-          street:         "NA",
-          building:       "NA",
-          shippingMethod: "NA",
-          postalCode:     "NA",
-          city:           "NA",
-          country:        "EG",
-          state:          "NA",
-        },
-      });
-
-      toast.success("Subscription saved! Complete payment in the window to activate.");
-    } catch {
-      // Errors are already set in the hooks and toasted via useEffects above
-    }
-  };
+    toast.info("Complete payment in the window to activate your subscription.");
+  } catch {
+    // already toasted via useEffects
+  }
+};
 
   const handleCloseIframe = () => {
     setShowIframe(false);
     resetPayment();
-    // Re-fetch so the UI reflects whatever the payment callback updated
-    if (pharmacyId) fetchStatus(pharmacyId);
+    // Re-fetch so UI reflects whatever the payment callback updated
+    fetchStatus();
   };
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
 
-      {/* ── Payment iframe modal ── */}
       {showIframe && paymentResult?.iframeUrl && (
         <PaymentIframeModal
           iframeUrl={paymentResult.iframeUrl}
@@ -363,7 +321,6 @@ export default function Subscription() {
         />
       )}
 
-      {/* ── Page header ── */}
       <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
         <MdCreditCard size={30} className="text-[#3C623C]" />
         <div>
@@ -372,13 +329,19 @@ export default function Subscription() {
         </div>
       </div>
 
-      {/* ── Main two-column grid ── */}
+      {/* Loading state on initial fetch */}
+      {subLoading && !status && (
+        <div className="flex items-center gap-3 text-sm text-gray-400 py-4">
+          <span className="h-4 w-4 rounded-full border-2 border-[#3C623C] border-t-transparent animate-spin" />
+          Loading subscription...
+        </div>
+      )}
+
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
 
         {/* ══ LEFT PANEL ══ */}
         <div className="space-y-7">
 
-          {/* 1. Current subscription */}
           {status && (
             <section>
               <SectionHeader icon={MdCalendarToday} label="1 · Current Subscription" />
@@ -396,7 +359,8 @@ export default function Subscription() {
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: "Plan",           value: status.plan ?? "—",       icon: MdStar },
-                    { label: "Days Remaining", value: status.status === "Active" ? `${status.daysRemaining} days` : "Expired",
+                    { label: "Days Remaining",
+                      value: status.status === "Active" ? `${status.daysRemaining} days` : "Expired",
                       icon: MdTimelapse,
                       className: status.status === "Active" ? "text-[#3C623C]" : "text-red-500" },
                     { label: "Start Date",     value: fmt(status.startDate),    icon: MdCalendarToday },
@@ -424,7 +388,6 @@ export default function Subscription() {
             </section>
           )}
 
-          {/* 2. Choose plan */}
           <section>
             <SectionHeader
               icon={MdAutorenew}
@@ -444,14 +407,12 @@ export default function Subscription() {
 
         </div>
 
-        {/* ══ RIGHT PANEL — Live Preview ══ */}
+        {/* ══ RIGHT PANEL ══ */}
         <div className="space-y-5 sticky top-6">
           <SectionHeader icon={MdCreditCard} label="Plan Preview & Checkout" />
 
-          {/* Hero preview */}
           <SubscriptionPreview selectedPlan={selectedPlan} status={status} />
 
-          {/* Summary + confirm */}
           <div className="bg-white rounded-2xl border border-[#e0f0cc] shadow-sm px-5 py-4 flex justify-between items-center gap-4">
             <div className="min-w-0">
               <p className="text-[10px] text-[#7a9a7a] uppercase tracking-wider font-semibold">Selected Plan</p>
@@ -481,13 +442,7 @@ export default function Subscription() {
             <p className="text-xs text-gray-400">↑ Pick a plan to enable checkout.</p>
           )}
 
-          {/* Info box — matches Ads.jsx */}
-          <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 text-xs text-blue-600 space-y-1">
-            <p className="font-semibold">How does subscribing work?</p>
-            <p>✅ Choose monthly or yearly plan</p>
-            <p>✅ Pay securely via Paymob — activates immediately</p>
-            <p>✅ Renew anytime before expiry to keep access</p>
-          </div>
+        
         </div>
 
       </div>

@@ -21,51 +21,45 @@ export const useSubscription = () => {
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Something went wrong";
       setError(msg);
-      throw err;
+      throw err; // re-throw so callers can catch it
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // ── PharmacyAdmin ────────────────────────────────────────────────────────
-
   const create = useCallback(
-    (pharmacyId, plan) =>
+    (plan) =>
       run(async () => {
-        const res = await createSubscription(pharmacyId, plan);
+        const res = await createSubscription(plan); // no pharmacyId
         return res.data;
       }),
     [run]
   );
 
   const renew = useCallback(
-    (pharmacyId, plan) =>
+    (plan) =>
       run(async () => {
-        const res = await renewSubscription(pharmacyId, plan);
+        const res = await renewSubscription(plan); // no pharmacyId
         return res.data;
       }),
     [run]
   );
 
   const fetchStatus = useCallback(
-    async (pharmacyId) => {
-      await run(async () => {
-        const res = await getSubscriptionStatus(pharmacyId);
+    () =>
+      run(async () => {
+        const res = await getSubscriptionStatus(); // no pharmacyId
         setStatus(res.data);
-      });
-    },
+      }),
     [run]
   );
 
-  // ── SuperAdmin ───────────────────────────────────────────────────────────
-
   const fetchAll = useCallback(
-    async () => {
-      await run(async () => {
+    () =>
+      run(async () => {
         const res = await getAllSubscriptions();
         setAll(res.data);
-      });
-    },
+      }),
     [run]
   );
 
@@ -76,11 +70,7 @@ export const useSubscription = () => {
         setAll((prev) =>
           prev.map((s) =>
             s.pharmacyId === pharmacyId
-              ? {
-                  ...s,
-                  pharmacyIsActive: activate,
-                  subscriptionStatus: activate ? "Active" : "Expired",
-                }
+              ? { ...s, pharmacyIsActive: activate, subscriptionStatus: activate ? "Active" : "Expired" }
               : s
           )
         );
@@ -89,15 +79,5 @@ export const useSubscription = () => {
     [run]
   );
 
-  return {
-    loading,
-    error,
-    status,
-    all,
-    create,
-    renew,
-    fetchStatus,
-    fetchAll,
-    toggleStatus,
-  };
+  return { loading, error, status, all, create, renew, fetchStatus, fetchAll, toggleStatus };
 };

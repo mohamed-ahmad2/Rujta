@@ -14,20 +14,20 @@ export const usePayment = () => {
   const [loading, setLoading]             = useState(false);
   const [error, setError]                 = useState(null);
 
-  const withLoading = useCallback(async (fn) => {
-    try {
-      setLoading(true);
-      setError(null);
-      await fn();
-    } catch (err) {
-      // ── Full error detail for debugging ──
-      console.error("❌ errors:", JSON.stringify(err?.response?.data?.errors, null, 2));
-      setError(err?.response?.data?.message || "Payment request failed");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // usePayment.js
+const withLoading = useCallback(async (fn) => {
+  try {
+    setLoading(true);
+    setError(null);
+    await fn();
+  } catch (err) {
+    // Log the whole data object to see the validation array
+    console.error("❌ Full Error Response:", err?.response?.data);
+    setError(err?.response?.data?.message || "Payment request failed");
+  } finally {
+    setLoading(false);
+  }
+}, []);
   const initiate = useCallback(
     (dto) =>
       withLoading(async () => {
