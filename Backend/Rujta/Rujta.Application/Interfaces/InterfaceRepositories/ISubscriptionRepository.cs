@@ -1,10 +1,10 @@
 ﻿namespace Rujta.Application.Interfaces.InterfaceRepositories
 { 
-      public interface ISubscriptionRepository
+      public interface ISubscriptionRepository : IGenericRepository<Subscription, int>
         {
             Task<Subscription?> GetByPharmacyIdAsync(int pharmacyId);
-            Task AddAsync(Subscription subscription);
-        Task<IEnumerable<Subscription>> GetAllWithPharmacyAsync();
+            Task<IEnumerable<Subscription>> GetAllWithPharmacyAsync();
+            Task<List<Subscription>> GetExpiredActiveSubscriptionsAsync(CancellationToken cancellationToken = default);
     }
     }
 

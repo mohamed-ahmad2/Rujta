@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.RateLimiting;
 using Rujta.Application.DTOs.SubscriptionDto;
-using Rujta.Application.Interfaces;
+using Rujta.Infrastructure.Identity;
 
 namespace Rujta.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "PharmacyAdmin")]
+    [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)}")]
+    [EnableRateLimiting("Fixed")]
     public class SubscriptionController : ControllerBase
     {
         private readonly ISubscriptionService _subscriptionService;
@@ -17,9 +17,8 @@ namespace Rujta.API.Controllers
             _subscriptionService = subscriptionService;
         }
 
-        // ── POST api/subscription/create ──────────────────────────────────────
-        // Called right after first-time registration to choose a plan
         [HttpPost("create")]
+        [Authorize(Roles = nameof(UserRole.PharmacyAdmin))]
         public async Task<IActionResult> Create([FromBody] CreateSubscriptionRequest request)
         {
             if (!ModelState.IsValid)
@@ -41,9 +40,8 @@ namespace Rujta.API.Controllers
             });
         }
 
-        // ── GET api/subscription/status/{pharmacyId} ──────────────────────────
-        // Check current subscription status
         [HttpGet("status/{pharmacyId:int}")]
+        [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.SuperAdmin)}")]
         public async Task<IActionResult> GetStatus(int pharmacyId)
         {
             var result = await _subscriptionService.GetStatusAsync(pharmacyId);
@@ -53,19 +51,16 @@ namespace Rujta.API.Controllers
 
             return Ok(new
             {
-                status = result.Status.ToString(),
-                plan = result.Plan.ToString(),
+                status = result.Status?.ToString(),
+                plan = result.Plan?.ToString(),
                 startDate = result.StartDate,
                 endDate = result.EndDate,
                 daysRemaining = result.DaysRemaining
             });
         }
 
-        // ── POST api/subscription/renew ───────────────────────────────────────
-        // Renew an expired (or active) subscription
-        // This endpoint must be accessible even when subscription is expired,
-        // so we allow it through middleware — covered in Step 5
         [HttpPost("renew")]
+        [Authorize(Roles = nameof(UserRole.PharmacyAdmin))]
         public async Task<IActionResult> Renew([FromBody] RenewSubscriptionRequest request)
         {
             if (!ModelState.IsValid)
@@ -82,6 +77,37 @@ namespace Rujta.API.Controllers
             return Ok(new
             {
                 message = "Subscription renewed successfully.",
+                startDate = result.StartDate,
+                endDate = result.EndDate
+            });
+        }
+
+        [HttpGet("all")]
+        [Authorize(Roles = nameof(UserRole.SuperAdmin))]
+        public async Task<IActionResult> GetAll()
+        {
+            var result = await _subscriptionService.GetAllSubscriptionsAsync();
+            return Ok(result);
+        }
+
+        [HttpPatch("set-status")]
+        [Authorize(Roles = nameof(UserRole.SuperAdmin))]
+        public async Task<IActionResult> SetStatus([FromBody] SetStatusManuallyRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _subscriptionService.SetStatusManuallyAsync(
+                request.PharmacyId,
+                request.Activate
+            );
+
+            if (!result.Success)
+                return BadRequest(new { message = result.Message });
+
+            return Ok(new
+            {
+                message = $"Subscription {(request.Activate ? "activated" : "deactivated")} successfully.",
                 startDate = result.StartDate,
                 endDate = result.EndDate
             });

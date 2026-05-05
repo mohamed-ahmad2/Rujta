@@ -32,7 +32,7 @@ namespace Rujta.API.Controllers
             return Ok(result);
         }
 
-        [AllowAnonymous]
+
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<PharmacyDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllPharmacies(CancellationToken cancellationToken)
@@ -42,7 +42,7 @@ namespace Rujta.API.Controllers
             return Ok(pharmacies);
         }
 
-        [AllowAnonymous]
+ 
         [HttpGet("{pharmacyId}/medicine/{medicineId}/stock")]
         [ProducesResponseType(typeof(MedicineStockDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -57,7 +57,7 @@ namespace Rujta.API.Controllers
             return Ok(stock);
         }
 
-        [AllowAnonymous]
+ 
         [HttpGet("{pharmacyId}/medicines")]
         [ProducesResponseType(typeof(IEnumerable<MedicineDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -69,7 +69,7 @@ namespace Rujta.API.Controllers
             return Ok(medicines);
         }
 
-        [AllowAnonymous]
+   
         [HttpGet("{pharmacyId}/medicines/paged")]
         [ProducesResponseType(typeof(PagedResultDto<MedicineDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
