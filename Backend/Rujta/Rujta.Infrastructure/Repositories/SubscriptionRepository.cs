@@ -22,10 +22,10 @@ namespace Rujta.Infrastructure.Repositories
                 .OrderBy(s => s.Status)
                 .ToListAsync();
 
-        public async Task<List<Subscription>> GetExpiredActiveSubscriptionsAsync(CancellationToken ct = default)
+        public async Task<List<Subscription>> GetExpiredActiveSubscriptionsAsync(CancellationToken cancellationToken = default)
             => await _context.Subscriptions
                 .Include(s => s.Pharmacy)
                 .Where(s => s.Status == SubscriptionStatus.Active && s.EndDate < DateTime.UtcNow)
-                .ToListAsync(ct);
+                .ToListAsync(cancellationToken);
     }
 }

@@ -35,6 +35,7 @@ namespace Rujta.API.Controllers
             return Ok(new
             {
                 message = "Subscription created successfully.",
+                subscriptionId = result.SubscriptionId,
                 startDate = result.StartDate,
                 endDate = result.EndDate
             });
@@ -77,6 +78,7 @@ namespace Rujta.API.Controllers
             return Ok(new
             {
                 message = "Subscription renewed successfully.",
+                subscriptionId = result.SubscriptionId,
                 startDate = result.StartDate,
                 endDate = result.EndDate
             });
@@ -108,6 +110,7 @@ namespace Rujta.API.Controllers
             return Ok(new
             {
                 message = $"Subscription {(request.Activate ? "activated" : "deactivated")} successfully.",
+                subscriptionId = result.SubscriptionId,
                 startDate = result.StartDate,
                 endDate = result.EndDate
             });
