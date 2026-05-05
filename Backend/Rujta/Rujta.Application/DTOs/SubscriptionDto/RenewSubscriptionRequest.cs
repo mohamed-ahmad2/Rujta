@@ -2,7 +2,6 @@
 {
     public class RenewSubscriptionRequest
     {
-        public int PharmacyId { get; set; }
         public SubscriptionPlan Plan { get; set; }
     }
 }
