@@ -31,7 +31,7 @@ namespace Rujta.Application.Services
             await _uow.Subscriptions.AddAsync(subscription);
             await _uow.SaveAsync();
 
-            return SubscriptionResult.Ok(start, end);
+            return SubscriptionResult.Ok(subscription.Id, start, end);
         }
 
         public async Task<SubscriptionStatusResult> GetStatusAsync(int pharmacyId)
@@ -85,7 +85,7 @@ namespace Rujta.Application.Services
 
             await _uow.SaveAsync();
 
-            return SubscriptionResult.Ok(start, end);
+            return SubscriptionResult.Ok(subscription.Id, start, end);
         }
 
         public async Task<bool> IsActiveAsync(int pharmacyId)
@@ -147,7 +147,7 @@ namespace Rujta.Application.Services
 
             await _uow.SaveAsync();
 
-            return SubscriptionResult.Ok(subscription.StartDate, subscription.EndDate);
+            return SubscriptionResult.Ok(subscription.Id, subscription.StartDate, subscription.EndDate);
         }
 
         private static (DateTime start, DateTime end) CalculateDates(SubscriptionPlan plan)
