@@ -14,7 +14,7 @@ namespace Rujta.Application.Services
         public AdService(IAdRepository adRepo, IMapper mapper)
         {
             _adRepo = adRepo;
-   
+
             _mapper = mapper;
         }
         public async Task<AdDto> CreateAsync(AdDto dto, CancellationToken cancellationToken = default)
@@ -66,7 +66,7 @@ namespace Rujta.Application.Services
             await _adRepo.SetStatusAsync(id, isActive, cancellationToken);
         }
 
-        
+
     }
 
 }
