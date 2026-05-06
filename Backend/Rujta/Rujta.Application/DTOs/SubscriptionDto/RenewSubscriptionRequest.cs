@@ -1,15 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Rujta.Domain.Enums;
-
-namespace Rujta.Application.DTOs.SubscriptionDto
+﻿namespace Rujta.Application.DTOs.SubscriptionDto
 {
     public class RenewSubscriptionRequest
     {
-        public int PharmacyId { get; set; }
         public SubscriptionPlan Plan { get; set; }
     }
 }

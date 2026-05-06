@@ -6,6 +6,9 @@ import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
 import useCampaigns from "../../campaigns/hook/useCampaigns";
 import useCategory from "../../category/hook/useCategory";
 
+// ══════════════════════════════════════════════════
+// Helpers
+// ══════════════════════════════════════════════════
 const normalizeMedicine = (med = {}) => {
   const price = Number(med.price ?? med.Price ?? 0);
   const discountedPrice = Number(
@@ -46,6 +49,13 @@ const normalizeMedicine = (med = {}) => {
   };
 };
 
+// ✅ Currency constant — one place to change
+const CURRENCY = "EGP";
+const formatPrice = (val) => `${CURRENCY} ${Number(val).toFixed(2)}`;
+
+// ══════════════════════════════════════════════════
+// Category Strip
+// ══════════════════════════════════════════════════
 function CategoryStrip({ categories, selected, onSelect }) {
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -73,9 +83,9 @@ function CategoryStrip({ categories, selected, onSelect }) {
   const scroll = (direction) => {
     const el = scrollRef.current;
     if (!el) return;
-    const amount = el.clientWidth * 0.7;
     el.scrollBy({
-      left: direction === "left" ? -amount : amount,
+      left:
+        direction === "left" ? -(el.clientWidth * 0.7) : el.clientWidth * 0.7,
       behavior: "smooth",
     });
   };
@@ -149,8 +159,9 @@ function CategoryStrip({ categories, selected, onSelect }) {
         }}
       >
         <style>{`div::-webkit-scrollbar { display: none; }`}</style>
+
         {categories.map((cat) => {
-          const active = selected === cat.id;
+          const active = String(selected) === String(cat.id);
           return (
             <button
               key={cat.id}
@@ -191,11 +202,15 @@ function CategoryStrip({ categories, selected, onSelect }) {
   );
 }
 
+// ══════════════════════════════════════════════════
+// Discount Badge
+// ══════════════════════════════════════════════════
 function DiscountBadge({ discountValue, discountType }) {
   const isPercentage = discountType === "Percentage";
+  // ✅ consistent currency symbol
   const label = isPercentage
     ? `SAVE ${Number(discountValue).toFixed(0)}%`
-    : `SAVE $${Number(discountValue).toFixed(2)}`;
+    : `SAVE ${CURRENCY} ${Number(discountValue).toFixed(2)}`;
 
   return (
     <div
@@ -210,7 +225,6 @@ function DiscountBadge({ discountValue, discountType }) {
           borderBottomRightRadius: 8,
           boxShadow: "0 4px 14px rgba(132,204,22,0.4)",
           letterSpacing: "0.04em",
-          position: "relative",
         }}
       >
         <svg
@@ -230,9 +244,11 @@ function DiscountBadge({ discountValue, discountType }) {
   );
 }
 
+// ══════════════════════════════════════════════════
+// Discount Name Banner
+// ══════════════════════════════════════════════════
 function DiscountNameBanner({ discountName }) {
   if (!discountName) return null;
-
   return (
     <div
       className="mb-2 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5"
@@ -244,10 +260,7 @@ function DiscountNameBanner({ discountName }) {
       <span style={{ fontSize: 13 }}>🎁</span>
       <span
         className="flex-1 truncate text-[11px] font-bold uppercase"
-        style={{
-          color: "#3e6013",
-          letterSpacing: "0.04em",
-        }}
+        style={{ color: "#3e6013", letterSpacing: "0.04em" }}
         title={discountName}
       >
         {discountName}
@@ -256,6 +269,9 @@ function DiscountNameBanner({ discountName }) {
   );
 }
 
+// ══════════════════════════════════════════════════
+// Ad Banner
+// ══════════════════════════════════════════════════
 function AdBanner({ ad }) {
   return (
     <div
@@ -268,6 +284,7 @@ function AdBanner({ ad }) {
         boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
       }}
     >
+      {/* Decorative circles */}
       <div
         className="pointer-events-none absolute -right-8 -top-8 h-56 w-56 rounded-full"
         style={{ background: "rgba(255,255,255,0.15)" }}
@@ -281,6 +298,7 @@ function AdBanner({ ad }) {
         style={{ background: "rgba(255,255,255,0.06)" }}
       />
 
+      {/* Medicine image */}
       {ad.adMode === "medicine" && ad.medicineImage && (
         <div
           className="absolute right-10 top-1/2 flex -translate-y-1/2 items-center justify-center overflow-hidden transition-transform duration-500 hover:scale-105"
@@ -311,6 +329,7 @@ function AdBanner({ ad }) {
       >
         {ad.badge}
       </span>
+
       <h3
         className="font-semibold leading-snug text-white"
         style={{
@@ -321,12 +340,14 @@ function AdBanner({ ad }) {
       >
         {ad.headline}
       </h3>
+
       <p
         className="mt-2 leading-relaxed text-white/75"
         style={{ maxWidth: "58%", fontSize: "0.95rem" }}
       >
         {ad.subtext}
       </p>
+
       <button
         className="mt-6 rounded-xl font-semibold transition hover:opacity-90"
         style={{
@@ -340,6 +361,7 @@ function AdBanner({ ad }) {
       >
         {ad.ctaLabel} →
       </button>
+
       <span className="pointer-events-none absolute bottom-3 right-4 text-xs text-white/20">
         Rujta™
       </span>
@@ -347,17 +369,27 @@ function AdBanner({ ad }) {
   );
 }
 
+// ══════════════════════════════════════════════════
+// Constants
+// ══════════════════════════════════════════════════
+const ITEMS_PER_PAGE = 16; // 4 columns × 4 rows
+
+// ══════════════════════════════════════════════════
+// Main Component
+// ══════════════════════════════════════════════════
 const PharmacyDetails = ({ cart, setCart }) => {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const {
     pharmacies,
-    medicines: rawMedicines,
-    loading,
+    loading, // ✅ used only for initial pharmacy fetch spinner
+    medicinesLoading, // ✅ used only for medicines grid spinner
     error,
     fetchAllPharmacies,
-    fetchPharmacyMedicines,
+    pagedPharmacyMedicines,
+    fetchPagedPharmacyMedicines,
+    clearPharmacyMedicinesCache,
   } = usePharmacies();
 
   const { ads, fetchByPharmacy } = useCampaigns();
@@ -366,58 +398,111 @@ const PharmacyDetails = ({ cart, setCart }) => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [expanded, setExpanded] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [addedIds, setAddedIds] = useState({});
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
+  // ✅ Track previous pharmacy id to flush cache on switch
+  const prevPharmacyIdRef = useRef(null);
+
+  // ── Fetch all pharmacies on mount
   useEffect(() => {
     fetchAllPharmacies();
   }, [fetchAllPharmacies]);
 
+  // ── Find current pharmacy
   const pharmacy = useMemo(
     () => pharmacies?.find((ph) => ph.id === Number(id)) ?? null,
     [pharmacies, id],
   );
 
+  // ✅ Clear paged cache when navigating between pharmacies
+  useEffect(() => {
+    if (
+      prevPharmacyIdRef.current !== null &&
+      prevPharmacyIdRef.current !== pharmacy?.id
+    ) {
+      clearPharmacyMedicinesCache();
+    }
+    prevPharmacyIdRef.current = pharmacy?.id ?? null;
+  }, [pharmacy?.id, clearPharmacyMedicinesCache]);
+
+  // ── Fetch pharmacy-specific data (campaigns, categories) once
   useEffect(() => {
     if (pharmacy?.id) {
-      fetchPharmacyMedicines(pharmacy.id);
       fetchByPharmacy(pharmacy.id);
       fetchCategoriesByPharmacy(pharmacy.id);
     }
+  }, [pharmacy?.id, fetchByPharmacy, fetchCategoriesByPharmacy]);
+
+  // 🔍 Debounce search (400ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // 🔄 Reset page on category change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory]);
+
+  // 🚀 Fetch paged medicines whenever filter/page changes
+  useEffect(() => {
+    if (!pharmacy?.id) return;
+    fetchPagedPharmacyMedicines(pharmacy.id, {
+      pageNumber: currentPage,
+      pageSize: ITEMS_PER_PAGE,
+      searchTerm: debouncedSearch || undefined,
+      categoryId:
+        selectedCategory !== "All" ? Number(selectedCategory) : undefined,
+    });
   }, [
     pharmacy?.id,
-    fetchPharmacyMedicines,
-    fetchByPharmacy,
-    fetchCategoriesByPharmacy,
+    currentPage,
+    debouncedSearch,
+    selectedCategory,
+    fetchPagedPharmacyMedicines,
   ]);
 
+  // 🗺️ Normalize medicines from server response
   const medicines = useMemo(
-    () => (rawMedicines || []).map(normalizeMedicine),
-    [rawMedicines],
+    () => (pagedPharmacyMedicines.items || []).map(normalizeMedicine),
+    [pagedPharmacyMedicines.items],
   );
 
+  const totalPages = pagedPharmacyMedicines.totalPages || 1;
+  const totalCount = pagedPharmacyMedicines.totalCount || 0;
+
+  // ── Categories
   const categoryOptions = useMemo(
     () => [
       { id: "All", name: "All" },
-      ...pharmacyCategories.map((c) => ({ id: c.id, name: c.name })),
+      ...(pharmacyCategories || []).map((c) => ({ id: c.id, name: c.name })),
     ],
     [pharmacyCategories],
   );
 
+  // ── Reset selected category if it no longer exists
   useEffect(() => {
     if (
       selectedCategory !== "All" &&
-      !pharmacyCategories.some((c) => c.id === selectedCategory)
+      !(pharmacyCategories || []).some((c) => c.id === selectedCategory)
     ) {
       setSelectedCategory("All");
     }
   }, [pharmacyCategories, selectedCategory]);
 
+  // ── Ads carousel auto-rotate
   useEffect(() => {
     if (ads.length > 1) {
-      const timer = setInterval(() => {
-        setCurrentAdIndex((prev) => (prev + 1) % ads.length);
-      }, 5000);
+      const timer = setInterval(
+        () => setCurrentAdIndex((prev) => (prev + 1) % ads.length),
+        5000,
+      );
       return () => clearInterval(timer);
     }
   }, [ads]);
@@ -426,6 +511,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
     setCurrentAdIndex(0);
   }, [ads.length]);
 
+  // ── Add to cart
   const handleAddToCart = (product) => {
     if (!setCart || !pharmacy) return;
     setCart((prev) => {
@@ -447,23 +533,37 @@ const PharmacyDetails = ({ cart, setCart }) => {
     setTimeout(() => setAddedIds((p) => ({ ...p, [product.id]: false })), 1200);
   };
 
-  const filteredMedicines = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    return medicines.filter(
-      (med) =>
-        (selectedCategory === "All" || med.categoryId === selectedCategory) &&
-        (med.name || "").toLowerCase().includes(q),
-    );
-  }, [medicines, selectedCategory, searchQuery]);
+  // 📄 Smart pagination buttons (with …)
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    const maxVisible = 5;
+    if (totalPages <= maxVisible + 2) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("...");
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (currentPage < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
+  }, [currentPage, totalPages]);
 
+  // ── Loading / Error / Not-found states ──
   if (loading && !pharmacy)
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="h-9 w-9 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
+        <div
+          className="h-9 w-9 animate-spin rounded-full border-4 border-t-transparent"
+          style={{ borderColor: "#5a8a1f", borderTopColor: "transparent" }}
+        />
       </div>
     );
 
   if (error) return <p className="py-24 text-center text-red-500">{error}</p>;
+
   if (!pharmacy)
     return (
       <p className="py-24 text-center text-gray-400">Pharmacy not found.</p>
@@ -475,7 +575,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
       style={{ background: "#f5f8f2", fontFamily: "'DM Sans', sans-serif" }}
     >
       <div className="mx-auto max-w-5xl">
-        {/* ── Pharmacy Header ── */}
+        {/* ══ Pharmacy Header ══ */}
         <div
           className="mb-8 flex items-center gap-5 overflow-hidden rounded-3xl bg-white p-7"
           style={{
@@ -484,6 +584,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
             position: "relative",
           }}
         >
+          {/* Decorative radial */}
           <div
             className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full"
             style={{
@@ -491,6 +592,8 @@ const PharmacyDetails = ({ cart, setCart }) => {
                 "radial-gradient(circle, rgba(90,138,31,0.08) 0%, transparent 70%)",
             }}
           />
+
+          {/* Logo */}
           <div
             className="flex h-[72px] w-[72px] flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl"
             style={{
@@ -506,6 +609,8 @@ const PharmacyDetails = ({ cart, setCart }) => {
               onError={(e) => (e.currentTarget.src = imge1)}
             />
           </div>
+
+          {/* Name + address */}
           <div className="flex-1">
             <h1
               className="text-2xl font-semibold"
@@ -517,7 +622,13 @@ const PharmacyDetails = ({ cart, setCart }) => {
             >
               {pharmacy.name}
             </h1>
-            {pharmacy.address && (
+
+            {/*
+              ✅ FIXED: pharmacy.location is always a plain string
+                 (computed in PharmacyDto on the backend).
+                 No more "Objects are not valid as a React child" crash.
+            */}
+            {pharmacy.location && (
               <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-400">
                 <svg
                   width="12"
@@ -530,10 +641,12 @@ const PharmacyDetails = ({ cart, setCart }) => {
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                {pharmacy.address}
+                {pharmacy.location}
               </p>
             )}
           </div>
+
+          {/* Verified badge */}
           <span
             className="rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-widest"
             style={{
@@ -546,7 +659,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
           </span>
         </div>
 
-        {/* ── Ads Carousel ── */}
+        {/* ══ Ads Carousel ══ */}
         {ads.length > 0 && (
           <div className="mb-8">
             <div className="mb-3 flex items-center justify-between">
@@ -578,7 +691,7 @@ const PharmacyDetails = ({ cart, setCart }) => {
           </div>
         )}
 
-        {/* ── Search ── */}
+        {/* ══ Search ══ */}
         <div className="mb-4">
           <div className="relative">
             <svg
@@ -593,10 +706,11 @@ const PharmacyDetails = ({ cart, setCart }) => {
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.35-4.35" />
             </svg>
+
             <input
               type="text"
               placeholder="Search medicines…"
-              className="w-full py-2.5 pl-10 pr-4 text-sm text-gray-700 outline-none transition"
+              className="w-full py-2.5 pl-10 pr-10 text-sm text-gray-700 outline-none transition"
               style={{
                 background: "#fff",
                 border: "1.5px solid #e8eee2",
@@ -614,10 +728,23 @@ const PharmacyDetails = ({ cart, setCart }) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+
+            {/* ✅ Uses medicinesLoading — won't flicker with pharmacy fetch */}
+            {medicinesLoading && searchQuery && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <div
+                  className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
+                  style={{
+                    borderColor: "#5a8a1f",
+                    borderTopColor: "transparent",
+                  }}
+                />
+              </div>
+            )}
           </div>
         </div>
 
-        {/* ── Categories ── */}
+        {/* ══ Categories ══ */}
         <div className="mb-7">
           <CategoryStrip
             categories={categoryOptions}
@@ -626,188 +753,314 @@ const PharmacyDetails = ({ cart, setCart }) => {
           />
         </div>
 
-        {/* ── Medicines Grid ── */}
-        {loading ? (
+        {/* ══ Medicines Grid ══ */}
+        {/* ✅ Uses medicinesLoading — independent from pharmacy fetch */}
+        {medicinesLoading && medicines.length === 0 ? (
           <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-secondary border-t-transparent" />
+            <div
+              className="h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"
+              style={{ borderColor: "#5a8a1f", borderTopColor: "transparent" }}
+            />
           </div>
-        ) : filteredMedicines.length > 0 ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {filteredMedicines.map((med) => {
-              const desc = med.description || "No description available";
-              const isLong = desc.length > 70;
-              const isExpanded = expanded[med.id];
-              const isAdded = addedIds[med.id];
+        ) : medicines.length > 0 ? (
+          <>
+            <div
+              className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 lg:gap-5"
+              style={{
+                opacity: medicinesLoading ? 0.5 : 1, // ✅
+                transition: "opacity 0.2s",
+              }}
+            >
+              {medicines.map((med) => {
+                const desc = med.description || "No description available";
+                const isLong = desc.length > 70;
+                const isExpanded = expanded[med.id];
+                const isAdded = addedIds[med.id];
+                const {
+                  hasDiscount,
+                  discountValue,
+                  discountName,
+                  discountType,
+                  price,
+                  effectivePrice,
+                } = med;
+                const showDiscount = hasDiscount && discountValue > 0;
 
-              const {
-                hasDiscount,
-                discountValue,
-                discountName,
-                discountType,
-                price,
-                effectivePrice,
-              } = med;
-
-              const showDiscount = hasDiscount && discountValue > 0;
-
-              return (
-                <div
-                  key={med.id}
-                  onClick={() => navigate(`/user/medicine/${med.id}`)}
-                  className="group flex cursor-pointer flex-col overflow-hidden bg-white transition-all duration-300"
-                  style={{
-                    borderRadius: 20,
-                    border: showDiscount
-                      ? "1.5px solid rgba(132,204,22,0.35)"
-                      : "1.5px solid #e8eee2",
-                    boxShadow: showDiscount
-                      ? "0 2px 12px rgba(132,204,22,0.1)"
-                      : "0 1px 4px rgba(0,0,0,0.04)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow = showDiscount
-                      ? "0 12px 40px rgba(132,204,22,0.22)"
-                      : "0 12px 40px rgba(90,138,31,0.13)";
-                    e.currentTarget.style.borderColor = showDiscount
-                      ? "rgba(132,204,22,0.55)"
-                      : "rgba(90,138,31,0.25)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = showDiscount
-                      ? "0 2px 12px rgba(132,204,22,0.1)"
-                      : "0 1px 4px rgba(0,0,0,0.04)";
-                    e.currentTarget.style.borderColor = showDiscount
-                      ? "rgba(132,204,22,0.35)"
-                      : "#e8eee2";
-                  }}
-                >
-                  {/* ── Image Section ── */}
+                return (
                   <div
-                    className="relative flex h-44 items-center justify-center overflow-hidden"
-                    style={{ background: "#EAF3DE" }}
+                    key={med.id}
+                    onClick={() => navigate(`/user/medicine/${med.id}`)}
+                    className="group flex cursor-pointer flex-col overflow-hidden bg-white transition-all duration-300"
+                    style={{
+                      borderRadius: 20,
+                      border: showDiscount
+                        ? "1.5px solid rgba(132,204,22,0.35)"
+                        : "1.5px solid #e8eee2",
+                      boxShadow: showDiscount
+                        ? "0 2px 12px rgba(132,204,22,0.1)"
+                        : "0 1px 4px rgba(0,0,0,0.04)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-4px)";
+                      e.currentTarget.style.boxShadow = showDiscount
+                        ? "0 12px 40px rgba(132,204,22,0.22)"
+                        : "0 12px 40px rgba(90,138,31,0.13)";
+                      e.currentTarget.style.borderColor = showDiscount
+                        ? "rgba(132,204,22,0.55)"
+                        : "rgba(90,138,31,0.25)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = showDiscount
+                        ? "0 2px 12px rgba(132,204,22,0.1)"
+                        : "0 1px 4px rgba(0,0,0,0.04)";
+                      e.currentTarget.style.borderColor = showDiscount
+                        ? "rgba(132,204,22,0.35)"
+                        : "#e8eee2";
+                    }}
                   >
-                    <img
-                      src={med.imageUrl || imge1}
-                      alt={med.name}
-                      className="h-28 w-28 object-contain transition-transform duration-500 group-hover:scale-105"
-                      onError={(e) => (e.currentTarget.src = imge1)}
-                    />
+                    {/* ── Image ── */}
                     <div
-                      className="pointer-events-none absolute bottom-0 left-0 right-0 h-8"
-                      style={{
-                        background:
-                          "linear-gradient(to top, rgba(234,243,222,0.6), transparent)",
-                      }}
-                    />
-
-                    {showDiscount && (
-                      <DiscountBadge
-                        discountValue={discountValue}
-                        discountType={discountType}
-                      />
-                    )}
-                  </div>
-
-                  {/* ── Content Section ── */}
-                  <div className="flex flex-1 flex-col p-4">
-                    {showDiscount && (
-                      <DiscountNameBanner discountName={discountName} />
-                    )}
-
-                    <h3
-                      className="font-semibold"
-                      style={{
-                        color: "#3e6013",
-                        fontSize: 15,
-                        letterSpacing: "-0.1px",
-                      }}
+                      className="relative flex h-44 items-center justify-center overflow-hidden"
+                      style={{ background: "#EAF3DE" }}
                     >
-                      {med.name}
-                    </h3>
-                    <p className="mt-1.5 flex-1 text-[12px] leading-relaxed text-gray-400">
-                      {isExpanded || !isLong ? desc : desc.slice(0, 70) + "…"}
-                    </p>
-                    {isLong && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpanded((p) => ({ ...p, [med.id]: !p[med.id] }));
-                        }}
-                        className="mt-1 text-left text-[12px] font-semibold hover:underline"
+                      <img
+                        src={med.imageUrl || imge1}
+                        alt={med.name}
+                        className="h-28 w-28 object-contain transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                        onError={(e) => (e.currentTarget.src = imge1)}
+                      />
+                      <div
+                        className="pointer-events-none absolute bottom-0 left-0 right-0 h-8"
                         style={{
-                          color: "#5a8a1f",
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          fontFamily: "'DM Sans', sans-serif",
+                          background:
+                            "linear-gradient(to top, rgba(234,243,222,0.6), transparent)",
+                        }}
+                      />
+                      {showDiscount && (
+                        <DiscountBadge
+                          discountValue={discountValue}
+                          discountType={discountType}
+                        />
+                      )}
+                    </div>
+
+                    {/* ── Content ── */}
+                    <div className="flex flex-1 flex-col p-4">
+                      {showDiscount && (
+                        <DiscountNameBanner discountName={discountName} />
+                      )}
+
+                      <h3
+                        className="font-semibold"
+                        style={{
+                          color: "#3e6013",
+                          fontSize: 15,
+                          letterSpacing: "-0.1px",
                         }}
                       >
-                        {isExpanded ? "↑ Show Less" : "↓ Show More"}
-                      </button>
-                    )}
+                        {med.name}
+                      </h3>
 
-                    {/* ── Price + Add to Cart ── */}
-                    <div
-                      className="mt-4 flex items-center justify-between pt-3"
-                      style={{ borderTop: "1px solid #e8eee2" }}
-                    >
-                      <div className="flex flex-col">
-                        {showDiscount && price > 0 && (
-                          <span className="text-[11px] text-gray-400 line-through">
-                            ${price.toFixed(2)}
-                          </span>
-                        )}
-                        <span
-                          className="text-base font-extrabold"
+                      <p className="mt-1.5 flex-1 text-[12px] leading-relaxed text-gray-400">
+                        {isExpanded || !isLong ? desc : desc.slice(0, 70) + "…"}
+                      </p>
+
+                      {isLong && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpanded((p) => ({
+                              ...p,
+                              [med.id]: !p[med.id],
+                            }));
+                          }}
+                          className="mt-1 text-left text-[12px] font-semibold hover:underline"
                           style={{
-                            color: showDiscount ? "#5a8a1f" : "#3e6013",
+                            color: "#5a8a1f",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontFamily: "'DM Sans', sans-serif",
                           }}
                         >
-                          ${effectivePrice.toFixed(2)}
-                        </span>
-                      </div>
+                          {isExpanded ? "↑ Show Less" : "↓ Show More"}
+                        </button>
+                      )}
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddToCart(med);
-                        }}
-                        className="flex items-center gap-1.5 rounded-xl text-xs font-semibold text-white transition-all duration-200 active:scale-95"
-                        style={{
-                          background: isAdded ? "#3e6013" : "#5a8a1f",
-                          padding: "8px 16px",
-                          border: "none",
-                          cursor: "pointer",
-                          fontFamily: "'DM Sans', sans-serif",
-                        }}
+                      {/* ── Price + Add button ── */}
+                      <div
+                        className="mt-4 flex items-center justify-between pt-3"
+                        style={{ borderTop: "1px solid #e8eee2" }}
                       >
-                        {isAdded ? (
-                          "✓ Added"
-                        ) : (
-                          <>
-                            <svg
-                              width="11"
-                              height="11"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.5"
-                            >
-                              <path d="M12 5v14M5 12h14" />
-                            </svg>
-                            Add
-                          </>
-                        )}
-                      </button>
+                        <div className="flex flex-col">
+                          {/* ✅ consistent EGP currency */}
+                          {showDiscount && price > 0 && (
+                            <span className="text-[11px] text-gray-400 line-through">
+                              {formatPrice(price)}
+                            </span>
+                          )}
+                          <span
+                            className="text-base font-extrabold"
+                            style={{
+                              color: showDiscount ? "#5a8a1f" : "#3e6013",
+                            }}
+                          >
+                            {formatPrice(effectivePrice)}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToCart(med);
+                          }}
+                          className="flex items-center gap-1.5 rounded-xl text-xs font-semibold text-white transition-all duration-200 active:scale-95"
+                          style={{
+                            background: isAdded ? "#3e6013" : "#5a8a1f",
+                            padding: "8px 16px",
+                            border: "none",
+                            cursor: "pointer",
+                            fontFamily: "'DM Sans', sans-serif",
+                          }}
+                        >
+                          {isAdded ? (
+                            "✓ Added"
+                          ) : (
+                            <>
+                              <svg
+                                width="11"
+                                height="11"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                              >
+                                <path d="M12 5v14M5 12h14" />
+                              </svg>
+                              Add
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+
+            {/* ══ Smart Pagination ══ */}
+            {totalPages > 1 && (
+              <div className="mt-10 flex items-center justify-center gap-2">
+                {/* Prev */}
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || medicinesLoading}
+                  className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200"
+                  style={{
+                    background: currentPage === 1 ? "#f0f0f0" : "#fff",
+                    border: "1.5px solid #e8eee2",
+                    cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                    color: currentPage === 1 ? "#bbb" : "#5a8a1f",
+                  }}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <path d="M15 18l-6-6 6-6" />
+                  </svg>
+                </button>
+
+                {/* Page numbers */}
+                {pageNumbers.map((page, idx) =>
+                  page === "..." ? (
+                    <span key={`dots-${idx}`} className="px-2 text-gray-400">
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      disabled={medicinesLoading}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all duration-200"
+                      style={{
+                        background: page === currentPage ? "#5a8a1f" : "#fff",
+                        border: `1.5px solid ${
+                          page === currentPage ? "#5a8a1f" : "#e8eee2"
+                        }`,
+                        color: page === currentPage ? "#fff" : "#7a8472",
+                        cursor: "pointer",
+                        fontFamily: "'DM Sans', sans-serif",
+                        boxShadow:
+                          page === currentPage
+                            ? "0 4px 12px rgba(90,138,31,0.25)"
+                            : "none",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (page !== currentPage) {
+                          e.currentTarget.style.borderColor = "#5a8a1f";
+                          e.currentTarget.style.color = "#5a8a1f";
+                          e.currentTarget.style.background = "#EAF3DE";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (page !== currentPage) {
+                          e.currentTarget.style.borderColor = "#e8eee2";
+                          e.currentTarget.style.color = "#7a8472";
+                          e.currentTarget.style.background = "#fff";
+                        }
+                      }}
+                    >
+                      {page}
+                    </button>
+                  ),
+                )}
+
+                {/* Next */}
+                <button
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages || medicinesLoading}
+                  className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200"
+                  style={{
+                    background: currentPage === totalPages ? "#f0f0f0" : "#fff",
+                    border: "1.5px solid #e8eee2",
+                    cursor:
+                      currentPage === totalPages ? "not-allowed" : "pointer",
+                    color: currentPage === totalPages ? "#bbb" : "#5a8a1f",
+                  }}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Page counter */}
+            <p
+              className="mt-3 text-center text-[12px]"
+              style={{ color: "#7a8472" }}
+            >
+              Page {currentPage} of {totalPages} · {totalCount} results
+            </p>
+          </>
         ) : (
+          /* ══ Empty state ══ */
           <div className="py-20 text-center">
             <div className="mb-3 text-5xl">🔍</div>
             <p className="text-gray-400">No medicines found.</p>

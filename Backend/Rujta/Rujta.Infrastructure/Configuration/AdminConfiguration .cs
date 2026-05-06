@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Rujta.Domain.Entities;
 
 namespace Rujta.Infrastructure.Configuration
 {
@@ -6,8 +8,6 @@ namespace Rujta.Infrastructure.Configuration
     {
         public void Configure(EntityTypeBuilder<Admin> builder)
         {
-            
-
             builder.HasMany(a => a.Pharmacies)
                    .WithOne(p => p.Admin)
                    .HasForeignKey(p => p.AdminId)

@@ -1,8 +1,13 @@
-﻿using Rujta.API.Realtime.Services;
+﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.HttpOverrides;
+
+using Rujta.API.Realtime.Services;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices.IAuth;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 using Rujta.Application.Notifications;
+using Rujta.Infrastructure.Data;
+using Rujta.Infrastructure.Repositories;
 using Rujta.Infrastructure.Services;
 
 namespace Rujta.API
@@ -50,6 +55,27 @@ namespace Rujta.API
             builder.Services.AddScoped<IReportService, ReportService>();
             builder.Services.AddScoped<ISuperAdminService, SuperAdminService>();
             builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+            builder.Services.AddScoped<IDrugHistoryRepository, DrugHistoryRepository>();
+
+            builder.Services.AddHttpClient<IDrugInteractionService, DrugInteractionService>(client =>
+            {
+                client.BaseAddress = new Uri(
+                    builder.Configuration["MlService:BaseUrl"] ?? "http://localhost:8000");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+            // 🔥🔥🔥 ADD THIS (SignalR Registration)
+            builder.Services.AddSignalR();
+
+            // Firebase Initialization
+            try
+            {
+                FirebaseInitializer.Initialize();
+                Console.WriteLine("Firebase initialized successfully!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing Firebase: {ex.Message}");
+            }
 
             builder.Services.AddCustomRateLimiting();
 
@@ -62,12 +88,19 @@ namespace Rujta.API
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5))
                 .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(10));
 
+            builder.Logging.AddConsole();
+
             var app = builder.Build();
 
             var logger = app.Services
                 .GetRequiredService<ILoggerFactory>()
                 .CreateLogger("Rujta.API");
 
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor
+                     | ForwardedHeaders.XForwardedProto
+            });
 
             try
             {
@@ -114,12 +147,17 @@ namespace Rujta.API
                 }
             });
 
+            
+
+            app.UseStaticFiles();
+
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapHub<PresenceHub>("/hubs/presence");
             app.MapHub<NotificationHub>("/hubs/notifications");
             app.MapHub<OrderHub>("/hubs/orders");
+            
 
             app.MapControllers();
 
@@ -156,6 +194,15 @@ namespace Rujta.API
             }
 
             await app.RunAsync();
+
+            builder.Services.AddDbContext<AppDbContext>(options =>
+            {
+                var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+
+                Console.WriteLine("DB USED BY EF: " + conn);
+
+                options.UseSqlServer(conn);
+            });
         }
     }
 }

@@ -1,11 +1,4 @@
-﻿// INotificationService.cs
-using Rujta.Application.DTOs;
-using Rujta.Domain.Common;
-using Rujta.Domain.Entities;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-namespace Rujta.Application.Interfaces.InterfaceServices
+﻿namespace Rujta.Application.Interfaces.InterfaceServices
 {
     public interface INotificationService
     {
@@ -22,9 +15,5 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task<int> GetUnreadCountAsync(string userId);
 
         Task SendNotificationToPharmacyAsync(string pharmacyId, string title, string message, string? payload = null);
-
-
-
-
     }
 }

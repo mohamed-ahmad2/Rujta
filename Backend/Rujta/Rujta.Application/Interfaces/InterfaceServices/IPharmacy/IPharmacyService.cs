@@ -1,4 +1,5 @@
-﻿using Rujta.Application.DTOs.MedicineDtos;
+﻿using Rujta.Application.DTOs.Common;
+using Rujta.Application.DTOs.MedicineDtos;
 using Rujta.Application.DTOs.PharmacyDtos;
 
 namespace Rujta.Application.Interfaces.InterfaceServices.IPharmacy
@@ -20,5 +21,7 @@ namespace Rujta.Application.Interfaces.InterfaceServices.IPharmacy
             double userLon,
             string mode = "car",
             int topK = 5);
+
+        Task<PagedResultDto<MedicineDto>> GetPagedMedicinesByPharmacyAsync(int pharmacyId, int pageNumber,int pageSize,string? searchTerm, int? categoryId,CancellationToken cancellationToken = default);
     }
 }

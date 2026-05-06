@@ -9,8 +9,8 @@ namespace Rujta.Application.Interfaces.InterfaceServices
     public interface IPrescriptionService
     {
         Task<PrescriptionResultDto> AnalyzePrescriptionAsync(
-            Stream imageStream,
-            int pharmacyId,
-            CancellationToken cancellationToken = default);
+    List<Stream> imageStreams,
+    int pharmacyId,
+    CancellationToken cancellationToken = default);
     }
 }

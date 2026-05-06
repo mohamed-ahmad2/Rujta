@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.DTOs.Common;
 using Rujta.Application.DTOs.MedicineDtos;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 using Rujta.Infrastructure.Constants;
@@ -141,6 +142,23 @@ namespace Rujta.API.Controllers
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,
                     "An unexpected error occurred while filtering medicines.");
+            }
+        }
+
+        [HttpGet("paged")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(PagedResultDto<MedicineDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<PagedResultDto<MedicineDto>>> GetPaged([FromQuery] MedicineFilterDto filter,CancellationToken cancellationToken)
+        {
+            try
+            {
+                var result = await _medicineService.GetPagedAsync(filter, cancellationToken);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                await _logService.AddLogAsync(GetUser(), $"Error fetching paged medicines: {ex.Message}");
+                return StatusCode(500, "An unexpected error occurred while fetching medicines.");
             }
         }
 

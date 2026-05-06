@@ -1,17 +1,10 @@
-﻿using Rujta.Domain.Entities.Rujta.Domain.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Rujta.Application.Interfaces.InterfaceRepositories
+﻿namespace Rujta.Application.Interfaces.InterfaceRepositories
 { 
-      public interface ISubscriptionRepository
+      public interface ISubscriptionRepository : IGenericRepository<Subscription, int>
         {
             Task<Subscription?> GetByPharmacyIdAsync(int pharmacyId);
-            Task AddAsync(Subscription subscription);
-        Task<IEnumerable<Subscription>> GetAllWithPharmacyAsync();
+            Task<IEnumerable<Subscription>> GetAllWithPharmacyAsync();
+            Task<List<Subscription>> GetExpiredActiveSubscriptionsAsync(CancellationToken cancellationToken = default);
     }
     }
 

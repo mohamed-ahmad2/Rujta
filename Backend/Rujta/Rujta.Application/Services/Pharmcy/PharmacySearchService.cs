@@ -15,7 +15,7 @@ namespace Rujta.Application.Services.Pharmcy
         private readonly IMedicineRepository _medicineRepo;
         private readonly ILogger<PharmacySearchService> _logger;
 
-        public PharmacySearchService(IPharmacyRepository pharmacyRepo,IPharmacyDistanceService distanceService, IMedicineRepository medicineRepo, ILogger<PharmacySearchService> logger)
+        public PharmacySearchService(IPharmacyRepository pharmacyRepo,IPharmacyDistanceService distanceService,IMedicineRepository medicineRepo,ILogger<PharmacySearchService> logger)
         {
             _pharmacyRepo = pharmacyRepo;
             _distanceService = distanceService;
@@ -23,7 +23,7 @@ namespace Rujta.Application.Services.Pharmcy
             _logger = logger;
         }
 
-        public async Task<List<PharmacyMatchResultDto>> GetRankedPharmaciesAsync(ItemDto order,double userLat,double userLng,int topK)
+        public async Task<List<PharmacyMatchResultDto>> GetRankedPharmaciesAsync(ItemDto order, double userLat, double userLng, int topK)
         {
             PharmacySearchLogger.LogStart(_logger, userLat, userLng, topK);
 
@@ -55,7 +55,8 @@ namespace Rujta.Application.Services.Pharmcy
             return medicines.ToDictionary(m => m.Id, m => m.Name ?? "Unknown");
         }
 
-        private async Task<(Dictionary<int, PharmacyRouteResult> entryMap, Dictionary<int, List<CartItemDto>> itemsMap)>
+        private async Task<(Dictionary<int, PharmacyRouteResult> entryMap,
+                            Dictionary<int, List<CartItemDto>> itemsMap)>
             BuildPharmacyMapsAsync(
                 List<CartItemDto> specificItems,
                 List<CartItemDto> generalItems,
@@ -80,21 +81,31 @@ namespace Rujta.Application.Services.Pharmcy
             return (entryMap, itemsMap);
         }
 
-        private async Task PopulateSpecificPharmaciesAsync(List<CartItemDto> specificItems,List<int> specificPharmacyIds,double userLat, double userLng, Dictionary<int, PharmacyRouteResult> entryMap, Dictionary<int, List<CartItemDto>> itemsMap)
+        private async Task PopulateSpecificPharmaciesAsync(
+            List<CartItemDto> specificItems,
+            List<int> specificPharmacyIds,
+            double userLat, double userLng,
+            Dictionary<int, PharmacyRouteResult> entryMap,
+            Dictionary<int, List<CartItemDto>> itemsMap)
         {
             var entries = await GetSpecificPharmaciesWithDistance(
                 specificPharmacyIds, userLat, userLng);
 
             foreach (var entry in entries)
             {
-                entryMap[entry.Pharmacy.Id] = entry; 
+                entryMap[entry.Pharmacy.Id] = entry;
                 itemsMap[entry.Pharmacy.Id] = specificItems
                     .Where(i => i.PharmacyId == entry.Pharmacy.Id)
                     .ToList();
             }
         }
 
-        private async Task PopulateGeneralPharmaciesAsync(List<CartItemDto> generalItems, List<int> specificPharmacyIds,double userLat, double userLng, int topK,Dictionary<int, PharmacyRouteResult> entryMap, Dictionary<int, List<CartItemDto>> itemsMap)
+        private async Task PopulateGeneralPharmaciesAsync(
+            List<CartItemDto> generalItems,
+            List<int> specificPharmacyIds,
+            double userLat, double userLng, int topK,
+            Dictionary<int, PharmacyRouteResult> entryMap,
+            Dictionary<int, List<CartItemDto>> itemsMap)
         {
             var nearestEntries = await GetNearestPharmaciesSafe(userLat, userLng, topK);
 
@@ -112,7 +123,10 @@ namespace Rujta.Application.Services.Pharmcy
             AddGeneralItemsToSpecificPharmacies(specificPharmacyIds, generalItems, itemsMap);
         }
 
-        private static void AddGeneralItemsToSpecificPharmacies(List<int> specificPharmacyIds,List<CartItemDto> generalItems, Dictionary<int, List<CartItemDto>> itemsMap)
+        private static void AddGeneralItemsToSpecificPharmacies(
+            List<int> specificPharmacyIds,
+            List<CartItemDto> generalItems,
+            Dictionary<int, List<CartItemDto>> itemsMap)
         {
             foreach (var id in specificPharmacyIds)
             {
@@ -124,7 +138,11 @@ namespace Rujta.Application.Services.Pharmcy
             }
         }
 
-        private async Task<List<PharmacyMatchResultDto>> BuildMatchResultsAsync(Dictionary<int, PharmacyRouteResult> entryMap,Dictionary<int, List<CartItemDto>> itemsMap,Dictionary<int, string> medicineNames,int? maxShortageRange)
+        private async Task<List<PharmacyMatchResultDto>> BuildMatchResultsAsync(
+            Dictionary<int, PharmacyRouteResult> entryMap,
+            Dictionary<int, List<CartItemDto>> itemsMap,
+            Dictionary<int, string> medicineNames,
+            int? maxShortageRange)
         {
             var results = new List<PharmacyMatchResultDto>();
 
@@ -148,17 +166,19 @@ namespace Rujta.Application.Services.Pharmcy
             return results;
         }
 
-        private static List<PharmacyMatchResultDto> RankResults(List<PharmacyMatchResultDto> results, bool hasSpecific,bool hasGeneral,int topK)
+        private static List<PharmacyMatchResultDto> RankResults(List<PharmacyMatchResultDto> results, bool hasSpecific, bool hasGeneral, int topK)
         {
             if (hasSpecific && !hasGeneral)
                 return results
-                    .OrderByDescending(r => r.MatchedDrugs)
+                    .OrderByDescending(r => r.MatchPercentage)   
+                    .ThenByDescending(r => r.MatchedDrugs)
                     .ThenByDescending(r => r.PartialMatches)
                     .ThenBy(r => r.TotalShortage)
                     .ToList();
 
             return results
-                .OrderByDescending(r => r.MatchedDrugs)
+                .OrderByDescending(r => r.MatchPercentage)    
+                .ThenByDescending(r => r.MatchedDrugs)
                 .ThenByDescending(r => r.PartialMatches)
                 .ThenBy(r => r.TotalShortage)
                 .ThenBy(r => r.DistanceKm)
@@ -177,7 +197,8 @@ namespace Rujta.Application.Services.Pharmcy
             return true;
         }
 
-        private async Task<List<PharmacyRouteResult>> GetSpecificPharmaciesWithDistance(List<int> pharmacyIds, double lat, double lng)
+        private async Task<List<PharmacyRouteResult>> GetSpecificPharmaciesWithDistance(
+            List<int> pharmacyIds, double lat, double lng)
         {
             var pharmacies = await _pharmacyRepo.GetPharmaciesByIdsAsync(pharmacyIds);
 
@@ -186,23 +207,24 @@ namespace Rujta.Application.Services.Pharmcy
                 var allRouted = await _distanceService
                     .GetNearestPharmaciesRouted(lat, lng, "car", 999);
 
-                var routedMap = allRouted.ToDictionary(x => x.Pharmacy.Id); 
+                var routedMap = allRouted.ToDictionary(x => x.Pharmacy.Id);
 
                 return pharmacies.Select(p =>
                     routedMap.TryGetValue(p.Id, out var routed)
                         ? routed
-                        : FallbackResult(p, lat, lng) 
+                        : FallbackResult(p, lat, lng)
                 ).ToList();
             }
             catch
             {
                 return pharmacies
-                    .Select(p => FallbackResult(p, lat, lng)) 
+                    .Select(p => FallbackResult(p, lat, lng))
                     .ToList();
             }
         }
 
-        private async Task<List<PharmacyRouteResult>> GetNearestPharmaciesSafe(double lat, double lng, int topK)
+        private async Task<List<PharmacyRouteResult>> GetNearestPharmaciesSafe(
+            double lat, double lng, int topK)
         {
             try
             {
@@ -213,25 +235,35 @@ namespace Rujta.Application.Services.Pharmcy
             {
                 var all = await _pharmacyRepo.GetAllPharmacies();
                 return all
-                    .Select(p => FallbackResult(p, lat, lng)) 
+                    .Select(p => FallbackResult(p, lat, lng))
                     .OrderBy(x => x.DistanceMeters)
                     .Take(topK * 2)
                     .ToList();
             }
         }
 
+  
         private static PharmacyRouteResult FallbackResult(
-            Pharmacy p, double lat, double lng) => new()
+            Pharmacy p, double lat, double lng)
+        {
+            var pharmacyLat = p.Address?.Latitude ?? 0d;
+            var pharmacyLng = p.Address?.Longitude ?? 0d;
+
+            return new PharmacyRouteResult
             {
                 Pharmacy = p,
-                DistanceMeters = Haversine(lat, lng, p.Latitude, p.Longitude),
+                DistanceMeters = Haversine(lat, lng, pharmacyLat, pharmacyLng),
                 DurationSeconds = 0,
                 Mode = "car"
             };
+        }
 
-        private async Task<PharmacyMatchResultDto> ProcessPharmacyAsync(PharmacyRouteResult entry,ItemDto order,Dictionary<int, string> medicineNames)
+        private async Task<PharmacyMatchResultDto> ProcessPharmacyAsync(
+            PharmacyRouteResult entry,
+            ItemDto order,
+            Dictionary<int, string> medicineNames)
         {
-            var pharmacy = entry.Pharmacy;     
+            var pharmacy = entry.Pharmacy;
             var distanceKm = entry.DistanceMeters / 1000;
             var deliveryFee = DeliveryPricingService.CalculateFee(distanceKm);
 
@@ -314,7 +346,8 @@ namespace Rujta.Application.Services.Pharmcy
             });
         }
 
-        private static double Haversine(double lat1, double lon1,double lat2, double lon2)
+        private static double Haversine(
+            double lat1, double lon1, double lat2, double lon2)
         {
             const double R = 6371000;
             double dLat = (lat2 - lat1) * Math.PI / 180;

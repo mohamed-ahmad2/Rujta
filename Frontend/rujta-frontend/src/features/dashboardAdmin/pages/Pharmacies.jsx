@@ -1,17 +1,89 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { Search, Plus, Eye, Edit, KeyRound, X, CheckCircle, XCircle, MapPin, Phone, Package } from "lucide-react";
-import useSuperAdminPharmacies from "../hooks/useSuperAdminPharmacies";
+// src/features/pharmacies/pages/Pharmacies.jsx
+import React, { useMemo, useState, useEffect, useCallback } from "react";
+import {
+  Search,
+  Plus,
+  Eye,
+  Edit,
+  KeyRound,
+  X,
+  CheckCircle,
+  XCircle,
+  Trash2,
+  RotateCcw,
+  Building2,
+  GitBranch,
+  Loader2,
+  Copy,
+  MapPin,
+  Phone,
+  Clock,
+  User,
+  Mail,
+  ChevronDown,
+  ChevronUp,
+  Home,
+} from "lucide-react";
+import useSuperAdmin from "../../super-admin/hook/useSuperAdmin";
+import useAddress from "../../address/hook/useAddress";
+import TimeRangePicker from "../components/TimeRangePicker";
+
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://localhost:7001";
+
+const getImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (url.startsWith("blob:") || url.startsWith("data:")) return url;
+  return `${API_URL}${url.startsWith("/") ? url : `/${url}`}`;
+};
 
 /* ─────────────────────────────────────────────
-   MODAL WRAPPER
+   COMPONENTS
 ───────────────────────────────────────────── */
-function Modal({ onClose, children }) {
+function PharmacyAvatar({ src, name, size = "md" }) {
+  const [errored, setErrored] = useState(false);
+
+  useEffect(() => {
+    setErrored(false);
+  }, [src]);
+
+  const sizeClasses = {
+    sm: "h-10 w-10 text-sm",
+    md: "h-14 w-14 text-lg",
+    lg: "h-20 w-20 text-2xl",
+  };
+
+  const showImage = src && !errored;
+
+  return showImage ? (
+    <img
+      src={getImageUrl(src)}
+      onError={() => setErrored(true)}
+      className={`${sizeClasses[size]} rounded-full border object-cover`}
+      alt={name || "pharmacy"}
+    />
+  ) : (
+    <div
+      className={`${sizeClasses[size]} flex items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100 font-semibold text-blue-700`}
+    >
+      {(name || "?").charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+function Modal({ onClose, children, width = "440px" }) {
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-t-2xl sm:rounded-xl w-full sm:w-[440px] space-y-4 relative shadow-xl max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div
+        className="relative max-h-[90vh] space-y-4 overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+        style={{ width }}
+      >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+          className="absolute right-4 top-4 text-gray-400 transition hover:text-gray-600"
         >
           <X size={18} />
         </button>
@@ -21,129 +93,62 @@ function Modal({ onClose, children }) {
   );
 }
 
-/* ─────────────────────────────────────────────
-   SUBSCRIPTION BADGE
-───────────────────────────────────────────── */
-function SubBadge({ status }) {
-  if (!status) return <span className="text-gray-300 text-xs">—</span>;
+function StatusBadge({ status }) {
   const styles =
     status === "Active"
-      ? "bg-green-100 text-green-600"
-      : status === "Expired"
-      ? "bg-red-100 text-red-600"
-      : "bg-yellow-100 text-yellow-600";
+      ? "bg-green-100 text-green-700"
+      : status === "Deleted"
+        ? "bg-red-100 text-red-600"
+        : "bg-yellow-100 text-yellow-700";
   return (
-    <span className={`px-2 py-1 text-xs rounded-full font-medium ${styles}`}>
+    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${styles}`}>
       {status}
     </span>
   );
 }
 
-/* ─────────────────────────────────────────────
-   MOBILE PHARMACY CARD
-───────────────────────────────────────────── */
-function PharmacyCard({ p, onView, onEdit, onResetPassword, onToggle }) {
-  return (
-    <div className="bg-white rounded-2xl border p-4 space-y-3">
-      {/* Top row: logo + name + status */}
-      <div className="flex items-center gap-3">
-        {p.logo ? (
-          <img src={p.logo} className="w-12 h-12 rounded-full object-cover shrink-0" alt="" />
-        ) : (
-          <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-base font-bold text-gray-500 shrink-0">
-            {p.name.charAt(0).toUpperCase()}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-gray-800 text-sm truncate">{p.name}</span>
-            {p.isMain ? (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-600 shrink-0">Main</span>
-            ) : (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-400 shrink-0">Sub</span>
-            )}
-          </div>
-          <div className="flex items-center gap-1 mt-0.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${p.isActive ? "bg-green-500" : "bg-red-400"}`} />
-            <span className="text-xs text-gray-500">{p.status}</span>
-          </div>
-        </div>
-        <SubBadge status={p.subscriptionStatus} />
-      </div>
-
-      {/* Info row */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-        {p.phone && (
-          <span className="flex items-center gap-1">
-            <Phone size={11} /> {p.phone}
-          </span>
-        )}
-        {p.location && (
-          <span className="flex items-center gap-1">
-            <MapPin size={11} /> {p.location}
-          </span>
-        )}
-        {p.totalOrders != null && (
-          <span className="flex items-center gap-1">
-            <Package size={11} /> {p.totalOrders} orders
-          </span>
-        )}
-      </div>
-
-      {/* Plan + Days */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {p.plan ? (
-          <span className="px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-600 font-medium">{p.plan}</span>
-        ) : null}
-        {p.daysRemaining !== null ? (
-          <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">{p.daysRemaining}d remaining</span>
-        ) : null}
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
-        <button
-          title="View"
-          onClick={() => onView(p)}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100"
-        >
-          <Eye size={14} /> View
-        </button>
-        <button
-          title="Edit"
-          onClick={() => onEdit(p)}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100"
-        >
-          <Edit size={14} /> Edit
-        </button>
-        <button
-          title="Reset Password"
-          onClick={() => onResetPassword(p)}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-orange-600 bg-orange-50 hover:bg-orange-100"
-        >
-          <KeyRound size={14} /> Reset
-        </button>
-        {p.subscriptionStatus === "Active" ? (
-          <button
-            title="Deactivate"
-            onClick={() => onToggle(p)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100"
-          >
-            <XCircle size={14} /> Off
-          </button>
-        ) : p.subscriptionStatus ? (
-          <button
-            title="Activate"
-            onClick={() => onToggle(p)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100"
-          >
-            <CheckCircle size={14} /> On
-          </button>
-        ) : null}
-      </div>
-    </div>
+function TypeBadge({ isBranch }) {
+  return isBranch ? (
+    <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-700">
+      <GitBranch size={11} /> Branch
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
+      <Building2 size={11} /> Main
+    </span>
   );
 }
+
+function CopyButton({ value, label = "Copy" }) {
+  const [copied, setCopied] = useState(false);
+  const handle = () => {
+    navigator.clipboard.writeText(value ?? "");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      onClick={handle}
+      className="flex items-center gap-1 rounded-md bg-gray-100 px-3 py-1.5 text-xs transition hover:bg-gray-200"
+    >
+      <Copy size={12} />
+      {copied ? "Copied!" : label}
+    </button>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────── */
+const buildLocationText = ({ street, buildingNo, city, governorate }) => {
+  const parts = [];
+  if (street?.toString().trim()) parts.push(street.toString().trim());
+  if (buildingNo?.toString().trim())
+    parts.push(`Building ${buildingNo.toString().trim()}`);
+  if (city?.toString().trim()) parts.push(city.toString().trim());
+  if (governorate?.toString().trim()) parts.push(governorate.toString().trim());
+  return parts.join(", ");
+};
 
 /* ─────────────────────────────────────────────
    MAIN PAGE
@@ -151,14 +156,23 @@ function PharmacyCard({ p, onView, onEdit, onResetPassword, onToggle }) {
 export default function Pharmacies() {
   const {
     pharmacies,
+    mainPharmacies,
+    loading,
     fetchAll,
     fetchById,
+    fetchMain,
     create,
     update,
+    remove,
+    restore,
     resetPassword,
-    activate,
-    deactivate,
-  } = useSuperAdminPharmacies();
+  } = useSuperAdmin();
+
+  const {
+    addresses,
+    fetchUserAddresses,
+    loading: addressLoading,
+  } = useAddress();
 
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -166,291 +180,526 @@ export default function Pharmacies() {
   const [selected, setSelected] = useState(null);
   const [successData, setSuccessData] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [confirmData, setConfirmData] = useState(null);
+  const [filterType, setFilterType] = useState("all");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvancedEdit, setShowAdvancedEdit] = useState(false);
 
-  /* ---------- ADD FORM ---------- */
   const emptyForm = {
     pharmacyName: "",
-    adminPhone: "",
-    pharmacyLocation: "",
-    adminEmail: "",
-    adminName: "",
+    street: "",
+    buildingNo: "",
+    city: "",
+    governorate: "",
     latitude: "",
     longitude: "",
-    logo: null,
-    logoPreview: null,
-    isMain: false,
+    openHours: "9AM - 11PM",
+    managerName: "",
+    managerEmail: "",
+    managerPhone: "",
+    managerQualification: "",
+    managerExperienceYears: "",
+    parentPharmacyId: "",
+    isBranch: false,
+    image: null,
+    imagePreview: null,
+    selectedAddressId: "",
   };
   const [addForm, setAddForm] = useState(emptyForm);
 
-  /* ---------- EDIT FORM ---------- */
   const [editForm, setEditForm] = useState({
     name: "",
-    location: "",
+    street: "",
+    buildingNo: "",
+    city: "",
+    governorate: "",
     contactNumber: "",
     latitude: "",
     longitude: "",
+    openHours: "9AM - 11PM",
   });
 
   const perPage = 7;
 
   useEffect(() => {
     fetchAll();
-  }, [fetchAll]);
+    fetchMain();
+    fetchUserAddresses();
+  }, [fetchAll, fetchMain, fetchUserAddresses]);
+
+  useEffect(() => {
+    return () => {
+      if (addForm.imagePreview && addForm.imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(addForm.imagePreview);
+      }
+    };
+  }, [addForm.imagePreview]);
 
   const filtered = useMemo(() => {
-    if (!q) return pharmacies;
-    return pharmacies.filter(
+    let list = pharmacies;
+    if (filterType === "main") list = list.filter((p) => !p.isBranch);
+    if (filterType === "branch") list = list.filter((p) => p.isBranch);
+    if (!q) return list;
+    const lower = q.toLowerCase();
+    return list.filter(
       (p) =>
-        p.name.toLowerCase().includes(q.toLowerCase()) ||
-        p.location.toLowerCase().includes(q.toLowerCase())
+        p.name?.toLowerCase().includes(lower) ||
+        p.location?.toLowerCase().includes(lower) ||
+        p.contactNumber?.toLowerCase().includes(lower),
     );
-  }, [q, pharmacies]);
+  }, [q, pharmacies, filterType]);
 
-  const totalPages = Math.ceil(filtered.length / perPage);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const data = filtered.slice((page - 1) * perPage, page * perPage);
 
-  /* ══ ADD ══ */
+  const handleSelectSavedAddress = useCallback(
+    (addressId) => {
+      if (!addressId) {
+        setAddForm((prev) => ({ ...prev, selectedAddressId: "" }));
+        return;
+      }
+      const addr = addresses.find(
+        (a) => String(a.id ?? a.Id) === String(addressId),
+      );
+      if (!addr) return;
+
+      setAddForm((prev) => ({
+        ...prev,
+        selectedAddressId: addressId,
+        street: addr.street ?? addr.Street ?? "",
+        buildingNo: String(addr.buildingNo ?? addr.BuildingNo ?? ""),
+        city: addr.city ?? addr.City ?? "",
+        governorate: addr.governorate ?? addr.Governorate ?? "",
+      }));
+    },
+    [addresses],
+  );
+
+  const resetAddForm = useCallback(() => {
+    if (addForm.imagePreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(addForm.imagePreview);
+    }
+    setAddForm(emptyForm);
+    setShowAdvanced(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addForm.imagePreview]);
+
+  /* ─────────────────────────────────────────────
+     ✅ ADD — payload يطابق buildCreateFormData في الـ hook
+  ───────────────────────────────────────────── */
   const handleAdd = async () => {
-    const { pharmacyName, adminPhone, adminEmail, adminName } = addForm;
-    if (!pharmacyName || !adminPhone || !adminEmail || !adminName) {
-      setErrorMsg("Please fill all required fields");
+    const {
+      pharmacyName,
+      managerName,
+      managerEmail,
+      managerPhone,
+      street,
+      city,
+      governorate,
+    } = addForm;
+
+    if (!pharmacyName || !managerName || !managerEmail || !managerPhone) {
+      setErrorMsg("Please fill all required fields (*)");
       return;
     }
+
+    if (!street && !city && !governorate) {
+      setErrorMsg(
+        "Please enter the pharmacy address (street, city, governorate)",
+      );
+      return;
+    }
+
+    if (addForm.isBranch && !addForm.parentPharmacyId) {
+      setErrorMsg("Please select a parent (main) pharmacy for the branch");
+      return;
+    }
+
     try {
+      // ⚠️ المفاتيح هنا camelCase حتى يتعامل معها buildCreateFormData
       const payload = {
         pharmacyName: addForm.pharmacyName,
-        pharmacyLocation: addForm.pharmacyLocation || "Not provided",
-        latitude: parseFloat(addForm.latitude) || 0,
-        longitude: parseFloat(addForm.longitude) || 0,
-        adminName: addForm.adminName,
-        adminEmail: addForm.adminEmail,
-        adminPhone: addForm.adminPhone,
-        logo: addForm.logo,
+        openHours: addForm.openHours || "9AM - 11PM",
+        managerName: addForm.managerName,
+        managerEmail: addForm.managerEmail,
+        managerPhone: addForm.managerPhone,
+        managerQualification: addForm.managerQualification || "N/A",
+        managerExperienceYears:
+          parseInt(addForm.managerExperienceYears, 10) || 0,
+        address: {
+          street: addForm.street,
+          buildingNo: addForm.buildingNo,
+          city: addForm.city,
+          governorate: addForm.governorate,
+          latitude: parseFloat(addForm.latitude) || 0,
+          longitude: parseFloat(addForm.longitude) || 0,
+        },
+        image: addForm.image, // الـ hook يضيفه فقط إذا كان File/Blob
       };
+
+      if (addForm.isBranch && addForm.parentPharmacyId) {
+        payload.parentPharmacyId = parseInt(addForm.parentPharmacyId, 10);
+      }
+
       const res = await create(payload);
+      if (!res) {
+        setErrorMsg("Failed to create pharmacy. Please try again.");
+        return;
+      }
+
       setSuccessData({
-        email: res.adminEmail,
-        password: res.generatedPassword,
+        email: res.managerEmail ?? res.ManagerEmail ?? addForm.managerEmail,
+        password: res.generatedPassword ?? res.GeneratedPassword ?? "",
       });
-      setAddForm(emptyForm);
+
+      resetAddForm();
       setModal(null);
-      fetchAll();
+      // fetchAll/fetchMain تم استدعاؤها مسبقًا داخل create() — لكن نحدّث الـ main أيضًا
+      fetchMain();
     } catch (err) {
       setErrorMsg(err?.message || "Error creating pharmacy");
     }
   };
 
-  /* ══ VIEW ══ */
+  /* ─────────────────────────────────────────────
+     VIEW
+  ───────────────────────────────────────────── */
   const handleView = async (p) => {
-    try {
-      const detail = await fetchById(p.id);
-      setSelected({ ...p, ...detail });
-    } catch {
-      setSelected(p);
-    }
+    setSelected(p);
     setModal("view");
+    const detail = await fetchById(p.id);
+    if (detail) setSelected({ ...p, ...detail });
   };
 
-  /* ══ EDIT ══ */
+  /* ─────────────────────────────────────────────
+     ✅ EDIT — نستخدم الحقول المهيكلة (street/city/...) مباشرةً
+  ───────────────────────────────────────────── */
   const openEdit = (p) => {
     setSelected(p);
     setEditForm({
-      name: p.name,
-      location: p.location,
-      contactNumber: p.phone,
-      latitude: p.raw?.latitude || "",
-      longitude: p.raw?.longitude || "",
+      name: p.name ?? "",
+      street: p.street ?? "",
+      buildingNo: p.buildingNo ?? "",
+      city: p.city ?? "",
+      governorate: p.governorate ?? "",
+      contactNumber: p.contactNumber === "-" ? "" : (p.contactNumber ?? ""),
+      latitude: p.latitude ?? "",
+      longitude: p.longitude ?? "",
+      openHours:
+        p.openHours && p.openHours !== "-" ? p.openHours : "9AM - 11PM",
     });
+    setShowAdvancedEdit(false);
     setModal("edit");
   };
 
   const handleEdit = async () => {
     if (!editForm.name) {
-      alert("Name is required");
+      setErrorMsg("Pharmacy name is required");
       return;
     }
-    try {
-      await update(selected.id, {
-        name: editForm.name,
-        location: editForm.location,
-        contactNumber: editForm.contactNumber,
+
+    // ⚠️ payload يطابق buildUpdatePayload في الـ hook (يتوقع address ككائن)
+    const updated = await update(selected.id, {
+      name: editForm.name,
+      contactNumber: editForm.contactNumber,
+      openHours: editForm.openHours || "9AM - 11PM",
+      address: {
+        street: editForm.street,
+        buildingNo: editForm.buildingNo,
+        city: editForm.city,
+        governorate: editForm.governorate,
         latitude: parseFloat(editForm.latitude) || 0,
         longitude: parseFloat(editForm.longitude) || 0,
-      });
-      alert("✅ Pharmacy updated successfully!");
+      },
+    });
+
+    if (updated) {
       setModal(null);
       fetchAll();
-    } catch (err) {
-      alert(`❌ ${err?.message || "Error updating pharmacy"}`);
+    } else {
+      setErrorMsg("Error updating pharmacy");
     }
   };
 
-  /* ══ RESET PASSWORD ══ */
-  const handleResetPassword = async (p) => {
-    if (!window.confirm(`Reset password for "${p.name}"?`)) return;
-    try {
-      const res = await resetPassword(p.id);
-      alert(`✅ New Password: ${res.newPassword}`);
-    } catch (err) {
-      alert(err?.message || "Error resetting password");
-    }
+  /* ─────────────────────────────────────────────
+     RESET PASSWORD
+  ───────────────────────────────────────────── */
+  const handleResetPassword = (p) => {
+    setConfirmData({
+      title: "Reset Password",
+      message: `Reset the manager password for "${p.name}"?`,
+      confirmText: "Reset",
+      onConfirm: async () => {
+        const newPwd = await resetPassword(p.id);
+        setConfirmData(null);
+        if (newPwd) {
+          setSuccessData({
+            email: p.managerEmail ?? p.raw?.managerEmail ?? "manager@email",
+            password: newPwd,
+            title: "Password Reset!",
+          });
+        } else {
+          setErrorMsg("Failed to reset password");
+        }
+      },
+    });
   };
 
-  /* ══ ACTIVATE / DEACTIVATE ══ */
-  const handleToggle = async (p) => {
-    const isActive = p.subscriptionStatus === "Active";
-    const action = isActive ? "Deactivate" : "Activate";
-    if (!window.confirm(`Are you sure you want to ${action} "${p.name}"?`)) return;
-    try {
-      isActive ? await deactivate(p.id) : await activate(p.id);
-      alert(`✅ ${action}d successfully!`);
-      fetchAll();
-    } catch (err) {
-      alert(err?.message || `Error during ${action}`);
-    }
+  /* ─────────────────────────────────────────────
+     DELETE / RESTORE
+  ───────────────────────────────────────────── */
+  const handleDelete = (p) => {
+    setConfirmData({
+      title: "Delete Pharmacy",
+      message: `Are you sure you want to delete "${p.name}"? This will deactivate it.`,
+      confirmText: "Delete",
+      danger: true,
+      onConfirm: async () => {
+        const ok = await remove(p.id);
+        setConfirmData(null);
+        if (!ok) {
+          setErrorMsg(
+            "Could not delete pharmacy (it may have active branches).",
+          );
+        }
+      },
+    });
   };
 
-  /* ══════════════════════════════
+  const handleRestore = (p) => {
+    setConfirmData({
+      title: "Restore Pharmacy",
+      message: `Restore "${p.name}" back to active state?`,
+      confirmText: "Restore",
+      onConfirm: async () => {
+        const ok = await restore(p.id);
+        setConfirmData(null);
+        if (!ok) setErrorMsg("Could not restore pharmacy.");
+      },
+    });
+  };
+
+  /* ─────────────────────────────────────────────
+     IMAGE UPLOAD
+  ───────────────────────────────────────────── */
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (addForm.imagePreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(addForm.imagePreview);
+    }
+
+    setAddForm({
+      ...addForm,
+      image: file,
+      imagePreview: URL.createObjectURL(file),
+    });
+  };
+
+  /* ─────────────────────────────────────────────
      RENDER
-  ══════════════════════════════ */
+  ───────────────────────────────────────────── */
   return (
-    <div className="p-4 sm:p-10 bg-[#f5f7fb] min-h-screen space-y-4 sm:space-y-6">
-
+    <div className="min-h-screen space-y-6 bg-[#f5f7fb] p-8 lg:p-10">
       {/* HEADER */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">Pharmacies</h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Manage and control all registered pharmacies
-        </p>
-      </div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800">Pharmacies</h1>
+          <p className="mt-1 text-sm text-gray-400">
+            Manage and control all registered pharmacies & branches
+          </p>
+        </div>
 
-      {/* TOP BAR */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:justify-between">
-        <button
-          onClick={() => setModal("add")}
-          className="flex items-center justify-center gap-2 bg-secondary text-white px-6 py-3 sm:py-2 rounded-full text-sm font-medium"
-        >
-          <Plus size={16} /> Add Pharmacy
-        </button>
-        <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-xl border w-full sm:w-[320px]">
-          <Search size={16} className="text-gray-400 shrink-0" />
-          <input
-            placeholder="Search pharmacy..."
-            className="bg-transparent outline-none w-full text-sm"
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setPage(1);
-            }}
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex rounded-full border bg-white p-1 text-sm">
+            {[
+              { key: "all", label: "All" },
+              { key: "main", label: "Main" },
+              { key: "branch", label: "Branches" },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => {
+                  setFilterType(tab.key);
+                  setPage(1);
+                }}
+                className={`rounded-full px-4 py-1.5 transition ${
+                  filterType === tab.key
+                    ? "bg-secondary text-white"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex w-[260px] items-center gap-2 rounded-xl border bg-white px-4 py-2.5">
+            <Search size={16} className="text-gray-400" />
+            <input
+              placeholder="Search pharmacy..."
+              className="w-full bg-transparent text-sm outline-none"
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+
+          <button
+            onClick={() => setModal("add")}
+            className="flex items-center gap-2 rounded-full bg-secondary px-5 py-2.5 text-sm text-white shadow-sm transition hover:opacity-90"
+          >
+            <Plus size={16} /> Add Pharmacy
+          </button>
         </div>
       </div>
 
-      {/* MOBILE CARDS */}
-      <div className="flex flex-col gap-3 sm:hidden">
-        {data.map((p, i) => (
-          <PharmacyCard
-            key={i}
-            p={p}
-            onView={handleView}
-            onEdit={openEdit}
-            onResetPassword={handleResetPassword}
-            onToggle={handleToggle}
-          />
-        ))}
-        {data.length === 0 && (
-          <div className="py-10 text-center text-gray-400 bg-white rounded-2xl border">
-            No pharmacies found
-          </div>
-        )}
+      {/* STATS CARDS */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatsCard
+          icon={<Building2 size={20} />}
+          label="Total Pharmacies"
+          value={pharmacies.length}
+          color="bg-blue-50 text-blue-600"
+        />
+        <StatsCard
+          icon={<Building2 size={20} />}
+          label="Main Pharmacies"
+          value={pharmacies.filter((p) => !p.isBranch).length}
+          color="bg-purple-50 text-purple-600"
+        />
+        <StatsCard
+          icon={<GitBranch size={20} />}
+          label="Branches"
+          value={pharmacies.filter((p) => p.isBranch).length}
+          color="bg-green-50 text-green-600"
+        />
       </div>
 
-      {/* DESKTOP TABLE */}
-      <div className="hidden sm:block bg-white rounded-2xl border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-            <tr>
-              <th className="py-3 px-2 text-center">Logo</th>
-              <th className="py-3 px-2 text-center">Name</th>
-              <th className="py-3 px-2 text-center">Phone</th>
-              <th className="py-3 px-2 text-center">Location</th>
-              <th className="py-3 px-2 text-center">Total Orders</th>
-              <th className="py-3 px-2 text-center">Status</th>
-              <th className="py-3 px-2 text-center">Branch</th>
-              <th className="py-3 px-2 text-center">Subscription</th>
-              <th className="py-3 px-2 text-center">Plan</th>
-              <th className="py-3 px-2 text-center">Days</th>
-              <th className="py-3 px-2 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((p, i) => (
-              <tr key={i} className="border-t hover:bg-gray-50">
-                <td className="py-3 px-2">
-                  <div className="flex justify-center">
-                    {p.logo ? (
-                      <img src={p.logo} className="w-10 h-10 rounded-full" alt="" />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold text-gray-500">
-                        {p.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                </td>
-                <td className="py-3 px-2 text-center font-medium">{p.name}</td>
-                <td className="py-3 px-2 text-center">{p.phone}</td>
-                <td className="py-3 px-2 text-center">{p.location}</td>
-                <td className="py-3 px-2 text-center">{p.totalOrders ?? "-"}</td>
-                <td className="py-3 px-2 text-center">
-                  <span className={`px-2 py-1 text-xs rounded-full ${p.isActive ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"}`}>
-                    {p.status}
-                  </span>
-                </td>
-                <td className="py-3 px-2 text-center">
-                  {p.isMain ? (
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-600">Main</span>
-                  ) : (
-                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-400">Sub</span>
-                  )}
-                </td>
-                <td className="py-3 px-2 text-center">
-                  <SubBadge status={p.subscriptionStatus} />
-                </td>
-                <td className="py-3 px-2 text-center">
-                  {p.plan ? (
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-600 font-medium">{p.plan}</span>
-                  ) : (
-                    <span className="text-gray-300 text-xs">—</span>
-                  )}
-                </td>
-                <td className="py-3 px-2 text-center">
-                  {p.daysRemaining !== null ? (
-                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600">{p.daysRemaining}d</span>
-                  ) : (
-                    <span className="text-gray-300 text-xs">—</span>
-                  )}
-                </td>
-                <td className="py-3 px-2">
-                  <div className="flex justify-center gap-2">
-                    <button title="View" onClick={() => handleView(p)} className="text-blue-500 hover:text-blue-700"><Eye size={17} /></button>
-                    <button title="Edit" onClick={() => openEdit(p)} className="text-gray-500 hover:text-gray-700"><Edit size={17} /></button>
-                    <button title="Reset Password" onClick={() => handleResetPassword(p)} className="text-orange-500 hover:text-orange-700"><KeyRound size={17} /></button>
-                    {p.subscriptionStatus === "Active" ? (
-                      <button title="Deactivate" onClick={() => handleToggle(p)} className="text-red-500 hover:text-red-700"><XCircle size={17} /></button>
-                    ) : p.subscriptionStatus ? (
-                      <button title="Activate" onClick={() => handleToggle(p)} className="text-green-500 hover:text-green-700"><CheckCircle size={17} /></button>
-                    ) : null}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {data.length === 0 && (
+      {/* TABLE */}
+      <div className="overflow-hidden rounded-2xl border bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-xs uppercase text-gray-500">
               <tr>
-                <td colSpan={11} className="py-10 text-center text-gray-400">No pharmacies found</td>
+                <th className="px-3 py-3 text-center">Logo</th>
+                <th className="px-3 py-3 text-left">Name</th>
+                <th className="px-3 py-3 text-left">Phone</th>
+                <th className="px-3 py-3 text-left">Location</th>
+                <th className="px-3 py-3 text-center">Type</th>
+                <th className="px-3 py-3 text-center">Status</th>
+                <th className="px-3 py-3 text-center">Branches</th>
+                <th className="px-3 py-3 text-center">Orders</th>
+                <th className="px-3 py-3 text-center">Actions</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {loading && data.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center">
+                    <Loader2 className="inline-block animate-spin text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-400">Loading...</p>
+                  </td>
+                </tr>
+              )}
+
+              {!loading && data.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center text-gray-400">
+                    No pharmacies found
+                  </td>
+                </tr>
+              )}
+
+              {data.map((p) => (
+                <tr key={p.id} className="border-t hover:bg-gray-50/60">
+                  <td className="px-3 py-3">
+                    <div className="flex justify-center">
+                      <PharmacyAvatar
+                        src={p.imageUrl}
+                        name={p.name}
+                        size="sm"
+                      />
+                    </div>
+                  </td>
+
+                  <td className="px-3 py-3 font-medium text-gray-800">
+                    {p.name}
+                  </td>
+                  <td className="px-3 py-3 text-gray-600">{p.contactNumber}</td>
+                  <td className="px-3 py-3 text-gray-600">
+                    {buildLocationText(p) || p.location}
+                  </td>
+
+                  <td className="px-3 py-3 text-center">
+                    <TypeBadge isBranch={p.isBranch} />
+                  </td>
+
+                  <td className="px-3 py-3 text-center">
+                    <StatusBadge status={p.statusLabel} />
+                  </td>
+
+                  <td className="px-3 py-3 text-center text-gray-600">
+                    {p.isBranch ? "—" : p.branchesCount}
+                  </td>
+
+                  <td className="px-3 py-3 text-center text-gray-600">
+                    {p.totalOrders}
+                  </td>
+
+                  <td className="px-3 py-3">
+                    <div className="flex justify-center gap-1.5">
+                      <IconBtn
+                        title="View"
+                        color="text-blue-500 hover:bg-blue-50"
+                        onClick={() => handleView(p)}
+                      >
+                        <Eye size={16} />
+                      </IconBtn>
+
+                      <IconBtn
+                        title="Edit"
+                        color="text-gray-500 hover:bg-gray-100"
+                        onClick={() => openEdit(p)}
+                      >
+                        <Edit size={16} />
+                      </IconBtn>
+
+                      <IconBtn
+                        title="Reset Password"
+                        color="text-orange-500 hover:bg-orange-50"
+                        onClick={() => handleResetPassword(p)}
+                      >
+                        <KeyRound size={16} />
+                      </IconBtn>
+
+                      {p.isDeleted ? (
+                        <IconBtn
+                          title="Restore"
+                          color="text-green-500 hover:bg-green-50"
+                          onClick={() => handleRestore(p)}
+                        >
+                          <RotateCcw size={16} />
+                        </IconBtn>
+                      ) : (
+                        <IconBtn
+                          title="Delete"
+                          color="text-red-500 hover:bg-red-50"
+                          onClick={() => handleDelete(p)}
+                        >
+                          <Trash2 size={16} />
+                        </IconBtn>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* PAGINATION */}
@@ -460,7 +709,11 @@ export default function Pharmacies() {
             <button
               key={i}
               onClick={() => setPage(i + 1)}
-              className={`w-8 h-8 rounded-full text-sm ${page === i + 1 ? "bg-secondary text-white" : "bg-white border text-gray-600"}`}
+              className={`h-9 w-9 rounded-full text-sm transition ${
+                page === i + 1
+                  ? "bg-secondary text-white shadow"
+                  : "border bg-white text-gray-600 hover:bg-gray-50"
+              }`}
             >
               {i + 1}
             </button>
@@ -468,179 +721,647 @@ export default function Pharmacies() {
         </div>
       )}
 
-      {/* ══ ADD MODAL ══ */}
+      {/* ════════ ADD MODAL ════════ */}
       {modal === "add" && (
-        <Modal onClose={() => setModal(null)}>
-          <h2 className="text-lg font-semibold">Add Pharmacy</h2>
-          {[
-            { label: "Pharmacy Name *", key: "pharmacyName", placeholder: "e.g. Pharma Plus" },
-            { label: "Admin Name *", key: "adminName", placeholder: "e.g. Ahmed Ali" },
-            { label: "Admin Email *", key: "adminEmail", placeholder: "admin@example.com", type: "email" },
-            { label: "Admin Phone *", key: "adminPhone", placeholder: "e.g. 01012345678" },
-            { label: "Location", key: "pharmacyLocation", placeholder: "e.g. Nasr City, Cairo" },
-          ].map(({ label, key, placeholder, type = "text" }) => (
-            <div key={key}>
-              <label className="text-xs text-gray-500 mb-1 block">{label}</label>
-              <input
-                type={type}
-                placeholder={placeholder}
-                className="border p-2 w-full rounded-lg text-sm"
-                value={addForm[key]}
-                onChange={(e) => setAddForm({ ...addForm, [key]: e.target.value })}
+        <Modal onClose={() => setModal(null)} width="560px">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <Plus size={18} /> Add New Pharmacy
+          </h2>
+          <p className="text-xs text-gray-400">
+            Create a new pharmacy with its manager account
+          </p>
+
+          <Section title="Pharmacy Info">
+            <Field
+              label="Pharmacy Name *"
+              placeholder="e.g. Pharma Plus"
+              value={addForm.pharmacyName}
+              onChange={(v) => setAddForm({ ...addForm, pharmacyName: v })}
+            />
+            <div>
+              <label className="mb-1 block text-xs text-gray-500">
+                Open Hours
+              </label>
+              <TimeRangePicker
+                value={addForm.openHours}
+                onChange={(v) => setAddForm({ ...addForm, openHours: v })}
+                placeholder="Select open hours"
               />
             </div>
-          ))}
+          </Section>
 
-          {/* Logo */}
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Logo</label>
+          <Section title="Pharmacy Address">
+            {addresses && addresses.length > 0 && (
+              <div className="rounded-lg bg-blue-50 p-3">
+                <label className="mb-1 flex items-center gap-1 text-xs text-blue-700">
+                  <Home size={11} /> Use a saved address (optional)
+                </label>
+                <select
+                  className="w-full rounded-lg border bg-white p-2 text-sm"
+                  value={addForm.selectedAddressId}
+                  onChange={(e) => handleSelectSavedAddress(e.target.value)}
+                  disabled={addressLoading}
+                >
+                  <option value="">
+                    -- {addressLoading ? "Loading..." : "Select to autofill"} --
+                  </option>
+                  {addresses.map((a) => {
+                    const id = a.id ?? a.Id;
+                    const street = a.street ?? a.Street ?? "";
+                    const city = a.city ?? a.City ?? "";
+                    const gov = a.governorate ?? a.Governorate ?? "";
+                    return (
+                      <option key={id} value={id}>
+                        {[street, city, gov].filter(Boolean).join(", ")}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
+
+            <Field
+              label="Street *"
+              placeholder="e.g. El-Tahrir Street"
+              value={addForm.street}
+              onChange={(v) =>
+                setAddForm({ ...addForm, street: v, selectedAddressId: "" })
+              }
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Field
+                label="Building No."
+                placeholder="e.g. 12"
+                value={addForm.buildingNo}
+                onChange={(v) =>
+                  setAddForm({
+                    ...addForm,
+                    buildingNo: v,
+                    selectedAddressId: "",
+                  })
+                }
+              />
+              <Field
+                label="City / Area *"
+                placeholder="e.g. Nasr City"
+                value={addForm.city}
+                onChange={(v) =>
+                  setAddForm({ ...addForm, city: v, selectedAddressId: "" })
+                }
+              />
+            </div>
+            <Field
+              label="Governorate *"
+              placeholder="e.g. Cairo"
+              value={addForm.governorate}
+              onChange={(v) =>
+                setAddForm({
+                  ...addForm,
+                  governorate: v,
+                  selectedAddressId: "",
+                })
+              }
+            />
+
+            {(addForm.street || addForm.city || addForm.governorate) && (
+              <div className="rounded-md bg-gray-50 p-2 text-xs text-gray-600">
+                <span className="font-semibold">Preview:</span>{" "}
+                {buildLocationText(addForm) || "—"}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((s) => !s)}
+              className="flex items-center gap-1 text-xs text-secondary hover:underline"
+            >
+              {showAdvanced ? (
+                <ChevronUp size={12} />
+              ) : (
+                <ChevronDown size={12} />
+              )}
+              Advanced (GPS coordinates - optional)
+            </button>
+
+            {showAdvanced && (
+              <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-3">
+                <Field
+                  label="Latitude"
+                  placeholder="30.0444"
+                  value={addForm.latitude}
+                  onChange={(v) => setAddForm({ ...addForm, latitude: v })}
+                />
+                <Field
+                  label="Longitude"
+                  placeholder="31.2357"
+                  value={addForm.longitude}
+                  onChange={(v) => setAddForm({ ...addForm, longitude: v })}
+                />
+              </div>
+            )}
+          </Section>
+
+          <Section title="Manager Info">
+            <Field
+              label="Manager Name *"
+              placeholder="e.g. Ahmed Ali"
+              value={addForm.managerName}
+              onChange={(v) => setAddForm({ ...addForm, managerName: v })}
+            />
+            <Field
+              label="Manager Email *"
+              type="email"
+              placeholder="manager@example.com"
+              value={addForm.managerEmail}
+              onChange={(v) => setAddForm({ ...addForm, managerEmail: v })}
+            />
+            <Field
+              label="Manager Phone *"
+              placeholder="01012345678"
+              value={addForm.managerPhone}
+              onChange={(v) => setAddForm({ ...addForm, managerPhone: v })}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Field
+                label="Qualification"
+                placeholder="B.Pharm"
+                value={addForm.managerQualification}
+                onChange={(v) =>
+                  setAddForm({ ...addForm, managerQualification: v })
+                }
+              />
+              <Field
+                label="Experience (years)"
+                type="number"
+                placeholder="5"
+                value={addForm.managerExperienceYears}
+                onChange={(v) =>
+                  setAddForm({ ...addForm, managerExperienceYears: v })
+                }
+              />
+            </div>
+          </Section>
+
+          <Section title="Logo">
             <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-full bg-gray-100 border flex items-center justify-center overflow-hidden shrink-0">
-                {addForm.logoPreview ? (
-                  <img src={addForm.logoPreview} className="w-full h-full object-cover" alt="logo" />
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-gray-100">
+                {addForm.imagePreview ? (
+                  <img
+                    src={addForm.imagePreview}
+                    className="h-full w-full object-cover"
+                    alt="logo"
+                  />
                 ) : (
-                  <span className="text-gray-400 text-xs text-center">No logo</span>
+                  <span className="text-center text-xs text-gray-400">
+                    No logo
+                  </span>
                 )}
               </div>
-              <label className="flex-1 cursor-pointer border border-dashed border-gray-300 rounded-lg p-2 text-center text-sm text-gray-400 hover:border-gray-400 transition">
+              <label className="flex-1 cursor-pointer rounded-lg border border-dashed border-gray-300 p-3 text-center text-sm text-gray-400 transition hover:border-secondary hover:text-secondary">
                 Click to upload image
                 <input
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    setAddForm({ ...addForm, logo: file, logoPreview: URL.createObjectURL(file) });
-                  }}
+                  onChange={handleImageUpload}
                 />
               </label>
             </div>
-          </div>
+          </Section>
 
-          {/* Main Branch Toggle */}
-          <label className="flex items-center gap-3 cursor-pointer select-none">
-            <div
-              onClick={() => setAddForm({ ...addForm, isMain: !addForm.isMain })}
-              className={`w-10 h-5 rounded-full transition-colors duration-200 flex items-center px-0.5 ${addForm.isMain ? "bg-secondary" : "bg-gray-300"}`}
-            >
-              <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${addForm.isMain ? "translate-x-5" : "translate-x-0"}`} />
-            </div>
-            <span className="text-sm text-gray-600">Main Branch</span>
-          </label>
-
-          <div className="flex justify-end gap-2 pt-1">
-            <button onClick={() => setModal(null)} className="px-4 py-2 border rounded-lg text-sm">Cancel</button>
-            <button onClick={handleAdd} className="bg-secondary text-white px-4 py-2 rounded-lg text-sm">Save</button>
-          </div>
-        </Modal>
-      )}
-
-      {/* ══ VIEW MODAL ══ */}
-      {modal === "view" && selected && (
-        <Modal onClose={() => setModal(null)}>
-          <h2 className="text-lg font-semibold">Pharmacy Details</h2>
-          <div className="space-y-2 text-sm">
-            {[
-              ["ID", selected.id],
-              ["Name", selected.name],
-              ["Location", selected.location],
-              ["Phone", selected.contactNumber || selected.phone],
-              ["Latitude", selected.latitude],
-              ["Longitude", selected.longitude],
-              ["Status", selected.isActive ? "Active" : "Inactive"],
-              ["Total Orders", selected.totalOrders ?? "-"],
-              ["Admin ID", selected.adminId ?? "-"],
-              ["─────────", "─────────"],
-              ["Subscription", selected.subscriptionStatus ?? "-"],
-              ["Plan", selected.plan ?? "-"],
-              ["Start Date", selected.startDate ? new Date(selected.startDate).toLocaleDateString() : "-"],
-              ["End Date", selected.endDate ? new Date(selected.endDate).toLocaleDateString() : "-"],
-              ["Days Remaining", selected.daysRemaining ?? "-"],
-            ].map(([label, val]) => (
-              <div key={label} className="flex justify-between border-b pb-1">
-                <span className="text-gray-500">{label}</span>
-                <span className="font-medium">{val}</span>
+          <Section title="Type">
+            <label className="flex cursor-pointer select-none items-center gap-3">
+              <div
+                onClick={() =>
+                  setAddForm({
+                    ...addForm,
+                    isBranch: !addForm.isBranch,
+                    parentPharmacyId: "",
+                  })
+                }
+                className={`flex h-6 w-11 items-center rounded-full px-0.5 transition-colors duration-200 ${
+                  addForm.isBranch ? "bg-secondary" : "bg-gray-300"
+                }`}
+              >
+                <div
+                  className={`h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                    addForm.isBranch ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
               </div>
-            ))}
-          </div>
-          <div className="flex justify-end pt-1">
-            <button onClick={() => setModal(null)} className="px-4 py-2 border rounded-lg text-sm">Close</button>
+              <span className="text-sm text-gray-700">
+                Create as Branch (under main pharmacy)
+              </span>
+            </label>
+
+            {addForm.isBranch && (
+              <div className="mt-3">
+                <label className="mb-1 block text-xs text-gray-500">
+                  Parent (Main) Pharmacy *
+                </label>
+                <select
+                  className="w-full rounded-lg border bg-white p-2 text-sm"
+                  value={addForm.parentPharmacyId}
+                  onChange={(e) =>
+                    setAddForm({ ...addForm, parentPharmacyId: e.target.value })
+                  }
+                >
+                  <option value="">-- Select main pharmacy --</option>
+                  {mainPharmacies.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} — {m.location}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </Section>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => {
+                resetAddForm();
+                setModal(null);
+              }}
+              className="rounded-lg border px-5 py-2 text-sm hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAdd}
+              disabled={loading}
+              className="flex items-center gap-2 rounded-lg bg-secondary px-5 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {loading && <Loader2 size={14} className="animate-spin" />}
+              Save
+            </button>
           </div>
         </Modal>
       )}
 
-      {/* ══ EDIT MODAL ══ */}
+      {/* ════════ VIEW MODAL ════════ */}
+      {modal === "view" && selected && (
+        <Modal onClose={() => setModal(null)} width="500px">
+          <div className="flex items-center gap-3 border-b pb-3">
+            <PharmacyAvatar
+              src={selected.imageUrl}
+              name={selected.name}
+              size="md"
+            />
+            <div>
+              <h2 className="text-lg font-semibold">{selected.name}</h2>
+              <div className="mt-1 flex gap-2">
+                <TypeBadge isBranch={selected.isBranch} />
+                <StatusBadge status={selected.statusLabel} />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2 text-sm">
+            <DetailRow
+              icon={<MapPin size={14} />}
+              label="Location"
+              value={buildLocationText(selected) || selected.location}
+            />
+            <DetailRow
+              icon={<Phone size={14} />}
+              label="Phone"
+              value={selected.contactNumber}
+            />
+            <DetailRow
+              icon={<Clock size={14} />}
+              label="Open Hours"
+              value={selected.openHours}
+            />
+            <DetailRow label="Latitude" value={selected.latitude} />
+            <DetailRow label="Longitude" value={selected.longitude} />
+            <DetailRow
+              icon={<User size={14} />}
+              label="Manager"
+              value={selected.managerName}
+            />
+            <DetailRow label="Admin" value={selected.adminName} />
+            <DetailRow label="Total Orders" value={selected.totalOrders} />
+            {!selected.isBranch && (
+              <DetailRow
+                label="Branches Count"
+                value={selected.branchesCount}
+              />
+            )}
+            {selected.parentPharmacyId && (
+              <DetailRow
+                label="Parent Pharmacy"
+                value={
+                  selected.parentPharmacyName || `#${selected.parentPharmacyId}`
+                }
+              />
+            )}
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={() => setModal(null)}
+              className="rounded-lg border px-5 py-2 text-sm hover:bg-gray-50"
+            >
+              Close
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ════════ EDIT MODAL ════════ */}
       {modal === "edit" && selected && (
-        <Modal onClose={() => setModal(null)}>
-          <h2 className="text-lg font-semibold">Edit Pharmacy</h2>
-          {[
-            { label: "Name *", key: "name", placeholder: "Pharmacy name" },
-            { label: "Location", key: "location", placeholder: "e.g. Nasr City" },
-            { label: "Contact Number", key: "contactNumber", placeholder: "e.g. 01012345678" },
-          ].map(({ label, key, placeholder }) => (
-            <div key={key}>
-              <label className="text-xs text-gray-500 mb-1 block">{label}</label>
-              <input
-                placeholder={placeholder}
-                className="border p-2 w-full rounded-lg text-sm"
-                value={editForm[key]}
-                onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })}
+        <Modal onClose={() => setModal(null)} width="500px">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <Edit size={18} /> Edit Pharmacy
+          </h2>
+
+          <Field
+            label="Name *"
+            placeholder="Pharmacy name"
+            value={editForm.name}
+            onChange={(v) => setEditForm({ ...editForm, name: v })}
+          />
+
+          <Field
+            label="Contact Number"
+            placeholder="01012345678"
+            value={editForm.contactNumber}
+            onChange={(v) => setEditForm({ ...editForm, contactNumber: v })}
+          />
+
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">
+              Open Hours
+            </label>
+            <TimeRangePicker
+              value={editForm.openHours}
+              onChange={(v) => setEditForm({ ...editForm, openHours: v })}
+              placeholder="Select open hours"
+            />
+          </div>
+
+          <Section title="Address">
+            <Field
+              label="Street"
+              placeholder="e.g. El-Tahrir Street"
+              value={editForm.street}
+              onChange={(v) => setEditForm({ ...editForm, street: v })}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Field
+                label="Building No."
+                placeholder="e.g. 12"
+                value={editForm.buildingNo}
+                onChange={(v) => setEditForm({ ...editForm, buildingNo: v })}
+              />
+              <Field
+                label="City / Area"
+                placeholder="e.g. Nasr City"
+                value={editForm.city}
+                onChange={(v) => setEditForm({ ...editForm, city: v })}
               />
             </div>
-          ))}
+            <Field
+              label="Governorate"
+              placeholder="e.g. Cairo"
+              value={editForm.governorate}
+              onChange={(v) => setEditForm({ ...editForm, governorate: v })}
+            />
+
+            {(editForm.street || editForm.city || editForm.governorate) && (
+              <div className="rounded-md bg-gray-50 p-2 text-xs text-gray-600">
+                <span className="font-semibold">Preview:</span>{" "}
+                {buildLocationText(editForm) || "—"}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowAdvancedEdit((s) => !s)}
+              className="flex items-center gap-1 text-xs text-secondary hover:underline"
+            >
+              {showAdvancedEdit ? (
+                <ChevronUp size={12} />
+              ) : (
+                <ChevronDown size={12} />
+              )}
+              Advanced (GPS coordinates - optional)
+            </button>
+
+            {showAdvancedEdit && (
+              <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-3">
+                <Field
+                  label="Latitude"
+                  placeholder="30.0444"
+                  value={editForm.latitude}
+                  onChange={(v) => setEditForm({ ...editForm, latitude: v })}
+                />
+                <Field
+                  label="Longitude"
+                  placeholder="31.2357"
+                  value={editForm.longitude}
+                  onChange={(v) => setEditForm({ ...editForm, longitude: v })}
+                />
+              </div>
+            )}
+          </Section>
+
           <div className="flex justify-end gap-2 pt-1">
-            <button onClick={() => setModal(null)} className="px-4 py-2 border rounded-lg text-sm">Cancel</button>
-            <button onClick={handleEdit} className="bg-secondary text-white px-4 py-2 rounded-lg text-sm">Update</button>
+            <button
+              onClick={() => setModal(null)}
+              className="rounded-lg border px-5 py-2 text-sm hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleEdit}
+              disabled={loading}
+              className="rounded-lg bg-secondary px-5 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
+            >
+              Update
+            </button>
           </div>
         </Modal>
       )}
 
-      {/* ══ SUCCESS MODAL ══ */}
+      {/* ════════ SUCCESS MODAL ════════ */}
       {successData && (
         <Modal onClose={() => setSuccessData(null)}>
-          <h2 className="text-lg font-semibold text-green-600 flex items-center gap-2">
-            <CheckCircle size={18} /> Pharmacy Created!
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-green-600">
+            <CheckCircle size={18} />
+            {successData.title || "Pharmacy Created!"}
           </h2>
-          <p className="text-sm text-gray-500">Admin credentials generated successfully</p>
-          <div className="border rounded-lg p-3 flex justify-between items-center">
-            <div>
-              <p className="text-xs text-gray-400">Admin Email</p>
-              <p className="font-medium text-sm break-all">{successData.email}</p>
+
+          <p className="text-sm text-gray-500">
+            Manager credentials generated successfully. Save them now — you
+            won't see them again.
+          </p>
+
+          <div className="flex items-center justify-between rounded-lg border bg-gray-50 p-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-1 text-xs text-gray-400">
+                <Mail size={11} /> Manager Email
+              </p>
+              <p className="truncate font-medium">{successData.email}</p>
             </div>
-            <button onClick={() => navigator.clipboard.writeText(successData.email)} className="text-sm px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 shrink-0 ml-2">Copy</button>
+            <CopyButton value={successData.email} />
           </div>
-          <div className="border rounded-lg p-3 flex justify-between items-center">
-            <div>
-              <p className="text-xs text-gray-400">Password</p>
-              <p className="font-medium">{successData.password}</p>
+
+          <div className="flex items-center justify-between rounded-lg border bg-gray-50 p-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-1 text-xs text-gray-400">
+                <KeyRound size={11} /> Password
+              </p>
+              <p className="font-mono font-medium">
+                {successData.password || "—"}
+              </p>
             </div>
-            <button onClick={() => navigator.clipboard.writeText(successData.password)} className="text-sm px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 shrink-0 ml-2">Copy</button>
+            <CopyButton value={successData.password} />
           </div>
+
           <button
-            onClick={() => navigator.clipboard.writeText(`Email: ${successData.email}\nPassword: ${successData.password}`)}
-            className="w-full bg-secondary text-white py-2 rounded-lg mt-2 text-sm"
+            onClick={() => {
+              navigator.clipboard.writeText(
+                `Email: ${successData.email}\nPassword: ${successData.password}`,
+              );
+            }}
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-secondary py-2 text-white transition hover:opacity-90"
           >
-            Copy All
+            <Copy size={14} /> Copy All
           </button>
+
           <div className="flex justify-end">
-            <button onClick={() => setSuccessData(null)} className="px-4 py-2 border rounded-lg text-sm">Close</button>
+            <button
+              onClick={() => setSuccessData(null)}
+              className="rounded-lg border px-5 py-2 text-sm hover:bg-gray-50"
+            >
+              Close
+            </button>
           </div>
         </Modal>
       )}
 
-      {/* ══ ERROR MODAL ══ */}
+      {/* ════════ ERROR MODAL ════════ */}
       {errorMsg && (
         <Modal onClose={() => setErrorMsg("")}>
-          <h2 className="text-lg font-semibold text-red-600 flex items-center gap-2">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-red-600">
             <XCircle size={18} /> Error
           </h2>
           <p className="text-sm text-gray-600">{errorMsg}</p>
           <div className="flex justify-end">
-            <button onClick={() => setErrorMsg("")} className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm">OK</button>
+            <button
+              onClick={() => setErrorMsg("")}
+              className="rounded-lg bg-red-500 px-5 py-2 text-sm text-white hover:bg-red-600"
+            >
+              OK
+            </button>
           </div>
         </Modal>
       )}
+
+      {/* ════════ CONFIRM MODAL ════════ */}
+      {confirmData && (
+        <Modal onClose={() => setConfirmData(null)}>
+          <h2
+            className={`flex items-center gap-2 text-lg font-semibold ${
+              confirmData.danger ? "text-red-600" : "text-gray-800"
+            }`}
+          >
+            {confirmData.title}
+          </h2>
+          <p className="text-sm text-gray-600">{confirmData.message}</p>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => setConfirmData(null)}
+              className="rounded-lg border px-5 py-2 text-sm hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmData.onConfirm}
+              className={`rounded-lg px-5 py-2 text-sm text-white ${
+                confirmData.danger
+                  ? "bg-red-500 hover:bg-red-600"
+                  : "bg-secondary hover:opacity-90"
+              }`}
+            >
+              {confirmData.confirmText || "Confirm"}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   SMALL HELPER COMPONENTS
+───────────────────────────────────────────── */
+function StatsCard({ icon, label, value, color }) {
+  return (
+    <div className="flex items-center gap-4 rounded-2xl border bg-white p-5">
+      <div
+        className={`flex h-12 w-12 items-center justify-center rounded-xl ${color}`}
+      >
+        {icon}
+      </div>
+      <div>
+        <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
+        <p className="text-2xl font-semibold text-gray-800">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function IconBtn({ children, title, onClick, color }) {
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      className={`rounded-md p-1.5 transition ${color}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Field({ label, value, onChange, placeholder, type = "text" }) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs text-gray-500">{label}</label>
+      <input
+        type={type}
+        placeholder={placeholder}
+        className="w-full rounded-lg border p-2 text-sm transition focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30"
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
+function Section({ title, children }) {
+  return (
+    <div className="space-y-3 pt-2">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+function DetailRow({ icon, label, value }) {
+  return (
+    <div className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+      <span className="flex items-center gap-1.5 text-gray-500">
+        {icon}
+        {label}
+      </span>
+      <span className="max-w-[60%] truncate text-right font-medium text-gray-800">
+        {value || "-"}
+      </span>
     </div>
   );
 }

@@ -10,36 +10,37 @@ namespace Rujta.Application.Services
     public class AdService : IAdService
     {
         private readonly IAdRepository _adRepo;
-
-        public AdService(IAdRepository adRepo)
+        private readonly IMapper _mapper;
+        public AdService(IAdRepository adRepo, IMapper mapper)
         {
             _adRepo = adRepo;
+   
+            _mapper = mapper;
         }
-        public async Task<AdDto> CreateAsync(
-            AdDto dto,
-            CancellationToken cancellationToken = default)
+        public async Task<AdDto> CreateAsync(AdDto dto, CancellationToken cancellationToken = default)
         {
-            var entity = MapToEntity(dto);
+            var entity = _mapper.Map<Ad>(dto);
             entity.CreatedAt = DateTime.UtcNow;
             entity.IsActive = true;
-
-            await _adRepo.AddAsync(entity);           
-            return MapToDto(entity);
+            entity.StartsAt = dto.StartsAt;
+            entity.ExpiresAt = dto.ExpiresAt;
+            await _adRepo.AddAsync(entity, cancellationToken);
+            return _mapper.Map<AdDto>(entity);
         }
 
         public async Task<IEnumerable<AdDto>> GetAllActiveAsync(
-            CancellationToken cancellationToken = default)
+     CancellationToken cancellationToken = default)
         {
             var ads = await _adRepo.GetAllActiveAsync(cancellationToken);
-            return ads.Select(MapToDto);
+            return _mapper.Map<IEnumerable<AdDto>>(ads);
         }
 
         public async Task<IEnumerable<AdDto>> GetByPharmacyIdAsync(
-            int pharmacyId,
-            CancellationToken cancellationToken = default)
+    int pharmacyId,
+    CancellationToken cancellationToken = default)
         {
             var ads = await _adRepo.GetByPharmacyIdAsync(pharmacyId, cancellationToken);
-            return ads.Select(MapToDto);
+            return _mapper.Map<IEnumerable<AdDto>>(ads);
         }
 
         public async Task DeactivateAsync(
@@ -65,47 +66,7 @@ namespace Rujta.Application.Services
             await _adRepo.SetStatusAsync(id, isActive, cancellationToken);
         }
 
-        private static Ad MapToEntity(AdDto dto) => new()
-        {
-            PharmacyId = dto.PharmacyId,
-            TemplateName = dto.TemplateName,
-            Badge = dto.Badge,
-            AdMode = dto.AdMode,
-            MedicineId = dto.MedicineId,
-            MedicineName = dto.MedicineName,
-            MedicineImage = dto.MedicineImage,
-            Category = dto.Category,
-            Headline = dto.Headline,
-            Subtext = dto.Subtext,
-            CtaLabel = dto.CtaLabel,
-            ColorFrom = dto.ColorFrom,
-            ColorTo = dto.ColorTo,
-            ColorAccent = dto.ColorAccent,
-            FontLabel = dto.FontLabel,
-            IsActive = dto.IsActive,
-        };
-
-        private static AdDto MapToDto(Ad entity) => new()
-        {
-            Id = entity.Id,
-            PharmacyId = entity.PharmacyId,
-            TemplateName = entity.TemplateName,
-            Badge = entity.Badge,
-            AdMode = entity.AdMode,
-            MedicineId = entity.MedicineId,
-            MedicineName = entity.MedicineName,
-            MedicineImage = entity.MedicineImage,
-            Category = entity.Category,
-            Headline = entity.Headline,
-            Subtext = entity.Subtext,
-            CtaLabel = entity.CtaLabel,
-            ColorFrom = entity.ColorFrom,
-            ColorTo = entity.ColorTo,
-            ColorAccent = entity.ColorAccent,
-            FontLabel = entity.FontLabel,
-            IsActive = entity.IsActive,
-            CreatedAt = entity.CreatedAt,
-        };
+        
     }
 
 }

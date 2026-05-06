@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.DTOs.Common;
 using Rujta.Application.DTOs.MedicineDtos;
 using Rujta.Application.DTOs.PharmacyDtos;
 using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
@@ -31,7 +32,7 @@ namespace Rujta.API.Controllers
             return Ok(result);
         }
 
-        [AllowAnonymous]
+
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<PharmacyDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllPharmacies(CancellationToken cancellationToken)
@@ -41,7 +42,7 @@ namespace Rujta.API.Controllers
             return Ok(pharmacies);
         }
 
-        [AllowAnonymous]
+ 
         [HttpGet("{pharmacyId}/medicine/{medicineId}/stock")]
         [ProducesResponseType(typeof(MedicineStockDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -56,7 +57,7 @@ namespace Rujta.API.Controllers
             return Ok(stock);
         }
 
-        [AllowAnonymous]
+ 
         [HttpGet("{pharmacyId}/medicines")]
         [ProducesResponseType(typeof(IEnumerable<MedicineDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -66,6 +67,18 @@ namespace Rujta.API.Controllers
                 .GetMedicinesByPharmacyAsync(pharmacyId);
 
             return Ok(medicines);
+        }
+
+   
+        [HttpGet("{pharmacyId}/medicines/paged")]
+        [ProducesResponseType(typeof(PagedResultDto<MedicineDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetPagedMedicines([Range(1, int.MaxValue)] int pharmacyId,[FromQuery, Range(1, int.MaxValue)] int pageNumber = 1,[FromQuery, Range(1, 100)] int pageSize = 16,[FromQuery] string? searchTerm = null,[FromQuery] int? categoryId = null,CancellationToken cancellationToken = default)
+        {
+            var result = await _pharmacyService.GetPagedMedicinesByPharmacyAsync(
+                pharmacyId, pageNumber, pageSize, searchTerm, categoryId, cancellationToken);
+
+            return Ok(result);
         }
     }
 }
