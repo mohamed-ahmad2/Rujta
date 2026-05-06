@@ -19,7 +19,7 @@
         public string ColorTo { get; set; } = "#0369a1";
         public string ColorAccent { get; set; } = "#38bdf8";
         public string FontLabel { get; set; } = "Modern Sans";
-        public bool IsActive { get; set; } = true;
+        public bool IsActive { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
