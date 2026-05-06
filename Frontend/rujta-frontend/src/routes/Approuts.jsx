@@ -74,6 +74,7 @@ const Logs = lazy(() => import("../features/dashboard/pages/Logs"));
 const Ads = lazy(() => import("../features/dashboard/pages/Ads"));
 const Subscription = lazy(() => import("../features/dashboard/pages/Subscription"));
 const Discounts = lazy(() => import("../features/dashboard/pages/Discounts"));
+const Payments = lazy(() => import("../features/dashboard/pages/Payments"));
 const AdminNotifications = lazy(() => import("../features/dashboard/notifications/pages/AdminNotificationsPage"));
 /* ================= Super Admin ================= */
 const DashboardLayoutSuberAdmin = lazy(
@@ -248,6 +249,14 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => {
             element={
               <ProtectedRoute roles={["PharmacyAdmin"]}>
                 <Discounts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="payments"
+            element={
+              <ProtectedRoute roles={["PharmacyAdmin"]}>
+                <Payments />
               </ProtectedRoute>
             }
           />

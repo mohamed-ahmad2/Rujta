@@ -152,7 +152,7 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
 function AddOrderModal({ open, onClose, onAdd }) {
   const [form, setForm] = useState({
     userName: "",
-    pharmacyName: "",
+    
     orderDate: new Date().toISOString().split("T")[0],
     totalPrice: "",
     status: "Pending",
@@ -198,7 +198,7 @@ function AddOrderModal({ open, onClose, onAdd }) {
     const newOrder = {
       id: Date.now(),
       userName: form.userName,
-      pharmacyName: form.pharmacyName,
+      
       orderDate: form.orderDate,
       totalPrice: form.totalPrice || calcTotal(),
       status: form.status,
@@ -252,15 +252,8 @@ function AddOrderModal({ open, onClose, onAdd }) {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Pharmacy Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                value={form.pharmacyName}
-                onChange={(e) => update("pharmacyName", e.target.value)}
-                placeholder="e.g. El-Dawaa Pharmacy"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
-              />
+              
+             
             </div>
           </div>
 
