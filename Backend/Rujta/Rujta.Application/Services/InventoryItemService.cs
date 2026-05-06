@@ -1,11 +1,13 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
+using Rujta.Application.DTOs.Common;
 using Rujta.Application.DTOs.InventoryDto;
 using Rujta.Application.Services.Pharmcy;
 
 namespace Rujta.Application.Services
 {
-    public class InventoryItemService : IInventoryItemService
+    public class InventoryItemService : IInventoryItemService 
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
@@ -37,6 +39,81 @@ namespace Rujta.Application.Services
             _cache = cache;
             _discountService = discountService;
             _logger = logger;
+        }
+
+        public async Task<PagedResultDto<InventoryItemDto>> GetPagedAsync(int pharmacyId, InventoryItemFilterDto filter,CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                filter ??= new InventoryItemFilterDto();
+
+                string cacheKey = BuildCacheKey(pharmacyId, filter);
+
+                
+                if (_cache.TryGetValue<PagedResultDto<InventoryItemDto>>(cacheKey, out var cached)
+                    && cached != null)
+                {
+                    _logger.LogDebug("Cache HIT: Inventory Paged");
+                    return cached;
+                }
+
+                var query = _unitOfWork.InventoryItems.GetQueryable().AsNoTracking().Where(i => i.PharmacyID == pharmacyId);
+
+
+
+                if (filter.MedicineId.HasValue)
+                {
+                    query = query.Where(i => i.MedicineID == filter.MedicineId.Value);
+                }
+
+                if (filter.CategoryId.HasValue)
+                    query = query.Where(i => i.Medicine!.CategoryId == filter.CategoryId.Value);
+                
+
+                if (filter.Status.HasValue)
+                    query = query.Where(i => i.Status == filter.Status.Value);
+                
+
+                var totalCount = await query.CountAsync(cancellationToken);
+
+                var items = await query
+                    .Include(i => i.Medicine)
+                    .ThenInclude(m => m!.Category)
+                    .OrderBy(i => i.Id)
+                    .Skip((filter.PageNumber - 1) * filter.PageSize)
+                    .Take(filter.PageSize)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var item in items)
+                    UpdateProductStatus(item);
+
+                var dtos = _mapper.Map<List<InventoryItemDto>>(items);
+
+                for (int i = 0; i < dtos.Count; i++)
+                    await ApplyDiscountToDtoAsync(dtos[i], items[i]);
+
+                var result = new PagedResultDto<InventoryItemDto>
+                {
+                    Items = dtos,
+                    TotalCount = totalCount,
+                    PageNumber = filter.PageNumber,
+                    PageSize = filter.PageSize
+                };
+
+                var options = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(CacheDurationMinutes))
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(SlidingMinutes))
+                    .AddExpirationToken(new CancellationChangeToken(_inventoryListToken.Token));
+
+                _cache.Set(cacheKey, result, options);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    "An error occurred while fetching paged inventory items.", ex);
+            }
         }
 
         public async Task<IEnumerable<InventoryItemDto>> GetAllAsync(
@@ -277,6 +354,15 @@ namespace Rujta.Application.Services
                 item.Status = ProductStatus.LowStock;
             else
                 item.Status = ProductStatus.InStock;
+        }
+
+        private static string BuildCacheKey(int pharmacyId, InventoryItemFilterDto f)
+        {
+            return $"Inventory_Page_ph{pharmacyId}" +
+                   $"_p{f.PageNumber}_s{f.PageSize}" +
+                   $"_m{f.MedicineId?.ToString() ?? "_"}" +
+                   $"_c{f.CategoryId?.ToString() ?? "_"}" +
+                   $"_st{f.Status?.ToString() ?? "_"}";
         }
     }
 }

@@ -13,6 +13,10 @@ export const getInventoryProducts = () => {
   return apiClient.get("/InventoryItem/products");
 };
 
+export const getPagedInventoryItems = (params) => {
+  return apiClient.get("/InventoryItem/paged", { params });
+};
+
 export const addInventoryItem = (data) => {
   return apiClient.post("/InventoryItem", data);
 };

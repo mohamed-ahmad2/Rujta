@@ -63,19 +63,6 @@ namespace Rujta.API
                     builder.Configuration["MlService:BaseUrl"] ?? "http://localhost:8000");
                 client.Timeout = TimeSpan.FromSeconds(30);
             });
-            // 🔥🔥🔥 ADD THIS (SignalR Registration)
-            builder.Services.AddSignalR();
-
-            // Firebase Initialization
-            try
-            {
-                FirebaseInitializer.Initialize();
-                Console.WriteLine("Firebase initialized successfully!");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error initializing Firebase: {ex.Message}");
-            }
 
             builder.Services.AddCustomRateLimiting();
 
