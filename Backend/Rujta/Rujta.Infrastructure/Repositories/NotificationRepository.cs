@@ -1,9 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Domain.Entities;
-using Rujta.Infrastructure.Data;
-
-namespace Rujta.Infrastructure.Repositories
+﻿namespace Rujta.Infrastructure.Repositories
 {
     public class NotificationRepository : INotificationRepository
     {

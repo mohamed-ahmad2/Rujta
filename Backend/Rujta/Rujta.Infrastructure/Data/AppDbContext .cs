@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Rujta.Domain.Common;
-using Rujta.Domain.Entities.Rujta.Domain.Entities;
 using Rujta.Infrastructure.Extensions;
 using Rujta.Infrastructure.Identity;
 

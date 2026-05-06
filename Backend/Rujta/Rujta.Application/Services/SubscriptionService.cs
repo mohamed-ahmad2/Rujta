@@ -1,22 +1,10 @@
 ﻿using Rujta.Application.DTOs.PharmacyDto;
 using Rujta.Application.DTOs.SubscriptionDto;
-using Rujta.Application.Interfaces;
-using Rujta.Domain.Entities;
-using Rujta.Domain.Entities.Rujta.Domain.Entities;
-using Rujta.Domain.Enums;
 
 namespace Rujta.Application.Services
 {
-    public class SubscriptionService : ISubscriptionService
+    public class SubscriptionService(IUnitOfWork _uow) : ISubscriptionService
     {
-        private readonly IUnitOfWork _uow;
-
-        public SubscriptionService(IUnitOfWork uow)
-        {
-            _uow = uow;
-        }
-
-        // ── 1. CREATE ─────────────────────────────────────────────────────────
         public async Task<SubscriptionResult> CreateSubscriptionAsync(int pharmacyId, SubscriptionPlan plan)
         {
             var existing = await _uow.Subscriptions.GetByPharmacyIdAsync(pharmacyId);
@@ -43,10 +31,9 @@ namespace Rujta.Application.Services
             await _uow.Subscriptions.AddAsync(subscription);
             await _uow.SaveAsync();
 
-            return SubscriptionResult.Ok(start, end);
+            return SubscriptionResult.Ok(subscription.Id, start, end);
         }
 
-        // ── 2. GET STATUS ─────────────────────────────────────────────────────
         public async Task<SubscriptionStatusResult> GetStatusAsync(int pharmacyId)
         {
             var subscription = await _uow.Subscriptions.GetByPharmacyIdAsync(pharmacyId);
@@ -54,9 +41,9 @@ namespace Rujta.Application.Services
             if (subscription is null)
                 return new SubscriptionStatusResult { Found = false };
 
-            // Auto-expire if past EndDate
-            if (subscription.Status == SubscriptionStatus.Active
-                && subscription.EndDate < DateTime.UtcNow)
+            var now = DateTime.UtcNow;
+
+            if (subscription.Status == SubscriptionStatus.Active && subscription.EndDate < now)
             {
                 subscription.Status = SubscriptionStatus.Expired;
 
@@ -74,12 +61,11 @@ namespace Rujta.Application.Services
                 StartDate = subscription.StartDate,
                 EndDate = subscription.EndDate,
                 DaysRemaining = subscription.Status == SubscriptionStatus.Active
-                    ? Math.Max(0, (subscription.EndDate - DateTime.UtcNow).Days)
+                    ? Math.Max(0, (subscription.EndDate - now).Days)
                     : 0
             };
         }
 
-        // ── 3. RENEW ──────────────────────────────────────────────────────────
         public async Task<SubscriptionResult> RenewSubscriptionAsync(int pharmacyId, SubscriptionPlan plan)
         {
             var subscription = await _uow.Subscriptions.GetByPharmacyIdAsync(pharmacyId);
@@ -99,29 +85,36 @@ namespace Rujta.Application.Services
 
             await _uow.SaveAsync();
 
-            return SubscriptionResult.Ok(start, end);
+            return SubscriptionResult.Ok(subscription.Id, start, end);
         }
 
-        // ── 4. QUICK ACTIVE CHECK (used by middleware) ────────────────────────
         public async Task<bool> IsActiveAsync(int pharmacyId)
         {
             var result = await GetStatusAsync(pharmacyId);
             return result.Found && result.Status == SubscriptionStatus.Active;
         }
 
-        // ── PRIVATE HELPER ────────────────────────────────────────────────────
-        private static (DateTime start, DateTime end) CalculateDates(SubscriptionPlan plan)
-        {
-            var start = DateTime.UtcNow;
-            var end = plan == SubscriptionPlan.Yearly
-                ? start.AddYears(1)
-                : start.AddMonths(1);
-            return (start, end);
-        }
-        // ── 5. GET ALL (Super Admin) ──────────────────────────────────────────
         public async Task<IEnumerable<PharmacySubscriptionSummary>> GetAllSubscriptionsAsync()
         {
             var subscriptions = await _uow.Subscriptions.GetAllWithPharmacyAsync();
+            var now = DateTime.UtcNow;
+            var hasChanges = false;
+
+            foreach (var s in subscriptions)
+            {
+                if (s.Status == SubscriptionStatus.Active && s.EndDate < now)
+                {
+                    s.Status = SubscriptionStatus.Expired;
+
+                    if (s.Pharmacy is not null)
+                        s.Pharmacy.IsActive = false;
+
+                    hasChanges = true;
+                }
+            }
+
+            if (hasChanges)
+                await _uow.SaveAsync();
 
             return subscriptions.Select(s => new PharmacySubscriptionSummary
             {
@@ -133,12 +126,11 @@ namespace Rujta.Application.Services
                 StartDate = s.StartDate,
                 EndDate = s.EndDate,
                 DaysRemaining = s.Status == SubscriptionStatus.Active
-                    ? Math.Max(0, (s.EndDate - DateTime.UtcNow).Days)
+                    ? Math.Max(0, (s.EndDate - now).Days)
                     : 0
             });
         }
 
-        // ── 6. MANUAL ACTIVATE / DEACTIVATE (Super Admin) ────────────────────
         public async Task<SubscriptionResult> SetStatusManuallyAsync(int pharmacyId, bool activate)
         {
             var subscription = await _uow.Subscriptions.GetByPharmacyIdAsync(pharmacyId);
@@ -155,7 +147,16 @@ namespace Rujta.Application.Services
 
             await _uow.SaveAsync();
 
-            return SubscriptionResult.Ok(subscription.StartDate, subscription.EndDate);
+            return SubscriptionResult.Ok(subscription.Id, subscription.StartDate, subscription.EndDate);
+        }
+
+        private static (DateTime start, DateTime end) CalculateDates(SubscriptionPlan plan)
+        {
+            var start = DateTime.UtcNow;
+            var end = plan == SubscriptionPlan.Yearly
+                ? start.AddYears(1)
+                : start.AddMonths(1);
+            return (start, end);
         }
     }
 }

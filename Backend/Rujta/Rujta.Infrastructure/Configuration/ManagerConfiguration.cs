@@ -1,6 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Rujta.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Rujta.Infrastructure.Configuration
 {
@@ -18,10 +16,6 @@ namespace Rujta.Infrastructure.Configuration
                    .WithMany(a => a.Managers)
                    .HasForeignKey(m => m.AdminId)
                    .OnDelete(DeleteBehavior.Restrict);
-
-
-            
-
 
             builder.HasMany(m => m.Pharmacists)
                    .WithOne(p => p.Manager)

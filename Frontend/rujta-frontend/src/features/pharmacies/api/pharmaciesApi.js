@@ -1,7 +1,6 @@
 // src/features/pharmacies/api/pharmaciesApi.js
 import apiClient from "../../../shared/api/apiClient";
 
-// Priority Pharmacies 
 export const getTopPharmacies = (
   items,
   addressId,
@@ -9,7 +8,7 @@ export const getTopPharmacies = (
   maxShortageRange = null
 ) => {
   const payload = { items };
-  const params  = { addressId, topK };
+  const params = { addressId, topK };
 
   if (maxShortageRange !== null && maxShortageRange !== undefined)
     params.maxShortageRange = maxShortageRange;
@@ -17,10 +16,7 @@ export const getTopPharmacies = (
   return apiClient.post("/PriorityPharmacies/top-k", payload, { params });
 };
 
-// General Pharmacies
-
-export const getAllPharmacies = () =>
-  apiClient.get("/pharmacies");
+export const getAllPharmacies = () => apiClient.get("/pharmacies");
 
 export const getNearestPharmacies = (
   userLat,
@@ -37,3 +33,25 @@ export const getPharmacyMedicines = (pharmacyId) =>
 
 export const getMedicineStockInPharmacy = (pharmacyId, medicineId) =>
   apiClient.get(`/pharmacies/${pharmacyId}/medicine/${medicineId}/stock`);
+
+
+export const getPagedPharmacyMedicines = (
+  pharmacyId,
+  { pageNumber = 1, pageSize = 16, searchTerm, categoryId } = {},
+  signal = undefined  
+) => {
+  const params = { pageNumber, pageSize };
+
+  if (searchTerm && searchTerm.trim()) params.searchTerm = searchTerm.trim();
+  if (
+    categoryId !== undefined &&
+    categoryId !== null &&
+    categoryId !== "All"
+  )
+    params.categoryId = categoryId;
+
+  return apiClient.get(`/pharmacies/${pharmacyId}/medicines/paged`, {
+    params,
+    signal,
+  });
+};

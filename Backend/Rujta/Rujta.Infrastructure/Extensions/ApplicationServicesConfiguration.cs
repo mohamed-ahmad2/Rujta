@@ -1,5 +1,5 @@
-﻿using Rujta.Application.Services;
-using Rujta.Application.Services.Logging;
+﻿using Rujta.Application.Notifications;
+using Rujta.Application.Resolver;
 
 namespace Rujta.Infrastructure.Extensions
 {
@@ -35,7 +35,11 @@ namespace Rujta.Infrastructure.Extensions
                 );
             });
 
-            services.AddSignalR();
+            services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.PropertyNamingPolicy = null;
+    });
 
             services.AddHttpContextAccessor();
 
@@ -69,7 +73,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IPeopleRepository, PeopleRepository>();
             services.AddScoped<IPharmacistRepository, PharmacistRepository>();
             services.AddScoped<IReportRepository, ReportRepository>();
-            services.AddScoped<ISuperAdminRepository, SuperAdminReposatory>();
+            services.AddScoped<ISuperAdminRepository, SuperAdminRepository>();
 
             return services;
         }
@@ -83,7 +87,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IdentityServices>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ILogService, LogService>();
-
+            
             services.AddScoped<IMedicineService, MedicineService>();
             services.AddScoped<ISearchMedicineService, SearchMedicineService>();
             services.AddScoped<IInventoryItemService, InventoryItemService>();
@@ -109,10 +113,13 @@ namespace Rujta.Infrastructure.Extensions
 
             services.AddScoped<IPrescriptionService, PrescriptionService>();
             services.AddScoped<IAdService, AdService>();
+            services.AddScoped<IAdRepository, AdRepository>();
+            services.AddMemoryCache();
+            services.AddScoped<IDrugRequestRepository, DrugRequestRepository>();
+            services.AddScoped<IDrugRequestService, DrugRequestService>();
 
             return services;
         }
-
 
         //Background Services
         private static IServiceCollection AddBackgroundServices(
@@ -121,6 +128,7 @@ namespace Rujta.Infrastructure.Extensions
             services.AddHostedService<RefreshTokenCleanupService>();
             services.AddHostedService<AdExpiryService>();
             services.AddHostedService<DiscountExpirationService>();
+            services.AddHostedService<SubscriptionExpirationService>();
 
             return services;
         }
@@ -142,6 +150,7 @@ namespace Rujta.Infrastructure.Extensions
         {
             services.AddSingleton<IMedicineAutocompleteIndex, MedicineAutocompleteIndex>();
             services.AddSingleton<IUserPresenceService, InMemoryUserPresenceService>();
+
 
             return services;
         }
@@ -174,6 +183,8 @@ namespace Rujta.Infrastructure.Extensions
             var mapsBasePath = Path.Combine(AppContext.BaseDirectory, "Maps");
             var pbfPath = Path.Combine(mapsBasePath, "egypt-251026.osm.pbf");
             var routerDbPath = Path.Combine(mapsBasePath, "egypt.routerdb");
+
+            services.AddScoped<IAddressResolver, AddressResolver>();
 
             services.AddSingleton<IOfflineGeocodingService>(sp =>
             {

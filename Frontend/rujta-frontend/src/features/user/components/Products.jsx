@@ -1,18 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import imge1 from "../../../assets/hero/img1.png";
 import useMedicine from "../../medicines/hook/useMedicines";
 import { useNavigate } from "react-router-dom";
 import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
+import useCategory from "../../category/hook/useCategory";
 
-const categoryOptions = [
-  { id: "All", name: "All" },
-  { id: 1, name: "Pain Relief" },
-  { id: 2, name: "Antibiotics" },
-  { id: 3, name: "Allergy & Respiratory" },
-];
+const ITEMS_PER_PAGE = 16;
 
 const Products = ({ cart, setCart }) => {
-  const { medicines, fetchAll, loading, error } = useMedicine();
+  const { pagedData, loading, error, fetchPaged } = useMedicine();
   const navigate = useNavigate();
 
   const {
@@ -22,49 +18,110 @@ const Products = ({ cart, setCart }) => {
     fetchAllPharmacies,
   } = usePharmacies();
 
+  const { categories, fetchAll: fetchAllCategories } = useCategory();
+
   const [expanded, setExpanded] = useState({});
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [addedIds, setAddedIds] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    fetchAll();
+    fetchAllCategories();
+  }, [fetchAllCategories]);
+  useEffect(() => {
     fetchAllPharmacies();
-  }, [fetchAll]);
+  }, [fetchAllPharmacies]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    fetchPaged({
+      pageNumber: currentPage,
+      pageSize: ITEMS_PER_PAGE,
+      searchTerm: debouncedSearch || undefined,
+      categoryIds:
+        selectedCategory !== "All" ? [Number(selectedCategory)] : undefined,
+    });
+  }, [currentPage, debouncedSearch, selectedCategory, fetchPaged]);
+
+  const medicines = pagedData.items || [];
+  const totalPages = pagedData.totalPages || 1;
+  const totalCount = pagedData.totalCount || 0;
 
   const handleAddToCart = (product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem)
         return prevCart.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item,
         );
       return [...prevCart, { ...product, quantity: 1 }];
     });
     setAddedIds((prev) => ({ ...prev, [product.id]: true }));
-    setTimeout(() => setAddedIds((prev) => ({ ...prev, [product.id]: false })), 1200);
+    setTimeout(
+      () => setAddedIds((prev) => ({ ...prev, [product.id]: false })),
+      1200,
+    );
   };
 
+  const categoryOptions = useMemo(() => {
+    if (!categories.length) return [{ id: "All", name: "All" }];
+    return [{ id: "All", name: "All" }, ...categories];
+  }, [categories]);
 
-  const filteredMedicines = medicines.filter(
-    (med) =>
-      (selectedCategory === "All" || med.categoryId === selectedCategory) &&
-      med.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    const maxVisible = 5;
+    if (totalPages <= maxVisible + 2) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("...");
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (currentPage < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
+  }, [currentPage, totalPages]);
 
-``
+  const initialLoading = loading && medicines.length === 0;
 
-  /* ── States ── */
-  if (loading || pharmaciesLoading)
+  if (initialLoading || pharmaciesLoading)
     return (
-      <div className="flex items-center justify-center py-32" style={{ background: "#f5f8f2" }}>
-        <div className="h-9 w-9 animate-spin rounded-full border-4 border-t-transparent"
-          style={{ borderColor: "#5a8a1f", borderTopColor: "transparent" }} />
+      <div
+        className="flex items-center justify-center py-32"
+        style={{ background: "#f5f8f2" }}
+      >
+        <div
+          className="h-9 w-9 animate-spin rounded-full border-4 border-t-transparent"
+          style={{ borderColor: "#5a8a1f", borderTopColor: "transparent" }}
+        />
       </div>
     );
 
   if (error || pharmaciesError)
-    return <p className="py-20 text-center text-red-500">{error || pharmaciesError}</p>;
+    return (
+      <p className="py-20 text-center text-red-500">
+        {error || pharmaciesError}
+      </p>
+    );
 
   return (
     <div
@@ -72,8 +129,7 @@ const Products = ({ cart, setCart }) => {
       style={{ background: "#f5f8f2", fontFamily: "'DM Sans', sans-serif" }}
     >
       <div className="mx-auto max-w-5xl">
-
-        {/* ── Section Label ── */}
+    
         <div className="mb-3 flex items-center justify-between">
           <p
             className="text-[10px] font-semibold uppercase tracking-widest"
@@ -83,35 +139,59 @@ const Products = ({ cart, setCart }) => {
           </p>
           <div className="flex gap-2">
             <button
-              onClick={() => {
-                document.getElementById("pharmacy-scroll").scrollBy({ left: -320, behavior: "smooth" });
-              }}
+              onClick={() =>
+                document
+                  .getElementById("pharmacy-scroll")
+                  .scrollBy({ left: -320, behavior: "smooth" })
+              }
               className="flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200"
-              style={{ background: "#fff", border: "1.5px solid #e8eee2", cursor: "pointer", color: "#5a8a1f" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#EAF3DE"; e.currentTarget.style.borderColor = "#5a8a1f"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e8eee2"; }}
+              style={{
+                background: "#fff",
+                border: "1.5px solid #e8eee2",
+                cursor: "pointer",
+                color: "#5a8a1f",
+              }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
             <button
-              onClick={() => {
-                document.getElementById("pharmacy-scroll").scrollBy({ left: 320, behavior: "smooth" });
-              }}
+              onClick={() =>
+                document
+                  .getElementById("pharmacy-scroll")
+                  .scrollBy({ left: 320, behavior: "smooth" })
+              }
               className="flex h-8 w-8 items-center justify-center rounded-full transition-all duration-200"
-              style={{ background: "#fff", border: "1.5px solid #e8eee2", cursor: "pointer", color: "#5a8a1f" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#EAF3DE"; e.currentTarget.style.borderColor = "#5a8a1f"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e8eee2"; }}
+              style={{
+                background: "#fff",
+                border: "1.5px solid #e8eee2",
+                cursor: "pointer",
+                color: "#5a8a1f",
+              }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path d="M9 18l6-6-6-6" />
               </svg>
             </button>
           </div>
         </div>
 
-        {/* ── Pharmacies Horizontal Scroll ── */}
+    
         <div
           id="pharmacy-scroll"
           className="mb-10 flex gap-4 overflow-x-auto pb-3 sm:gap-5 lg:gap-6"
@@ -129,23 +209,16 @@ const Products = ({ cart, setCart }) => {
                 width: 148,
                 padding: "18px 14px",
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-6px)";
-                e.currentTarget.style.boxShadow = "0 16px 40px rgba(90,138,31,0.15)";
-                e.currentTarget.style.borderColor = "rgba(90,138,31,0.3)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)";
-                e.currentTarget.style.borderColor = "#e8eee2";
-              }}
             >
               <div
                 className="flex h-20 w-20 items-center justify-center rounded-full sm:h-24 sm:w-24"
-                style={{ background: "#EAF3DE", border: "2px solid rgba(90,138,31,0.12)" }}
+                style={{
+                  background: "#EAF3DE",
+                  border: "2px solid rgba(90,138,31,0.12)",
+                }}
               >
                 <img
-                src={ph.imageUrl || ph.ImageUrl || imge1}
+                  src={ph.imageUrl || imge1}
                   alt={ph.name}
                   className="h-12 w-12 object-contain sm:h-14 sm:w-14"
                   onError={(e) => (e.currentTarget.src = imge1)}
@@ -167,36 +240,47 @@ const Products = ({ cart, setCart }) => {
           ))}
         </div>
 
-        {/* ── Page Title ── */}
+  
         <div className="mb-10 text-center sm:mb-12">
           <span
             className="mb-4 inline-block rounded-full px-4 py-1.5 text-[11px] font-semibold uppercase tracking-widest"
-            style={{ background: "#EAF3DE", color: "#5a8a1f", border: "1px solid rgba(90,138,31,0.2)" }}
+            style={{
+              background: "#EAF3DE",
+              color: "#5a8a1f",
+              border: "1px solid rgba(90,138,31,0.2)",
+            }}
           >
             Our Products
           </span>
           <h2
             className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl"
-            style={{ color: "#3e6013", fontFamily: "'Playfair Display', serif", letterSpacing: "-0.4px" }}
+            style={{
+              color: "#3e6013",
+              fontFamily: "'Playfair Display', serif",
+              letterSpacing: "-0.4px",
+            }}
           >
             Top Rated Medicines
           </h2>
           <p className="mx-auto mt-3 max-w-[520px] text-sm leading-relaxed text-gray-400 sm:text-base">
-            Discover our most trusted medicines and healthcare products,
-            carefully selected for your wellbeing.
+            Discover our most trusted medicines and healthcare products.
           </p>
         </div>
 
-        {/* ── Search + Category Filter ── */}
+    
         <div className="mb-7 flex flex-wrap items-center gap-3">
-          {/* Search */}
           <div className="relative flex-1" style={{ minWidth: 200 }}>
             <svg
               className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-              width="15" height="15" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
             >
-              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
             </svg>
             <input
               type="text"
@@ -208,23 +292,26 @@ const Products = ({ cart, setCart }) => {
                 borderRadius: 14,
                 fontFamily: "'DM Sans', sans-serif",
               }}
-              onFocus={(e) => {
-                e.target.style.borderColor = "#5a8a1f";
-                e.target.style.boxShadow = "0 0 0 3px rgba(90,138,31,0.1)";
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = "#e8eee2";
-                e.target.style.boxShadow = "none";
-              }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+       
+            {loading && searchQuery && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <div
+                  className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
+                  style={{
+                    borderColor: "#5a8a1f",
+                    borderTopColor: "transparent",
+                  }}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Category pills */}
           <div className="flex flex-wrap gap-2">
             {categoryOptions.map((cat) => {
-              const active = selectedCategory === cat.id;
+              const active = String(selectedCategory) === String(cat.id);
               return (
                 <button
                   key={cat.id}
@@ -236,22 +323,7 @@ const Products = ({ cart, setCart }) => {
                     background: active ? "#5a8a1f" : "#fff",
                     color: active ? "#fff" : "#7a8472",
                     padding: "8px 18px",
-                    fontFamily: "'DM Sans', sans-serif",
                     cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.borderColor = "#5a8a1f";
-                      e.currentTarget.style.color = "#5a8a1f";
-                      e.currentTarget.style.background = "#EAF3DE";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.borderColor = "#e8eee2";
-                      e.currentTarget.style.color = "#7a8472";
-                      e.currentTarget.style.background = "#fff";
-                    }
                   }}
                 >
                   {cat.name}
@@ -261,118 +333,214 @@ const Products = ({ cart, setCart }) => {
           </div>
         </div>
 
-        {/* ── Medicines Grid ── */}
-        {filteredMedicines.length === 0 ? (
+      
+        {medicines.length === 0 && !loading ? (
           <div className="py-20 text-center">
             <div className="mb-3 text-5xl">🔍</div>
             <p className="text-gray-400">No medicines found.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:gap-8 xl:grid-cols-4">
-            {filteredMedicines.map((med) => {
-              const desc = med.description || "No description available";
-              const isLong = desc.length > 70;
-              const isExpanded = expanded[med.id];
-              const isAdded = addedIds[med.id];
+          <>
+            <div
+              className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4 lg:gap-6"
+              style={{ opacity: loading ? 0.5 : 1, transition: "opacity 0.2s" }}
+            >
+              {medicines.map((med) => {
+                const desc = med.description || "No description available";
+                const isLong = desc.length > 70;
+                const isExpanded = expanded[med.id];
+                const isAdded = addedIds[med.id];
 
-              return (
-                <div
-                  key={med.id}
-                  onClick={() => navigate(`/medicines/${med.id}`)}
-                  className="group flex cursor-pointer flex-col overflow-hidden bg-white transition-all duration-300"
-                  style={{
-                    borderRadius: 24,
-                    border: "1.5px solid #e8eee2",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-6px) scale(1.02)";
-                    e.currentTarget.style.boxShadow = "0 20px 50px rgba(90,138,31,0.15)";
-                    e.currentTarget.style.borderColor = "rgba(90,138,31,0.25)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0) scale(1)";
-                    e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)";
-                    e.currentTarget.style.borderColor = "#e8eee2";
-                  }}
-                >
-                  {/* Image zone */}
+                return (
                   <div
-                    className="flex items-center justify-center overflow-hidden"
-                    style={{ background: "#EAF3DE", position: "relative", height: 170 }}
+                    key={med.id}
+                    onClick={() => navigate(`/medicines/${med.id}`)}
+                    className="group flex cursor-pointer flex-col overflow-hidden bg-white transition-all duration-300"
+                    style={{
+                      borderRadius: 24,
+                      border: "1.5px solid #e8eee2",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                    }}
                   >
-                    <img
-                      src={med.imageUrl || imge1}
-                      alt={med.name}
-                      className="object-contain transition-transform duration-500 group-hover:scale-110"
-                      style={{ height: 120, width: 120 }}
-                      onError={(e) => (e.currentTarget.src = imge1)}
-                    />
                     <div
-                      className="pointer-events-none absolute bottom-0 left-0 right-0 h-8"
-                      style={{ background: "linear-gradient(to top, rgba(234,243,222,0.6), transparent)" }}
-                    />
-                  </div>
-
-                  {/* Body */}
-                  <div className="flex flex-1 flex-col p-4 sm:p-5">
-                    <h3
-                      className="font-semibold"
-                      style={{ color: "#3e6013", fontSize: 16, letterSpacing: "-0.1px" }}
+                      className="flex items-center justify-center overflow-hidden"
+                      style={{
+                        background: "#EAF3DE",
+                        position: "relative",
+                        height: 170,
+                      }}
                     >
-                      {med.name}
-                    </h3>
-                    <p className="mt-2 flex-1 text-[13px] leading-relaxed text-gray-400">
-                      {isExpanded || !isLong ? desc : desc.slice(0, 70) + "…"}
-                    </p>
-                    {isLong && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpanded((p) => ({ ...p, [med.id]: !p[med.id] }));
-                        }}
-                        className="mt-1 text-left text-[13px] font-semibold hover:underline"
-                        style={{ color: "#5a8a1f", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
-                      >
-                        {isExpanded ? "↑ Show Less" : "↓ Show More"}
-                      </button>
-                    )}
+                      <img
+                        src={med.imageUrl || imge1}
+                        alt={med.name}
+                        className="object-contain transition-transform duration-500 group-hover:scale-110"
+                        style={{ height: 120, width: 120 }}
+                        loading="lazy"
+                        onError={(e) => (e.currentTarget.src = imge1)}
+                      />
+                    </div>
 
-                    {/* Footer */}
-                    <div
-                      className="mt-5 flex items-center justify-between pt-4"
-                      style={{ borderTop: "1px solid #e8eee2" }}
-                    >
-                    
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleAddToCart(med); }}
-                        className="flex items-center gap-1.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 active:scale-95"
-                        style={{
-                          background: isAdded ? "#3e6013" : "#5a8a1f",
-                          padding: "10px 20px",
-                          border: "none",
-                          cursor: "pointer",
-                          fontFamily: "'DM Sans', sans-serif",
-                          marginLeft: "auto",
-                        }}
+                    <div className="flex flex-1 flex-col p-4 sm:p-5">
+                      <h3
+                        className="font-semibold"
+                        style={{ color: "#3e6013", fontSize: 16 }}
                       >
-                        {isAdded ? (
-                          "✓ Added"
-                        ) : (
-                          <>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <path d="M12 5v14M5 12h14" />
-                            </svg>
-                            Add
-                          </>
-                        )}
-                      </button>
+                        {med.name}
+                      </h3>
+                      <p className="mt-2 flex-1 text-[13px] leading-relaxed text-gray-400">
+                        {isExpanded || !isLong ? desc : desc.slice(0, 70) + "…"}
+                      </p>
+                      {isLong && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpanded((p) => ({
+                              ...p,
+                              [med.id]: !p[med.id],
+                            }));
+                          }}
+                          className="mt-1 text-left text-[13px] font-semibold hover:underline"
+                          style={{
+                            color: "#5a8a1f",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {isExpanded ? "↑ Show Less" : "↓ Show More"}
+                        </button>
+                      )}
+
+                      <div
+                        className="mt-5 flex items-center justify-between pt-4"
+                        style={{ borderTop: "1px solid #e8eee2" }}
+                      >
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToCart(med);
+                          }}
+                          className="flex items-center gap-1.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 active:scale-95"
+                          style={{
+                            background: isAdded ? "#3e6013" : "#5a8a1f",
+                            padding: "10px 20px",
+                            border: "none",
+                            cursor: "pointer",
+                            marginLeft: "auto",
+                          }}
+                        >
+                          {isAdded ? (
+                            "✓ Added"
+                          ) : (
+                            <>
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                              >
+                                <path d="M12 5v14M5 12h14" />
+                              </svg>
+                              Add
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-10 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || loading}
+                  className="flex h-9 w-9 items-center justify-center rounded-full transition-all"
+                  style={{
+                    background: currentPage === 1 ? "#f0f0f0" : "#fff",
+                    border: "1.5px solid #e8eee2",
+                    cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                    color: currentPage === 1 ? "#bbb" : "#5a8a1f",
+                  }}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <path d="M15 18l-6-6 6-6" />
+                  </svg>
+                </button>
+
+                {pageNumbers.map((page, idx) =>
+                  page === "..." ? (
+                    <span key={`dots-${idx}`} className="px-2 text-gray-400">
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      disabled={loading}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all"
+                      style={{
+                        background: page === currentPage ? "#5a8a1f" : "#fff",
+                        border: `1.5px solid ${page === currentPage ? "#5a8a1f" : "#e8eee2"}`,
+                        color: page === currentPage ? "#fff" : "#7a8472",
+                        cursor: "pointer",
+                        boxShadow:
+                          page === currentPage
+                            ? "0 4px 12px rgba(90,138,31,0.25)"
+                            : "none",
+                      }}
+                    >
+                      {page}
+                    </button>
+                  ),
+                )}
+
+                <button
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages || loading}
+                  className="flex h-9 w-9 items-center justify-center rounded-full transition-all"
+                  style={{
+                    background: currentPage === totalPages ? "#f0f0f0" : "#fff",
+                    border: "1.5px solid #e8eee2",
+                    cursor:
+                      currentPage === totalPages ? "not-allowed" : "pointer",
+                    color: currentPage === totalPages ? "#bbb" : "#5a8a1f",
+                  }}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            <p
+              className="mt-3 text-center text-[12px]"
+              style={{ color: "#7a8472" }}
+            >
+              Page {currentPage} of {totalPages} · {totalCount} results
+            </p>
+          </>
         )}
       </div>
     </div>

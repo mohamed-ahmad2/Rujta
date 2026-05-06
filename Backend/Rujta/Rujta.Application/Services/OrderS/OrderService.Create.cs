@@ -1,12 +1,14 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Rujta.Application.DTOs.OrderDto;
-using Rujta.Application.Interfaces.InterfaceServices;
 
 namespace Rujta.Application.Services.OrderS
 {
     public partial class OrderService
     {
-        public async Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto,Guid userId,CancellationToken cancellationToken = default)
+        public async Task<OrderDto> CreateOrderAsync(
+            CreateOrderDto createOrderDto,
+            Guid userId,
+            CancellationToken cancellationToken = default)
         {
             try
             {
@@ -39,33 +41,41 @@ namespace Rujta.Application.Services.OrderS
 
                 order.TotalPrice = await BuildOrderItemsAsync(order, createOrderDto, cancellationToken);
 
-                await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+                var savedOrder = await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+                {
+                    await _unitOfWork.Orders.AddAsync(order, ct);
+                    await _unitOfWork.SaveAsync(ct);
+                    return order;
+                }, cancellationToken);
 
-                await _unitOfWork.Orders.AddAsync(order, cancellationToken);
-                await _unitOfWork.SaveAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
+                _logger.LogInformation(
+                    "Order {OrderId} created successfully for UserId {UserId}",
+                    savedOrder.Id, userId);
 
-                _logger.LogInformation("Order {OrderId} created successfully for UserId {UserId}",
-                    order.Id.ToString(), userId.ToString());
-
-                var orderDto = _mapper.Map<OrderDto>(order);
+                var orderDto = _mapper.Map<OrderDto>(savedOrder);
                 orderDto.UserName = appUser.Name;
                 orderDto.PharmacyName = pharmacy.Name;
 
                 await _notificationService.NotifyNewOrderAsync(createOrderDto.PharmacyID, orderDto.Id);
-                await _notificationService.NotifyOrderItemChangedAsync(order.Id);
+                await _notificationService.NotifyOrderItemChangedAsync(savedOrder.Id);
+
                 await NotifyService.SendNotificationAsync(
                     userId.ToString(),
                     "Order Created",
-                    $"Your order #{order.Id} has been created successfully.",
-                    order.Id.ToString());
+                    $"Your order #{savedOrder.Id} has been created successfully.",
+                    savedOrder.Id.ToString());
+
                 await NotifyService.SendNotificationToPharmacyAsync(
                     createOrderDto.PharmacyID.ToString(),
-                    $"New order #{order.Id} received!",
-                    $"A new order is waiting for your approval.",
-    order.Id.ToString());
+                    $"New order #{savedOrder.Id} received!",
+                    "A new order is waiting for your approval.",
+                    savedOrder.Id.ToString());
 
                 return orderDto;
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -90,7 +100,10 @@ namespace Rujta.Application.Services.OrderS
             return text;
         }
 
-        private async Task<decimal> BuildOrderItemsAsync( Order order,CreateOrderDto createOrderDto,CancellationToken cancellationToken)
+        private async Task<decimal> BuildOrderItemsAsync(
+            Order order,
+            CreateOrderDto createOrderDto,
+            CancellationToken cancellationToken)
         {
             var medicineIds = createOrderDto.OrderItems
                 .Select(i => i.MedicineID)
@@ -118,14 +131,13 @@ namespace Rujta.Application.Services.OrderS
                         $"Insufficient stock for Medicine ID {itemDto.MedicineID}. " +
                         $"Available: {inventoryItem.Quantity}, Requested: {itemDto.Quantity}");
 
-                // ✅ طبّق الـ Discount
                 var pricePerUnit = await _discountService.ApplyDiscountAsync(inventoryItem);
 
                 var orderItem = new OrderItem
                 {
                     MedicineID = inventoryItem.MedicineID,
                     Quantity = itemDto.Quantity,
-                    PricePerUnit = pricePerUnit,            
+                    PricePerUnit = pricePerUnit,
                     SubTotal = itemDto.Quantity * pricePerUnit
                 };
 

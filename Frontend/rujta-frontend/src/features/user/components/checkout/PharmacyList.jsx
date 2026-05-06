@@ -37,6 +37,7 @@ const PharmacyList = ({
   onToggleMedicine,
   onUpdateQty,
   onOrderClick,
+  onMultiOrderClick,  
   onExpandRange,
   onOpenPaymentModal,
   setHoveredPharmacyId,
@@ -122,7 +123,7 @@ const PharmacyList = ({
         </button>
 
         <button
-          onClick={onOpenPaymentModal}
+          onClick={onMultiOrderClick}
           disabled={loading || totalSelectedItems === 0 || creatingOrder}
           className={`w-full rounded-lg px-5 py-2.5 text-sm font-medium transition-all sm:w-auto md:px-6 md:py-3 md:text-base ${
             loading || totalSelectedItems === 0 || creatingOrder

@@ -106,3 +106,7 @@ dist-ssr
 Backend/Rujta/Rujta.Api/Firebase/
 
 backup.bundle 
+
+
+# ML model weights
+ml-service/*.pt

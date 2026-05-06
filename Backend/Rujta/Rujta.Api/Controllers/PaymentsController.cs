@@ -122,7 +122,7 @@ namespace Rujta.Api.Controllers
             return Ok(new { message = "Callback processed." });
         }
 
-        [Authorize(Roles = nameof(UserRole.Pharmacist))]
+        [Authorize(Roles = $"{nameof(UserRole.User)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpGet("my")]
         public async Task<IActionResult> GetMyPayments(CancellationToken cancellationToken)
         {
@@ -140,7 +140,7 @@ namespace Rujta.Api.Controllers
         public async Task<IActionResult> GetOrderPayments(CancellationToken cancellationToken)
             => await GetByType(PaymentType.Order, cancellationToken);
 
-        [Authorize(Roles = nameof(UserRole.Pharmacist))]
+        [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
         [HttpGet("my/subscriptions")]
         public async Task<IActionResult> GetSubscriptionPayments(CancellationToken cancellationToken)
             => await GetByType(PaymentType.Subscription, cancellationToken);
@@ -149,18 +149,6 @@ namespace Rujta.Api.Controllers
         [HttpGet("my/ads")]
         public async Task<IActionResult> GetAdPayments(CancellationToken cancellationToken)
             => await GetByType(PaymentType.Ad, cancellationToken);
-
-        [Authorize(Roles = nameof(UserRole.SuperAdmin))]
-        [HttpGet]
-        public async Task<IActionResult> GetAll(
-            [FromQuery] PaymentType? type,
-            CancellationToken cancellationToken)
-        {
-            // extend your service/repo with GetAllAsync filtered by type if needed
-            return Ok();
-        }
-
-        // ─── Helpers ────────────────────────────────────────────────────
 
         private async Task<IActionResult> GetByType(PaymentType type, CancellationToken cancellationToken)
         {

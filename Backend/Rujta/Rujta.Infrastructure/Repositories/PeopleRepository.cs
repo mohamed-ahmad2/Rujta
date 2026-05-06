@@ -12,6 +12,13 @@ namespace Rujta.Infrastructure.Repositories
 
         public async Task<Person?> GetByGuidAsync(Guid guid, CancellationToken cancellationToken = default)=>
             await _context.People.FirstOrDefaultAsync(p => p.Id == guid, cancellationToken);
-        
+
+        public async Task<TPerson?> GetByIdAsync<TPerson>(Guid id, CancellationToken cancellationToken = default)
+           where TPerson : Person
+        {
+            return await _context.Set<TPerson>()
+                                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        }
+
     }
 }

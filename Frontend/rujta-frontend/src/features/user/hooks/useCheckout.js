@@ -7,6 +7,8 @@ import useAddress from "../../address/hook/useAddress";
 import { usePayment } from "../../payment/hooks/usePayment";
 import apiClient from "../../../shared/api/apiClient";
 import { decodePolyline } from "../../../utils/decodePolyline";
+// ✅ NEW: drug interaction hook
+import useDrugInteraction from "../../druginteraction/hook/useDrugInteraction";
 
 const getAvailableQty = (medicine) => {
   const shortage = medicine.shortageQuantity ?? 0;
@@ -34,7 +36,15 @@ export const useCheckout = () => {
     reset: resetPayment,
   } = usePayment();
 
-  // ── Address States ──────────────────────────────────────────────
+  // ✅ NEW: drug interaction state
+  const {
+    result: interactionResult,
+    loading: interactionLoading,
+    checkInteractions,
+    reset: resetInteraction,
+  } = useDrugInteraction();
+  const [showInteractionModal, setShowInteractionModal] = useState(false);
+
   const [pharmaciesRange, setPharmaciesRange] = useState(5);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [showAddressSelection, setShowAddressSelection] = useState(true);
@@ -161,18 +171,7 @@ export const useCheckout = () => {
     });
   }, []);
 
-  const handleOrderClick = (pharmacy) => {
-    const allMedicines = pharmacy.foundMedicines;
-    setSelectedPharmacyForPayment(pharmacy);
-
-    const newMeds = {};
-    allMedicines.forEach((m) => {
-      newMeds[m.medicineId] = getAvailableQty(m);
-    });
-
-    setSelectedMedicines({ [pharmacy.pharmacyId]: newMeds });
-    setShowPaymentModal(true);
-  };
+  
 
   // ── Route Fetching ──────────────────────────────────────────────
   const fetchRoute = useCallback(
@@ -311,7 +310,39 @@ export const useCheckout = () => {
       await fetchPharmacies(cart, selectedAddressId, newRange);
   };
 
-  // ── Core order creation ─────────────────────────────────────────
+  // ✅ MODIFIED: now triggers interaction check first, then opens PaymentModal
+  const handleOrderClick = async (pharmacy) => {
+    const allMedicineIds = pharmacy.foundMedicines.map((m) => m.medicineId);
+
+    // store pharmacy selection (same as before)
+    setSelectedPharmacyForPayment(pharmacy);
+    setSelectedPharmacies([pharmacy.pharmacyId]);
+    setSelectedMedicines({ [pharmacy.pharmacyId]: allMedicineIds });
+
+    // ✅ run interaction check before showing payment modal
+    resetInteraction();
+    setShowInteractionModal(true);
+
+  await checkInteractions(allMedicineIds, 0.5);
+
+  };
+
+  // ✅ NEW: user chose to proceed after seeing interactions → open PaymentModal
+  const handleInteractionProceed = () => {
+    setShowInteractionModal(false);
+    setShowPaymentModal(true);
+  };
+
+  // ✅ NEW: user chose to go back → close modal, reset selection
+  const handleInteractionBack = () => {
+    setShowInteractionModal(false);
+    resetInteraction();
+    setSelectedPharmacyForPayment(null);
+    setSelectedPharmacies([]);
+    setSelectedMedicines({});
+  };
+
+
   const createOrders = async () => {
     if (!cart.length) throw new Error("Your cart is empty!");
     if (!selectedAddressId) throw new Error("No delivery address selected!");
@@ -464,6 +495,20 @@ export const useCheckout = () => {
     resetPayment();
     setPendingOrderId(null);
   };
+  // ✅ ADD THIS — handles the bottom "Order X items" button
+const handleMultiOrderClick = async () => {
+  // Collect all selected medicine IDs across all pharmacies
+  const allMedicineIds = Object.values(selectedMedicines)
+    .flatMap((medsMap) => Object.keys(medsMap).map(Number))
+    .filter((id, index, self) => self.indexOf(id) === index); // deduplicate
+
+  if (allMedicineIds.length === 0) return;
+
+  resetInteraction();
+  setShowInteractionModal(true);
+
+  await checkInteractions(allMedicineIds, 0.5);
+};
 
   return {
     // data
@@ -504,7 +549,10 @@ export const useCheckout = () => {
     routeData,
     // toast
     toast,
-    // setters
+    // ✅ NEW exports
+    showInteractionModal,
+    interactionResult,
+    interactionLoading,
     setSelectedAddressId,
     setShowNewAddressForm,
     setNewAddressForm,
@@ -526,5 +574,10 @@ export const useCheckout = () => {
     handleOrderClick,
     handlePaymentConfirm,
     handleCloseIframe,
+    // ✅ NEW exports
+    handleInteractionProceed,
+    handleInteractionBack,
+    handleMultiOrderClick,   // ← add this
+
   };
 };
