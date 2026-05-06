@@ -55,10 +55,12 @@ function Toast({ message, type, onClose }) {
 
   return (
     <div
+      className="toast-wrapper"
       style={{
         position: "fixed",
         bottom: "24px",
-        right: "24px",
+        right: "16px",
+        left: "16px",
         zIndex: 9999,
         display: "flex",
         alignItems: "center",
@@ -69,9 +71,16 @@ function Toast({ message, type, onClose }) {
         padding: "12px 16px",
         boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
         animation: "slideIn 0.3s ease",
-        maxWidth: "320px",
+        maxWidth: "400px",
+        margin: "0 auto",
       }}
     >
+      <style>{`
+        @keyframes slideIn { from { transform: translateY(20px); opacity:0 } to { transform: translateY(0); opacity:1 } }
+        @media (min-width: 640px) {
+          .toast-wrapper { left: auto !important; right: 24px !important; max-width: 320px !important; }
+        }
+      `}</style>
       <div
         style={{
           width: "22px",
@@ -89,7 +98,7 @@ function Toast({ message, type, onClose }) {
       >
         {colors.icon}
       </div>
-      <span style={{ fontSize: "13px", color: colors.text, fontWeight: 500 }}>
+      <span style={{ fontSize: "13px", color: colors.text, fontWeight: 500, flex: 1 }}>
         {message}
       </span>
       <button
@@ -492,7 +501,6 @@ export default function ApprovalQueue() {
         position: "relative",
       }}
     >
-
       <style>{`
         @keyframes slideIn {
           from { transform: translateX(60px); opacity: 0 }
@@ -501,6 +509,7 @@ export default function ApprovalQueue() {
         @keyframes spin { to { transform: rotate(360deg) } }
       `}</style>
 
+      {/* ── Topbar ── */}
       <div
         style={{
           background: "#fff",
@@ -511,6 +520,7 @@ export default function ApprovalQueue() {
           gap: "12px",
         }}
       >
+        {/* Search */}
         <div
           style={{
             flex: 1,
@@ -576,6 +586,7 @@ export default function ApprovalQueue() {
             position: "relative",
           }}
         >
+          {/* Notification Bell */}
           <div style={{ position: "relative" }}>
             <button
               onClick={() => setShowNotif((v) => !v)}
@@ -626,6 +637,7 @@ export default function ApprovalQueue() {
             )}
           </div>
 
+          {/* Info button */}
           <button
             title="About this queue"
             onClick={() =>
@@ -670,6 +682,7 @@ export default function ApprovalQueue() {
             Support
           </div>
 
+          {/* Emergency Override */}
           <button
             onClick={() => setShowEmergency(true)}
             style={{
@@ -681,14 +694,17 @@ export default function ApprovalQueue() {
               fontWeight: 500,
               background: "#fff",
               cursor: "pointer",
+              whiteSpace: "nowrap",
             }}
           >
-            Emergency Override
+            Emergency
           </button>
         </div>
       </div>
 
+      {/* ── Content ── */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+        {/* Queue Panel */}
         <div style={{ flex: 1, padding: "20px", overflowY: "auto" }}>
           <div
             style={{
@@ -720,6 +736,7 @@ export default function ApprovalQueue() {
               overflow: "hidden",
             }}
           >
+            {/* Table Header */}
             <div
               style={{
                 display: "grid",
@@ -865,6 +882,7 @@ export default function ApprovalQueue() {
               ))
             )}
 
+            {/* Pagination */}
             <div
               style={{
                 padding: "10px 16px",
@@ -953,6 +971,7 @@ export default function ApprovalQueue() {
           </div>
         </div>
 
+        {/* Details Panel */}
         {d && (
           <div
             style={{
@@ -1244,6 +1263,7 @@ export default function ApprovalQueue() {
                   justifyContent: "center",
                   gap: "8px",
                   transition: "background 0.2s",
+                  opacity: approving || rejecting ? 0.5 : 1,
                 }}
               >
                 {approving ? (
@@ -1309,6 +1329,7 @@ export default function ApprovalQueue() {
         )}
       </div>
 
+      {/* ── Emergency Modal ── */}
       {showEmergency && (
         <div
           style={{
@@ -1431,6 +1452,7 @@ export default function ApprovalQueue() {
         </div>
       )}
 
+      {/* ── Reject Modal ── */}
       {showRejectModal && d && (
         <RejectModal
           drug={d}
@@ -1440,6 +1462,7 @@ export default function ApprovalQueue() {
         />
       )}
 
+      {/* ── Toast ── */}
       {toast && (
         <Toast
           message={toast.message}

@@ -3,53 +3,6 @@ import { useNavigate } from "react-router-dom";
 import useCampaigns from "../../campaigns/hook/useCampaigns";
 import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
 
-// --- Static Asset Imports ---
-import productImg1 from "../../../assets/hero/pantin.png";
-import modelImg1   from "../../../assets/hero/model.png";
-import bg1         from "../../../assets/hero/bg1.png";
-
-import productImg3 from "../../../assets/hero/i1.png";
-import modelImg3   from "../../../assets/hero/mod.png";
-import bg3         from "../../../assets/hero/bg3.png";
-
-// --- Configuration: Static Slides ---
-const staticAds = [
-  {
-    id: "static-1",
-    type: "static",
-    text1: "بشرة اجمل مع ",
-    text2: "ordenary",
-    textColor1: "text-gray-900",
-    textColor2: "text-red-900",
-    textSize1: "text-3xl sm:text-5xl md:text-8xl",
-    textSize2: "text-5xl sm:text-6xl md:text-9xl",
-    bgImage: bg3,
-    productImg: productImg3,
-    productSize: "w-[260px] sm:w-[420px] md:w-[900px]",
-    productPosition: "left-1/2 -translate-x-1/2 bottom-[-80px] sm:bottom-[-200px] md:left-[-500px] md:translate-x-0 md:bottom-[-350px]",
-    modelImg: modelImg3,
-    modelSize: "md:w-[450px]",
-    modelPosition: "hidden md:block md:right-[-100px] md:bottom-[-280px]",
-  },
-  {
-    id: "static-2",
-    type: "static",
-    text1: "يعالج ويحمي",
-    text2: "من تلف الماء",
-    textColor1: "text-gray-900",
-    textColor2: "text-yellow-600",
-    textSize1: "text-4xl sm:text-5xl md:text-8xl",
-    textSize2: "text-5xl sm:text-5xl md:text-8xl",
-    bgImage: bg1,
-    productImg: productImg1,
-    productSize: "w-[240px] sm:w-[500px] md:w-[700px]",
-    productPosition: "left-1/2 -translate-x-1/2 bottom-[-80px] sm:bottom-[-200px] md:left-[-500px] md:translate-x-0 md:bottom-[-400px]",
-    modelImg: modelImg1,
-    modelSize: "md:w-[650px]",
-    modelPosition: "hidden md:block md:right-[-100px] md:bottom-[-380px]",
-  },
-];
-
 // ─── Pharmacy Badge ────────────────────────────────────────────────────────────
 const PharmacyBadge = ({ imageUrl, name, pharmacyId, navigate }) => {
   const [hovered, setHovered] = useState(false);
@@ -293,24 +246,6 @@ const DynamicSlide = ({ ad, pharmacyMap, navigate }) => {
     </section>
   );
 };
-// --- Static Slide ---
-const StaticSlide = ({ ad }) => (
-  <section
-    className="relative w-full min-h-screen overflow-hidden flex items-center"
-    style={{ backgroundImage: `url(${ad.bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }}
-  >
-    <div className="relative z-20 max-w-7xl mx-auto px-6 grid md:grid-cols-2">
-      <div className="-mt-20 space-y-8">
-        <p className={`font-medium ${ad.textColor1} ${ad.textSize1}`}>{ad.text1}</p>
-        <p className={`font-extrabold ${ad.textColor2} ${ad.textSize2}`}>{ad.text2}</p>
-      </div>
-      <div className="relative flex items-center justify-center">
-        <img src={ad.productImg} className={`absolute ${ad.productPosition} ${ad.productSize} z-10`} alt="prod" />
-        <img src={ad.modelImg}   className={`absolute ${ad.modelPosition} ${ad.modelSize} z-10`}   alt="mod"  />
-      </div>
-    </div>
-  </section>
-);
 
 // --- Main Hero Page ---
 const Hero = () => {
@@ -319,7 +254,7 @@ const Hero = () => {
   const { pharmacies, fetchAllPharmacies } = usePharmacies();
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [allSlides,    setAllSlides]    = useState(staticAds);
+  const [allSlides, setAllSlides] = useState([]);
 
   const fetchedRef = useRef(false);
   useEffect(() => {
@@ -342,7 +277,7 @@ const Hero = () => {
       id: `dynamic-${ad.id}`,
       type: "dynamic",
     }));
-    setAllSlides([...staticAds, ...dynamicSlides]);
+    setAllSlides(dynamicSlides);
   }, [backendAds]);
 
   useEffect(() => {
@@ -358,24 +293,22 @@ const Hero = () => {
 
   return (
     <div className="relative w-full min-h-screen">
-      {activeSlide.type === "dynamic" ? (
-        <DynamicSlide ad={activeSlide} pharmacyMap={pharmacyMap} navigate={navigate} />
-      ) : (
-        <StaticSlide ad={activeSlide} />
-      )}
+      <DynamicSlide ad={activeSlide} pharmacyMap={pharmacyMap} navigate={navigate} />
 
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 flex gap-3">
-        {allSlides.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentIndex(i)}
-            className={`transition-all duration-300 rounded-full ${
-              i === currentIndex ? "w-10 h-3 bg-white" : "w-3 h-3 bg-white/40 hover:bg-white/60"
-            }`}
-            aria-label={`Go to slide ${i + 1}`}
-          />
-        ))}
-      </div>
+      {allSlides.length > 1 && (
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 flex gap-3">
+          {allSlides.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentIndex(i)}
+              className={`transition-all duration-300 rounded-full ${
+                i === currentIndex ? "w-10 h-3 bg-white" : "w-3 h-3 bg-white/40 hover:bg-white/60"
+              }`}
+              aria-label={`Go to slide ${i + 1}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
