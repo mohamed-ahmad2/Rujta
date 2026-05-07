@@ -5,6 +5,7 @@ import {
   getPharmacistById,
   getPharmacyStaff,
   getPharmacistsByManager,
+  createPharmacist,
   updatePharmacist,
   deletePharmacist,
 } from "../api/pharmacistsApi";
@@ -15,6 +16,23 @@ export const usePharmacists = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const handleError = (err) => {
+    if (err.response?.data?.errors) {
+      const errors = err.response.data.errors;
+
+      return {
+        message: "Validation error",
+        details: Object.values(errors).flat(),
+      };
+    }
+
+    return {
+      message:
+        err.response?.data?.message || err.message || "Something went wrong",
+      details: [],
+    };
+  };
+
   const fetchList = async (fetchFn) => {
     setLoading(true);
     setError(null);
@@ -23,7 +41,7 @@ export const usePharmacists = () => {
       setPharmacists(res.data);
       return res.data;
     } catch (err) {
-      setError(err.response?.data || err.message);
+      setError(handleError(err));
       return [];
     } finally {
       setLoading(false);
@@ -38,57 +56,62 @@ export const usePharmacists = () => {
       setStateFn(res.data);
       return res.data;
     } catch (err) {
-      setError(err.response?.data || err.message);
+      setError(handleError(err));
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchAll = useCallback(
-    async () => fetchList(getAllPharmacists),
-    []
-  );
+  const runMutation = async (fn, options = {}) => {
+    const { refreshFn, optimisticUpdate } = options;
 
-  const fetchPharmacyStaff = useCallback(
-    async () => fetchList(getPharmacyStaff),
-    []
-  );
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (optimisticUpdate) optimisticUpdate();
+
+      const res = await fn();
+
+      if (refreshFn) await refreshFn();
+
+      return res?.data || null;
+    } catch (err) {
+      setError(handleError(err));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAll = useCallback(() => fetchList(getAllPharmacists), []);
+
+  const fetchPharmacyStaff = useCallback(() => fetchList(getPharmacyStaff), []);
 
   const fetchByManager = useCallback(
-    async (managerId) =>
-      fetchList(() => getPharmacistsByManager(managerId)),
-    []
+    (managerId) => fetchList(() => getPharmacistsByManager(managerId)),
+    [],
   );
 
   const fetchById = useCallback(
-    async (id) =>
-      fetchSingle(getPharmacistById, id, setSelectedPharmacist),
-    []
+    (id) => fetchSingle(getPharmacistById, id, setSelectedPharmacist),
+    [],
   );
 
-
-  const runMutation = async (fn, refreshFn) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fn();
-      if (refreshFn) await refreshFn();
-      return res?.data || null;
-    } catch (err) {
-      setError(err.response?.data || err.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
+  const create = async (data, refreshFn = fetchPharmacyStaff) =>
+    runMutation(() => createPharmacist(data), { refreshFn });
 
   const update = async (id, data, refreshFn = fetchPharmacyStaff) =>
-    runMutation(() => updatePharmacist(id, data), refreshFn);
+    runMutation(() => updatePharmacist(id, data), { refreshFn });
 
   const remove = async (id, refreshFn = fetchPharmacyStaff) =>
-    runMutation(() => deletePharmacist(id), refreshFn);
-
+    runMutation(() => deletePharmacist(id), {
+      refreshFn,
+      optimisticUpdate: () => {
+        setPharmacists((prev) => prev.filter((p) => p.id !== id));
+      },
+    });
 
   return {
     pharmacists,
@@ -101,6 +124,7 @@ export const usePharmacists = () => {
     fetchByManager,
     fetchById,
 
+    create,
     update,
     remove,
   };

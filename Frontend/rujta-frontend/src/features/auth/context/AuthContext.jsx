@@ -127,7 +127,13 @@ export const AuthProvider = ({ children }) => {
 
   /* ================= Staff ================= */
   const handleRegisterStaff = async (dto) => {
-    return await registerStaff(dto);
+    const res = await registerStaff(dto);
+
+    if (!res?.userId) {
+      throw new Error("Failed to create staff user");
+    }
+
+    return res;
   };
 
   /* ================= Logout ================= */

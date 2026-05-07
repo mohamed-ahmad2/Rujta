@@ -25,10 +25,7 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
             return exists;
         }
 
-        public async Task<Guid> CreateUserAsync(
-            RegisterDto dto,
-            UserRole role,
-            CancellationToken cancellationToken = default)
+        public async Task<Guid> CreateUserAsync(RegisterDto dto, UserRole role, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(dto.Email))
                 throw new InvalidOperationException("Email is required.");
@@ -36,7 +33,7 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
             var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
             dto.Email = normalizedEmail;
 
-    
+
             if (await IsEmailExistsAsync(normalizedEmail, cancellationToken))
             {
                 _infra.Logger.LogWarning(
@@ -52,7 +49,6 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
                     Person person = role switch
                     {
                         UserRole.User => _identity.Mapper.Map<User>(dto),
-                        UserRole.Pharmacist => await CreatePharmacist(dto),
                         UserRole.SuperAdmin => _identity.Mapper.Map<Admin>(dto),
                         UserRole.PharmacyAdmin => _identity.Mapper.Map<Manager>(dto),
                         _ => throw new InvalidOperationException(AuthMessages.UnknownRole)
@@ -83,7 +79,7 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
                             "User creation failed for {Email}: {Errors}",
                             dto.Email, errors);
 
-                    
+
                         throw new InvalidOperationException(errors);
                     }
 
@@ -126,20 +122,81 @@ namespace Rujta.Infrastructure.Identity.Services.Auth
             }
         }
 
-        private async Task<Pharmacist> CreatePharmacist(RegisterDto dto)
+        public async Task<Guid> CreatePharmacistUserAsync(CreatePharmacistDto dto,int pharmacyId, CancellationToken cancellationToken = default)
         {
-            var pharmacistDto = dto as RegisterByAdminDto;
+            if (string.IsNullOrWhiteSpace(dto.Email))
+                throw new InvalidOperationException("Email is required.");
 
-            if (pharmacistDto?.PharmacyId == null)
-                throw new InvalidOperationException("PharmacyId is required for Pharmacist.");
+            var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
 
+            if (await IsEmailExistsAsync(normalizedEmail, cancellationToken))
+                throw new InvalidOperationException("Email is already registered.");
+
+            try
+            {
+                var userId = await _identity.UnitOfWork.ExecuteInTransactionAsync(async ct =>
+                {
+                    var pharmacist = await CreatePharmacist(dto, pharmacyId);
+
+                    await _identity.UnitOfWork.People.AddAsync(pharmacist);
+                    await _identity.UnitOfWork.SaveAsync(ct);
+
+                    var user = _identity.Mapper.Map<ApplicationUser>(dto);
+                    user.DomainPersonId = pharmacist.Id;
+                    user.Email = normalizedEmail;
+                    user.UserName = normalizedEmail;
+
+                    pharmacist.PhoneNumber = user.PhoneNumber ?? string.Empty;
+
+                    if (!string.IsNullOrWhiteSpace(dto.Location))
+                        pharmacist.Addresses.Add(new Address { City = dto.Location });
+
+                    var result = await _identity.Identity.UserManager
+                        .CreateAsync(user, dto.CreatePassword);
+
+                    if (!result.Succeeded)
+                    {
+                        var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                        throw new InvalidOperationException(errors);
+                    }
+
+                    var roleResult = await _identity.Identity.UserManager
+                        .AddToRoleAsync(user, UserRole.Pharmacist.ToString());
+
+                    if (!roleResult.Succeeded)
+                    {
+                        var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                        throw new InvalidOperationException(errors);
+                    }
+
+                    return user.Id;
+
+                }, cancellationToken);
+
+                return userId;
+            }
+            catch (Exception ex)
+            {
+                _infra.Logger.LogError(ex,
+                    "Error creating pharmacist user for {Email}",
+                    dto.Email);
+
+                throw new InvalidOperationException(
+                    $"An unexpected error occurred while creating user '{dto.Email}'. See inner exception for details.",
+                    ex);
+            }
+        }
+
+        private async Task<Pharmacist> CreatePharmacist(CreatePharmacistDto dto, int pharmacyId)
+        {
             var pharmacist = _identity.Mapper.Map<Pharmacist>(dto);
-            pharmacist.PharmacyId = pharmacistDto.PharmacyId.Value;
+
+            pharmacist.PharmacyId = pharmacyId;
 
             var manager = await _identity.UnitOfWork.People
-                            .GetQueryable()
-                            .OfType<Manager>()
-                            .FirstOrDefaultAsync(m => m.PharmacyId == pharmacist.PharmacyId);
+                .GetQueryable()
+                .OfType<Manager>()
+                .FirstOrDefaultAsync(m => m.PharmacyId == pharmacyId);
 
             if (manager == null)
                 throw new InvalidOperationException("No manager found for this pharmacy.");
