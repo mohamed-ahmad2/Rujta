@@ -235,23 +235,22 @@ const buildCreateFormData = (payload = {}) => {
 const buildUpdatePayload = (payload = {}) => {
   const addr = payload.address ?? payload.Address ?? {};
 
+  const street = addr.street ?? addr.Street ?? payload.street ?? "";
+  const buildingNo =
+    addr.buildingNo ?? addr.BuildingNo ?? payload.buildingNo ?? "";
+  const city = addr.city ?? addr.City ?? payload.city ?? "";
+  const governorate =
+    addr.governorate ?? addr.Governorate ?? payload.governorate ?? "";
+
   return {
     name: payload.name ?? payload.Name ?? "",
     contactNumber: payload.contactNumber ?? payload.ContactNumber ?? "",
     openHours: payload.openHours ?? payload.OpenHours ?? "9AM - 11PM",
     address: {
-      street: addr.street ?? addr.Street ?? payload.street ?? "",
-      buildingNo:
-        addr.buildingNo ?? addr.BuildingNo ?? payload.buildingNo ?? "",
-      city: addr.city ?? addr.City ?? payload.city ?? "",
-      governorate:
-        addr.governorate ?? addr.Governorate ?? payload.governorate ?? "",
-      latitude: toNumber(
-        addr.latitude ?? addr.Latitude ?? payload.latitude ?? 0,
-      ),
-      longitude: toNumber(
-        addr.longitude ?? addr.Longitude ?? payload.longitude ?? 0,
-      ),
+      street,
+      buildingNo,
+      city,
+      governorate,
     },
   };
 };
@@ -265,7 +264,6 @@ export default function useSuperAdmin() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -385,12 +383,10 @@ export default function useSuperAdmin() {
     }
   };
 
-
   const create = async (payload = {}) => {
     setLoading(true);
     try {
       const formData = buildCreateFormData(payload);
-
       const res = await createPharmacy(formData);
       await fetchAll();
       setError(null);
@@ -408,12 +404,12 @@ export default function useSuperAdmin() {
     setLoading(true);
     try {
       const body = buildUpdatePayload(data);
+      console.log("📤 updatePharmacy payload:", JSON.stringify(body, null, 2));
 
       const res = await updatePharmacy(id, body);
       const updated = mapPharmacy(res?.data ?? res);
-      setPharmacies((prev) =>
-        prev.map((p) => (p.id === id ? { ...updated } : p)),
-      );
+
+      await fetchAll();
       setError(null);
       return updated;
     } catch (err) {
@@ -429,7 +425,8 @@ export default function useSuperAdmin() {
     setLoading(true);
     try {
       await deletePharmacy(id);
-      setPharmacies((prev) => prev.filter((p) => p.id !== id));
+
+      await fetchAll();
       setError(null);
       return true;
     } catch (err) {

@@ -1,4 +1,6 @@
-﻿namespace Rujta.Application.Interfaces.InterfaceRepositories
+﻿using Rujta.Application.DTOs.PharmacyDtos;
+
+namespace Rujta.Application.Interfaces.InterfaceRepositories
 {
     public interface IPharmacyRepository : IGenericRepository<Pharmacy, int>
     {
@@ -20,5 +22,6 @@
         Task<bool> IsMainPharmacyAsync(int pharmacyId, CancellationToken cancellationToken = default);
         Task<(List<InventoryItem> Items, int TotalCount)> GetPagedInventoryByPharmacyAsync(int pharmacyId,int pageNumber,int pageSize,string? searchTerm, int? categoryId,CancellationToken cancellationToken = default);
 
+        Task<List<PharmacyDto>> GetAllPharmaciesSuperAdminAsync(CancellationToken cancellationToken = default);
     }
 }

@@ -7,7 +7,7 @@ namespace Rujta.Infrastructure.Repositories
         private readonly AppDbContext _context;
         private readonly IServiceProvider _serviceProvider;
         private bool _disposed = false;
-
+        private IPricingRepository? _pricing;
         private IMedicineRepository? _medicines;
         private IPharmacyRepository? _pharmacies;
         private IOrderRepository? _orders;
@@ -97,7 +97,8 @@ namespace Rujta.Infrastructure.Repositories
         public IExecutionStrategy CreateExecutionStrategy()
             => _context.Database.CreateExecutionStrategy();
 
-
+        public IPricingRepository Pricing =>
+    _pricing ??= _serviceProvider.GetRequiredService<IPricingRepository>();
         public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> action,CancellationToken cancellationToken = default)
         {
             var strategy = _context.Database.CreateExecutionStrategy();

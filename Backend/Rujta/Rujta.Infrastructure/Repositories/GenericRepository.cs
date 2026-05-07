@@ -103,5 +103,10 @@ namespace Rujta.Infrastructure.Repositories
 
             return await query.FirstOrDefaultAsync( e => EF.Property<TKey>(e, keyName)!.Equals(id),cancellationToken);
         }
+        
+        public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 }

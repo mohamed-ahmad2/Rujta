@@ -13,15 +13,9 @@ namespace Rujta.Infrastructure.Identity.Services
         private readonly ILogger<SuperAdminService> _logger;
         private readonly IMapper _mapper;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly IAddressResolver _addressResolver;  
+        private readonly IAddressResolver _addressResolver;
 
-        public SuperAdminService(
-            IUnitOfWork unitOfWork,
-            UserManager<ApplicationUser> userManager,
-            ILogger<SuperAdminService> logger,
-            IMapper mapper,
-            IHttpContextAccessor httpContextAccessor,
-            IAddressResolver addressResolver)
+        public SuperAdminService(IUnitOfWork unitOfWork,UserManager<ApplicationUser> userManager,ILogger<SuperAdminService> logger,IMapper mapper,IHttpContextAccessor httpContextAccessor,IAddressResolver addressResolver)
         {
             _unitOfWork = unitOfWork;
             _userManager = userManager;
@@ -34,50 +28,46 @@ namespace Rujta.Infrastructure.Identity.Services
         }
 
 
-        public async Task<CreatePharmacyResultDto> CreatePharmacyAsync(
-            CreatePharmacyDto dto,
-            Guid adminId,
-            CancellationToken cancellationToken = default)
+        public async Task<CreatePharmacyResultDto> CreatePharmacyAsync( CreatePharmacyDto dto, Guid adminId, CancellationToken cancellationToken = default)
         {
             await EnsureManagerEmailIsUniqueAsync(dto.ManagerEmail);
 
             return await _unitOfWork.ExecuteInTransactionAsync(async ct =>
             {
-                var effectiveAdminId = await ResolveEffectiveAdminIdAsync(
-                    dto.ParentPharmacyId, adminId, ct);
+                var effectiveAdminId = await ResolveEffectiveAdminIdAsync(dto.ParentPharmacyId, adminId, ct);
 
                 await EnsureAdminExistsAsync(effectiveAdminId, ct);
 
-          
+
                 var manager = CreateManagerEntity(dto, effectiveAdminId);
                 await _unitOfWork.People.AddAsync(manager, ct);
 
-              
+
                 var generatedPassword = GenerateStrongPassword();
                 await CreateIdentityUserAsync(dto, manager.Id, generatedPassword);
 
-           
+
                 var imageUrl = await SaveImageAsync(dto.Image, ct);
 
-               
+
                 await _addressResolver.ResolveAsync(dto.Address);
 
-         
+
                 var address = _mapper.Map<Address>(dto.Address);
                 await _unitOfWork.Address.AddAsync(address, ct);
                 await _unitOfWork.SaveAsync(ct);
 
-            
+
                 var pharmacy = BuildPharmacyEntity(
                     dto, manager.Id, effectiveAdminId, imageUrl, address.Id);
 
                 await _unitOfWork.Pharmacies.AddAsync(pharmacy, ct);
                 await _unitOfWork.SaveAsync(ct);
 
-            
+
                 address.PharmacyId = pharmacy.Id;
 
-            
+
                 manager.PharmacyId = pharmacy.Id;
 
                 await _unitOfWork.SaveAsync(ct);
@@ -102,10 +92,7 @@ namespace Rujta.Infrastructure.Identity.Services
                 throw new InvalidOperationException("Manager email already exists.");
         }
 
-        private async Task<Guid> ResolveEffectiveAdminIdAsync(
-            int? parentPharmacyId,
-            Guid fallbackAdminId,
-            CancellationToken ct)
+        private async Task<Guid> ResolveEffectiveAdminIdAsync(int? parentPharmacyId,Guid fallbackAdminId,CancellationToken ct)
         {
             if (!parentPharmacyId.HasValue)
                 return fallbackAdminId;
@@ -159,10 +146,7 @@ namespace Rujta.Infrastructure.Identity.Services
             };
         }
 
-        private async Task CreateIdentityUserAsync(
-            CreatePharmacyDto dto,
-            Guid domainPersonId,
-            string password)
+        private async Task CreateIdentityUserAsync(CreatePharmacyDto dto,Guid domainPersonId,string password)
         {
             var identityUser = new ApplicationUser
             {
@@ -185,12 +169,7 @@ namespace Rujta.Infrastructure.Identity.Services
             await _userManager.AddToRoleAsync(identityUser, nameof(UserRole.PharmacyAdmin));
         }
 
-        private static Pharmacy BuildPharmacyEntity(
-            CreatePharmacyDto dto,
-            Guid managerId,
-            Guid adminId,
-            string? imageUrl,
-            int addressId)
+        private static Pharmacy BuildPharmacyEntity(CreatePharmacyDto dto,Guid managerId,Guid adminId,string? imageUrl,int addressId)
         {
             return new Pharmacy
             {
@@ -240,9 +219,8 @@ namespace Rujta.Infrastructure.Identity.Services
             return dtos;
         }
 
-        public async Task<PharmacyDto?> GetPharmacyByIdAsync(
-            int pharmacyId,
-            CancellationToken cancellationToken = default)
+
+        public async Task<PharmacyDto?> GetPharmacyByIdAsync(int pharmacyId, CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies
                 .GetByIdWithIncludesAsync(pharmacyId, cancellationToken,
@@ -256,20 +234,20 @@ namespace Rujta.Infrastructure.Identity.Services
                 return null;
 
             var dto = _mapper.Map<PharmacyDto>(pharmacy);
+
             dto.ImageUrl = EnsureAbsoluteUrl(dto.ImageUrl);
-            dto.TotalOrders = await _unitOfWork.SuperAdmin
-                .GetTotalOrdersAsync(pharmacy.Id, cancellationToken);
+
+            dto.TotalOrders = await _unitOfWork.SuperAdmin.GetTotalOrdersAsync(pharmacy.Id, cancellationToken);
 
             return dto;
         }
 
-        public async Task<PharmacyDto> UpdatePharmacyAsync(
-            int pharmacyId,
-            UpdatePharmacyDto dto,
-            CancellationToken cancellationToken = default)
+        public async Task<PharmacyDto> UpdatePharmacyAsync(int pharmacyId, UpdatePharmacyDto dto,CancellationToken cancellationToken = default)
         {
             var pharmacy = await _unitOfWork.Pharmacies
-                .GetByIdWithIncludesAsync(pharmacyId, cancellationToken,
+                .GetByIdWithIncludesAsync(
+                    pharmacyId,
+                    cancellationToken,
                     p => p.Manager!,
                     p => p.Admin!,
                     p => p.Address!,
@@ -282,20 +260,24 @@ namespace Rujta.Infrastructure.Identity.Services
             if (pharmacy.IsDeleted)
                 throw new InvalidOperationException("Cannot update a deleted pharmacy.");
 
-      
             pharmacy.Name = dto.Name;
             pharmacy.ContactNumber = dto.ContactNumber;
-            if (!string.IsNullOrWhiteSpace(dto.OpenHours))
-                pharmacy.OpenHours = dto.OpenHours;
+            pharmacy.OpenHours = dto.OpenHours;
 
-       
             await _addressResolver.ResolveAsync(dto.Address);
 
-       
             if (pharmacy.Address == null)
             {
-                var newAddress = _mapper.Map<Address>(dto.Address);
-                newAddress.PharmacyId = pharmacy.Id;
+                var newAddress = new Address
+                {
+                    Street = dto.Address.Street,
+                    BuildingNo = dto.Address.BuildingNo,
+                    City = dto.Address.City,
+                    Governorate = dto.Address.Governorate,
+                    Latitude = dto.Address.Latitude,
+                    Longitude = dto.Address.Longitude,
+                    PharmacyId = pharmacy.Id
+                };
 
                 await _unitOfWork.Address.AddAsync(newAddress, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
@@ -304,13 +286,19 @@ namespace Rujta.Infrastructure.Identity.Services
             }
             else
             {
-                _mapper.Map(dto.Address, pharmacy.Address);
+                pharmacy.Address.Street = dto.Address.Street;
+                pharmacy.Address.BuildingNo = dto.Address.BuildingNo;
+                pharmacy.Address.City = dto.Address.City;
+                pharmacy.Address.Governorate = dto.Address.Governorate;
+                pharmacy.Address.Latitude = dto.Address.Latitude;
+                pharmacy.Address.Longitude = dto.Address.Longitude;
             }
 
             await _unitOfWork.SaveAsync(cancellationToken);
 
             var result = _mapper.Map<PharmacyDto>(pharmacy);
             result.ImageUrl = EnsureAbsoluteUrl(result.ImageUrl);
+
             return result;
         }
 
@@ -512,7 +500,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return true;
         }
 
-        private async Task<string?> SaveImageAsync(IFormFile? image, CancellationToken ct)
+        private static async Task<string?> SaveImageAsync(IFormFile? image, CancellationToken ct)
         {
             if (image == null) return null;
 
@@ -526,8 +514,7 @@ namespace Rujta.Infrastructure.Identity.Services
             await using var stream = new FileStream(filePath, FileMode.Create);
             await image.CopyToAsync(stream, ct);
 
-            var relativePath = $"/images/pharmacies/{fileName}";
-            return BuildAbsoluteUrl(relativePath);
+            return $"/images/pharmacies/{fileName}";
         }
 
         private string BuildAbsoluteUrl(string relativePath)
@@ -542,6 +529,7 @@ namespace Rujta.Infrastructure.Identity.Services
         private string? EnsureAbsoluteUrl(string? url)
         {
             if (string.IsNullOrWhiteSpace(url)) return url;
+
             if (url.StartsWith("http://") || url.StartsWith("https://"))
                 return url;
 

@@ -1,5 +1,5 @@
 // src/dashboard/pages/Products.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import ProductsCard from "../components/ProductsCard";
 import {
   Package,
@@ -19,16 +19,40 @@ import ProductModal from "../components/ProductModal";
 import useInventory from "../../inventory item/hook/useInventoryItem";
 import useCategory from "../../category/hook/useCategory";
 import useMedicines from "../../medicines/hook/useMedicines";
-import useDrugRequest from "../../drugRequests/hook/useDrugRequest"; // ✅ ADDED
+import useDrugRequest from "../../drugRequests/hook/useDrugRequest";
 
 const statusColor = {
   "In stock": "bg-green-100 text-green-700",
   "Low stock": "bg-yellow-100 text-yellow-700",
   "Out of stock": "bg-red-100 text-red-600",
+  Expired: "bg-gray-100 text-gray-500",
 };
 
+const perPage = 6;
+
+const STATUS_TO_API = {
+  "In stock": "InStock",
+  "Low stock": "LowStock",
+  "Out of stock": "OutOfStock",
+};
+
+function buildPageRange(current, total) {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const pages = [];
+  pages.push(1);
+  if (current > 3) pages.push("...");
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  for (let i = start; i <= end; i++) pages.push(i);
+  if (current < total - 2) pages.push("...");
+  pages.push(total);
+  return pages;
+}
+
 export default function Products() {
-  const { items, loading, error, fetchAll, remove, create, update } =
+  const { items, loading, error, fetchPaged, remove, create, update } =
     useInventory();
   const {
     categories,
@@ -40,25 +64,76 @@ export default function Products() {
     fetchAll: fetchMedicines,
     loading: loadingMedicines,
   } = useMedicines();
-
-  const { submit } = useDrugRequest(); // ✅ ADDED
+  const { submit } = useDrugRequest();
 
   const [openModal, setOpenModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
-  const perPage = 6;
+
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState("All");
   const [filterStatus, setFilterStatus] = useState("All");
   const filterRef = useRef(null);
 
+  const [stats, setStats] = useState({ total: 0, lowStock: 0, outOfStock: 0 });
+
+  const buildFilter = useCallback(
+    (pageNumber, search, category, status) => ({
+      pageNumber,
+      pageSize: perPage,
+      ...(search ? { search } : {}),
+      ...(category !== "All" ? { category } : {}),
+      ...(status !== "All" && STATUS_TO_API[status]
+        ? { status: STATUS_TO_API[status] }
+        : {}),
+    }),
+    [],
+  );
+
+  const loadPage = useCallback(
+    async (pageNumber, search, category, status) => {
+      const result = await fetchPaged(
+        buildFilter(pageNumber, search, category, status),
+      );
+      if (result) {
+        setTotalCount(result.totalCount ?? 0);
+        setTotalPages(
+          Math.max(1, Math.ceil((result.totalCount ?? 0) / perPage)),
+        );
+      }
+    },
+    [fetchPaged, buildFilter],
+  );
+
+  const loadStats = useCallback(async () => {
+    try {
+      const [allRes, lowRes, outRes] = await Promise.all([
+        fetchPaged({ pageNumber: 1, pageSize: 1 }),
+        fetchPaged({ pageNumber: 1, pageSize: 1, status: "LowStock" }),
+        fetchPaged({ pageNumber: 1, pageSize: 1, status: "OutOfStock" }),
+      ]);
+      setStats({
+        total: allRes?.totalCount ?? 0,
+        lowStock: lowRes?.totalCount ?? 0,
+        outOfStock: outRes?.totalCount ?? 0,
+      });
+    } catch (_) {
+    }
+  }, [fetchPaged]);
+
   useEffect(() => {
-    fetchAll();
     fetchCategories();
     fetchMedicines();
-  }, [fetchAll, fetchCategories, fetchMedicines]);
+    loadStats();
+  }, []);
+
+  useEffect(() => {
+    loadPage(page, q, filterCategory, filterStatus);
+  }, [page, q, filterCategory, filterStatus]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -69,32 +144,14 @@ export default function Products() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filtered = items.filter((p) => {
-    const matchesSearch =
-      !q ||
-      p.name?.toLowerCase().includes(q.toLowerCase()) ||
-      p.id?.toLowerCase().includes(q.toLowerCase());
-    const matchesCategory =
-      filterCategory === "All" || p.category === filterCategory;
-    const matchesStatus =
-      filterStatus === "All" || p.status === filterStatus;
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-  const pageData = filtered.slice((page - 1) * perPage, page * perPage);
-
-  const totalProducts = items.length;
-  const lowStockCount = items.filter((p) => p.status === "Low stock").length;
-  const outOfStockCount = items.filter(
-    (p) => p.status === "Out of stock",
-  ).length;
   const hasActiveFilters = filterCategory !== "All" || filterStatus !== "All";
+  const pageRange = buildPageRange(page, totalPages);
 
   const handleDelete = async (id) => {
     if (!confirm("Delete this product?")) return;
-    await remove(id.replace("#", ""));
-    setPage(1);
+    await remove(String(id).replace("#", ""));
+    await loadPage(page, q, filterCategory, filterStatus);
+    loadStats();
   };
 
   const handleAddOrUpdate = async (data) => {
@@ -102,7 +159,8 @@ export default function Products() {
     else await create(data);
     setOpenModal(false);
     setEditingProduct(null);
-    setPage(1);
+    await loadPage(page, q, filterCategory, filterStatus);
+    loadStats();
   };
 
   const clearFilters = () => {
@@ -114,7 +172,7 @@ export default function Products() {
   const handleExport = () => {
     const rows = [
       ["ID", "Name", "Category", "Qty", "Price", "Expiry", "Status"],
-      ...filtered.map((p) => [
+      ...items.map((p) => [
         p.id,
         p.name,
         p.category,
@@ -125,7 +183,9 @@ export default function Products() {
       ]),
     ];
     const csv = rows
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .map((r) =>
+        r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","),
+      )
       .join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -138,31 +198,28 @@ export default function Products() {
 
   return (
     <div className="space-y-4 p-3 sm:space-y-5 sm:p-4 md:space-y-6 md:p-0">
-      {/* ===== Stats ===== */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 md:gap-6">
         <ProductsCard
           title="Total Products"
-          value={totalProducts.toLocaleString()}
+          value={stats.total.toLocaleString()}
           icon={<Package size={18} />}
           color="bg-secondary"
         />
         <ProductsCard
           title="Low Stock Items"
-          value={lowStockCount}
+          value={stats.lowStock}
           icon={<AlertTriangle size={18} />}
           color="bg-yellow-500"
         />
         <ProductsCard
           title="Out of Stock"
-          value={outOfStockCount}
+          value={stats.outOfStock}
           icon={<XCircle size={18} />}
           color="bg-red-500"
         />
       </div>
 
-      {/* ===== Action Bar ===== */}
-      <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border bg-white p-3 shadow sm:p-4 md:flex-row md:items-center">
-        {/* Search */}
+      <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border bg-white p-3 shadow sm:p-4 md:flex-row md:items-center">ltw1
         <div className="flex w-full items-center gap-2 rounded-full bg-gray-100 px-3 py-2 md:w-1/3">
           <Search className="h-4 w-4 flex-shrink-0 text-gray-400" />
           <input
@@ -187,9 +244,7 @@ export default function Products() {
           )}
         </div>
 
-        {/* Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Add Product */}
           <button
             onClick={() => {
               setEditingProduct(null);
@@ -201,7 +256,6 @@ export default function Products() {
             Add Product
           </button>
 
-          {/* Filter */}
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => setFilterOpen(!filterOpen)}
@@ -218,7 +272,6 @@ export default function Products() {
               )}
             </button>
 
-            {/* Filter Dropdown */}
             {filterOpen && (
               <div className="absolute right-0 z-50 mt-2 w-64 space-y-3 rounded-2xl border bg-white p-3 shadow-xl sm:w-72 sm:p-4">
                 <div className="flex items-center justify-between">
@@ -233,7 +286,6 @@ export default function Products() {
                   </button>
                 </div>
 
-                {/* Category */}
                 <div>
                   <label className="mb-1 block text-xs text-gray-500">
                     Category
@@ -255,7 +307,6 @@ export default function Products() {
                   </select>
                 </div>
 
-                {/* Status */}
                 <div>
                   <label className="mb-1 block text-xs text-gray-500">
                     Status
@@ -287,7 +338,6 @@ export default function Products() {
             )}
           </div>
 
-          {/* Export */}
           <button
             onClick={handleExport}
             className="flex items-center gap-1.5 rounded-full border bg-white px-3 py-2 text-xs transition hover:bg-gray-50 sm:text-sm"
@@ -298,7 +348,6 @@ export default function Products() {
         </div>
       </div>
 
-      {/* ===== Table ===== */}
       <div className="overflow-hidden rounded-2xl border bg-white shadow">
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-12 sm:py-16">
@@ -338,7 +387,7 @@ export default function Products() {
                 </tr>
               </thead>
               <tbody>
-                {pageData.length === 0 ? (
+                {items.length === 0 ? (
                   <tr>
                     <td
                       colSpan={8}
@@ -348,7 +397,7 @@ export default function Products() {
                     </td>
                   </tr>
                 ) : (
-                  pageData.map((p) => (
+                  items.map((p) => (
                     <tr
                       key={p.id}
                       className={`border-t transition hover:bg-gray-50 ${p.expired ? "bg-red-50" : ""}`}
@@ -360,7 +409,7 @@ export default function Products() {
                         {p.name}
                       </td>
                       <td className="whitespace-nowrap px-2 py-3 text-xs sm:px-3 sm:text-sm md:px-4">
-                        {p.category}
+                        {p.category ?? "—"}
                       </td>
                       <td className="whitespace-nowrap px-2 py-3 text-xs sm:px-3 sm:text-sm md:px-4">
                         {p.qty}
@@ -373,7 +422,9 @@ export default function Products() {
                       </td>
                       <td className="px-2 py-3 sm:px-3 md:px-4">
                         <span
-                          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs sm:px-3 sm:py-1 ${statusColor[p.status]}`}
+                          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs sm:px-3 sm:py-1 ${
+                            statusColor[p.status] ?? "bg-gray-100 text-gray-500"
+                          }`}
                         >
                           {p.status}
                         </span>
@@ -408,44 +459,57 @@ export default function Products() {
         )}
       </div>
 
-      {/* ===== Pagination ===== */}
       {totalPages > 1 && (
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-1 sm:gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition hover:bg-gray-50 disabled:opacity-50 sm:px-3 sm:text-sm"
-          >
-            <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Prev
-          </button>
-
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
             <button
-              key={p}
-              onClick={() => setPage(p)}
-              className={`rounded-full px-2 py-1 text-xs transition sm:px-3 sm:text-sm ${
-                page === p
-                  ? "bg-secondary text-white"
-                  : "border hover:bg-gray-50"
-              }`}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition hover:bg-gray-50 disabled:opacity-50 sm:px-3 sm:text-sm"
             >
-              {p}
+              <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Prev
             </button>
-          ))}
 
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition hover:bg-gray-50 disabled:opacity-50 sm:px-3 sm:text-sm"
-          >
-            Next
-            <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          </button>
+            {pageRange.map((p, idx) =>
+              p === "..." ? (
+                <span
+                  key={`dots-${idx}`}
+                  className="px-1 text-xs text-gray-400 sm:text-sm"
+                >
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`rounded-full px-2 py-1 text-xs transition sm:px-3 sm:text-sm ${
+                    page === p
+                      ? "bg-secondary text-white"
+                      : "border hover:bg-gray-50"
+                  }`}
+                >
+                  {p}
+                </button>
+              ),
+            )}
+
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition hover:bg-gray-50 disabled:opacity-50 sm:px-3 sm:text-sm"
+            >
+              Next
+              <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-400 sm:text-sm">
+            Page {page} of {totalPages} · {totalCount.toLocaleString()} results
+          </p>
         </div>
       )}
 
-      {/* ===== Modal ===== */}
       <ProductModal
         open={openModal}
         onClose={() => {
@@ -453,7 +517,7 @@ export default function Products() {
           setEditingProduct(null);
         }}
         onSave={handleAddOrUpdate}
-        onSubmitRequest={submit} 
+        onSubmitRequest={submit}
         categories={categories}
         loadingCategories={loadingCategories}
         medicines={medicines}
