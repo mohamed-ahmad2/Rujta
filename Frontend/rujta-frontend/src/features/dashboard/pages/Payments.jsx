@@ -1,164 +1,134 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ShieldCheck,
   Megaphone,
   CreditCard,
   Clock,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
   Download,
   ChevronLeft,
   ChevronRight,
   TrendingUp,
-  Calendar,
   Zap,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-
-// ─── Mock Data (استبدليه بـ API hook) ────────────────────────────────────────
-
-const SUBSCRIPTION = {
-  plan: "Yearly",
-  amount: 14400,
-  currency: "EGP",
-  startDate: "2025-01-15",
-  endDate: "2026-01-15",
-  status: "active", // active | expired | cancelled
-  daysTotal: 365,
-  daysUsed: 107,
-};
-
-const ADS = [
-  {
-    id: "ad-1",
-    title: "Discount Banner",
-    target: "Panadol 500mg",
-    plan: "14 days",
-    amount: 179,
-    startDate: "2025-04-28",
-    endDate: "2025-05-12",
-    daysTotal: 14,
-    daysUsed: 4,
-    status: "active",
-    emoji: "💊",
-    color: "#dbeafe",
-  },
-  {
-    id: "ad-2",
-    title: "New Arrival",
-    target: "Skincare Category",
-    plan: "7 days",
-    amount: 99,
-    startDate: "2025-04-28",
-    endDate: "2025-05-05",
-    daysTotal: 7,
-    daysUsed: 4,
-    status: "active",
-    emoji: "🧴",
-    color: "#ede9fe",
-  },
-  {
-    id: "ad-3",
-    title: "Best Seller",
-    target: "Antibiotics",
-    plan: "30 days",
-    amount: 299,
-    startDate: "2025-03-10",
-    endDate: "2025-04-09",
-    daysTotal: 30,
-    daysUsed: 30,
-    status: "expired",
-    emoji: "🧬",
-    color: "#dcfce7",
-  },
-];
-
-const HISTORY = [
-  {
-    id: "INV-004",
-    date: "2025-04-28",
-    description: "New Arrival ad — Skincare (7 days)",
-    type: "ad",
-    amount: 99,
-    status: "paid",
-  },
-  {
-    id: "INV-003",
-    date: "2025-04-28",
-    description: "Discount Banner — Panadol (14 days)",
-    type: "ad",
-    amount: 179,
-    status: "paid",
-  },
-  {
-    id: "INV-002",
-    date: "2025-03-10",
-    description: "Best Seller ad — Antibiotics (30 days)",
-    type: "ad",
-    amount: 299,
-    status: "paid",
-  },
-  {
-    id: "INV-001",
-    date: "2025-01-15",
-    description: "Yearly subscription — Dashboard access",
-    type: "subscription",
-    amount: 14400,
-    status: "paid",
-  },
-];
+import { usePayments } from "../../payments/hooks/usePayments";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmt = (n) => Number(n).toLocaleString("en-EG");
 
 const fmtDate = (d) =>
-  new Date(d).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  d
+    ? new Date(d).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "—";
 
 const daysLeft = (endDate) => {
+  if (!endDate) return 0;
   const diff = new Date(endDate) - new Date();
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+};
+
+// ─── Normalize helpers ────────────────────────────────────────────────────────
+
+const normalizeSubscription = (raw) => {
+  if (!raw) return null;
+  const start = raw.startDate  || raw.start_date  || raw.createdAt;
+  const end   = raw.endDate    || raw.end_date    || raw.expiryDate || raw.expiry_date;
+  const total = raw.daysTotal  || raw.days_total  || raw.durationDays || 365;
+
+  const usedRaw = raw.daysUsed || raw.days_used;
+  const used =
+    usedRaw != null
+      ? usedRaw
+      : start
+      ? Math.max(0, Math.ceil((new Date() - new Date(start)) / (1000 * 60 * 60 * 24)))
+      : 0;
+
+  return {
+    plan:      raw.plan      || raw.planName || "Yearly",
+    amount:    raw.amount    || raw.price    || 0,
+    currency:  raw.currency  || "EGP",
+    startDate: start,
+    endDate:   end,
+    status:    raw.status    || "active",
+    daysTotal: total,
+    daysUsed:  Math.min(used, total),
+  };
+};
+
+const normalizeAd = (raw, idx) => {
+  const endDate   = raw.endDate   || raw.end_date;
+  const startDate = raw.startDate || raw.start_date;
+  const daysTotal = raw.daysTotal || raw.days_total || raw.durationDays || 7;
+
+  const usedRaw = raw.daysUsed || raw.days_used;
+  const daysUsed =
+    usedRaw != null
+      ? usedRaw
+      : startDate
+      ? Math.max(0, Math.ceil((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24)))
+      : 0;
+
+  // حساب الـ status الصح بناءً على الـ endDate مش من الـ API
+  const computedLeft = daysLeft(endDate);
+  const rawStatus    = raw.status || "active";
+  const status =
+    computedLeft === 0 && rawStatus !== "cancelled" ? "expired" : rawStatus;
+
+  return {
+    id:        raw.id        || `ad-${idx}`,
+    title:     raw.title     || raw.name       || "Ad Campaign",
+    target:    raw.target    || raw.targetName || raw.medicineName || "—",
+    plan:      raw.plan      || raw.duration   || "—",
+    amount:    raw.amount    || raw.price      || 0,
+    startDate,
+    endDate,
+    daysTotal,
+    daysUsed:  Math.min(daysUsed, daysTotal),
+    daysLeft:  computedLeft,
+    status,
+    emoji:     raw.emoji     || "📢",
+    color:     raw.color     || "#fef3c7",
+  };
+};
+
+const normalizePayment = (raw) => {
+  const type =
+    raw.type         ||
+    raw.paymentType  ||
+    raw.payment_type ||
+    raw.category     ||
+    "subscription";
+
+  return {
+    id:          raw.id          || raw.invoiceId  || "—",
+    date:        raw.date        || raw.createdAt  || raw.paymentDate,
+   
+    type:        type.toLowerCase(),
+    amount:      raw.amount      || raw.price      || 0,
+  
+  };
 };
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }) {
   const map = {
-    active: {
-      label: "Active",
-      cls: "bg-green-100 text-green-700",
-      dot: "bg-green-500",
-    },
-    expired: {
-      label: "Expired",
-      cls: "bg-gray-100 text-gray-500",
-      dot: "bg-gray-400",
-    },
-    cancelled: {
-      label: "Cancelled",
-      cls: "bg-red-100 text-red-600",
-      dot: "bg-red-500",
-    },
-    paid: {
-      label: "Paid",
-      cls: "bg-green-100 text-green-700",
-      dot: "bg-green-500",
-    },
-    pending: {
-      label: "Pending",
-      cls: "bg-yellow-100 text-yellow-700",
-      dot: "bg-yellow-400",
-    },
+    active:    { label: "Active",    cls: "bg-green-100 text-green-700",   dot: "bg-green-500"  },
+    expired:   { label: "Expired",   cls: "bg-gray-100 text-gray-500",     dot: "bg-gray-400"   },
+    cancelled: { label: "Cancelled", cls: "bg-red-100 text-red-600",       dot: "bg-red-500"    },
+    paid:      { label: "Paid",      cls: "bg-green-100 text-green-700",   dot: "bg-green-500"  },
+    pending:   { label: "Pending",   cls: "bg-yellow-100 text-yellow-700", dot: "bg-yellow-400" },
   };
-  const s = map[status] || map.paid;
+  const s = map[status?.toLowerCase()] || map.paid;
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${s.cls}`}
-    >
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${s.cls}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
       {s.label}
     </span>
@@ -168,11 +138,19 @@ function StatusBadge({ status }) {
 // ─── Type Badge ───────────────────────────────────────────────────────────────
 
 function TypeBadge({ type }) {
-  if (type === "subscription")
+  const t = type?.toLowerCase();
+  if (t === "subscription")
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
         <ShieldCheck className="h-3 w-3" />
         Sub
+      </span>
+    );
+  if (t === "order")
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-[11px] font-semibold text-purple-700">
+        <CreditCard className="h-3 w-3" />
+        Order
       </span>
     );
   return (
@@ -186,7 +164,7 @@ function TypeBadge({ type }) {
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
 
 function ProgressBar({ used, total, color = "#9DC873" }) {
-  const pct = Math.min(100, Math.round((used / total) * 100));
+  const pct = Math.min(100, Math.round((used / Math.max(total, 1)) * 100));
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
       <div
@@ -220,8 +198,15 @@ function MetricCard({ icon: Icon, iconBg, iconColor, label, value, sub }) {
 // ─── Subscription Card ────────────────────────────────────────────────────────
 
 function SubscriptionCard({ sub }) {
-  const left = daysLeft(sub.endDate);
-  const pct = Math.round((sub.daysUsed / sub.daysTotal) * 100);
+  if (!sub)
+    return (
+      <div className="rounded-2xl bg-white p-5 shadow-sm border border-gray-100 flex items-center justify-center py-12 text-gray-400">
+        <p className="text-sm">No active subscription found.</p>
+      </div>
+    );
+
+  const left        = daysLeft(sub.endDate);
+  const pct         = Math.round((sub.daysUsed / Math.max(sub.daysTotal, 1)) * 100);
   const urgentColor = left < 30 ? "#ef4444" : left < 60 ? "#f59e0b" : "#9DC873";
 
   return (
@@ -241,14 +226,10 @@ function SubscriptionCard({ sub }) {
 
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: "Amount paid", value: `${fmt(sub.amount)} EGP` },
-          { label: "Start date", value: fmtDate(sub.startDate) },
-          { label: "Renewal date", value: fmtDate(sub.endDate) },
-          {
-            label: "Days remaining",
-            value: `${left} days`,
-            valueColor: urgentColor,
-          },
+          { label: "Amount paid",    value: `${fmt(sub.amount)} EGP` },
+          { label: "Start date",     value: fmtDate(sub.startDate) },
+          { label: "Renewal date",   value: fmtDate(sub.endDate) },
+          { label: "Days remaining", value: `${left} days`, valueColor: urgentColor },
         ].map((r) => (
           <div key={r.label} className="rounded-xl bg-gray-50 px-3 py-2.5">
             <p className="text-[11px] text-gray-400">{r.label}</p>
@@ -276,9 +257,8 @@ function SubscriptionCard({ sub }) {
 // ─── Ad Card ──────────────────────────────────────────────────────────────────
 
 function AdCard({ ad }) {
-  const left = daysLeft(ad.endDate);
-  const pct = Math.round((ad.daysUsed / ad.daysTotal) * 100);
-  const isExpired = ad.status === "expired";
+  const left      = ad.daysLeft; // ✅ محسوب من endDate مش من الـ API
+  const isExpired = ad.status?.toLowerCase() === "expired";
 
   return (
     <div
@@ -297,9 +277,7 @@ function AdCard({ ad }) {
             {ad.emoji}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-800 leading-tight">
-              {ad.title}
-            </p>
+            <p className="text-sm font-semibold text-gray-800 leading-tight">{ad.title}</p>
             <p className="text-[11px] text-gray-400 truncate">{ad.target}</p>
           </div>
         </div>
@@ -309,8 +287,11 @@ function AdCard({ ad }) {
       <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
         <span>{ad.plan} · {fmt(ad.amount)} EGP</span>
         {!isExpired ? (
-          <span className="font-medium" style={{ color: left <= 3 ? "#ef4444" : "#f59e0b" }}>
-            {left} days left
+          <span
+            className="font-medium"
+            style={{ color: left <= 3 ? "#ef4444" : left <= 7 ? "#f59e0b" : "#6b7280" }}
+          >
+            {left} {left === 1 ? "day" : "days"} left
           </span>
         ) : (
           <span className="text-gray-400">Ended {fmtDate(ad.endDate)}</span>
@@ -326,49 +307,99 @@ function AdCard({ ad }) {
   );
 }
 
+// ─── Ads Section with Show More ───────────────────────────────────────────────
+
+const ADS_INITIAL_LIMIT = 3;
+
+function AdsSection({ ads, activeCount }) {
+  const [showAll, setShowAll] = useState(false);
+
+  const visible = showAll ? ads : ads.slice(0, ADS_INITIAL_LIMIT);
+  const hasMore = ads.length > ADS_INITIAL_LIMIT;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 px-1">
+        <Megaphone size={16} className="text-secondary" />
+        <p className="text-sm font-semibold text-gray-700">Ad Campaigns</p>
+        <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+          {activeCount} active
+        </span>
+      </div>
+
+      {ads.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white py-12 text-gray-400">
+          <Megaphone className="mb-2 h-8 w-8 opacity-30" />
+          <p className="text-sm">No ad campaigns found.</p>
+        </div>
+      ) : (
+        <>
+          {visible.map((ad) => (
+            <AdCard key={ad.id} ad={ad} />
+          ))}
+          {hasMore && (
+            <button
+              onClick={() => setShowAll((v) => !v)}
+              className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-gray-200 bg-white py-2.5 text-xs font-medium text-gray-500 transition hover:bg-gray-50"
+            >
+              {showAll ? (
+                <><ChevronUp size={14} /> Show less</>
+              ) : (
+                <><ChevronDown size={14} /> Show all {ads.length} campaigns</>
+              )}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── History Table ────────────────────────────────────────────────────────────
 
 const ITEMS_PER_PAGE = 5;
 
 function HistoryTable({ data }) {
-  const [page, setPage] = useState(1);
+  const [page, setPage]             = useState(1);
   const [typeFilter, setTypeFilter] = useState("all");
 
   const filtered = useMemo(() => {
     if (typeFilter === "all") return data;
-    return data.filter((r) => r.type === typeFilter);
+    return data.filter((r) => r.type?.toLowerCase() === typeFilter);
   }, [data, typeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  const pageData = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const pageData   = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+  useEffect(() => { setPage(1); }, [typeFilter]);
 
   const handleExport = () => {
     const rows = [
-      ["Invoice", "Date", "Description", "Type", "Amount (EGP)", "Status"],
+      ["Invoice", "Date",  "Type", "Amount (EGP)"],
       ...filtered.map((r) => [
-        r.id,
-        fmtDate(r.date),
-        r.description,
-        r.type,
-        r.amount,
-        r.status,
+        r.id, fmtDate(r.date), r.type, r.amount,
       ]),
     ];
-    const csv = rows
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
+    const csv  = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
     a.download = "payment-history.csv";
     a.click();
     URL.revokeObjectURL(url);
   };
 
+  const getPageNumbers = () => {
+    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (page <= 3) return [1, 2, 3, 4, 5];
+    if (page >= totalPages - 2)
+      return [totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    return [page - 2, page - 1, page, page + 1, page + 2];
+  };
+
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm border border-gray-100">
-      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div className="flex items-center gap-2">
           <CreditCard size={18} className="text-secondary" />
@@ -380,12 +411,13 @@ function HistoryTable({ data }) {
         <div className="flex items-center gap-2">
           <select
             value={typeFilter}
-            onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+            onChange={(e) => setTypeFilter(e.target.value)}
             className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-secondary"
           >
             <option value="all">All types</option>
             <option value="subscription">Subscription</option>
             <option value="ad">Ad</option>
+            
           </select>
           <button
             onClick={handleExport}
@@ -397,12 +429,11 @@ function HistoryTable({ data }) {
         </div>
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
             <tr className="border-b border-gray-100">
-              {["Invoice", "Date", "Description", "Type", "Amount", "Status"].map((h) => (
+              {["Invoice", "Date", "Type", "Amount"].map((h) => (
                 <th
                   key={h}
                   className="pb-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400"
@@ -420,24 +451,16 @@ function HistoryTable({ data }) {
                 </td>
               </tr>
             ) : (
-              pageData.map((r) => (
-                <tr key={r.id} className="border-b border-gray-50 transition hover:bg-gray-50/60">
+              pageData.map((r, i) => (
+                <tr key={r.id || i} className="border-b border-gray-50 transition hover:bg-gray-50/60">
                   <td className="py-3 pr-4 font-mono text-xs text-gray-400">{r.id}</td>
-                  <td className="py-3 pr-4 text-xs text-gray-500 whitespace-nowrap">
-                    {fmtDate(r.date)}
-                  </td>
-                  <td className="py-3 pr-4 text-xs text-gray-700 max-w-[200px] truncate">
-                    {r.description}
-                  </td>
-                  <td className="py-3 pr-4">
-                    <TypeBadge type={r.type} />
-                  </td>
+                  <td className="py-3 pr-4 text-xs text-gray-500 whitespace-nowrap">{fmtDate(r.date)}</td>
+                  
+                  <td className="py-3 pr-4"><TypeBadge type={r.type} /></td>
                   <td className="py-3 pr-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
                     {fmt(r.amount)} EGP
                   </td>
-                  <td className="py-3">
-                    <StatusBadge status={r.status} />
-                  </td>
+                 
                 </tr>
               ))
             )}
@@ -445,12 +468,9 @@ function HistoryTable({ data }) {
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
-          <p className="text-xs text-gray-400">
-            Page {page} of {totalPages}
-          </p>
+          <p className="text-xs text-gray-400">Page {page} of {totalPages}</p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -459,7 +479,7 @@ function HistoryTable({ data }) {
             >
               <ChevronLeft size={14} />
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            {getPageNumbers().map((p) => (
               <button
                 key={p}
                 onClick={() => setPage(p)}
@@ -486,18 +506,76 @@ function HistoryTable({ data }) {
   );
 }
 
+// ─── Loading Skeleton ─────────────────────────────────────────────────────────
+
+function Skeleton({ className }) {
+  return <div className={`animate-pulse rounded-xl bg-gray-100 ${className}`} />;
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Payments() {
-  const totalPaid = HISTORY.reduce((s, r) => s + r.amount, 0);
-  const activeAds = ADS.filter((a) => a.status === "active").length;
-  const subLeft = daysLeft(SUBSCRIPTION.endDate);
+  const {
+    payments: rawPayments,
+    subscription: subData,
+    ads: adsData,
+    loading,
+    error,
+    fetchAll,
+  } = usePayments();
+
+  useEffect(() => {
+    fetchAll();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const normalizedSub = normalizeSubscription(subData);
+
+  const normalizedAds = useMemo(
+    () => (adsData || []).map((a, i) => normalizeAd(a, i)),
+    [adsData]
+  );
+
+  const normalizedPayments = useMemo(
+    () => (rawPayments || []).map(normalizePayment),
+    [rawPayments]
+  );
+
+  const totalPaid = normalizedPayments.reduce((s, r) => s + Number(r.amount || 0), 0);
+  const activeAds = normalizedAds.filter((a) => a.status?.toLowerCase() === "active").length;
+  const subLeft   = normalizedSub ? daysLeft(normalizedSub.endDate) : 0;
+
+  if (loading) {
+    return (
+      <div className="space-y-5 p-3 sm:p-4 md:p-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24" />)}
+        </div>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64" />
+        </div>
+        <Skeleton className="h-72" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
+        <AlertCircle className="h-10 w-10 text-red-400" />
+        <p className="text-sm font-medium text-red-500">{error}</p>
+        <button
+          onClick={fetchAll}
+          className="rounded-full bg-secondary px-5 py-2 text-sm text-white transition hover:opacity-90"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 p-3 sm:p-4 md:p-6 max-w-6xl mx-auto">
-
-     
-      
 
       {/* Metric cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -514,8 +592,12 @@ export default function Payments() {
           iconBg="#dbeafe"
           iconColor="#2563eb"
           label="Subscription"
-          value={SUBSCRIPTION.plan}
-          sub={`Active · renews ${fmtDate(SUBSCRIPTION.endDate)}`}
+          value={normalizedSub?.plan || "—"}
+          sub={
+            normalizedSub
+              ? `Active · renews ${fmtDate(normalizedSub.endDate)}`
+              : "No active plan"
+          }
         />
         <MetricCard
           icon={Clock}
@@ -531,31 +613,18 @@ export default function Payments() {
           iconColor="#d97706"
           label="Active ads"
           value={activeAds}
-          sub={`${ADS.length} total campaigns`}
+          sub={`${normalizedAds.length} total campaigns`}
         />
       </div>
 
       {/* Subscription + Ads */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <SubscriptionCard sub={SUBSCRIPTION} />
-
-        {/* Ads column */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <Megaphone size={16} className="text-secondary" />
-            <p className="text-sm font-semibold text-gray-700">Ad Campaigns</p>
-            <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-              {activeAds} active
-            </span>
-          </div>
-          {ADS.map((ad) => (
-            <AdCard key={ad.id} ad={ad} />
-          ))}
-        </div>
+        <SubscriptionCard sub={normalizedSub} />
+        <AdsSection ads={normalizedAds} activeCount={activeAds} />
       </div>
 
       {/* History table */}
-      <HistoryTable data={HISTORY} />
+      <HistoryTable data={normalizedPayments} />
     </div>
   );
 }

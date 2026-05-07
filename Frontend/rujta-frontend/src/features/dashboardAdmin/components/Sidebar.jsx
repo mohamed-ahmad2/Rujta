@@ -5,7 +5,8 @@ import { RiLogoutCircleLine } from "react-icons/ri";
 import { MdMenuOpen, MdAttachMoney } from "react-icons/md";
 import { TbMenuOrder } from "react-icons/tb";
 import { useAuth } from "../../auth/hooks/useAuth";
-
+import { AiOutlineClockCircle } from "react-icons/ai";
+import { MdOutlinePendingActions } from "react-icons/md";
 export default function Sidebar({ open, setOpen }) {
   const location = useLocation();
   const { loading, handleLogout } = useAuth();
@@ -38,7 +39,7 @@ export default function Sidebar({ open, setOpen }) {
     },
     {
       label: "Approval Queue",
-      icon: <MdAttachMoney size={22} />,
+      icon: <MdOutlinePendingActions size={22} />,
       path: "/superadmin/ApprovalQueue",
     },
   ];

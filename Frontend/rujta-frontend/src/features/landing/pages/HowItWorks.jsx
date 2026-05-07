@@ -63,9 +63,7 @@ const HowItWorks = () => {
         <p className="text-lg text-gray-700 mb-10 max-w-2xl mx-auto">
           Upload your prescription and see how fast and accurate our AI system works!
         </p>
-        <button className="bg-secondary text-white px-10 py-4 text-xl rounded-full hover:opacity-90 transition">
-          Upload Now
-        </button>
+        
       </section>
     </main>
   );

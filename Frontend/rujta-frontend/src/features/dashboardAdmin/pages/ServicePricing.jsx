@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 
 const PRIMARY = "#9DC873"
 
-// ── Responsive styles via inline + CSS-in-JS approach ──
 const baseStyles = {
   page: { minHeight: "100vh", background: "#f3f4f6", padding: "24px 16px 100px" },
   title: { fontSize: 24, fontWeight: 800, marginBottom: 6, color: "#111827" },
@@ -15,6 +14,7 @@ const baseStyles = {
   rateLabel: { fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 },
   rateNote: { fontSize: 12, color: "#6b7280", marginTop: 5, fontStyle: "italic" },
   rateNoteGreen: { fontSize: 12, color: PRIMARY, marginTop: 5, fontWeight: 600 },
+  rateNoteRed: { fontSize: 12, color: "#ef4444", marginTop: 5, fontWeight: 600 },
   advTitle: { fontSize: 15, fontWeight: 700, marginBottom: 4 },
   advDesc: { fontSize: 12.5, color: "#6b7280", lineHeight: 1.5 },
   advRateLabel: { fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 },
@@ -54,6 +54,20 @@ const ServicePricing = () => {
   const [monthlySponsorship, setMonthlySponsorship] = useState("850.00")
   const [saved, setSaved] = useState(false)
 
+  const monthlyNum = parseFloat(monthlyRate) || 0
+  const yearlyNum = parseFloat(yearlyRate) || 0
+  const annualIfMonthly = monthlyNum * 12
+  const savingsPercent = annualIfMonthly > 0 ? Math.round((1 - yearlyNum / annualIfMonthly) * 100) : 0
+
+  const getSavingsNote = () => {
+    if (!monthlyNum || !yearlyNum) return { text: "Enter both rates to calculate savings", style: baseStyles.rateNote }
+    if (savingsPercent > 0) return { text: `Saves pharmacies ${savingsPercent}% annually`, style: baseStyles.rateNoteGreen }
+    if (savingsPercent < 0) return { text: `${Math.abs(savingsPercent)}% more expensive than monthly`, style: baseStyles.rateNoteRed }
+    return { text: "Same as monthly pricing", style: baseStyles.rateNote }
+  }
+
+  const savingsNote = getSavingsNote()
+
   const handleSave = () => {
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -87,7 +101,6 @@ const ServicePricing = () => {
       <h1 className="pricing-title" style={baseStyles.title}>Service Pricing Control</h1>
       <p style={baseStyles.subtitle}>Configure network-wide pricing for subscriptions and localized advertising.</p>
 
-      {/* Subscription Pricing */}
       <div style={baseStyles.card}>
         <div style={baseStyles.cardHeader}>
           <div style={baseStyles.cardHeaderLeft}>
@@ -100,7 +113,6 @@ const ServicePricing = () => {
           <span style={baseStyles.badge}>Active Plan</span>
         </div>
         <div style={baseStyles.cardBody}>
-          {/* Plan info */}
           <div className="sub-plan-layout" style={{ display:'flex', flexDirection:'column', gap:'20px' }}>
             <div style={{ flex:1 }}>
               <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Standard Care</h3>
@@ -117,14 +129,13 @@ const ServicePricing = () => {
               <div>
                 <div style={baseStyles.rateLabel}>Yearly Rate</div>
                 <InputField value={yearlyRate} onChange={setYearlyRate} />
-                <div style={baseStyles.rateNoteGreen}>Saves pharmacies 17% annually</div>
+                <div style={savingsNote.style}>{savingsNote.text}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Advertising Pricing */}
       <div style={baseStyles.card}>
         <div style={baseStyles.cardHeader}>
           <div style={baseStyles.cardHeaderLeft}>
@@ -136,8 +147,6 @@ const ServicePricing = () => {
         </div>
         <div style={baseStyles.cardBody}>
           <div className="adv-grid" style={{ display:'grid', gridTemplateColumns:'1fr', gap:'24px' }}>
-
-            {/* Daily Placement */}
             <div>
               <div style={{ display:'flex', alignItems:'flex-start', gap:'14px', marginBottom:'14px' }}>
                 <div style={{ width:44, height:44, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, background:'#e5e7eb' }}>
@@ -154,8 +163,6 @@ const ServicePricing = () => {
               <div style={baseStyles.advRateLabel}>Rate per 24h</div>
               <InputField value={dailyRate} onChange={setDailyRate} />
             </div>
-
-            {/* Monthly Sponsorship */}
             <div>
               <div style={{ display:'flex', alignItems:'flex-start', gap:'14px', marginBottom:'14px' }}>
                 <div style={{ width:44, height:44, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, background:'#fde8d8' }}>
@@ -176,7 +183,6 @@ const ServicePricing = () => {
         </div>
       </div>
 
-      {/* Footer Actions */}
       <div className="footer-row" style={{ display:'flex', flexDirection:'column', gap:'12px', paddingBottom:'8px' }}>
         <div className="footer-actions" style={{ display:'flex', flexDirection:'column', gap:'10px', width:'100%' }}>
           <button className="btn-save" style={baseStyles.btnSave} onClick={handleSave}>

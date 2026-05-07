@@ -118,9 +118,7 @@ const Features = () => {
           <p className="text-xl text-gray-700 mb-10">
             Join the future of digital healthcare powered by AI.
           </p>
-          <button className="bg-secondary text-white px-10 py-4 text-xl rounded-full hover:opacity-90 transition">
-            Get Started Now
-          </button>
+         
         </div>
       </section>
     </main>
