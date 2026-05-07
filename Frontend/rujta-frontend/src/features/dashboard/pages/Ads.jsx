@@ -20,14 +20,26 @@ const adTemplates = [
 ];
 
 const colorPalettes = [
-  { label: "Ocean",   from: "#0ea5e9", to: "#0369a1", accent: "#38bdf8" },
-  { label: "Emerald", from: "#10b981", to: "#065f46", accent: "#6ee7b7" },
-  { label: "Crimson", from: "#ef4444", to: "#7f1d1d", accent: "#fca5a5" },
-  { label: "Amber",   from: "#f59e0b", to: "#78350f", accent: "#fde68a" },
-  { label: "Violet",  from: "#8b5cf6", to: "#4c1d95", accent: "#c4b5fd" },
-  { label: "Rose",    from: "#f43f5e", to: "#881337", accent: "#fda4af" },
-  { label: "Slate",   from: "#334155", to: "#0f172a", accent: "#94a3b8" },
-  { label: "Coral",   from: "#fb923c", to: "#9a3412", accent: "#fed7aa" },
+  { label: "Mint",        from: "#34d399", to: "#065f46", accent: "#a7f3d0" },
+  { label: "Lime",        from: "#84cc16", to: "#365314", accent: "#d9f99d" },
+  { label: "Forest",      from: "#22c55e", to: "#14532d", accent: "#86efac" },
+  { label: "Olive",       from: "#65a30d", to: "#3f6212", accent: "#bef264" },
+  { label: "Teal",        from: "#14b8a6", to: "#134e4a", accent: "#99f6e4" },
+  { label: "Jade",        from: "#16a34a", to: "#166534", accent: "#bbf7d0" },
+  { label: "Sea Green",   from: "#2dd4bf", to: "#115e59", accent: "#99f6e4" },
+  { label: "Moss",        from: "#4ade80", to: "#365314", accent: "#dcfce7" },
+  { label: "Pine",        from: "#15803d", to: "#052e16", accent: "#86efac" },
+  { label: "Clover",      from: "#22c55e", to: "#166534", accent: "#bbf7d0" },
+  { label: "Sage",        from: "#6ee7b7", to: "#3f3f46", accent: "#d1fae5" },
+  { label: "Fern",        from: "#4ade80", to: "#14532d", accent: "#bbf7d0" },
+  { label: "Matcha",      from: "#86efac", to: "#365314", accent: "#f0fdf4" },
+  { label: "Aqua Green",  from: "#2dd4bf", to: "#164e63", accent: "#ccfbf1" },
+  { label: "Spring",      from: "#5eead4", to: "#115e59", accent: "#ccfbf1" },
+  { label: "Leaf",        from: "#16a34a", to: "#14532d", accent: "#dcfce7" },
+  { label: "Bamboo",      from: "#65a30d", to: "#1a2e05", accent: "#ecfccb" },
+  { label: "Arctic Mint", from: "#99f6e4", to: "#0f766e", accent: "#ecfeff" },
+  { label: "Evergreen",   from: "#166534", to: "#022c22", accent: "#6ee7b7" },
+  { label: "Neon Green",  from: "#39ff14", to: "#14532d", accent: "#d9f99d" },
 ];
 
 const fontOptions = [
@@ -230,68 +242,223 @@ function PlanModal({ plans, onSelect, onClose, loading }) {
 
 // ─── Hero-Style Live Preview ──────────────────────────────────────────────────
 
-function HeroPreview({ adMode, selectedProduct, selectedCategory, palette, font, selectedTemplate, previewHeadline, previewSubtext, previewCta }) {
-  const imgSrc = adMode === "medicine" ? getImgSrc(selectedProduct) : null;
-  const isReady = selectedTemplate && (adMode === "medicine" ? !!selectedProduct : !!selectedCategory);
+function AdProgressBar({ duration, running, slideIndex }) {
+  const [width, setWidth] = useState(0);
+  const rafRef = useRef();
+  const startRef = useRef();
+
+  useEffect(() => {
+    cancelAnimationFrame(rafRef.current);
+    setWidth(0);
+    startRef.current = null;
+    if (!running) return;
+    const animate = (ts) => {
+      if (!startRef.current) startRef.current = ts;
+      const pct = Math.min(((ts - startRef.current) / duration) * 100, 100);
+      setWidth(pct);
+      if (pct < 100) rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [running, duration, slideIndex]);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl"
-      style={{ minHeight: 420, background: `radial-gradient(circle at top left, ${palette.to}, ${palette.from})`, fontFamily: font.value }}>
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-white/10 blur-[80px] animate-pulse pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] rounded-full bg-black/20 blur-[60px] pointer-events-none" />
-      <div style={{ position: "absolute", top: 0, left: 0, zIndex: 30, width: 140, height: 140, overflow: "hidden", pointerEvents: "none", userSelect: "none" }}>
-        <div style={{ position: "absolute", top: 32, left: -38, width: 170, padding: "8px 0", background: "linear-gradient(135deg, #1a5c2a 0%, #2d8c45 100%)", transform: "rotate(-45deg)", textAlign: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.35)" }}>
-          <span style={{ fontSize: "0.7rem", fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff", whiteSpace: "nowrap" }}>
-            {selectedTemplate?.badge || "NEW"}
-          </span>
-        </div>
-      </div>
-      <div className="relative z-10 w-full h-full flex items-center px-8 py-10 gap-6">
-        <div className="flex-1 space-y-5">
-          <div className="space-y-2">
-            <h1 className="text-white font-extrabold leading-tight drop-shadow-md" style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.8rem)" }}>
-              {isReady ? previewHeadline : <span className="opacity-30">Headline here</span>}
-            </h1>
-            <div className="h-1 w-16 bg-white/40 rounded-full" />
-          </div>
-          {isReady && previewSubtext && (
-            <div className="relative">
-              <style>{`@keyframes adFloat { 0%,100%{transform:perspective(800px) rotateX(12deg) rotateY(-4deg) translateY(0px)} 50%{transform:perspective(800px) rotateX(12deg) rotateY(-4deg) translateY(-8px)} }`}</style>
-              <p className="text-white font-black leading-none select-none"
-                style={{ fontSize: "clamp(1.1rem, 2.5vw, 1.8rem)", textTransform: "uppercase", letterSpacing: "-0.01em", transform: "perspective(800px) rotateX(12deg) rotateY(-4deg)", textShadow: "1px 1px 0px rgba(0,0,0,0.2),2px 2px 0px rgba(0,0,0,0.18),3px 3px 0px rgba(0,0,0,0.14),4px 4px 8px rgba(0,0,0,0.25)", WebkitTextStroke: "0.5px rgba(255,255,255,0.1)", animation: "adFloat 4s ease-in-out infinite", maxWidth: "80%" }}>
-                {previewSubtext}
-              </p>
-            </div>
-          )}
-          {!isReady && <p className="text-white/30 text-sm">Select a template &amp; {adMode === "medicine" ? "medicine" : "category"} to preview</p>}
-          <button className="group relative bg-white px-8 py-3 rounded-full font-black text-sm overflow-hidden transition-all hover:pl-12 active:scale-95 shadow-xl" style={{ color: palette.from }}>
-            <span className="relative z-10">{previewCta}</span>
-            <span className="absolute left-4 opacity-0 transition-all group-hover:opacity-100 group-hover:left-5 text-xs">→</span>
-          </button>
-        </div>
-        <div className="relative flex items-center justify-center flex-shrink-0 w-[180px] h-[180px]">
-          <div className="absolute w-full h-full rounded-full border-2 border-white/20" style={{ animation: "spin 10s linear infinite", boxShadow: `0 0 30px ${palette.from}44` }} />
-          <div className="absolute w-[70%] h-[70%] rounded-full bg-white/10 blur-xl" />
-          <div className="relative z-10" style={{ animation: "bounce 4s ease-in-out infinite" }}>
-            {imgSrc ? (
-              <img src={imgSrc} alt={selectedProduct?.name} className="w-[130px] h-[130px] object-contain drop-shadow-2xl transition-transform duration-500 hover:scale-110" style={{ filter: "drop-shadow(0 20px 20px rgba(0,0,0,0.45))" }} />
-            ) : adMode === "category" && selectedCategory ? (
-              <div className="w-[130px] h-[130px] rounded-full flex items-center justify-center border-4 border-white/30" style={{ background: "rgba(255,255,255,0.12)" }}>
-                <MdCategory size={52} style={{ color: "rgba(255,255,255,0.7)" }} />
-              </div>
-            ) : (
-              <div className="w-[130px] h-[130px] rounded-full flex items-center justify-center border-2 border-dashed border-white/20">
-                <MdMedication size={40} style={{ color: "rgba(255,255,255,0.2)" }} />
-              </div>
-            )}
-          </div>
-          <div className="absolute bottom-0 w-[60%] h-4 bg-black/20 blur-xl rounded-full" />
-        </div>
-      </div>
-      <span className="absolute bottom-2 right-3 text-[10px] text-white/15 pointer-events-none select-none">Rujta™</span>
+    <div style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 3, background: "rgba(255,255,255,0.15)", zIndex: 40 }}>
+      <div style={{ height: "100%", width: `${width}%`, background: "rgba(255,255,255,0.65)", transition: "width 0.08s linear" }} />
     </div>
   );
 }
+
+// ─── 2. Replace HeroPreview entirely with this ────────────────────────────────
+
+function HeroPreview({ adMode, selectedProduct, selectedCategory, palette, font, selectedTemplate, previewHeadline, previewSubtext, previewCta }) {
+  const [isPaused, setIsPaused] = useState(false);
+
+  const imgSrc = adMode === "medicine" ? getImgSrc(selectedProduct) : null;
+  const isReady = selectedTemplate && (adMode === "medicine" ? !!selectedProduct : !!selectedCategory);
+  const badge = selectedTemplate?.badge || "NEW ARRIVAL";
+
+  // mirrors DynamicSlide.handleShopNow — no-op in the designer context
+  const handleShopNow = () => {};
+
+  return (
+    <>
+      <style>{`
+        @keyframes adSpin  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes adFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+      `}</style>
+
+      {/* Outer shell — identical dimensions & border-radius to Hero.jsx */}
+      <div
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "520px",
+          borderRadius: "20px",
+          overflow: "hidden",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+          fontFamily: font.value,
+          // radial-gradient matches DynamicSlide exactly (colorTo → colorFrom)
+          background: `radial-gradient(circle at top left, ${palette.to}, ${palette.from})`,
+        }}
+      >
+        {/* ── Ambient blobs (copied from DynamicSlide) ── */}
+        <div style={{ position: "absolute", top: "-10%", right: "-10%", width: "40%", height: "40%", borderRadius: "50%", background: "rgba(255,255,255,0.08)", filter: "blur(60px)" }} />
+        <div style={{ position: "absolute", bottom: "-10%", left: "-10%", width: "30%", height: "30%", borderRadius: "50%", background: "rgba(0,0,0,0.15)", filter: "blur(60px)" }} />
+
+        {/* ── Corner ribbon — pixel-matched to DynamicSlide ── */}
+        <div style={{ position: "absolute", top: 0, left: 0, width: 120, height: 120, overflow: "hidden", pointerEvents: "none", zIndex: 30 }}>
+          <div style={{
+            position: "absolute", top: 28, left: -36, width: 160,
+            padding: "6px 0",
+            background: "linear-gradient(135deg, #1a5c2a 0%, #2d8c45 100%)",
+            transform: "rotate(-45deg)",
+            textAlign: "center",
+            boxShadow: "0 3px 10px rgba(0,0,0,0.3)",
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff" }}>
+              {badge}
+            </span>
+          </div>
+        </div>
+
+        {/* ── Main content grid — same as DynamicSlide ── */}
+        <div style={{
+          position: "relative", zIndex: 10,
+          width: "100%", height: "100%",
+          display: "grid", gridTemplateColumns: "1fr 1fr",
+          gap: 32, alignItems: "center",
+          padding: "0 32px", boxSizing: "border-box",
+        }}>
+
+          {/* Left: text column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <h1 style={{
+              color: "#fff", fontWeight: 800, lineHeight: 1.1,
+              fontSize: "clamp(1rem, 1.6vw, 1.6rem)",
+              textShadow: "0 2px 8px rgba(0,0,0,0.2)", margin: 0,
+            }}>
+              {isReady ? previewHeadline : <span style={{ opacity: 0.3 }}>Headline here</span>}
+            </h1>
+
+            <div style={{ width: 36, height: 3, background: "rgba(255,255,255,0.45)", borderRadius: 4 }} />
+
+            {isReady && previewSubtext && (
+              <p style={{
+                color: "rgba(255,255,255,0.88)",
+                fontWeight: 900,
+                // matches DynamicSlide subtext sizing exactly
+                fontSize: "clamp(1rem, 3.5vw, 2.5rem)",
+                lineHeight: 1,
+                textShadow: "0 2px 10px rgba(0,0,0,0.18)",
+                margin: 0,
+              }}>
+                {previewSubtext}
+              </p>
+            )}
+
+            {!isReady && (
+              <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, margin: 0 }}>
+                Select a template &amp; {adMode === "medicine" ? "medicine" : "category"} to preview
+              </p>
+            )}
+
+            {/* CTA button — same style as DynamicSlide SHOP NOW */}
+            <button
+              onClick={handleShopNow}
+              style={{
+                alignSelf: "flex-start",
+                background: "#fff", color: "#111",
+                border: "none", borderRadius: 100,
+                padding: "10px 24px",
+                fontWeight: 700, fontSize: 13,
+                cursor: "pointer", letterSpacing: "0.04em",
+                boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
+                transition: "transform 0.15s, box-shadow 0.15s",
+                fontFamily: font.value,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 10px 28px rgba(0,0,0,0.28)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.18)";
+              }}
+            >
+              {previewCta ? previewCta.toUpperCase() : "SHOP NOW"}
+            </button>
+          </div>
+
+          {/* Right: product image with orbit ring + float animation */}
+          <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+            {/* Spinning orbit ring */}
+            <div style={{
+              position: "absolute", width: "75%", height: "75%",
+              borderRadius: "50%",
+              border: "1.5px solid rgba(255,255,255,0.18)",
+              animation: "adSpin 12s linear infinite",
+            }} />
+
+            {/* Product image / category placeholder / empty state */}
+            {imgSrc ? (
+              <img
+                src={imgSrc}
+                alt={selectedProduct?.name}
+                style={{
+                  width: "clamp(120px, 18vw, 260px)",
+                  objectFit: "contain",
+                  filter: "drop-shadow(0 16px 16px rgba(0,0,0,0.4))",
+                  position: "relative", zIndex: 1,
+                  animation: "adFloat 5s ease-in-out infinite",
+                }}
+              />
+            ) : adMode === "category" && selectedCategory ? (
+              <div style={{
+                width: 130, height: 130, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                border: "4px solid rgba(255,255,255,0.3)",
+                background: "rgba(255,255,255,0.12)",
+                position: "relative", zIndex: 1,
+                animation: "adFloat 5s ease-in-out infinite",
+              }}>
+                <MdCategory size={52} style={{ color: "rgba(255,255,255,0.7)" }} />
+              </div>
+            ) : (
+              <div style={{
+                width: 130, height: 130, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                border: "2px dashed rgba(255,255,255,0.2)",
+                position: "relative", zIndex: 1,
+              }}>
+                <MdMedication size={40} style={{ color: "rgba(255,255,255,0.2)" }} />
+              </div>
+            )}
+
+            {/* Ground shadow */}
+            <div style={{
+              position: "absolute", bottom: 0,
+              width: "45%", height: 16,
+              background: "rgba(0,0,0,0.2)",
+              filter: "blur(8px)", borderRadius: "50%",
+            }} />
+          </div>
+        </div>
+
+        {/* ── Progress bar — pauses on hover, same as Hero.jsx ── */}
+        <AdProgressBar duration={6000} running={!isPaused && isReady} slideIndex={0} />
+
+        {/* Watermark */}
+        <span style={{ position: "absolute", bottom: 8, right: 12, fontSize: 10, color: "rgba(255,255,255,0.15)", pointerEvents: "none", userSelect: "none" }}>
+          Rujta™
+        </span>
+      </div>
+    </>
+  );
+}
+
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
