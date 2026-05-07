@@ -15,9 +15,7 @@ export const getPharmacyById = (id) =>
   apiClient.get(`${BASE}/pharmacies/${id}`);
 
 export const updatePharmacy = (id, data) =>
-  apiClient.put(`${BASE}/pharmacies/${id}`, data, {
-    headers: { "Content-Type": "application/json" },
-  });
+  apiClient.put(`${BASE}/pharmacies/${id}`, data);
 
 export const deletePharmacy = (id) =>
   apiClient.delete(`${BASE}/pharmacies/${id}`);

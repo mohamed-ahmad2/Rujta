@@ -42,14 +42,6 @@ namespace Rujta.API.Controllers
                     !string.IsNullOrWhiteSpace(dto.Address.Governorate));
         }
 
-        private static bool IsAddressValid(UpdatePharmacyDto dto)
-        {
-            return dto.Address != null &&
-                   (!string.IsNullOrWhiteSpace(dto.Address.Street) ||
-                    !string.IsNullOrWhiteSpace(dto.Address.City) ||
-                    !string.IsNullOrWhiteSpace(dto.Address.Governorate));
-        }
-
 
         [HttpPost("pharmacies")]
         [Consumes("multipart/form-data")]
@@ -57,9 +49,7 @@ namespace Rujta.API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> CreatePharmacy(
-            [FromForm] CreatePharmacyDto dto,
-            CancellationToken cancellationToken)
+        public async Task<IActionResult> CreatePharmacy([FromForm] CreatePharmacyDto dto,CancellationToken cancellationToken)
         {
             if (dto == null)
                 return BadRequest(new { message = "Invalid request data." });
@@ -151,27 +141,12 @@ namespace Rujta.API.Controllers
         [ProducesResponseType(typeof(PharmacyDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdatePharmacy(
-            int pharmacyId,
-            [FromBody] UpdatePharmacyDto dto,
-            CancellationToken cancellationToken)
+        public async Task<IActionResult> UpdatePharmacy(int pharmacyId,[FromBody] UpdatePharmacyDto dto, CancellationToken cancellationToken)
         {
-            if (dto == null)
-                return BadRequest(new { message = "Invalid request data." });
-
-            if (string.IsNullOrWhiteSpace(dto.Name))
-                return BadRequest(new { message = "Pharmacy name is required." });
-
-            if (!IsAddressValid(dto))
-                return BadRequest(new
-                {
-                    message = "Address is required (Street, City, or Governorate at minimum)."
-                });
-
             try
             {
-                var updatedPharmacy = await _service.UpdatePharmacyAsync(
-                    pharmacyId, dto, cancellationToken);
+                var updatedPharmacy = await _service.UpdatePharmacyAsync(pharmacyId, dto, cancellationToken);
+
                 return Ok(updatedPharmacy);
             }
             catch (KeyNotFoundException ex)
@@ -185,6 +160,7 @@ namespace Rujta.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to update pharmacy {PharmacyId}", pharmacyId);
+
                 return StatusCode(StatusCodes.Status500InternalServerError,
                     new { message = "An unexpected error occurred while updating the pharmacy." });
             }
