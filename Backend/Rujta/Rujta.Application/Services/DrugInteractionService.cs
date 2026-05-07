@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-// ─────────────────────────────────────────────────────────────────────────────
+﻿// ─────────────────────────────────────────────────────────────────────────────
 // FILE: Rujta.Application/Services/DrugInteractionService.cs
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -14,22 +8,9 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FILE: Rujta.Application/Services/DrugInteractionService.cs
-//
-// Now lives in Application cleanly — no AppDbContext reference.
-// DB access is fully delegated to IDrugHistoryRepository.
-// ─────────────────────────────────────────────────────────────────────────────
-
-using System.Net.Http.Json;
-using System.Text.Json;
-using Microsoft.Extensions.Logging;
-using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces;
 using Rujta.Application.Interfaces.InterfaceServices;
+using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Services;
 
@@ -61,15 +42,12 @@ public class DrugInteractionService : IDrugInteractionService
         double threshold = 0.5,
         CancellationToken ct = default)
     {
-        // ── Step 1: Load medicines from the new order ─────────────────────────
         var newMedicines = await _drugHistoryRepo
             .GetMedicinesByIdsAsync(newOrderMedicineIds, ct);
 
-        // ── Step 2: Load patient's historical medicines ───────────────────────
         var historicalMedicines = await _drugHistoryRepo
             .GetPatientDrugHistoryAsync(patientUserId, ct);
 
-        // ── Step 3: Track which drugs are new vs history ──────────────────────────
         var newIds = newMedicines.Select(m => m.Id).ToHashSet();
 
         var allDrugs = newMedicines
@@ -93,7 +71,6 @@ public class DrugInteractionService : IDrugInteractionService
             };
         }
 
-        // ── Step 4: Build all drug pairs ──────────────────────────────────────────
         var pairs = new List<object>();
         for (int i = 0; i < allDrugs.Count; i++)
             for (int j = i + 1; j < allDrugs.Count; j++)
@@ -105,7 +82,6 @@ public class DrugInteractionService : IDrugInteractionService
                     name2 = allDrugs[j].Name,
                 });
 
-        // ── Step 5: Call Python ML /predict/batch ────────────────────────────────
         var batchRequest = new { pairs };
         BatchMlResponseDto? mlResponse = null;
         bool mlUnavailable = false;
@@ -134,7 +110,6 @@ public class DrugInteractionService : IDrugInteractionService
                 Interactions = new List<DrugInteractionResultDto>()
             };
 
-        // ── Step 6: Map to response ───────────────────────────────────────────────
         var interactions = mlResponse.Results
             .Where(r => r.Interaction == true && r.Error == null)
             .Select(r => new DrugInteractionResultDto
@@ -151,6 +126,7 @@ public class DrugInteractionService : IDrugInteractionService
                 Interacts = r.Interaction ?? false,
                 Confidence = r.Confidence,
             }).ToList();
+
         return new OrderDrugInteractionResponseDto
         {
             TotalDrugsChecked = allDrugs.Count,
@@ -159,12 +135,12 @@ public class DrugInteractionService : IDrugInteractionService
             Interactions = interactions,
         };
     }
+
     public async Task<OrderDrugInteractionResponseDto> CheckNewOrderOnlyAsync(
-    IEnumerable<int> medicineIds,
-    double threshold = 0.5,
-    CancellationToken ct = default)
+        IEnumerable<int> medicineIds,
+        double threshold = 0.5,
+        CancellationToken ct = default)
     {
-        // Load only the new order drugs — NO history
         var drugs = await _drugHistoryRepo.GetMedicinesByIdsAsync(medicineIds, ct);
 
         if (drugs.Count < 2)
@@ -176,7 +152,6 @@ public class DrugInteractionService : IDrugInteractionService
                 Interactions = new List<DrugInteractionResultDto>()
             };
 
-        // Build pairs
         var pairs = new List<object>();
         for (int i = 0; i < drugs.Count; i++)
             for (int j = i + 1; j < drugs.Count; j++)
@@ -188,7 +163,6 @@ public class DrugInteractionService : IDrugInteractionService
                     name2 = drugs[j].Name,
                 });
 
-        // Call ML
         var batchRequest = new { pairs };
         BatchMlResponseDto? mlResponse = null;
 
@@ -211,7 +185,6 @@ public class DrugInteractionService : IDrugInteractionService
             };
         }
 
-        // Map — all drugs are from new order so IsFromHistory = false
         var interactions = mlResponse!.Results
             .Where(r => r.Interaction == true && r.Error == null)
             .Select(r => new DrugInteractionResultDto

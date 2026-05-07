@@ -12,7 +12,6 @@ namespace Rujta.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-//[Authorize]
 public class DrugInteractionController : ControllerBase
 {
     private readonly IDrugInteractionService _drugInteractionService;
@@ -20,45 +19,6 @@ public class DrugInteractionController : ControllerBase
     public DrugInteractionController(IDrugInteractionService drugInteractionService)
     {
         _drugInteractionService = drugInteractionService;
-    }
-
-    /// <summary>
-    /// Check drug interactions for a list of medicine IDs.
-    /// User ID is extracted automatically from the JWT token — no need to pass it.
-    ///
-    /// POST /api/druginteraction/check
-    /// Headers: Authorization: Bearer YOUR_TOKEN
-    /// Body: { "medicineIds": [1, 2, 3], "threshold": 0.5 }
-    /// </summary>
-    [HttpPost("check")]
-    [ProducesResponseType(typeof(OrderDrugInteractionResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> CheckInteractions(
-        [FromBody] CheckInteractionsRequest request,
-        CancellationToken ct)
-    {
-        // ── Extract user ID from JWT token ────────────────────────────────────
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)
-                       ?? User.FindFirst("sub")
-                       ?? User.FindFirst("uid");
-
-        if (userIdClaim is null || !Guid.TryParse(userIdClaim.Value, out var userId))
-            return Unauthorized("Could not extract user ID from token.");
-
-        // ── Validate request ──────────────────────────────────────────────────
-        if (request.MedicineIds is null || !request.MedicineIds.Any())
-            return BadRequest("At least one medicine ID is required.");
-
-        // ── Run interaction check ─────────────────────────────────────────────
-        var result = await _drugInteractionService.CheckOrderInteractionsAsync(
-            request.MedicineIds,
-            userId,           // ← from token, not from request body
-            request.Threshold,
-            ct
-        );
-
-        return Ok(result);
     }
 
     /// <summary>
@@ -74,19 +34,19 @@ public class DrugInteractionController : ControllerBase
             ? Ok(new { status = "ok", mlService = "reachable" })
             : StatusCode(503, new { status = "degraded", mlService = "unreachable" });
     }
-    // PAGE 1 — new order drugs only (no history)
+
+    /// <summary>
+    /// PAGE 1 — Check interactions within the new order drugs only (no history).
+    /// POST /api/druginteraction/check-order
+    /// Body: { "medicineIds": [1, 2, 3], "threshold": 0.5 }
+    /// </summary>
     [HttpPost("check-order")]
+    [ProducesResponseType(typeof(OrderDrugInteractionResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CheckOrderOnly(
         [FromBody] CheckInteractionsRequest request,
         CancellationToken ct)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)
-                       ?? User.FindFirst("sub")
-                       ?? User.FindFirst("uid");
-
-        if (userIdClaim is null || !Guid.TryParse(userIdClaim.Value, out var userId))
-            return Unauthorized("Could not extract user ID from token.");
-
         if (request.MedicineIds is null || !request.MedicineIds.Any())
             return BadRequest("At least one medicine ID is required.");
 
@@ -98,8 +58,16 @@ public class DrugInteractionController : ControllerBase
         return Ok(result);
     }
 
-    // PAGE 2 — new order drugs vs past history
+    /// <summary>
+    /// PAGE 2 — Check new order drugs against the user's past history.
+    /// POST /api/druginteraction/check-history
+    /// Headers: Authorization: Bearer YOUR_TOKEN
+    /// Body: { "medicineIds": [1, 2, 3], "threshold": 0.5 }
+    /// </summary>
     [HttpPost("check-history")]
+    [ProducesResponseType(typeof(OrderDrugInteractionResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> CheckWithHistory(
         [FromBody] CheckInteractionsRequest request,
         CancellationToken ct)
@@ -124,7 +92,7 @@ public class DrugInteractionController : ControllerBase
     }
 }
 
-// ── Request DTO — no PatientUserId needed anymore ─────────────────────────────
+// ── Request DTO ───────────────────────────────────────────────────────────────
 public class CheckInteractionsRequest
 {
     /// <summary>Medicine IDs from the current order cart</summary>
