@@ -138,16 +138,16 @@ export default function ServicePricing() {
       {displayError && <div style={styles.errorBanner}>❌ {displayError}</div>}
 
       {/* Subscription Pricing */}
-      <div style={styles.card}>
-        <div style={styles.cardHeader}>
-          <div style={styles.cardHeaderLeft}>
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke={PRIMARY} strokeWidth="2">
+      <div style={baseStyles.card}>
+        <div style={baseStyles.cardHeader}>
+          <div style={baseStyles.cardHeaderLeft}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke={PRIMARY} strokeWidth="2">
               <rect x="2" y="3" width="20" height="14" rx="2" />
               <path d="M8 21h8M12 17v4" strokeLinecap="round" />
             </svg>
-            Subscription Pricing
+            <span style={{ fontSize: 15 }}>Subscription Pricing</span>
           </div>
-          <span style={styles.badge}>Active Plan</span>
+          <span style={baseStyles.badge}>Active Plan</span>
         </div>
         <div style={styles.cardBody}>
           <div style={styles.subPlan}>
@@ -161,7 +161,7 @@ export default function ServicePricing() {
               <div style={styles.rateBox}>
                 <div style={styles.rateLabel}>Monthly Rate</div>
                 <InputField value={monthlyRate} onChange={setMonthlyRate} />
-                <div style={styles.rateNote}>Billed every 30 days</div>
+                <div style={baseStyles.rateNote}>Billed every 30 days</div>
               </div>
               <div style={styles.rateBox}>
                 <div style={styles.rateLabel}>Yearly Rate</div>
@@ -174,13 +174,13 @@ export default function ServicePricing() {
       </div>
 
       {/* Advertising Pricing */}
-      <div style={styles.card}>
-        <div style={styles.cardHeader}>
-          <div style={styles.cardHeaderLeft}>
-            <svg width="20" height="20" fill={PRIMARY} viewBox="0 0 24 24">
+      <div style={baseStyles.card}>
+        <div style={baseStyles.cardHeader}>
+          <div style={baseStyles.cardHeaderLeft}>
+            <svg width="18" height="18" fill={PRIMARY} viewBox="0 0 24 24">
               <path d="M3 11l19-9-9 19-2-8-8-2z" />
             </svg>
-            Advertising Pricing
+            <span style={{ fontSize: 15 }}>Advertising Pricing</span>
           </div>
         </div>
         <div style={styles.cardBody}>

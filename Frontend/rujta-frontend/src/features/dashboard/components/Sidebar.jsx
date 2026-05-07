@@ -86,6 +86,12 @@ export default function Sidebar({ open, setOpen }) {
   path: "/dashboard/discounts",
   role: "PharmacyAdmin",
 },
+{
+  label: "Payments",
+  icon: <CiSettings size={22} />,
+  path: "/dashboard/payments",
+  role: "PharmacyAdmin",
+},
   ];
 
   const onLogout = async () => {
