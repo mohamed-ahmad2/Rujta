@@ -17,4 +17,8 @@ public interface IDrugInteractionService
         CancellationToken ct = default
     );
     Task<bool> IsMlServiceHealthyAsync(CancellationToken ct = default);
+    Task<OrderDrugInteractionResponseDto> CheckNewOrderOnlyAsync(
+    IEnumerable<int> medicineIds,
+    double threshold = 0.5,
+    CancellationToken ct = default);
 }

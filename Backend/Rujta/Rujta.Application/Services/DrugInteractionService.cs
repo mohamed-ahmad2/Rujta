@@ -69,7 +69,9 @@ public class DrugInteractionService : IDrugInteractionService
         var historicalMedicines = await _drugHistoryRepo
             .GetPatientDrugHistoryAsync(patientUserId, ct);
 
-        // ── Step 3: Merge and deduplicate ─────────────────────────────────────
+        // ── Step 3: Track which drugs are new vs history ──────────────────────────
+        var newIds = newMedicines.Select(m => m.Id).ToHashSet();
+
         var allDrugs = newMedicines
             .Concat(historicalMedicines)
             .GroupBy(d => d.Id)
@@ -91,54 +93,143 @@ public class DrugInteractionService : IDrugInteractionService
             };
         }
 
-        // ── Step 4: Call Python ML service ────────────────────────────────────
-        var mlRequest = new MlPredictRequestDto { Drugs = allDrugs, Threshold = threshold };
-        MlPredictResponseDto? mlResponse = null;
+        // ── Step 4: Build all drug pairs ──────────────────────────────────────────
+        var pairs = new List<object>();
+        for (int i = 0; i < allDrugs.Count; i++)
+            for (int j = i + 1; j < allDrugs.Count; j++)
+                pairs.Add(new
+                {
+                    smiles1 = allDrugs[i].Smiles,
+                    name1 = allDrugs[i].Name,
+                    smiles2 = allDrugs[j].Smiles,
+                    name2 = allDrugs[j].Name,
+                });
+
+        // ── Step 5: Call Python ML /predict/batch ────────────────────────────────
+        var batchRequest = new { pairs };
+        BatchMlResponseDto? mlResponse = null;
         bool mlUnavailable = false;
 
         try
         {
             var httpResponse = await _http.PostAsJsonAsync(
-                "/predict", mlRequest, _jsonOptions, ct);
+                "/predict/batch", batchRequest, _jsonOptions, ct);
 
             httpResponse.EnsureSuccessStatusCode();
 
             mlResponse = await httpResponse.Content
-                .ReadFromJsonAsync<MlPredictResponseDto>(_jsonOptions, ct);
+                .ReadFromJsonAsync<BatchMlResponseDto>(_jsonOptions, ct);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex,
-                "ML service unavailable — order will proceed without interaction check");
+            _logger.LogWarning(ex, "ML service unavailable");
             mlUnavailable = true;
         }
 
         if (mlUnavailable || mlResponse is null)
-        {
             return new OrderDrugInteractionResponseDto
             {
                 TotalDrugsChecked = allDrugs.Count,
                 MlServiceUnavailable = true,
                 Interactions = new List<DrugInteractionResultDto>()
             };
-        }
 
-        // ── Step 5: Map to frontend DTOs ──────────────────────────────────────
-        var interactions = mlResponse.Interactions.Select(i => new DrugInteractionResultDto
-        {
-            Drug1Id = int.TryParse(i.Drug1Id, out var d1) ? d1 : 0,
-            Drug1Name = i.Drug1Name,
-            Drug2Id = int.TryParse(i.Drug2Id, out var d2) ? d2 : 0,
-            Drug2Name = i.Drug2Name,
-            Probability = i.Probability,
-            Interacts = i.Interacts,
-        }).ToList();
+        // ── Step 6: Map to response ───────────────────────────────────────────────
+        var interactions = mlResponse.Results
+            .Where(r => r.Interaction == true && r.Error == null)
+            .Select(r => new DrugInteractionResultDto
+            {
+                Drug1Id = int.TryParse(allDrugs.FirstOrDefault(d => d.Name == r.Drug1)?.Id, out var d1) ? d1 : 0,
+                Drug1Name = r.Drug1,
+                Drug1IsFromHistory = !newIds.Contains(allDrugs.FirstOrDefault(d => d.Name == r.Drug1)?.Id ?? ""),
 
+                Drug2Id = int.TryParse(allDrugs.FirstOrDefault(d => d.Name == r.Drug2)?.Id, out var d2) ? d2 : 0,
+                Drug2Name = r.Drug2,
+                Drug2IsFromHistory = !newIds.Contains(allDrugs.FirstOrDefault(d => d.Name == r.Drug2)?.Id ?? ""),
+
+                Probability = r.Probability ?? 0,
+                Interacts = r.Interaction ?? false,
+                Confidence = r.Confidence,
+            }).ToList();
         return new OrderDrugInteractionResponseDto
         {
             TotalDrugsChecked = allDrugs.Count,
-            TotalPairsChecked = mlResponse.TotalPairsChecked,
-            InteractionsFound = mlResponse.InteractionsFound,
+            TotalPairsChecked = mlResponse.Total,
+            InteractionsFound = interactions.Count,
+            Interactions = interactions,
+        };
+    }
+    public async Task<OrderDrugInteractionResponseDto> CheckNewOrderOnlyAsync(
+    IEnumerable<int> medicineIds,
+    double threshold = 0.5,
+    CancellationToken ct = default)
+    {
+        // Load only the new order drugs — NO history
+        var drugs = await _drugHistoryRepo.GetMedicinesByIdsAsync(medicineIds, ct);
+
+        if (drugs.Count < 2)
+            return new OrderDrugInteractionResponseDto
+            {
+                TotalDrugsChecked = drugs.Count,
+                TotalPairsChecked = 0,
+                InteractionsFound = 0,
+                Interactions = new List<DrugInteractionResultDto>()
+            };
+
+        // Build pairs
+        var pairs = new List<object>();
+        for (int i = 0; i < drugs.Count; i++)
+            for (int j = i + 1; j < drugs.Count; j++)
+                pairs.Add(new
+                {
+                    smiles1 = drugs[i].Smiles,
+                    name1 = drugs[i].Name,
+                    smiles2 = drugs[j].Smiles,
+                    name2 = drugs[j].Name,
+                });
+
+        // Call ML
+        var batchRequest = new { pairs };
+        BatchMlResponseDto? mlResponse = null;
+
+        try
+        {
+            var httpResponse = await _http.PostAsJsonAsync(
+                "/predict/batch", batchRequest, _jsonOptions, ct);
+            httpResponse.EnsureSuccessStatusCode();
+            mlResponse = await httpResponse.Content
+                .ReadFromJsonAsync<BatchMlResponseDto>(_jsonOptions, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "ML service unavailable");
+            return new OrderDrugInteractionResponseDto
+            {
+                TotalDrugsChecked = drugs.Count,
+                MlServiceUnavailable = true,
+                Interactions = new List<DrugInteractionResultDto>()
+            };
+        }
+
+        // Map — all drugs are from new order so IsFromHistory = false
+        var interactions = mlResponse!.Results
+            .Where(r => r.Interaction == true && r.Error == null)
+            .Select(r => new DrugInteractionResultDto
+            {
+                Drug1Name = r.Drug1,
+                Drug1IsFromHistory = false,
+                Drug2Name = r.Drug2,
+                Drug2IsFromHistory = false,
+                Probability = r.Probability ?? 0,
+                Interacts = r.Interaction ?? false,
+                Confidence = r.Confidence,
+            }).ToList();
+
+        return new OrderDrugInteractionResponseDto
+        {
+            TotalDrugsChecked = drugs.Count,
+            TotalPairsChecked = mlResponse.Total,
+            InteractionsFound = interactions.Count,
             Interactions = interactions,
         };
     }

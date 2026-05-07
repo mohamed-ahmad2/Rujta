@@ -12,7 +12,7 @@ namespace Rujta.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+//[Authorize]
 public class DrugInteractionController : ControllerBase
 {
     private readonly IDrugInteractionService _drugInteractionService;
@@ -73,6 +73,54 @@ public class DrugInteractionController : ControllerBase
         return healthy
             ? Ok(new { status = "ok", mlService = "reachable" })
             : StatusCode(503, new { status = "degraded", mlService = "unreachable" });
+    }
+    // PAGE 1 — new order drugs only (no history)
+    [HttpPost("check-order")]
+    public async Task<IActionResult> CheckOrderOnly(
+        [FromBody] CheckInteractionsRequest request,
+        CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)
+                       ?? User.FindFirst("sub")
+                       ?? User.FindFirst("uid");
+
+        if (userIdClaim is null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            return Unauthorized("Could not extract user ID from token.");
+
+        if (request.MedicineIds is null || !request.MedicineIds.Any())
+            return BadRequest("At least one medicine ID is required.");
+
+        var result = await _drugInteractionService.CheckNewOrderOnlyAsync(
+            request.MedicineIds,
+            request.Threshold,
+            ct
+        );
+        return Ok(result);
+    }
+
+    // PAGE 2 — new order drugs vs past history
+    [HttpPost("check-history")]
+    public async Task<IActionResult> CheckWithHistory(
+        [FromBody] CheckInteractionsRequest request,
+        CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)
+                       ?? User.FindFirst("sub")
+                       ?? User.FindFirst("uid");
+
+        if (userIdClaim is null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            return Unauthorized("Could not extract user ID from token.");
+
+        if (request.MedicineIds is null || !request.MedicineIds.Any())
+            return BadRequest("At least one medicine ID is required.");
+
+        var result = await _drugInteractionService.CheckOrderInteractionsAsync(
+            request.MedicineIds,
+            userId,
+            request.Threshold,
+            ct
+        );
+        return Ok(result);
     }
 }
 
