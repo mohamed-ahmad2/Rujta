@@ -6,6 +6,6 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
     {
         Task<int> GetTotalOrdersAsync(int pharmacyId, CancellationToken cancellationToken);
         Task<List<PharmacyStatsDto>> GetTopPharmaciesAsync(int count, CancellationToken cancellationToken);
-
+        Task<Dictionary<int, int>> GetTotalOrdersForPharmaciesAsync(List<int> pharmacyIds, CancellationToken cancellationToken = default);
     }
 }

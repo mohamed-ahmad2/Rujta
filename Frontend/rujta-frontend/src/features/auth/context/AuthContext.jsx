@@ -104,6 +104,8 @@ export const AuthProvider = ({ children }) => {
     setUser(newUser);
     applyAndStoreToken(token, setTokenExp);
 
+    window.location.reload();
+    
     return newUser;
   };
 
