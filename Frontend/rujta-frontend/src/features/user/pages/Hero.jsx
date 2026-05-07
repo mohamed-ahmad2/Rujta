@@ -2,57 +2,9 @@ import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import useCampaigns from "../../campaigns/hook/useCampaigns";
 import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
+const staticAds = [];
 
-// --- Static Asset Imports ---
-import productImg1 from "../../../assets/hero/pantin.png";
-import modelImg1   from "../../../assets/hero/model.png";
-import bg1         from "../../../assets/hero/bg1.png";
-
-import productImg3 from "../../../assets/hero/i1.png";
-import modelImg3   from "../../../assets/hero/mod.png";
-import bg3         from "../../../assets/hero/bg3.png";
-
-// --- Static Slides Config ---
-const staticAds = [
-  {
-    id: "static-1",
-    type: "static",
-    text1: "بشرة اجمل مع ",
-    text2: "ordenary",
-    textColor1: "text-gray-900",
-    textColor2: "text-red-900",
-    textSize1: "text-3xl sm:text-5xl md:text-8xl",
-    textSize2: "text-5xl sm:text-6xl md:text-9xl",
-    bgImage: bg3,
-    productImg: productImg3,
-    productSize: "w-[260px] sm:w-[420px] md:w-[900px]",
-    productPosition:
-      "left-1/2 -translate-x-1/2 bottom-[-80px] sm:bottom-[-200px] md:left-[-500px] md:translate-x-0 md:bottom-[-350px]",
-    modelImg: modelImg3,
-    modelSize: "md:w-[450px]",
-    modelPosition: "hidden md:block md:right-[-100px] md:bottom-[-280px]",
-  },
-  {
-    id: "static-2",
-    type: "static",
-    text1: "يعالج ويحمي",
-    text2: "من تلف الماء",
-    textColor1: "text-gray-900",
-    textColor2: "text-yellow-600",
-    textSize1: "text-4xl sm:text-5xl md:text-8xl",
-    textSize2: "text-5xl sm:text-5xl md:text-8xl",
-    bgImage: bg1,
-    productImg: productImg1,
-    productSize: "w-[240px] sm:w-[500px] md:w-[700px]",
-    productPosition:
-      "left-1/2 -translate-x-1/2 bottom-[-80px] sm:bottom-[-200px] md:left-[-500px] md:translate-x-0 md:bottom-[-400px]",
-    modelImg: modelImg1,
-    modelSize: "md:w-[650px]",
-    modelPosition: "hidden md:block md:right-[-100px] md:bottom-[-380px]",
-  },
-];
-
-// ─── Pharmacy Badge ───────────────────────────────────────────────────────────
+// ─── Pharmacy Badge ────────────────────────────────────────────────────────────
 const PharmacyBadge = ({ imageUrl, name, pharmacyId, navigate }) => {
   const [hovered, setHovered] = useState(false);
   if (!imageUrl && !name) return null;

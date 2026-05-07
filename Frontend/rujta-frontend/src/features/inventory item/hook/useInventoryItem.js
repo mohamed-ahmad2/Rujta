@@ -4,157 +4,164 @@ import {
   getAllInventoryItems,
   getInventoryItemById,
   getInventoryProducts,
+  getPagedInventoryItems,
   addInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
 } from "../api/inventoryItem";
 
-export const ProductStatus = {
-  0: "In stock",
-  1: "Low stock",
-  2: "Out of stock",
-  3: "Expired",
-  InStock:     0,
-  LowStock:    1,
-  OutOfStock:  2,
-  Expired:     3,
+const extractErrorMessage = (err) => {
+  const res = err?.response;
+
+  if (res?.data?.message) return res.data.message;
+  if (typeof res?.data === "string") return res.data;
+
+  switch (res?.status) {
+    case 400:
+      return "Invalid request data";
+    case 401:
+      return "Unauthorized";
+    case 403:
+      return "Forbidden";
+    case 404:
+      return "Not found";
+    case 500:
+      return "Server error";
+    default:
+      return err?.message || "Unexpected error";
+  }
 };
 
-const toNumber = (value, fallback = 0) => {
-  const n = Number(value);
+const toNumber = (v, fallback = 0) => {
+  const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 };
 
-const extractErrorMessage = (err) => {
-  if (!err) return "An unknown error occurred";
+// ─── Map string enum → display label ────────────────────────────────────────
+// Handles both string enums  ("InStock") and numeric enums (0)
+const mapStatus = (rawStatus, expired) => {
+  if (expired) return "Expired";
 
-  if (err?.response?.data?.message) return err.response.data.message;
+  // Normalise to lowercase string for comparison
+  const s =
+    rawStatus !== undefined && rawStatus !== null
+      ? String(rawStatus).toLowerCase()
+      : "";
 
-  if (err?.response?.data) {
-    if (typeof err.response.data === "string") return err.response.data;
-  }
+  if (s === "instock" || s === "0") return "In stock";
+  if (s === "lowstock" || s === "1") return "Low stock";
+  if (s === "outofstock" || s === "2") return "Out of stock";
+  if (s === "expired" || s === "3") return "Expired";
 
-  if (err?.response?.status) {
-    const status = err.response.status;
-    if (status === 400) return "Invalid inventory item data";
-    if (status === 401) return "Unauthorized: Please log in again";
-    if (status === 403) return "Forbidden: You don't have permission";
-    if (status === 404) return "Inventory item not found";
-    if (status === 500) return "Server error: Please contact support";
-    return `Request failed with status ${status}`;
-  }
+  return "Unknown";
+};
 
-  if (err?.message) return err.message;
-
-  return "Failed to load inventory items";
+// ─── Format a date value to a readable string ────────────────────────────────
+const formatExpiry = (raw) => {
+  if (!raw) return "—";
+  const d = new Date(raw);
+  if (isNaN(d)) return "—";
+  // e.g. "2025-12-31"
+  return d.toISOString().slice(0, 10);
 };
 
 const mapItem = (item = {}) => {
-  const quantity        = toNumber(item.quantity        ?? item.Quantity);
-  const price           = toNumber(item.price           ?? item.Price);
-  const discountedPrice = toNumber(item.discountedPrice ?? item.DiscountedPrice);
-  const discountValue   = toNumber(item.discountValue   ?? item.DiscountValue);
-  const hasDiscount     = item.hasDiscount              ?? item.HasDiscount ?? false;
+  const quantity = toNumber(item.quantity ?? item.Quantity);
+  const price = toNumber(item.price ?? item.Price);
+  const discountedPrice = toNumber(
+    item.discountedPrice ?? item.DiscountedPrice,
+  );
+  const hasDiscount = item.hasDiscount ?? item.HasDiscount ?? false;
 
-  const expiryDate = item.expiryDate
-    ? new Date(item.expiryDate)
-    : item.ExpiryDate
-      ? new Date(item.ExpiryDate)
-      : null;
+  // Support all common casing variants the backend might return
+  const expiryRaw =
+    item.expiryDate ??
+    item.ExpiryDate ??
+    item.expiry_date ??
+    item.Expiry_Date ??
+    item.expiry ??
+    item.Expiry ??
+    null;
 
-  const today   = new Date();
-  const expired = expiryDate ? expiryDate < today : false;
+  const expiryObj = expiryRaw ? new Date(expiryRaw) : null;
+  const expired = expiryObj ? expiryObj < new Date() : false;
 
-  const statusRaw   = item.status ?? item.Status ?? ProductStatus.InStock;
-  const statusLabel = expired
-    ? "Expired"
-    : ProductStatus[statusRaw] ?? "Unknown";
+  // Support string enum ("InStock") AND numeric enum (0)
+  const statusRaw = item.status ?? item.Status;
+  const status = mapStatus(statusRaw, expired);
 
   return {
-    id:             item.id             ?? item.Id             ?? "-",
-    displayId:      `#${item.id         ?? item.Id             ?? "-"}`,
-    pharmacyId:     item.pharmacyID     ?? item.PharmacyID     ?? null,
-    medicineId:     item.medicineID     ?? item.MedicineID     ?? null,
-    prescriptionId: item.prescriptionID ?? item.PrescriptionID ?? null,
-    categoryId:     item.categoryId     ?? item.CategoryId     ?? null,
+    id: item.id ?? item.Id,
+    name: item.medicineName ?? item.MedicineName,
+    category: item.categoryName ?? item.CategoryName,
 
-    name:        item.medicineName ?? item.MedicineName ?? "Unknown",
-    category:    item.categoryName ?? item.CategoryName ?? "General",
-    qty:         quantity,
-    displayQty:  `${quantity} Units`,
-
-
+    qty: quantity,
     price,
-    displayPrice:         `
-$${price.toFixed(2)}`,
     discountedPrice,
-    displayDiscountedPrice: `
-$${discountedPrice.toFixed(2)}`,
-    discountValue,
-    hasDiscount,
-    effectivePrice:        hasDiscount ? discountedPrice : price,
-    displayEffectivePrice: hasDiscount
-      ? `
-$${discountedPrice.toFixed(2)}`
-      : `
-$${price.toFixed(2)}`,
+    effectivePrice: hasDiscount ? discountedPrice : price,
 
-    expiryDate:    expiryDate ? expiryDate.toLocaleDateString("en-GB") : "-",
-    expiryDateRaw: expiryDate,
-
-    statusRaw,
-    status: statusLabel,
+    expiry: formatExpiry(expiryRaw), // ← now shows the date
+    status, // ← now shows correct status
     expired,
+
+    pharmacyId: item.pharmacyID ?? item.PharmacyID,
 
     raw: item,
   };
 };
 
-
 export default function useInventory() {
-  const [items, setItems]     = useState([]);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState(null);
+  const [error, setError] = useState(null);
 
+  // =========================
+  // GET ALL (simple)
+  // =========================
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const res  = await getInventoryProducts();
-      const data = res?.data ?? res ?? [];
-      const list = Array.isArray(data) ? data : [];
-      setItems(list.map(mapItem));
+      const res = await getInventoryProducts();
+      const data = res?.data ?? [];
+      setItems(data.map(mapItem));
       setError(null);
     } catch (err) {
-      console.error("❌ fetchAll inventory error:", err);
       setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const fetchAllItems = useCallback(async () => {
+  // =========================
+  // GET PAGED
+  // =========================
+  const fetchPaged = useCallback(async (filter) => {
     setLoading(true);
     try {
-      const res  = await getAllInventoryItems();
-      const data = res?.data ?? res ?? [];
-      const list = Array.isArray(data) ? data : [];
-      setItems(list.map(mapItem));
+      const res = await getPagedInventoryItems(filter);
+      const data = res?.data?.items ?? [];
+
+      setItems(data.map(mapItem));
       setError(null);
+
+      return res?.data;
     } catch (err) {
-      console.error("❌ fetchAllItems inventory error:", err);
       setError(extractErrorMessage(err));
+      return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // =========================
+  // GET BY ID
+  // =========================
   const fetchById = async (id) => {
     setLoading(true);
     try {
       const res = await getInventoryItemById(id);
-      return mapItem(res?.data ?? res);
+      return mapItem(res?.data);
     } catch (err) {
-      console.error("❌ fetchById inventory error:", err);
       setError(extractErrorMessage(err));
       return null;
     } finally {
@@ -162,14 +169,16 @@ export default function useInventory() {
     }
   };
 
+  // =========================
+  // CREATE
+  // =========================
   const create = async (data) => {
     setLoading(true);
     try {
       const res = await addInventoryItem(data);
-      await fetchAll(); 
-      return mapItem(res?.data ?? res);
+      await fetchAll();
+      return res?.data;
     } catch (err) {
-      console.error("❌ create inventory error:", err);
       setError(extractErrorMessage(err));
       return null;
     } finally {
@@ -177,35 +186,32 @@ export default function useInventory() {
     }
   };
 
-
+  // =========================
+  // UPDATE
+  // =========================
   const update = async (id, data) => {
     setLoading(true);
     try {
       await updateInventoryItem(id, data);
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? { ...mapItem({ ...item.raw, ...data }), id }
-            : item
-        )
-      );
+      await fetchAll();
       setError(null);
     } catch (err) {
-      console.error("❌ update inventory error:", err);
       setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
+  // =========================
+  // DELETE
+  // =========================
   const remove = async (id) => {
     setLoading(true);
     try {
       await deleteInventoryItem(id);
-      setItems((prev) => prev.filter((item) => item.id !== id));
+      setItems((prev) => prev.filter((x) => x.id !== id));
       setError(null);
     } catch (err) {
-      console.error("❌ remove inventory error:", err);
       setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
@@ -216,8 +222,9 @@ export default function useInventory() {
     items,
     loading,
     error,
-    fetchAll,     
-    fetchAllItems,  
+
+    fetchAll,
+    fetchPaged,
     fetchById,
     create,
     update,

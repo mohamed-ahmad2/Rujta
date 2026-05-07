@@ -5,7 +5,7 @@ using Rujta.Application.DTOs.Common;
 using Rujta.Application.DTOs.MedicineDtos;
 using Rujta.Application.Interfaces.InterfaceServices.IMedicine;
 
-namespace Rujta.Application.Services.MedicineS
+namespace Rujta.Application.Services.MedicineS 
 {
     public class MedicineService : IMedicineService
     {
@@ -28,9 +28,7 @@ namespace Rujta.Application.Services.MedicineS
             _cache = cache;
         }
 
-        public async Task<PagedResultDto<MedicineDto>> GetPagedAsync(
-            MedicineFilterDto filter,
-            CancellationToken cancellationToken = default)
+        public async Task<PagedResultDto<MedicineDto>> GetPagedAsync(MedicineFilterDto filter, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -42,7 +40,7 @@ namespace Rujta.Application.Services.MedicineS
                     && cached != null)
                     return cached;
 
-                var query = _unitOfWork.Medicines.GetQueryable(); 
+                var query = _unitOfWork.Medicines.GetQueryable().AsNoTracking(); 
 
                 if (filter.CategoryIds != null && filter.CategoryIds.Any())
                 {

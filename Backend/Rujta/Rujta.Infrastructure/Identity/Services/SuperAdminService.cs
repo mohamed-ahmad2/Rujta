@@ -13,7 +13,7 @@ namespace Rujta.Infrastructure.Identity.Services
         private readonly ILogger<SuperAdminService> _logger;
         private readonly IMapper _mapper;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly IAddressResolver _addressResolver;  
+        private readonly IAddressResolver _addressResolver;
 
         public SuperAdminService(
             IUnitOfWork unitOfWork,
@@ -48,36 +48,36 @@ namespace Rujta.Infrastructure.Identity.Services
 
                 await EnsureAdminExistsAsync(effectiveAdminId, ct);
 
-          
+
                 var manager = CreateManagerEntity(dto, effectiveAdminId);
                 await _unitOfWork.People.AddAsync(manager, ct);
 
-              
+
                 var generatedPassword = GenerateStrongPassword();
                 await CreateIdentityUserAsync(dto, manager.Id, generatedPassword);
 
-           
+
                 var imageUrl = await SaveImageAsync(dto.Image, ct);
 
-               
+
                 await _addressResolver.ResolveAsync(dto.Address);
 
-         
+
                 var address = _mapper.Map<Address>(dto.Address);
                 await _unitOfWork.Address.AddAsync(address, ct);
                 await _unitOfWork.SaveAsync(ct);
 
-            
+
                 var pharmacy = BuildPharmacyEntity(
                     dto, manager.Id, effectiveAdminId, imageUrl, address.Id);
 
                 await _unitOfWork.Pharmacies.AddAsync(pharmacy, ct);
                 await _unitOfWork.SaveAsync(ct);
 
-            
+
                 address.PharmacyId = pharmacy.Id;
 
-            
+
                 manager.PharmacyId = pharmacy.Id;
 
                 await _unitOfWork.SaveAsync(ct);
@@ -282,16 +282,16 @@ namespace Rujta.Infrastructure.Identity.Services
             if (pharmacy.IsDeleted)
                 throw new InvalidOperationException("Cannot update a deleted pharmacy.");
 
-      
+
             pharmacy.Name = dto.Name;
             pharmacy.ContactNumber = dto.ContactNumber;
             if (!string.IsNullOrWhiteSpace(dto.OpenHours))
                 pharmacy.OpenHours = dto.OpenHours;
 
-       
+
             await _addressResolver.ResolveAsync(dto.Address);
 
-       
+
             if (pharmacy.Address == null)
             {
                 var newAddress = _mapper.Map<Address>(dto.Address);
@@ -512,7 +512,7 @@ namespace Rujta.Infrastructure.Identity.Services
             return true;
         }
 
-        private async Task<string?> SaveImageAsync(IFormFile? image, CancellationToken ct)
+        private static async Task<string?> SaveImageAsync(IFormFile? image, CancellationToken ct)
         {
             if (image == null) return null;
 
@@ -526,8 +526,7 @@ namespace Rujta.Infrastructure.Identity.Services
             await using var stream = new FileStream(filePath, FileMode.Create);
             await image.CopyToAsync(stream, ct);
 
-            var relativePath = $"/images/pharmacies/{fileName}";
-            return BuildAbsoluteUrl(relativePath);
+            return $"/images/pharmacies/{fileName}";
         }
 
         private string BuildAbsoluteUrl(string relativePath)
@@ -542,6 +541,7 @@ namespace Rujta.Infrastructure.Identity.Services
         private string? EnsureAbsoluteUrl(string? url)
         {
             if (string.IsNullOrWhiteSpace(url)) return url;
+
             if (url.StartsWith("http://") || url.StartsWith("https://"))
                 return url;
 

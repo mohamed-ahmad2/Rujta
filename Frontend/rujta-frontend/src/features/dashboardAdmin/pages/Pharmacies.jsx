@@ -35,14 +35,14 @@ const API_URL =
 
 const getImageUrl = (url) => {
   if (!url) return null;
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+
   if (url.startsWith("blob:") || url.startsWith("data:")) return url;
+
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+
   return `${API_URL}${url.startsWith("/") ? url : `/${url}`}`;
 };
 
-/* ─────────────────────────────────────────────
-   COMPONENTS
-───────────────────────────────────────────── */
 function PharmacyAvatar({ src, name, size = "md" }) {
   const [errored, setErrored] = useState(false);
 
@@ -137,9 +137,6 @@ function CopyButton({ value, label = "Copy" }) {
   );
 }
 
-/* ─────────────────────────────────────────────
-   HELPERS
-───────────────────────────────────────────── */
 const buildLocationText = ({ street, buildingNo, city, governorate }) => {
   const parts = [];
   if (street?.toString().trim()) parts.push(street.toString().trim());
@@ -150,9 +147,6 @@ const buildLocationText = ({ street, buildingNo, city, governorate }) => {
   return parts.join(", ");
 };
 
-/* ─────────────────────────────────────────────
-   MAIN PAGE
-───────────────────────────────────────────── */
 export default function Pharmacies() {
   const {
     pharmacies,
@@ -281,12 +275,8 @@ export default function Pharmacies() {
     }
     setAddForm(emptyForm);
     setShowAdvanced(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addForm.imagePreview]);
 
-  /* ─────────────────────────────────────────────
-     ✅ ADD — payload يطابق buildCreateFormData في الـ hook
-  ───────────────────────────────────────────── */
   const handleAdd = async () => {
     const {
       pharmacyName,
@@ -316,7 +306,6 @@ export default function Pharmacies() {
     }
 
     try {
-      // ⚠️ المفاتيح هنا camelCase حتى يتعامل معها buildCreateFormData
       const payload = {
         pharmacyName: addForm.pharmacyName,
         openHours: addForm.openHours || "9AM - 11PM",
@@ -334,7 +323,7 @@ export default function Pharmacies() {
           latitude: parseFloat(addForm.latitude) || 0,
           longitude: parseFloat(addForm.longitude) || 0,
         },
-        image: addForm.image, // الـ hook يضيفه فقط إذا كان File/Blob
+        image: addForm.image,
       };
 
       if (addForm.isBranch && addForm.parentPharmacyId) {
@@ -354,16 +343,12 @@ export default function Pharmacies() {
 
       resetAddForm();
       setModal(null);
-      // fetchAll/fetchMain تم استدعاؤها مسبقًا داخل create() — لكن نحدّث الـ main أيضًا
       fetchMain();
     } catch (err) {
       setErrorMsg(err?.message || "Error creating pharmacy");
     }
   };
 
-  /* ─────────────────────────────────────────────
-     VIEW
-  ───────────────────────────────────────────── */
   const handleView = async (p) => {
     setSelected(p);
     setModal("view");
@@ -371,9 +356,6 @@ export default function Pharmacies() {
     if (detail) setSelected({ ...p, ...detail });
   };
 
-  /* ─────────────────────────────────────────────
-     ✅ EDIT — نستخدم الحقول المهيكلة (street/city/...) مباشرةً
-  ───────────────────────────────────────────── */
   const openEdit = (p) => {
     setSelected(p);
     setEditForm({
@@ -398,7 +380,6 @@ export default function Pharmacies() {
       return;
     }
 
-    // ⚠️ payload يطابق buildUpdatePayload في الـ hook (يتوقع address ككائن)
     const updated = await update(selected.id, {
       name: editForm.name,
       contactNumber: editForm.contactNumber,
@@ -421,9 +402,6 @@ export default function Pharmacies() {
     }
   };
 
-  /* ─────────────────────────────────────────────
-     RESET PASSWORD
-  ───────────────────────────────────────────── */
   const handleResetPassword = (p) => {
     setConfirmData({
       title: "Reset Password",
@@ -445,9 +423,6 @@ export default function Pharmacies() {
     });
   };
 
-  /* ─────────────────────────────────────────────
-     DELETE / RESTORE
-  ───────────────────────────────────────────── */
   const handleDelete = (p) => {
     setConfirmData({
       title: "Delete Pharmacy",
@@ -479,9 +454,6 @@ export default function Pharmacies() {
     });
   };
 
-  /* ─────────────────────────────────────────────
-     IMAGE UPLOAD
-  ───────────────────────────────────────────── */
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -497,9 +469,6 @@ export default function Pharmacies() {
     });
   };
 
-  /* ─────────────────────────────────────────────
-     RENDER
-  ───────────────────────────────────────────── */
   return (
     <div className="min-h-screen space-y-6 bg-[#f5f7fb] p-8 lg:p-10">
       {/* HEADER */}
@@ -557,7 +526,6 @@ export default function Pharmacies() {
         </div>
       </div>
 
-      {/* STATS CARDS */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatsCard
           icon={<Building2 size={20} />}
@@ -579,7 +547,6 @@ export default function Pharmacies() {
         />
       </div>
 
-      {/* TABLE */}
       <div className="overflow-hidden rounded-2xl border bg-white">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -702,7 +669,6 @@ export default function Pharmacies() {
         </div>
       </div>
 
-      {/* PAGINATION */}
       {totalPages > 1 && (
         <div className="flex justify-center gap-2">
           {Array.from({ length: totalPages }, (_, i) => (
@@ -721,7 +687,6 @@ export default function Pharmacies() {
         </div>
       )}
 
-      {/* ════════ ADD MODAL ════════ */}
       {modal === "add" && (
         <Modal onClose={() => setModal(null)} width="560px">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -999,7 +964,6 @@ export default function Pharmacies() {
         </Modal>
       )}
 
-      {/* ════════ VIEW MODAL ════════ */}
       {modal === "view" && selected && (
         <Modal onClose={() => setModal(null)} width="500px">
           <div className="flex items-center gap-3 border-b pb-3">
@@ -1069,7 +1033,6 @@ export default function Pharmacies() {
         </Modal>
       )}
 
-      {/* ════════ EDIT MODAL ════════ */}
       {modal === "edit" && selected && (
         <Modal onClose={() => setModal(null)} width="500px">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -1185,7 +1148,6 @@ export default function Pharmacies() {
         </Modal>
       )}
 
-      {/* ════════ SUCCESS MODAL ════════ */}
       {successData && (
         <Modal onClose={() => setSuccessData(null)}>
           <h2 className="flex items-center gap-2 text-lg font-semibold text-green-600">
@@ -1242,7 +1204,6 @@ export default function Pharmacies() {
         </Modal>
       )}
 
-      {/* ════════ ERROR MODAL ════════ */}
       {errorMsg && (
         <Modal onClose={() => setErrorMsg("")}>
           <h2 className="flex items-center gap-2 text-lg font-semibold text-red-600">
@@ -1260,7 +1221,6 @@ export default function Pharmacies() {
         </Modal>
       )}
 
-      {/* ════════ CONFIRM MODAL ════════ */}
       {confirmData && (
         <Modal onClose={() => setConfirmData(null)}>
           <h2
@@ -1295,9 +1255,6 @@ export default function Pharmacies() {
   );
 }
 
-/* ─────────────────────────────────────────────
-   SMALL HELPER COMPONENTS
-───────────────────────────────────────────── */
 function StatsCard({ icon, label, value, color }) {
   return (
     <div className="flex items-center gap-4 rounded-2xl border bg-white p-5">

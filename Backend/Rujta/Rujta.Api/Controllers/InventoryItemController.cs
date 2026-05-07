@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.RateLimiting;
+using Rujta.Application.DTOs.Common;
 using Rujta.Application.DTOs.InventoryDto;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
@@ -128,6 +129,17 @@ namespace Rujta.Api.Controllers
 
             var products = await _inventoryService.GetByPharmacyAsync(pharmacyId);
             return Ok(products);
+        }
+
+        [HttpGet("paged", Name = "GetPagedInventoryItems")]
+        public async Task<ActionResult<PagedResultDto<InventoryItemDto>>> GetPaged([FromQuery] InventoryItemFilterDto filter)
+        {
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = MissingPharmacyIdMessage });
+
+            var result = await _inventoryService.GetPagedAsync(pharmacyId, filter);
+
+            return Ok(result);
         }
     }
 }
