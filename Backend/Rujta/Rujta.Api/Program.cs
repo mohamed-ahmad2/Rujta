@@ -181,15 +181,6 @@ namespace Rujta.API
             }
 
             await app.RunAsync();
-
-            builder.Services.AddDbContext<AppDbContext>(options =>
-            {
-                var conn = builder.Configuration.GetConnectionString("DefaultConnection");
-
-                Console.WriteLine("DB USED BY EF: " + conn);
-
-                options.UseSqlServer(conn);
-            });
         }
     }
 }

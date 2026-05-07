@@ -208,8 +208,6 @@ export default function Pharmacies() {
     city: "",
     governorate: "",
     contactNumber: "",
-    latitude: "",
-    longitude: "",
     openHours: "9AM - 11PM",
   });
 
@@ -365,8 +363,6 @@ export default function Pharmacies() {
       city: p.city ?? "",
       governorate: p.governorate ?? "",
       contactNumber: p.contactNumber === "-" ? "" : (p.contactNumber ?? ""),
-      latitude: p.latitude ?? "",
-      longitude: p.longitude ?? "",
       openHours:
         p.openHours && p.openHours !== "-" ? p.openHours : "9AM - 11PM",
     });
@@ -389,8 +385,6 @@ export default function Pharmacies() {
         buildingNo: editForm.buildingNo,
         city: editForm.city,
         governorate: editForm.governorate,
-        latitude: parseFloat(editForm.latitude) || 0,
-        longitude: parseFloat(editForm.longitude) || 0,
       },
     });
 
@@ -1098,19 +1092,6 @@ export default function Pharmacies() {
                 {buildLocationText(editForm) || "—"}
               </div>
             )}
-
-            <button
-              type="button"
-              onClick={() => setShowAdvancedEdit((s) => !s)}
-              className="flex items-center gap-1 text-xs text-secondary hover:underline"
-            >
-              {showAdvancedEdit ? (
-                <ChevronUp size={12} />
-              ) : (
-                <ChevronDown size={12} />
-              )}
-              Advanced (GPS coordinates - optional)
-            </button>
 
             {showAdvancedEdit && (
               <div className="grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-3">
