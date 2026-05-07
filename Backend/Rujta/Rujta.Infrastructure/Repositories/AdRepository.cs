@@ -18,12 +18,11 @@ namespace Rujta.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<IEnumerable<Ad>> GetByPharmacyIdAsync(
-            int pharmacyId,
-            CancellationToken cancellationToken = default)
+       
+        public async Task<IEnumerable<Ad>> GetByPharmacyIdAsync(int pharmacyId, CancellationToken cancellationToken = default)
         {
             return await _context.Ads
-                .Where(a => a.PharmacyId == pharmacyId && a.IsActive)
+                .Where(a => a.PharmacyId == pharmacyId)
                 .OrderByDescending(a => a.CreatedAt)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);

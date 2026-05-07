@@ -74,6 +74,9 @@ namespace Rujta.Infrastructure.Extensions
             services.AddScoped<IPharmacistRepository, PharmacistRepository>();
             services.AddScoped<IReportRepository, ReportRepository>();
             services.AddScoped<ISuperAdminRepository, SuperAdminRepository>();
+            services.AddScoped<IAdRepository, AdRepository>();
+            services.AddScoped<IPricingRepository, PricingRepository>();
+            services.AddScoped<IDrugRequestRepository, DrugRequestRepository>();
 
             return services;
         }
@@ -113,10 +116,11 @@ namespace Rujta.Infrastructure.Extensions
 
             services.AddScoped<IPrescriptionService, PrescriptionService>();
             services.AddScoped<IAdService, AdService>();
-            services.AddScoped<IAdRepository, AdRepository>();
+           
             services.AddMemoryCache();
-            services.AddScoped<IDrugRequestRepository, DrugRequestRepository>();
+           
             services.AddScoped<IDrugRequestService, DrugRequestService>();
+            services.AddScoped<IPricingService, PricingService>();
 
             return services;
         }

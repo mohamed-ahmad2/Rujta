@@ -23,7 +23,7 @@ namespace Rujta.Application.Interfaces
         IAdRepository Ads { get; }
         IDiscountRepository Discount { get; }
         ICompanyRepository Companies { get; }
-
+        IPricingRepository Pricing { get; }
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
         IExecutionStrategy CreateExecutionStrategy();
      
