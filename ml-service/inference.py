@@ -3,28 +3,31 @@ inference.py
 ------------
 Load a trained MR-GNN checkpoint and predict drug-drug interaction
 for one or more pairs of SMILES strings.
+
+Checkpoint format produced by the training loop:
+    {
+        "epoch":     int,
+        "model":     state_dict,
+        "optimizer": state_dict,
+        "scheduler": state_dict,
+        "valid_auc": float,
+    }
 """
+
+import importlib
+from pathlib import Path
+from typing import Optional, Union
 
 import torch
 import torch.nn.functional as F
-import numpy as np
-import importlib
-from pathlib import Path
-from typing import Union, Optional
 
-from model import MRGNN, smiles_to_graph, batch_graphs, NODE_DIM
+from model import MRGNN, NODE_DIM, batch_graphs, smiles_to_graph
 
 
-# ── Register ALL NumPy globals that may appear in a checkpoint ────────────────
+# ── Register all NumPy globals PyTorch 2.6+ may refuse ───────────────────────
 
 def _register_numpy_safe_globals() -> None:
-    """
-    Allowlist every NumPy type that PyTorch 2.6+ may refuse under
-    weights_only=True.  Covers numpy < 2.0 and numpy >= 2.0 layouts,
-    plus the numpy.dtypes sub-module introduced in NumPy 1.24+.
-    """
     candidates = [
-        # core scalar / array types
         "numpy.dtype",
         "numpy.ndarray",
         "numpy.core.multiarray.scalar",
@@ -35,7 +38,6 @@ def _register_numpy_safe_globals() -> None:
 
     resolved = []
 
-    # Add every attribute from numpy.dtypes (Float64DType, Int32DType, etc.)
     for mod_name in ("numpy.dtypes",):
         try:
             mod = importlib.import_module(mod_name)
@@ -46,7 +48,6 @@ def _register_numpy_safe_globals() -> None:
         except ImportError:
             pass
 
-    # Add the individually listed candidates
     for dotted in candidates:
         *mod_parts, attr = dotted.split(".")
         try:
@@ -57,6 +58,7 @@ def _register_numpy_safe_globals() -> None:
 
     if resolved:
         torch.serialization.add_safe_globals(resolved)
+
 
 _register_numpy_safe_globals()
 
@@ -71,33 +73,31 @@ def _confidence(prob: float) -> str:
     return "low"
 
 
-# ── Predictor class ───────────────────────────────────────────────────────────
+# ── Predictor ────────────────────────────────────────────────────────────────
 
 class DDIPredictor:
-    """
-    Load a saved MR-GNN checkpoint and expose a simple .predict() interface.
-    """
+    """Load a saved MR-GNN checkpoint and expose a .predict() interface."""
 
     def __init__(
         self,
         checkpoint_path: Union[str, Path],
-        device: str = None,
+        device: Optional[str] = None,
         threshold: float = 0.5,
     ):
         self.threshold = threshold
-        self.device = torch.device(
+        self.device    = torch.device(
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
         self.model = self._load_model(checkpoint_path)
+
+    # ── Checkpoint loading ────────────────────────────────────────────────────
 
     def _load_model(self, checkpoint_path: Union[str, Path]) -> MRGNN:
         path = Path(checkpoint_path)
         if not path.exists():
             raise FileNotFoundError(f"Checkpoint not found: {path}")
 
-        # Try safe load first; if an unexpected type still slips through,
-        # fall back to weights_only=False — safe because this is a locally
-        # trained file you own.
+        # Try weights_only=True first; fall back for numpy-typed checkpoints.
         try:
             ckpt = torch.load(path, map_location=self.device, weights_only=True)
             print("🔒 Checkpoint loaded with weights_only=True")
@@ -106,35 +106,42 @@ class DDIPredictor:
             print("↩️  Retrying with weights_only=False (trusted local file)")
             ckpt = torch.load(path, map_location=self.device, weights_only=False)
 
-        # Handle both checkpoint formats:
-        # 1) {"model_state_dict": ..., "cfg": ..., "epoch": ..., "best_val_auc": ...}
-        # 2) bare state_dict
-        if isinstance(ckpt, dict) and "model_state_dict" in ckpt:
+        # ── Unpack checkpoint ─────────────────────────────────────────────────
+        # Format 1 (training loop): {"model": ..., "epoch": ..., "valid_auc": ...}
+        # Format 2 (legacy):        {"model_state_dict": ..., "best_val_auc": ...}
+        # Format 3 (bare):          state_dict directly
+        if isinstance(ckpt, dict) and "model" in ckpt:
+            state_dict = ckpt["model"]
+            cfg        = ckpt.get("cfg", {})
+            epoch      = ckpt.get("epoch", "?")
+            auc        = float(ckpt.get("valid_auc", float("nan")))
+        elif isinstance(ckpt, dict) and "model_state_dict" in ckpt:
             state_dict = ckpt["model_state_dict"]
             cfg        = ckpt.get("cfg", {})
             epoch      = ckpt.get("epoch", "?")
-            auc        = ckpt.get("best_val_auc", float("nan"))
+            auc        = float(ckpt.get("best_val_auc", float("nan")))
         else:
             state_dict = ckpt
             cfg        = {}
             epoch      = "?"
             auc        = float("nan")
 
-        # Build model from saved config (or defaults)
+        # ── Build model ───────────────────────────────────────────────────────
         model = MRGNN(
-            node_dim   = cfg.get("node_dim",    NODE_DIM),
-            conv_dim   = cfg.get("conv_dim",    384),
-            graph_dim  = cfg.get("graph_dim",   128),
-            hidden_dim = cfg.get("hidden_dim",  512),
-            num_layers = cfg.get("num_layers",  3),
-            num_classes= cfg.get("num_classes", 2),
-            dropout    = cfg.get("dropout",     0.3),
+            node_dim    = cfg.get("node_dim",    NODE_DIM),
+            conv_dim    = cfg.get("conv_dim",    384),
+            graph_dim   = cfg.get("graph_dim",   128),
+            hidden_dim  = cfg.get("hidden_dim",  512),
+            num_layers  = cfg.get("num_layers",  3),
+            num_classes = cfg.get("num_classes", 2),
+            dropout     = cfg.get("dropout",     0.3),
         ).to(self.device)
 
         model.load_state_dict(state_dict)
         model.eval()
 
-        print(f"✅ Model loaded | epoch={epoch} | val_AUC={auc:.4f} | device={self.device}")
+        auc_str = f"{auc:.4f}" if auc == auc else "n/a"   # nan-safe
+        print(f"✅ Model loaded | epoch={epoch} | val_AUC={auc_str} | device={self.device}")
         return model
 
     # ── Single pair ───────────────────────────────────────────────────────────
@@ -150,11 +157,7 @@ class DDIPredictor:
         g2 = smiles_to_graph(smiles2)
 
         if g1 is None or g2 is None:
-            bad = []
-            if g1 is None:
-                bad.append(name1)
-            if g2 is None:
-                bad.append(name2)
+            bad = ([name1] if g1 is None else []) + ([name2] if g2 is None else [])
             return {
                 "drug_1":      name1,
                 "drug_2":      name2,
@@ -165,15 +168,14 @@ class DDIPredictor:
                 "error":       f"Could not parse SMILES for: {', '.join(bad)}",
             }
 
-        g1_batch = batch_graphs([g1]).to(self.device)
-        g2_batch = batch_graphs([g2]).to(self.device)
+        b1 = batch_graphs([g1]).to(self.device)
+        b2 = batch_graphs([g2]).to(self.device)
 
         with torch.no_grad():
-            logits = self.model(g1_batch, g2_batch)
+            logits = self.model(b1, b2)
             prob   = torch.softmax(logits, dim=1)[0, 1].item()
 
         label = int(prob >= self.threshold)
-
         return {
             "drug_1":      name1,
             "drug_2":      name2,
@@ -197,11 +199,7 @@ class DDIPredictor:
             g2 = smiles_to_graph(s2)
 
             if g1 is None or g2 is None:
-                bad = []
-                if g1 is None:
-                    bad.append(n1)
-                if g2 is None:
-                    bad.append(n2)
+                bad = ([n1] if g1 is None else []) + ([n2] if g2 is None else [])
                 results.append({
                     "index":       idx,
                     "drug_1":      n1,
@@ -216,7 +214,7 @@ class DDIPredictor:
                 valid_indices.append(idx)
                 valid_g1.append(g1)
                 valid_g2.append(g2)
-                results.append({"drug_1": n1, "drug_2": n2})
+                results.append({"drug_1": n1, "drug_2": n2})   # placeholder
 
         if valid_g1:
             b1 = batch_graphs(valid_g1).to(self.device)
@@ -244,16 +242,16 @@ class DDIPredictor:
 # ── CLI convenience ───────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    import sys
     import json
+    import sys
 
     if len(sys.argv) < 6:
         print("Usage: python inference.py <ckpt> <smi1> <name1> <smi2> <name2>")
         sys.exit(1)
 
-    ckpt_path   = sys.argv[1]
-    smi1, name1 = sys.argv[2], sys.argv[3]
-    smi2, name2 = sys.argv[4], sys.argv[5]
+    ckpt_path        = sys.argv[1]
+    smi1, name1      = sys.argv[2], sys.argv[3]
+    smi2, name2      = sys.argv[4], sys.argv[5]
 
     predictor = DDIPredictor(ckpt_path)
     result    = predictor.predict(smi1, smi2, name1, name2)

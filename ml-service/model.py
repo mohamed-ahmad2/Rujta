@@ -22,7 +22,7 @@ remover = SaltRemover.SaltRemover()
 
 NODE_DIM = 32
 
-ATOM_TYPES = [1, 5, 6, 7, 8, 9, 14, 15, 16, 17, 35, 53]  # H B C N O F Si P S Cl Br I
+ATOM_TYPES    = [1, 5, 6, 7, 8, 9, 14, 15, 16, 17, 35, 53]   # H B C N O F Si P S Cl Br I
 
 HYBRIDIZATION = {
     Chem.rdchem.HybridizationType.SP:    0,
@@ -37,7 +37,7 @@ HYBRIDIZATION = {
 
 @dataclass
 class GraphData:
-    x: torch.Tensor
+    x:          torch.Tensor
     edge_index: torch.Tensor
 
     def to(self, device):
@@ -53,9 +53,9 @@ class GraphData:
 
 @dataclass
 class GraphBatch:
-    x: torch.Tensor
+    x:          torch.Tensor
     edge_index: torch.Tensor
-    batch: torch.Tensor
+    batch:      torch.Tensor
 
     def to(self, device):
         return GraphBatch(
@@ -82,8 +82,8 @@ def batch_graphs(graph_list):
         batches.append(torch.full((g.num_nodes,), i, dtype=torch.long))
         node_offset += g.num_nodes
 
-    x = torch.cat(xs, dim=0)
-    batch = torch.cat(batches, dim=0)
+    x          = torch.cat(xs, dim=0)
+    batch      = torch.cat(batches, dim=0)
     edge_index = (
         torch.cat(edge_indices, dim=1)
         if edge_indices
@@ -132,7 +132,7 @@ def one_hot(value, vocab):
     if value in vocab:
         vec[vocab.index(value)] = 1
     else:
-        vec[-1] = 1  # "other" bucket
+        vec[-1] = 1   # "other" bucket
     return vec
 
 
@@ -145,20 +145,20 @@ def _graph_from_clean_smiles(smi: str):
     node_features = []
     for atom in mol.GetAtoms():
         feat = (
-            one_hot(atom.GetAtomicNum(), ATOM_TYPES)             # 12
-            + one_hot(atom.GetDegree(), list(range(11)))         # 11
-            + one_hot(atom.GetHybridization(), list(HYBRIDIZATION.keys()))  # 5
-            + [int(atom.GetIsAromatic())]                        # 1
-            + [int(atom.IsInRing())]                             # 1
-            + [atom.GetFormalCharge()]                           # 1
-            + [atom.GetTotalNumHs()]                             # 1
-        )                                                        # total = 32
+            one_hot(atom.GetAtomicNum(),      ATOM_TYPES)                    # 12
+            + one_hot(atom.GetDegree(),       list(range(11)))               # 11
+            + one_hot(atom.GetHybridization(),list(HYBRIDIZATION.keys()))    # 5
+            + [int(atom.GetIsAromatic())]                                    # 1
+            + [int(atom.IsInRing())]                                         # 1
+            + [atom.GetFormalCharge()]                                       # 1
+            + [atom.GetTotalNumHs()]                                         # 1
+        )                                                                    # = 32
         node_features.append(feat)
 
     if not node_features:
         return None
 
-    x = torch.tensor(node_features, dtype=torch.float)  # [N, 32]
+    x = torch.tensor(node_features, dtype=torch.float)   # [N, 32]
 
     edge_index = []
     for bond in mol.GetBonds():
@@ -227,7 +227,8 @@ class GraphPooling(nn.Module):
         if row.numel() == 0:
             return x
         neigh_max = torch.full_like(x, -1e9)
-        neigh_max = neigh_max.index_put((row,), x[col], accumulate=False)
+        idx       = row.unsqueeze(1).expand(-1, x.size(1))
+        neigh_max.scatter_reduce_(0, idx, x[col], reduce='amax', include_self=False)
         return torch.maximum(x, neigh_max)
 
 
@@ -256,7 +257,7 @@ class GraphGather(nn.Module):
             if mask.any():
                 out[mask] = self.theta[d](x[mask]) + self.beta[d]
 
-        return global_add_pool(out, batch)  # [B, graph_dim]
+        return global_add_pool(out, batch)   # [B, graph_dim]
 
 
 # ── MR-GNN ────────────────────────────────────────────────────────────────────
@@ -274,14 +275,14 @@ class MRGNN(nn.Module):
 
     def __init__(
         self,
-        node_dim   = NODE_DIM,
-        conv_dim   = 384,
-        graph_dim  = 128,
-        hidden_dim = 512,
-        num_layers = 3,
-        num_classes= 2,
-        dropout    = 0.3,
-        max_degree = 10,
+        node_dim    = NODE_DIM,
+        conv_dim    = 384,
+        graph_dim   = 128,
+        hidden_dim  = 512,
+        num_layers  = 3,
+        num_classes = 2,
+        dropout     = 0.3,
+        max_degree  = 10,
     ):
         super().__init__()
         self.num_layers = num_layers
@@ -301,11 +302,10 @@ class MRGNN(nn.Module):
         for d in dims:
             self.gathers.append(GraphGather(d, graph_dim, max_degree))
 
-        self.s_lstm = nn.LSTMCell(graph_dim, graph_dim)
+        self.s_lstm = nn.LSTMCell(graph_dim,         graph_dim)
         self.i_lstm = nn.LSTMCell(2 * graph_dim, 2 * graph_dim)
-        self.global_proj = nn.Linear(conv_dim, graph_dim)
 
-        fc_in = 6 * graph_dim  # 768
+        fc_in        = 4 * graph_dim + 2 * conv_dim   # 1280  (paper Eq. 8)
         self.fc1     = nn.Linear(fc_in, hidden_dim)
         self.fc2     = nn.Linear(hidden_dim, num_classes)
         self.dropout = nn.Dropout(dropout)
@@ -330,7 +330,7 @@ class MRGNN(nn.Module):
         return states, x
 
     def global_pool(self, x, batch):
-        return pyg_max_pool(self.global_proj(x), batch)
+        return pyg_max_pool(x, batch)
 
     def dual_lstm(self, sx, sy):
         B   = sx[0].size(0)
@@ -353,9 +353,8 @@ class MRGNN(nn.Module):
         p_x = self.global_pool(fx, dx.batch)
         p_y = self.global_pool(fy, dy.batch)
 
-        e_x = torch.cat([s_x, p_x], dim=1)
-        e_y = torch.cat([s_y, p_y], dim=1)
-
+        e_x   = torch.cat([s_x, p_x], dim=1)
+        e_y   = torch.cat([s_y, p_y], dim=1)
         fused = torch.cat([e_x, e_y, h], dim=1)
 
         z = F.relu(self.bn_fc(self.fc1(self.dropout(fused))))
