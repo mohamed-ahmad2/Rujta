@@ -27,5 +27,6 @@ namespace Rujta.Application.Interfaces
         Task<IEnumerable<T>> GetAllWithIncludesAsync(CancellationToken cancellationToken = default,params Expression<Func<T, object>>[] includes);
 
         Task<T?> GetByIdWithIncludesAsync( TKey id, CancellationToken cancellationToken = default, params Expression<Func<T, object>>[] includes);
+        Task SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

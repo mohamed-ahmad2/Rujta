@@ -1,14 +1,7 @@
-// src/features/campaigns/hook/useCampaigns.js
 import { useState, useCallback } from "react";
 import {
-  getAllAds,
-  getAdById,
-  getActiveAds,
-  getAdsByPharmacy,
-  createAd,
-  updateAd,
-  deleteAd,
-  toggleAdStatus,
+  getAllAds, getAdById, getActiveAds, getAdsByPharmacy,
+  createAd, updateAd, deleteAd, toggleAdStatus,
 } from "../api/campaignsApi";
 
 export default function useCampaigns() {
@@ -67,17 +60,17 @@ export default function useCampaigns() {
     }
   }, []);
 
-  // create now receives durationDays + price in the payload — no changes needed here,
-  // the payload is built in Ads.jsx and passed straight through to the API
   const create = async (data) => {
     try {
       setLoading(true);
       const res = await createAd(data);
+       console.log("✅ createAd response:", JSON.stringify(res.data, null, 2));
+      const created = res.data; // ✅ grab BEFORE fetchAll
       await fetchAll();
-      return res.data; // ← returns created ad so caller gets the id
+      return created;           // ✅ return actual ad object with id
     } catch (err) {
       setError(err.message || "Failed to create ad");
-      throw err; // re-throw so Ads.jsx can catch and show error
+      throw err;
     } finally {
       setLoading(false);
     }

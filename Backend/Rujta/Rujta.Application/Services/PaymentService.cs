@@ -244,16 +244,16 @@ namespace Rujta.Infrastructure.Services
                 obj.IsStandalonePayment.ToString().ToLower(),
                 obj.IsVoided.ToString().ToLower(),
                 obj.Order.Id, obj.OwnerUsername,
-                obj.PendingAction, obj.SourceDataPan,
-                obj.SourceDataSubType, obj.SourceDataType,
+                obj.PendingAction,
+                obj.SourceData.Pan,        
+                obj.SourceData.SubType,   
+                obj.SourceData.Type,      
                 obj.Success.ToString().ToLower()
             );
 
             using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(HmacSecret));
             var computed = Convert.ToHexString(
                 hmac.ComputeHash(Encoding.UTF8.GetBytes(data))).ToLower();
-
-            
 
             return computed == receivedHmac.ToLower();
         }
