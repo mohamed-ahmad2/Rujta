@@ -13,6 +13,7 @@ Checkpoint format produced by the training loop:
         "valid_auc": float,
     }
 """
+import math
 
 import importlib
 from pathlib import Path
@@ -85,8 +86,9 @@ class DDIPredictor:
         threshold: float = 0.5,
     ):
         self.threshold = threshold
-        self.device    = torch.device(
-            device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(
+            device if device else (
+                "cuda" if torch.cuda.is_available() else "cpu")
         )
         self.model = self._load_model(checkpoint_path)
 
@@ -99,12 +101,14 @@ class DDIPredictor:
 
         # Try weights_only=True first; fall back for numpy-typed checkpoints.
         try:
-            ckpt = torch.load(path, map_location=self.device, weights_only=True)
+            ckpt = torch.load(path, map_location=self.device,
+                              weights_only=True)
             print("🔒 Checkpoint loaded with weights_only=True")
         except Exception as e:
             print(f"⚠️  Safe load failed ({type(e).__name__}: {e})")
             print("↩️  Retrying with weights_only=False (trusted local file)")
-            ckpt = torch.load(path, map_location=self.device, weights_only=False)
+            ckpt = torch.load(path, map_location=self.device,
+                              weights_only=False)
 
         # ── Unpack checkpoint ─────────────────────────────────────────────────
         # Format 1 (training loop): {"model": ..., "epoch": ..., "valid_auc": ...}
@@ -112,36 +116,37 @@ class DDIPredictor:
         # Format 3 (bare):          state_dict directly
         if isinstance(ckpt, dict) and "model" in ckpt:
             state_dict = ckpt["model"]
-            cfg        = ckpt.get("cfg", {})
-            epoch      = ckpt.get("epoch", "?")
-            auc        = float(ckpt.get("valid_auc", float("nan")))
+            cfg = ckpt.get("cfg", {})
+            epoch = ckpt.get("epoch", "?")
+            auc = float(ckpt.get("valid_auc", float("nan")))
         elif isinstance(ckpt, dict) and "model_state_dict" in ckpt:
             state_dict = ckpt["model_state_dict"]
-            cfg        = ckpt.get("cfg", {})
-            epoch      = ckpt.get("epoch", "?")
-            auc        = float(ckpt.get("best_val_auc", float("nan")))
+            cfg = ckpt.get("cfg", {})
+            epoch = ckpt.get("epoch", "?")
+            auc = float(ckpt.get("best_val_auc", float("nan")))
         else:
             state_dict = ckpt
-            cfg        = {}
-            epoch      = "?"
-            auc        = float("nan")
+            cfg = {}
+            epoch = "?"
+            auc = float("nan")
 
         # ── Build model ───────────────────────────────────────────────────────
         model = MRGNN(
-            node_dim    = cfg.get("node_dim",    NODE_DIM),
-            conv_dim    = cfg.get("conv_dim",    384),
-            graph_dim   = cfg.get("graph_dim",   128),
-            hidden_dim  = cfg.get("hidden_dim",  512),
-            num_layers  = cfg.get("num_layers",  3),
-            num_classes = cfg.get("num_classes", 2),
-            dropout     = cfg.get("dropout",     0.3),
+            node_dim=cfg.get("node_dim",    NODE_DIM),
+            conv_dim=cfg.get("conv_dim",    384),
+            graph_dim=cfg.get("graph_dim",   128),
+            hidden_dim=cfg.get("hidden_dim",  512),
+            num_layers=cfg.get("num_layers",  3),
+            num_classes=cfg.get("num_classes", 2),
+            dropout=cfg.get("dropout",     0.3),
         ).to(self.device)
 
         model.load_state_dict(state_dict)
         model.eval()
 
-        auc_str = f"{auc:.4f}" if auc == auc else "n/a"   # nan-safe
-        print(f"✅ Model loaded | epoch={epoch} | val_AUC={auc_str} | device={self.device}")
+        auc_str = f"{auc:.4f}" if not math.isnan(auc) else "n/a"
+        print(
+            f"✅ Model loaded | epoch={epoch} | val_AUC={auc_str} | device={self.device}")
         return model
 
     # ── Single pair ───────────────────────────────────────────────────────────
@@ -157,7 +162,8 @@ class DDIPredictor:
         g2 = smiles_to_graph(smiles2)
 
         if g1 is None or g2 is None:
-            bad = ([name1] if g1 is None else []) + ([name2] if g2 is None else [])
+            bad = ([name1] if g1 is None else []) + \
+                ([name2] if g2 is None else [])
             return {
                 "drug_1":      name1,
                 "drug_2":      name2,
@@ -173,7 +179,7 @@ class DDIPredictor:
 
         with torch.no_grad():
             logits = self.model(b1, b2)
-            prob   = torch.softmax(logits, dim=1)[0, 1].item()
+            prob = torch.softmax(logits, dim=1)[0, 1].item()
 
         label = int(prob >= self.threshold)
         return {
@@ -189,17 +195,18 @@ class DDIPredictor:
     # ── Batch of pairs ────────────────────────────────────────────────────────
 
     def predict_batch(self, pairs: list[tuple[str, str, str, str]]) -> list[dict]:
-        results       = []
+        results = []
         valid_indices = []
-        valid_g1      = []
-        valid_g2      = []
+        valid_g1 = []
+        valid_g2 = []
 
         for idx, (s1, s2, n1, n2) in enumerate(pairs):
             g1 = smiles_to_graph(s1)
             g2 = smiles_to_graph(s2)
 
             if g1 is None or g2 is None:
-                bad = ([n1] if g1 is None else []) + ([n2] if g2 is None else [])
+                bad = ([n1] if g1 is None else []) + \
+                    ([n2] if g2 is None else [])
                 results.append({
                     "index":       idx,
                     "drug_1":      n1,
@@ -222,10 +229,10 @@ class DDIPredictor:
 
             with torch.no_grad():
                 logits = self.model(b1, b2)
-                probs  = torch.softmax(logits, dim=1)[:, 1].tolist()
+                probs = torch.softmax(logits, dim=1)[:, 1].tolist()
 
             for local_i, global_i in enumerate(valid_indices):
-                prob  = probs[local_i]
+                prob = probs[local_i]
                 label = int(prob >= self.threshold)
                 results[global_i].update({
                     "index":       global_i,
@@ -249,10 +256,10 @@ if __name__ == "__main__":
         print("Usage: python inference.py <ckpt> <smi1> <name1> <smi2> <name2>")
         sys.exit(1)
 
-    ckpt_path        = sys.argv[1]
-    smi1, name1      = sys.argv[2], sys.argv[3]
-    smi2, name2      = sys.argv[4], sys.argv[5]
+    ckpt_path = sys.argv[1]
+    smi1, name1 = sys.argv[2], sys.argv[3]
+    smi2, name2 = sys.argv[4], sys.argv[5]
 
     predictor = DDIPredictor(ckpt_path)
-    result    = predictor.predict(smi1, smi2, name1, name2)
+    result = predictor.predict(smi1, smi2, name1, name2)
     print(json.dumps(result, indent=2))
