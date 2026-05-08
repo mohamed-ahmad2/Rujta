@@ -18,7 +18,7 @@ namespace Rujta.Infrastructure.Services
         private readonly IAdRepository _adRepository;
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
-
+        private readonly ISubscriptionRepository _subscriptionRepository;
         private string BaseUrl => _configuration["Paymob:BaseUrl"]!;
         private string ApiKey => _configuration["Paymob:ApiKey"]!;
         private int IntegrationId => int.Parse(_configuration["Paymob:IntegrationId"]!);
@@ -29,12 +29,13 @@ namespace Rujta.Infrastructure.Services
         public PaymentService(
             IPaymentRepository paymentRepository,
             IAdRepository adRepository,
-            HttpClient httpClient,
+            HttpClient httpClient, ISubscriptionRepository subscriptionRepository,
             IConfiguration configuration)
         {
             _paymentRepository = paymentRepository;
             _adRepository = adRepository;
             _httpClient = httpClient;
+            _subscriptionRepository = subscriptionRepository;
             _configuration = configuration;
         }
 
@@ -125,10 +126,13 @@ namespace Rujta.Infrastructure.Services
             switch (payment.Type)
             {
                 case PaymentType.Ad when payment.AdId.HasValue:
-                    // Activate ad with its stored duration
                     var ad = await _adRepository.GetByIdAsync(payment.AdId.Value, cancellationToken);
                     if (ad != null)
                         await _adRepository.ActivateAsync(ad.Id, ad.DurationDays, cancellationToken);
+                    break;
+
+                case PaymentType.Subscription when payment.PharmacyId > 0:
+                    await _subscriptionRepository.ActivateAsync(payment.PharmacyId, cancellationToken);
                     break;
 
                 case PaymentType.Order:

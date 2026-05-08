@@ -5,6 +5,8 @@
             Task<Subscription?> GetByPharmacyIdAsync(int pharmacyId);
             Task<IEnumerable<Subscription>> GetAllWithPharmacyAsync();
             Task<List<Subscription>> GetExpiredActiveSubscriptionsAsync(CancellationToken cancellationToken = default);
+        Task ActivateAsync(int pharmacyId, CancellationToken cancellationToken = default);
+
     }
     }
 
