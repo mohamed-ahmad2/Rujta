@@ -91,24 +91,19 @@ export const AuthProvider = ({ children }) => {
 
   /* ================= Login ================= */
   const handleLogin = async (email, password, rememberMe = false) => {
-    const res = await login({ email, password, rememberMe });
+  const res = await login({ email, password, rememberMe });
 
-    const token = res.accessToken;
-
-    const newUser = {
-      email: res.email,
-      role: res.role,
-      isFirstLogin: res.isFirstLogin ?? false,
-    };
-
-    setUser(newUser);
-    applyAndStoreToken(token, setTokenExp);
-
-    window.location.reload();
-    
-    return newUser;
+  const newUser = {
+    email: res.email,
+    role: res.role,
+    isFirstLogin: res.isFirstLogin ?? false,
   };
 
+  setUser(newUser);
+  applyAndStoreToken(res.accessToken, setTokenExp);
+
+  return newUser;  // ← must be here, no reload
+};
   /* ================= Register ================= */
   const handleRegister = async (dto) => {
     const res = await registerUser(dto);
