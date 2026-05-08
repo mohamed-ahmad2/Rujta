@@ -99,7 +99,7 @@ namespace Rujta.Infrastructure.Services
             payment.Status = PaymentStatus.Success;
             payment.UpdatedAt = DateTime.UtcNow;
             payment.PaymobTransactionId = callback.Obj.Id;
-         
+          
             await _paymentRepository.UpdateAsync(payment, cancellationToken);
 
             // Activate immediately after HMAC — don't rely on HandlePostPaymentAsync routing
