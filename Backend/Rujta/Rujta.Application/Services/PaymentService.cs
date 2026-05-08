@@ -81,26 +81,40 @@ namespace Rujta.Infrastructure.Services
         }
 
         public async Task<bool> HandleCallbackAsync(
-            PaymobCallbackDto callback,
-            string hmacSignature,
-            CancellationToken cancellationToken = default)
+    PaymobCallbackDto callback,
+    string hmacSignature,
+    CancellationToken cancellationToken = default)
         {
             if (!VerifyHmac(callback.Obj, hmacSignature))
                 return false;
+
+            // Don't wait for anything — if HMAC passed and success is true, activate now
+            if (!callback.Obj.Success) return true;
 
             var payment = await _paymentRepository
                 .GetByPaymobOrderIdAsync(callback.Obj.Order.Id, cancellationToken);
 
             if (payment == null) return false;
 
-            payment.Status = callback.Obj.Success ? PaymentStatus.Success : PaymentStatus.Failed;
+            payment.Status = PaymentStatus.Success;
             payment.PaymobTransactionId = callback.Obj.Id;
             payment.UpdatedAt = DateTime.UtcNow;
-
             await _paymentRepository.UpdateAsync(payment, cancellationToken);
 
-            if (payment.Status == PaymentStatus.Success)
-                await HandlePostPaymentAsync(payment, cancellationToken);
+            // Activate immediately after HMAC — don't rely on HandlePostPaymentAsync routing
+            if (payment.Type == PaymentType.Ad && payment.AdId.HasValue)
+            {
+                var ad = await _adRepository.GetByIdAsync(payment.AdId.Value, cancellationToken);
+                if (ad != null)
+                {
+                    Console.WriteLine($"[Callback] Activating ad Id={ad.Id} for {ad.DurationDays} days");
+                    await _adRepository.ActivateAsync(ad.Id, ad.DurationDays, cancellationToken);
+                }
+                else
+                {
+                    Console.WriteLine($"[Callback] Ad not found for AdId={payment.AdId.Value}");
+                }
+            }
 
             return true;
         }
