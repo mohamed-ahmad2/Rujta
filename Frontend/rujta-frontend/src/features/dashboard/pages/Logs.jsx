@@ -28,7 +28,7 @@ const extractErrors = (err) => {
 
 const extractMessage = (err) =>
   err?.response?.data?.message ||
-  err?.response?.data?.title || 
+  err?.response?.data?.title ||
   err?.message ||
   "An unexpected error occurred. Please try again.";
 
