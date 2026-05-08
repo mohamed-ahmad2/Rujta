@@ -43,24 +43,18 @@ export const AuthPage = () => {
   }, [isSignUp]);
 
   const redirectByRole = (userData) => {
-    const role = userData.role || "User";
+  const role = userData?.role || "User";
 
-    // ✅ Fix: بس PharmacyAdmin هو اللي محتاج يغير الـ password في أول login
-    if (userData.isFirstLogin && role === "PharmacyAdmin") {
-      navigate("/change-password");
-      return;
-    }
+  if (userData?.isFirstLogin && role === "PharmacyAdmin") {
+    navigate("/change-password");
+    return;
+  }
 
-    if (role === "SuperAdmin") {
-      navigate("/superadmin");
-    } else if (role === "Pharmacist" || role === "PharmacyAdmin") {
-      navigate("/dashboard");
-    } else if (role === "User") {
-      navigate("/user/");
-    } else {
-      navigate("/");
-    }
-  };
+  if (role === "SuperAdmin") navigate("/superadmin");
+  else if (role === "Pharmacist" || role === "PharmacyAdmin") navigate("/dashboard");
+  else if (role === "User") navigate("/user/");
+  else navigate("/");
+};
 
   // ✅ بياخد rememberMe من LoginForm
   const onLogin = async (e, rememberMe = false) => {

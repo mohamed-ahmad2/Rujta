@@ -92,15 +92,12 @@ export default function ServicePricing() {
 
   const handleSave = async () => {
     setLocalError(null)
-
-    // ✅ Fix: validate all fields before sending
     const fields = { monthlyRate, yearlyRate, adWeeklyPrice, adBiweeklyPrice, adMonthlyPrice }
     const hasInvalid = Object.values(fields).some(v => v === "" || isNaN(parseFloat(v)) || parseFloat(v) < 0)
     if (hasInvalid) {
       setLocalError("All prices must be valid positive numbers.")
       return
     }
-
     try {
       await savePricing({
         subscriptionMonthlyPrice: parseFloat(monthlyRate),
@@ -120,7 +117,7 @@ export default function ServicePricing() {
     resetFields()
     setSaved(false)
     setLocalError(null)
-    clearError() // ✅ Fix: clear API error banner on discard
+    clearError()
   }
 
   const displayError = localError || error
@@ -138,16 +135,16 @@ export default function ServicePricing() {
       {displayError && <div style={styles.errorBanner}>❌ {displayError}</div>}
 
       {/* Subscription Pricing */}
-      <div style={baseStyles.card}>
-        <div style={baseStyles.cardHeader}>
-          <div style={baseStyles.cardHeaderLeft}>
+      <div style={styles.card}>
+        <div style={styles.cardHeader}>
+          <div style={styles.cardHeaderLeft}>
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke={PRIMARY} strokeWidth="2">
               <rect x="2" y="3" width="20" height="14" rx="2" />
               <path d="M8 21h8M12 17v4" strokeLinecap="round" />
             </svg>
             <span style={{ fontSize: 15 }}>Subscription Pricing</span>
           </div>
-          <span style={baseStyles.badge}>Active Plan</span>
+          <span style={styles.badge}>Active Plan</span>
         </div>
         <div style={styles.cardBody}>
           <div style={styles.subPlan}>
@@ -161,7 +158,7 @@ export default function ServicePricing() {
               <div style={styles.rateBox}>
                 <div style={styles.rateLabel}>Monthly Rate</div>
                 <InputField value={monthlyRate} onChange={setMonthlyRate} />
-                <div style={baseStyles.rateNote}>Billed every 30 days</div>
+                <div style={styles.rateNote}>Billed every 30 days</div>
               </div>
               <div style={styles.rateBox}>
                 <div style={styles.rateLabel}>Yearly Rate</div>
@@ -174,9 +171,9 @@ export default function ServicePricing() {
       </div>
 
       {/* Advertising Pricing */}
-      <div style={baseStyles.card}>
-        <div style={baseStyles.cardHeader}>
-          <div style={baseStyles.cardHeaderLeft}>
+      <div style={styles.card}>
+        <div style={styles.cardHeader}>
+          <div style={styles.cardHeaderLeft}>
             <svg width="18" height="18" fill={PRIMARY} viewBox="0 0 24 24">
               <path d="M3 11l19-9-9 19-2-8-8-2z" />
             </svg>
@@ -185,6 +182,7 @@ export default function ServicePricing() {
         </div>
         <div style={styles.cardBody}>
           <div style={styles.advGrid}>
+
             {/* 1 Week */}
             <div style={styles.advItem}>
               <div style={styles.advItemHeader}>
@@ -242,10 +240,12 @@ export default function ServicePricing() {
                 <InputField value={adMonthlyPrice} onChange={setAdMonthlyPrice} />
               </div>
             </div>
+
           </div>
         </div>
       </div>
 
+      {/* Action Buttons */}
       <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
         <button style={styles.btnDiscard} onClick={handleDiscard} disabled={loading}>
           Discard Changes
