@@ -26,7 +26,7 @@ namespace Rujta.API.Controllers
             return Ok(pharmacistS);
         }
 
-        [HttpGet("GetPharmacistById/{id:int}")]
+        [HttpGet("GetPharmacistById/{id}")]
         public async Task<IActionResult> GetPharmacistById(Guid id)
         {
             var pharmacist = await _service.GetByIdAsync(id);
@@ -35,20 +35,20 @@ namespace Rujta.API.Controllers
         }
 
         [HttpPost("AddStaff")]
-        public async Task<IActionResult> AddPharmacist([FromBody] PharmacistDto dto)
+        public async Task<IActionResult> AddPharmacist([FromBody] PharmacistDto dto) 
         {
             await _service.AddAsync(dto);
             return Ok(dto);
         }
 
-        [HttpPut("UpdateStaff/{id:int}")]
+        [HttpPut("UpdateStaff/{id}")]
         public async Task<IActionResult> UpdatePharmacist(Guid id, [FromBody] PharmacistDto dto)
         {
             await _service.UpdateAsync(id, dto);
             return NoContent();
         }
 
-        [HttpDelete("DeleteStaff/{id:int}")]
+        [HttpDelete("DeleteStaff/{id}")]
         public async Task<IActionResult> DeletePharmacist(Guid id)
         {
             await _service.DeleteAsync(id);
