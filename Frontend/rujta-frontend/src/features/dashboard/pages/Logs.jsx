@@ -13,7 +13,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import Toast from "../../dashboard/components/logs/Toast";
+import Toast from "../components/logsToast/Toast";
 import { createPortal } from "react-dom";
 
 const normalize = (v) => (v ?? "").toString().toLowerCase();
