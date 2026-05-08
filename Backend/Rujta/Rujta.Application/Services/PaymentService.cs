@@ -49,7 +49,7 @@ namespace Rujta.Infrastructure.Services
             var amountCents = dto.Amount * 100;
             var authToken = await GetAuthTokenAsync();
             var paymobOrderId = await RegisterOrderAsync(authToken, amountCents, dto.Currency);
-            var redirectUrl = dto.Type == PaymentType.Order ? UserRedirectUrl: AdminRedirectUrl;
+            var redirectUrl = dto.Type == PaymentType.Order ? UserRedirectUrl : AdminRedirectUrl;
 
             var paymentKey = await GetPaymentKeyAsync(authToken, paymobOrderId, amountCents, dto.Currency, dto.BillingData, redirectUrl);
 
@@ -81,7 +81,7 @@ namespace Rujta.Infrastructure.Services
         }
 
         public async Task<bool> HandleCallbackAsync(
-    PaymobCallbackDto callback,
+        PaymobCallbackDto callback,
     string hmacSignature,
     CancellationToken cancellationToken = default)
         {
@@ -252,28 +252,37 @@ namespace Rujta.Infrastructure.Services
         private bool VerifyHmac(PaymobCallbackObj obj, string receivedHmac)
         {
             var data = string.Concat(
-                obj.AmountCents, obj.CreatedAt, obj.Currency,
+                obj.AmountCents,
+                obj.CreatedAt ?? string.Empty,
+                obj.Currency ?? string.Empty,
                 obj.ErrorOccured.ToString().ToLower(),
                 obj.HasParentTransaction.ToString().ToLower(),
-                obj.Id, obj.IntegrationId,
+                obj.Id,
+                obj.IntegrationId,
                 obj.Is3dSecure.ToString().ToLower(),
                 obj.IsAuth.ToString().ToLower(),
                 obj.IsCapture.ToString().ToLower(),
                 obj.IsRefunded.ToString().ToLower(),
                 obj.IsStandalonePayment.ToString().ToLower(),
                 obj.IsVoided.ToString().ToLower(),
-                obj.Order.Id, obj.OwnerUsername,
-                obj.PendingAction,
-                obj.SourceData.Pan,        
-                obj.SourceData.SubType,   
-                obj.SourceData.Type,      
+                obj.Order.Id,
+                obj.OwnerUsername ?? string.Empty,
+                obj.PendingAction ?? string.Empty,
+                obj.SourceData.Pan ?? string.Empty,
+                obj.SourceData.SubType ?? string.Empty,
+                obj.SourceData.Type ?? string.Empty,
                 obj.Success.ToString().ToLower()
             );
+
+            // add this to debug HMAC mismatches
+            Console.WriteLine($"[HMAC Input] {data}");
+            Console.WriteLine($"[HMAC Received] {receivedHmac}");
 
             using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(HmacSecret));
             var computed = Convert.ToHexString(
                 hmac.ComputeHash(Encoding.UTF8.GetBytes(data))).ToLower();
 
+            Console.WriteLine($"[HMAC Computed] {computed}");
             return computed == receivedHmac.ToLower();
         }
     }

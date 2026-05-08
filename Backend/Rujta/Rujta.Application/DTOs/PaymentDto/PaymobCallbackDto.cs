@@ -14,7 +14,9 @@ namespace Rujta.Application.DTOs.PaymentDto
     public class PaymobCallbackObj
     {
         [JsonPropertyName("id")]
+        [JsonConverter(typeof(IntToStringConverter))]  // ← add this
         public string Id { get; set; } = string.Empty;
+
 
         [JsonPropertyName("success")]
         public bool Success { get; set; }
@@ -74,6 +76,7 @@ namespace Rujta.Application.DTOs.PaymentDto
     public class PaymobCallbackOrder
     {
         [JsonPropertyName("id")]
+        [JsonConverter(typeof(IntToStringConverter))]  // ← same here
         public string Id { get; set; } = string.Empty;
 
         [JsonPropertyName("amount_cents")]
