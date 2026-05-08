@@ -38,8 +38,8 @@ export const usePharmacies = () => {
   const [pharmacies,      setPharmacies]      = useState([]);
   const [medicines,       setMedicines]        = useState([]);
   const [stock,           setStock]            = useState(null);
-  const [loading,         setLoading]          = useState(false);  // pharmacies / misc
-  const [medicinesLoading,setMedicinesLoading] = useState(false);  // ✅ paged grid only
+  const [loading,         setLoading]          = useState(false);  
+  const [medicinesLoading,setMedicinesLoading] = useState(false);  
   const [error,           setError]            = useState(null);
   const [stockNotFound,   setStockNotFound]    = useState(false);
 
