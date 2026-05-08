@@ -27,6 +27,7 @@ namespace Rujta.Infrastructure.Repositories
         private IAdRepository? _ads;
         private IDiscountRepository? _discount;
         private ICompanyRepository? _company;
+        private IPaymentRepository? _payments;
 
         public UnitOfWork(AppDbContext context, IServiceProvider serviceProvider)
         {
@@ -90,6 +91,8 @@ namespace Rujta.Infrastructure.Repositories
 
         public IAdRepository Ads =>
             _ads ??= _serviceProvider.GetRequiredService<IAdRepository>();
+        public IPaymentRepository Payments =>
+            _payments ??= _serviceProvider.GetRequiredService<IPaymentRepository>();
 
         public async Task<int> SaveAsync(CancellationToken cancellationToken = default)
             => await _context.SaveChangesAsync(cancellationToken);
