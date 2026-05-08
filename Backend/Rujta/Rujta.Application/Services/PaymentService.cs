@@ -49,7 +49,7 @@ namespace Rujta.Infrastructure.Services
             var amountCents = dto.Amount * 100;
             var authToken = await GetAuthTokenAsync();
             var paymobOrderId = await RegisterOrderAsync(authToken, amountCents, dto.Currency);
-            var redirectUrl = dto.Type == PaymentType.Order ? UserRedirectUrl: AdminRedirectUrl;
+            var redirectUrl = dto.Type == PaymentType.Order ? UserRedirectUrl : AdminRedirectUrl;
 
             var paymentKey = await GetPaymentKeyAsync(authToken, paymobOrderId, amountCents, dto.Currency, dto.BillingData, redirectUrl);
 
@@ -81,14 +81,14 @@ namespace Rujta.Infrastructure.Services
         }
 
         public async Task<bool> HandleCallbackAsync(
-             PaymobCallbackDto callback,
-            string hmacSignature,
-            CancellationToken cancellationToken = default)
+        PaymobCallbackDto callback,
+    string hmacSignature,
+    CancellationToken cancellationToken = default)
         {
             if (!VerifyHmac(callback.Obj, hmacSignature))
                 return false;
 
-           
+            // Don't wait for anything — if HMAC passed and success is true, activate now
             if (!callback.Obj.Success) return true;
 
             var payment = await _paymentRepository
@@ -97,8 +97,9 @@ namespace Rujta.Infrastructure.Services
             if (payment == null) return false;
 
             payment.Status = PaymentStatus.Success;
-            payment.PaymobTransactionId = callback.Obj.Id;
             payment.UpdatedAt = DateTime.UtcNow;
+            payment.PaymobTransactionId = callback.Obj.Id;
+         
             await _paymentRepository.UpdateAsync(payment, cancellationToken);
 
             // Activate immediately after HMAC — don't rely on HandlePostPaymentAsync routing
@@ -252,8 +253,8 @@ namespace Rujta.Infrastructure.Services
         {
             var data = string.Concat(
                 obj.AmountCents,
-                obj.CreatedAt,
-                obj.Currency,
+                obj.CreatedAt ?? string.Empty,
+                obj.Currency ?? string.Empty,
                 obj.ErrorOccured.ToString().ToLower(),
                 obj.HasParentTransaction.ToString().ToLower(),
                 obj.Id,
@@ -265,22 +266,24 @@ namespace Rujta.Infrastructure.Services
                 obj.IsStandalonePayment.ToString().ToLower(),
                 obj.IsVoided.ToString().ToLower(),
                 obj.Order.Id,
-                obj.OwnerUsername ?? "",   // ← was likely "null" string before
-                obj.PendingAction ?? "",   // ← was likely "null" string before
-                obj.SourceData?.Pan ?? "", // ← null for wallet/kiosk payments
-                obj.SourceData?.SubType ?? "",
-                obj.SourceData?.Type ?? "",
+                obj.OwnerUsername ?? string.Empty,
+                obj.PendingAction ?? string.Empty,
+                obj.SourceData.Pan ?? string.Empty,
+                obj.SourceData.SubType ?? string.Empty,
+                obj.SourceData.Type ?? string.Empty,
                 obj.Success.ToString().ToLower()
             );
+
+            // add this to debug HMAC mismatches
+            Console.WriteLine($"[HMAC Input] {data}");
+            Console.WriteLine($"[HMAC Received] {receivedHmac}");
 
             using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(HmacSecret));
             var computed = Convert.ToHexString(
                 hmac.ComputeHash(Encoding.UTF8.GetBytes(data))).ToLower();
 
-            Console.WriteLine($"[HMAC] computed={computed}");
-            Console.WriteLine($"[HMAC] received={receivedHmac?.ToLower()}");
-
-            return computed == receivedHmac?.ToLower();
+            Console.WriteLine($"[HMAC Computed] {computed}");
+            return computed == receivedHmac.ToLower();
         }
     }
 }
