@@ -1,14 +1,9 @@
 ﻿// Rujta.Infrastructure/Services/PaymentService.cs
 using System.Net.Http.Json;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Rujta.Application.DTOs.PaymentDto;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
-using Rujta.Domain.Enums;
 
 namespace Rujta.Infrastructure.Services
 {
