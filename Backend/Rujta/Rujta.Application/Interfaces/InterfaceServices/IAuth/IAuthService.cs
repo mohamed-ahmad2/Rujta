@@ -11,6 +11,7 @@ namespace Rujta.Application.Interfaces.InterfaceServices.IAuth
         Task<LoginResultDto> RegisterAsync(RegisterDto dto, CancellationToken cancellationToken = default);
         Task<bool> IsEmailExistsAsync(string email, CancellationToken cancellationToken = default);
         Task<bool> CheckPasswordAsync(string email, string password, CancellationToken cancellationToken = default);
+        Task<Guid> CreatePharmacistUserAsync(CreatePharmacistDto dto, int pharmacyId, CancellationToken cancellationToken = default);
         Task<Guid> CreateUserAsync(RegisterDto dto, UserRole role, CancellationToken cancellationToken = default);
         Task<TokenDto> GenerateTokensAsync(string email, bool rememberMe = false, CancellationToken cancellationToken = default);
         Task<TokenDto> RefreshAccessTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
