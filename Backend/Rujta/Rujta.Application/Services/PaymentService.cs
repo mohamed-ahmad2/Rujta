@@ -81,14 +81,14 @@ namespace Rujta.Infrastructure.Services
         }
 
         public async Task<bool> HandleCallbackAsync(
-    PaymobCallbackDto callback,
-    string hmacSignature,
-    CancellationToken cancellationToken = default)
+             PaymobCallbackDto callback,
+            string hmacSignature,
+            CancellationToken cancellationToken = default)
         {
             if (!VerifyHmac(callback.Obj, hmacSignature))
                 return false;
 
-            // Don't wait for anything — if HMAC passed and success is true, activate now
+           
             if (!callback.Obj.Success) return true;
 
             var payment = await _paymentRepository
@@ -251,21 +251,25 @@ namespace Rujta.Infrastructure.Services
         private bool VerifyHmac(PaymobCallbackObj obj, string receivedHmac)
         {
             var data = string.Concat(
-                obj.AmountCents, obj.CreatedAt, obj.Currency,
+                obj.AmountCents,
+                obj.CreatedAt,
+                obj.Currency,
                 obj.ErrorOccured.ToString().ToLower(),
                 obj.HasParentTransaction.ToString().ToLower(),
-                obj.Id, obj.IntegrationId,
+                obj.Id,
+                obj.IntegrationId,
                 obj.Is3dSecure.ToString().ToLower(),
                 obj.IsAuth.ToString().ToLower(),
                 obj.IsCapture.ToString().ToLower(),
                 obj.IsRefunded.ToString().ToLower(),
                 obj.IsStandalonePayment.ToString().ToLower(),
                 obj.IsVoided.ToString().ToLower(),
-                obj.Order.Id, obj.OwnerUsername,
-                obj.PendingAction,
-                obj.SourceData.Pan,        
-                obj.SourceData.SubType,   
-                obj.SourceData.Type,      
+                obj.Order.Id,
+                obj.OwnerUsername ?? "",   // ← was likely "null" string before
+                obj.PendingAction ?? "",   // ← was likely "null" string before
+                obj.SourceData?.Pan ?? "", // ← null for wallet/kiosk payments
+                obj.SourceData?.SubType ?? "",
+                obj.SourceData?.Type ?? "",
                 obj.Success.ToString().ToLower()
             );
 
@@ -273,7 +277,10 @@ namespace Rujta.Infrastructure.Services
             var computed = Convert.ToHexString(
                 hmac.ComputeHash(Encoding.UTF8.GetBytes(data))).ToLower();
 
-            return computed == receivedHmac.ToLower();
+            Console.WriteLine($"[HMAC] computed={computed}");
+            Console.WriteLine($"[HMAC] received={receivedHmac?.ToLower()}");
+
+            return computed == receivedHmac?.ToLower();
         }
     }
 }
