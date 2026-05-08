@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Rujta.Application.DTOs.PaymentDto
 {
@@ -60,8 +61,9 @@ namespace Rujta.Application.DTOs.PaymentDto
         [JsonPropertyName("currency")]
         public string? Currency { get; set; }
 
+   
         [JsonPropertyName("owner")]
-        public string? OwnerUsername { get; set; }
+        public JsonElement? Owner { get; set; }  
 
         [JsonPropertyName("pending")]
         public string? PendingAction { get; set; }
