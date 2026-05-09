@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Rujta.Application.DTOs.PaymentDto
 {
@@ -15,9 +14,8 @@ namespace Rujta.Application.DTOs.PaymentDto
     public class PaymobCallbackObj
     {
         [JsonPropertyName("id")]
-        [JsonConverter(typeof(IntToStringConverter))]  // ← add this
+        [JsonConverter(typeof(IntToStringConverter))]
         public string Id { get; set; } = string.Empty;
-
 
         [JsonPropertyName("success")]
         public bool Success { get; set; }
@@ -61,15 +59,14 @@ namespace Rujta.Application.DTOs.PaymentDto
         [JsonPropertyName("currency")]
         public string? Currency { get; set; }
 
-   
         [JsonPropertyName("owner")]
-        public JsonElement? Owner { get; set; }
+        public int? Owner { get; set; }  // ✅ كانت JsonElement?
 
         [JsonPropertyName("pending")]
         public bool Pending { get; set; }
 
         [JsonPropertyName("source_data")]
-        public PaymobSourceData SourceData { get; set; } = new();  // ✅ replaced 3 flat fields
+        public PaymobSourceData SourceData { get; set; } = new();
 
         [JsonPropertyName("order")]
         public PaymobCallbackOrder Order { get; set; } = new();
@@ -78,7 +75,7 @@ namespace Rujta.Application.DTOs.PaymentDto
     public class PaymobCallbackOrder
     {
         [JsonPropertyName("id")]
-        [JsonConverter(typeof(IntToStringConverter))]  // ← same here
+        [JsonConverter(typeof(IntToStringConverter))]
         public string Id { get; set; } = string.Empty;
 
         [JsonPropertyName("amount_cents")]
@@ -88,7 +85,7 @@ namespace Rujta.Application.DTOs.PaymentDto
         public string Currency { get; set; } = string.Empty;
     }
 
-    public class PaymobSourceData          // ✅ added here at the bottom
+    public class PaymobSourceData
     {
         [JsonPropertyName("pan")]
         public string? Pan { get; set; }

@@ -294,7 +294,7 @@ namespace Rujta.Infrastructure.Services
                 obj.ErrorOccured.ToString().ToLower(),
                 obj.HasParentTransaction.ToString().ToLower(),
                 obj.Id,
-                obj.IntegrationId.ToString(),     
+                obj.IntegrationId.ToString(),         
                 obj.Is3dSecure.ToString().ToLower(),
                 obj.IsAuth.ToString().ToLower(),
                 obj.IsCapture.ToString().ToLower(),
@@ -302,7 +302,8 @@ namespace Rujta.Infrastructure.Services
                 obj.IsStandalonePayment.ToString().ToLower(),
                 obj.IsVoided.ToString().ToLower(),
                 obj.Order.Id,
-                obj.Pending.ToString().ToLower(),    
+                obj.Owner?.ToString() ?? string.Empty,  
+                obj.Pending.ToString().ToLower(),
                 obj.SourceData.Pan ?? string.Empty,
                 obj.SourceData.SubType ?? string.Empty,
                 obj.SourceData.Type ?? string.Empty,
@@ -312,7 +313,7 @@ namespace Rujta.Infrastructure.Services
             _logger.LogWarning("[HMAC] Data: {Data}", data);
             _logger.LogWarning("[HMAC] Received: {Rec}", receivedHmac);
 
-            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(HmacSecret));
+            using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(HmacSecret));
             var computed = Convert.ToHexString(
                 hmac.ComputeHash(Encoding.UTF8.GetBytes(data))).ToLower();
 
