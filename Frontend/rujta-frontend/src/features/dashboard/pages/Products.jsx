@@ -1,9 +1,9 @@
-// Products.jsx — full updated file
-import React, { useEffect, useRef, useState, useCallback } from "react";
+// Products.jsx
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import ProductsCard from "../components/ProductsCard";
 import {
   Package, AlertTriangle, XCircle, Search, PlusCircle,
-  Trash2, Edit, UploadCloud, Filter, ChevronLeft, ChevronRight, X, CheckCircle,
+  Trash2, Edit, UploadCloud, Filter, ChevronLeft, ChevronRight, X,
 } from "lucide-react";
 import ProductModal from "../components/ProductModal";
 import useInventory from "../../inventory item/hook/useInventoryItem";
@@ -12,18 +12,18 @@ import useMedicines from "../../medicines/hook/useMedicines";
 import useDrugRequest from "../../drugRequests/hook/useDrugRequest";
 
 const statusColor = {
-  "In stock":    "bg-green-100 text-green-700",
-  "Low stock":   "bg-yellow-100 text-yellow-700",
-  "Out of stock":"bg-red-100 text-red-600",
-  Expired:       "bg-gray-100 text-gray-500",
+  "In stock":     "bg-green-100 text-green-700",
+  "Low stock":    "bg-yellow-100 text-yellow-700",
+  "Out of stock": "bg-red-100 text-red-600",
+  Expired:        "bg-gray-100 text-gray-500",
 };
 
 const perPage = 6;
 
 const STATUS_TO_API = {
-  "In stock":    "InStock",
-  "Low stock":   "LowStock",
-  "Out of stock":"OutOfStock",
+  "In stock":     "InStock",
+  "Low stock":    "LowStock",
+  "Out of stock": "OutOfStock",
 };
 
 function buildPageRange(current, total) {
@@ -38,7 +38,6 @@ function buildPageRange(current, total) {
   return pages;
 }
 
-// ── Simple toast shown at page level ─────────────────────────────────────────
 function Toast({ type, message, onClose }) {
   useEffect(() => {
     const t = setTimeout(onClose, 3500);
@@ -46,7 +45,7 @@ function Toast({ type, message, onClose }) {
   }, [onClose]);
 
   return (
-    <div className={`fixed bottom-6 left-1/2 z-[9999] flex -translate-x-1/2 items-center gap-3 
+    <div className={`fixed bottom-6 left-1/2 z-[9999] flex -translate-x-1/2 items-center gap-3
         rounded-2xl px-5 py-3.5 shadow-xl
         ${type === "success" ? "bg-green-600" : "bg-red-600"} text-white`}>
       <span className="text-lg">{type === "success" ? "✅" : "❌"}</span>
@@ -67,53 +66,52 @@ export default function Products() {
   const [openModal,      setOpenModal]      = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [q,              setQ]              = useState("");
-  const [debouncedQ,     setDebouncedQ]     = useState("");
   const [page,           setPage]           = useState(1);
   const [totalCount,     setTotalCount]     = useState(0);
   const [totalPages,     setTotalPages]     = useState(1);
   const [filterOpen,     setFilterOpen]     = useState(false);
   const [filterCategory, setFilterCategory] = useState("All");
   const [filterStatus,   setFilterStatus]   = useState("All");
-  const [toast,          setToast]          = useState(null); // ← page-level toast
+  const [toast,          setToast]          = useState(null);
   const filterRef = useRef(null);
   const [stats, setStats] = useState({ total: 0, lowStock: 0, outOfStock: 0 });
 
-  // ── Debounce search ────────────────────────────────────────────────────────
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQ(q);
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [q]);
+  // ── Frontend-only search — never triggers a backend call ──────────────────
+  const filteredItems = useMemo(() => {
+    if (!q.trim()) return items;
+    const s = q.toLowerCase();
+    return items.filter(
+      (p) =>
+        (p.name     ?? "").toLowerCase().includes(s) ||
+        (p.id       ?? "").toString().includes(s)    ||
+        (p.category ?? "").toLowerCase().includes(s)
+    );
+  }, [items, q]);
 
-  // ── Build filter — keys must match backend InventoryItemFilterDto ──────────
-  const buildFilter = useCallback((pageNumber, search, category, status) => {
-    const filter = { pageNumber, pageSize: perPage };
+  const buildFilter = useCallback(
+    (pageNumber, category, status) => {
+      const filter = { pageNumber, pageSize: perPage };
+      if (category !== "All") {
+        const cat = categories.find((c) => c.name === category);
+        if (cat) filter.categoryId = cat.id;
+      }
+      if (status !== "All" && STATUS_TO_API[status])
+        filter.status = STATUS_TO_API[status];
+      return filter;
+    },
+    [categories],
+  );
 
-    // ✅ send "search" — matches backend filter.Search
-    if (search) filter.search = search;
-
-    // ✅ send "categoryId" (int) not "category" (string)
-    if (category !== "All") {
-      const cat = categories.find((c) => c.name === category);
-      if (cat) filter.categoryId = cat.id;
-    }
-
-    // ✅ send "status" as enum string
-    if (status !== "All" && STATUS_TO_API[status])
-      filter.status = STATUS_TO_API[status];
-
-    return filter;
-  }, [categories]); // ← depends on categories so IDs are resolved correctly
-
-  const loadPage = useCallback(async (pageNumber, search, category, status) => {
-    const result = await fetchPaged(buildFilter(pageNumber, search, category, status));
-    if (result) {
-      setTotalCount(result.totalCount ?? 0);
-      setTotalPages(Math.max(1, Math.ceil((result.totalCount ?? 0) / perPage)));
-    }
-  }, [fetchPaged, buildFilter]);
+  const loadPage = useCallback(
+    async (pageNumber, category, status) => {
+      const result = await fetchPaged(buildFilter(pageNumber, category, status));
+      if (result) {
+        setTotalCount(result.totalCount ?? 0);
+        setTotalPages(Math.max(1, Math.ceil((result.totalCount ?? 0) / perPage)));
+      }
+    },
+    [fetchPaged, buildFilter],
+  );
 
   const loadStats = useCallback(async () => {
     try {
@@ -134,11 +132,14 @@ export default function Products() {
     fetchCategories();
     fetchMedicines();
     loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Clear local search whenever we navigate to a new page or change filters
   useEffect(() => {
-    loadPage(page, debouncedQ, filterCategory, filterStatus);
-  }, [page, debouncedQ, filterCategory, filterStatus]);
+    setQ("");
+    loadPage(page, filterCategory, filterStatus);
+  }, [page, filterCategory, filterStatus]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -166,9 +167,13 @@ export default function Products() {
 
   // ── Add / Update ───────────────────────────────────────────────────────────
   const handleAddOrUpdate = async (data) => {
+    // Snapshot BEFORE any state mutation so we don't lose it mid-async
+    const isEdit  = !!editingProduct;
+    const editId  = editingProduct?.raw?.id;
+
     try {
-      const result = editingProduct
-        ? await update(editingProduct.raw.id, data)
+      const result = isEdit
+        ? await update(editId, data)
         : await create(data);
 
       setOpenModal(false);
@@ -180,10 +185,9 @@ export default function Products() {
       }
 
       loadStats();
-      // ✅ Success toast
       setToast({
         type:    "success",
-        message: editingProduct ? "Product updated successfully!" : "Product added successfully!",
+        message: isEdit ? "Product updated successfully!" : "Product added successfully!",
       });
     } catch {
       setToast({ type: "error", message: "Something went wrong. Please try again." });
@@ -199,7 +203,7 @@ export default function Products() {
   const handleExport = () => {
     const rows = [
       ["ID", "Name", "Category", "Qty", "Price", "Expiry", "Status"],
-      ...items.map((p) => [p.id, p.name, p.category, p.qty, p.price, p.expiry, p.status]),
+      ...filteredItems.map((p) => [p.id, p.name, p.category, p.qty, p.price, p.expiry, p.status]),
     ];
     const csv = rows
       .map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
@@ -216,7 +220,6 @@ export default function Products() {
   return (
     <div className="space-y-4 p-3 sm:space-y-5 sm:p-4 md:space-y-6 md:p-0">
 
-      {/* Page-level toast */}
       {toast && (
         <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />
       )}
@@ -228,17 +231,18 @@ export default function Products() {
       </div>
 
       <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border bg-white p-3 shadow sm:p-4 md:flex-row md:items-center">
+        {/* ── Search — purely frontend, no setPage ── */}
         <div className="flex w-full items-center gap-2 rounded-full bg-gray-100 px-3 py-2 md:w-1/3">
           <Search className="h-4 w-4 flex-shrink-0 text-gray-400" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by name or ID..."
+            placeholder="Search by name, ID or category..."
             className="w-full bg-transparent text-xs outline-none sm:text-sm"
           />
           {q && (
             <button
-              onClick={() => { setQ(""); setDebouncedQ(""); setPage(1); }}
+              onClick={() => setQ("")}
               className="flex-shrink-0 text-gray-400 hover:text-gray-600"
             >
               <X className="h-3.5 w-3.5" />
@@ -339,12 +343,14 @@ export default function Products() {
                 </tr>
               </thead>
               <tbody>
-                {items.length === 0 ? (
+                {filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-10 text-xs text-gray-500 sm:text-sm">No products found.</td>
+                    <td colSpan={8} className="py-10 text-xs text-gray-500 sm:text-sm">
+                      {q ? `No products match "${q}".` : "No products found."}
+                    </td>
                   </tr>
                 ) : (
-                  items.map((p) => (
+                  filteredItems.map((p) => (
                     <tr key={p.id} className={`border-t transition hover:bg-gray-50 ${p.expired ? "bg-red-50" : ""}`}>
                       <td className="whitespace-nowrap px-2 py-3 text-xs font-medium sm:px-3 sm:text-sm md:px-4">{p.id}</td>
                       <td className="max-w-[120px] truncate px-2 py-3 text-xs sm:px-3 sm:text-sm md:px-4">{p.name}</td>

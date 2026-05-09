@@ -63,10 +63,10 @@ namespace Rujta.Application.DTOs.PaymentDto
 
    
         [JsonPropertyName("owner")]
-        public JsonElement? Owner { get; set; }  
+        public JsonElement? Owner { get; set; }
 
         [JsonPropertyName("pending")]
-        public string? PendingAction { get; set; }
+        public bool Pending { get; set; }
 
         [JsonPropertyName("source_data")]
         public PaymobSourceData SourceData { get; set; } = new();  // ✅ replaced 3 flat fields

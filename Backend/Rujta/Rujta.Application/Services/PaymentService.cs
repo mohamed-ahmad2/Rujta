@@ -125,7 +125,11 @@ namespace Rujta.Infrastructure.Services
                     if (ad != null)
                     {
                         Console.WriteLine($"[Callback] Activating ad Id={ad.Id} for {ad.DurationDays} days");
-                        await _unitOfWork.Ads.ActivateAsync(ad.Id, ad.DurationDays, ct);
+                        ad.IsActive = true;
+                        ad.StartsAt = DateTime.UtcNow;
+                        ad.ExpiresAt = DateTime.UtcNow.AddDays(ad.DurationDays);
+                        ad.UpdatedAt = DateTime.UtcNow;
+                        await _unitOfWork.Ads.UpdateAsync(ad, ct);
                         await _unitOfWork.SaveAsync(ct);
                     }
                     else
@@ -271,7 +275,7 @@ namespace Rujta.Infrastructure.Services
                 obj.IsVoided.ToString().ToLower(),
                 obj.Order.Id,
                 string.Empty,   // owner — not included in HMAC
-                obj.PendingAction ?? string.Empty,
+                obj.Pending.ToString().ToLower(),
                 obj.SourceData.Pan ?? string.Empty,
                 obj.SourceData.SubType ?? string.Empty,
                 obj.SourceData.Type ?? string.Empty,
