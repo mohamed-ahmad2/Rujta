@@ -1,6 +1,6 @@
 // src/features/dashboard/components/ProductModal.jsx
 import React, { useEffect, useRef, useState } from "react";
-import { X, Search, Minus, Plus, Upload, ChevronDown } from "lucide-react";
+import { X, Search, Minus, Plus, ChevronDown } from "lucide-react";
 
 function Toast({ type, message, onClose }) {
   useEffect(() => {
@@ -35,17 +35,17 @@ function AddExistingTab({
   onSave,
   onClose,
 }) {
-  const [search, setSearch] = useState("");
+  const [search,           setSearch]           = useState("");
   const [selectedMedicine, setSelectedMedicine] = useState(null);
-  const [category, setCategory] = useState("");
-  const [quantity, setQuantity] = useState(100);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [quantity,         setQuantity]         = useState(100);
+  const [showDropdown,     setShowDropdown]     = useState(false);
+  const [toast,            setToast]            = useState(null);
   const dropdownRef = useRef(null);
 
+  // Populate fields when editing an existing item
   useEffect(() => {
     if (initialData) {
       setSearch(initialData.medicineName || "");
-      setCategory(initialData.categoryName || "");
       setQuantity(initialData.quantity || 100);
       setSelectedMedicine(
         initialData.medicineId
@@ -54,7 +54,6 @@ function AddExistingTab({
       );
     } else {
       setSearch("");
-      setCategory("");
       setQuantity(100);
       setSelectedMedicine(null);
     }
@@ -73,26 +72,30 @@ function AddExistingTab({
     m.name.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const selectedCategory =
-    categories.find((c) => c.name === category) || null;
-
   const handleSubmit = () => {
-    if (!selectedMedicine) return alert("Please select a valid medicine.");
+    if (!selectedMedicine) {
+      setToast({ type: "error", message: "Please select a valid medicine." });
+      return;
+    }
+    if (toNumber(quantity) <= 0) {
+      setToast({ type: "error", message: "Quantity must be greater than 0." });
+      return;
+    }
 
     const parsed = {
-      medicineId: selectedMedicine.id,
+      medicineId:     selectedMedicine.id,
       prescriptionId: initialData ? initialData.prescriptionId : null,
-      categoryId: selectedCategory ? selectedCategory.id : null,
-      medicineName: selectedMedicine.name,
-      categoryName: category || null,
-      quantity: toNumber(quantity),
-      price: initialData ? toNumber(initialData.price) : 0,
-      status: initialData ? initialData.status : 0,
-      expiryDate: initialData ? initialData.expiryDate : null,
+      categoryId:     initialData ? initialData.categoryId     : null,
+      medicineName:   selectedMedicine.name,
+      categoryName:   initialData ? initialData.categoryName   : null,
+      quantity:       toNumber(quantity),
+      price:          initialData ? toNumber(initialData.price) : 0,
+      status:         initialData ? initialData.status          : 0,
+      expiryDate:     initialData ? initialData.expiryDate      : null,
     };
 
     if (initialData) {
-      parsed.id = initialData.id;
+      parsed.id         = initialData.id;
       parsed.pharmacyId = initialData.pharmacyId;
     }
 
@@ -100,141 +103,149 @@ function AddExistingTab({
   };
 
   return (
-    <div className="space-y-5">
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-gray-700">
-          Search Drug Database
-        </label>
-        <div className="relative" ref={dropdownRef}>
-          <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 focus-within:border-secondary focus-within:ring-2 focus-within:ring-secondary/20">
-            <Search className="h-4 w-4 flex-shrink-0 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setSelectedMedicine(null);
-                setShowDropdown(true);
-              }}
-              onFocus={() => setShowDropdown(true)}
-              placeholder="Start typing drug name, SKU or NDC..."
-              className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
-            />
-          </div>
+    <>
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
+      <div className="space-y-5">
 
-          {showDropdown && search && (
-            <div className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
-              {loadingMedicines ? (
-                <div className="px-4 py-3 text-sm text-gray-500">
-                  Loading...
-                </div>
-              ) : filtered.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-gray-500">
-                  No medicines found.
-                </div>
-              ) : (
-                filtered.map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedMedicine(m);
-                      setSearch(m.name);
-                      setShowDropdown(false);
-                    }}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50"
-                  >
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">
-                      💊
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-800">{m.name}</p>
-                      {m.sku && (
-                        <p className="text-xs text-gray-400">SKU: {m.sku}</p>
-                      )}
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-400">
-          <span className="inline-block h-3.5 w-3.5 rounded-full border border-gray-300 text-center leading-3 text-[10px]">
-            i
-          </span>
-          Only drugs already approved in the master database will appear here.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
+        {/* Drug search */}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">
-            Quantity to Add
+            Search Drug Database
           </label>
-          <div className="flex overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => Math.max(0, q - 1))}
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-gray-500 transition hover:bg-gray-100"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-            <input
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              className="w-full bg-transparent text-center text-sm font-medium outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => q + 1)}
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-gray-500 transition hover:bg-gray-100"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+          <div className="relative" ref={dropdownRef}>
+            <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 focus-within:border-secondary focus-within:ring-2 focus-within:ring-secondary/20">
+              <Search className="h-4 w-4 flex-shrink-0 text-gray-400" />
+              <input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setSelectedMedicine(null);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => setShowDropdown(true)}
+                placeholder="Start typing drug name, SKU or NDC..."
+                className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => { setSearch(""); setSelectedMedicine(null); }}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
 
-      {selectedMedicine && (
-        <div className="flex items-center gap-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3">
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white text-2xl shadow-sm">
-            💊
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-gray-800">{selectedMedicine.name}</p>
-            {selectedMedicine.sku && (
-              <p className="text-xs text-gray-400">SKU: {selectedMedicine.sku}</p>
+            {showDropdown && search && (
+              <div className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+                {loadingMedicines ? (
+                  <div className="px-4 py-3 text-sm text-gray-500">Loading...</div>
+                ) : filtered.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-gray-500">No medicines found.</div>
+                ) : (
+                  filtered.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedMedicine(m);
+                        setSearch(m.name);
+                        setShowDropdown(false);
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-gray-50"
+                    >
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">
+                        💊
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-800">{m.name}</p>
+                        {m.sku && <p className="text-xs text-gray-400">SKU: {m.sku}</p>}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
             )}
           </div>
-          {initialData && (
-            <div className="text-right">
-              <p className="text-xs text-gray-400">Current Stock</p>
-              <p className="font-bold text-secondary">
-                {initialData.quantity} Units
-              </p>
-            </div>
-          )}
+          <p className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-400">
+            <span className="inline-block h-3.5 w-3.5 rounded-full border border-gray-300 text-center leading-3 text-[10px]">i</span>
+            Only drugs already approved in the master database will appear here.
+          </p>
         </div>
-      )}
 
-      <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full border border-gray-200 px-5 py-2 text-sm text-gray-600 transition hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className="rounded-full bg-secondary px-6 py-2 text-sm font-medium text-white transition hover:opacity-90"
-        >
-          {initialData ? "Update" : "Confirm Add"}
-        </button>
+        {/* Quantity */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Quantity to Add
+            </label>
+            <div className="flex overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => Math.max(0, q - 1))}
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-gray-500 transition hover:bg-gray-100"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <input
+                type="number"
+                value={quantity}
+                min={0}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+                className="w-full bg-transparent text-center text-sm font-medium outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setQuantity((q) => q + 1)}
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-gray-500 transition hover:bg-gray-100"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Selected medicine preview */}
+        {selectedMedicine && (
+          <div className="flex items-center gap-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white text-2xl shadow-sm">
+              💊
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-gray-800">{selectedMedicine.name}</p>
+              {selectedMedicine.sku && (
+                <p className="text-xs text-gray-400">SKU: {selectedMedicine.sku}</p>
+              )}
+            </div>
+            {initialData && (
+              <div className="text-right">
+                <p className="text-xs text-gray-400">Current Stock</p>
+                <p className="font-bold text-secondary">{initialData.quantity} Units</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-gray-200 px-5 py-2 text-sm text-gray-600 transition hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="rounded-full bg-secondary px-6 py-2 text-sm font-medium text-white transition hover:opacity-90"
+          >
+            {initialData ? "Update" : "Confirm Add"}
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -246,17 +257,17 @@ function RequestNewDrugTab({
   onSubmitRequest,
 }) {
   const [form, setForm] = useState({
-    drugName: "",
-    description: "",
-    category: "",
+    drugName:     "",
+    description:  "",
+    category:     "",
     manufacturer: "",
-    supplier: "",
-    price: "",
-    quantity: "",
-    expiryDate: "",
+    supplier:     "",
+    price:        "",
+    quantity:     "",
+    expiryDate:   "",
   });
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState(null);
+  const [toast,  setToast]  = useState(null);
 
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -294,15 +305,13 @@ function RequestNewDrugTab({
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
       <div className="space-y-4">
         <div>
-          <h4 className="text-base font-semibold text-gray-800">
-            New Drug Request
-          </h4>
+          <h4 className="text-base font-semibold text-gray-800">New Drug Request</h4>
           <p className="mt-0.5 text-xs text-gray-400">
             Fill in the details to submit a new pharmaceutical item for approval.
           </p>
         </div>
 
-        {/* Row 1 — Drug Name */}
+        {/* Drug Name */}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">
             Drug Name <span className="text-red-500">*</span>
@@ -315,7 +324,7 @@ function RequestNewDrugTab({
           />
         </div>
 
-        {/* Row 2 — Category + Manufacturer */}
+        {/* Category + Manufacturer */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -332,9 +341,7 @@ function RequestNewDrugTab({
                   <option>Loading...</option>
                 ) : (
                   categories.map((c) => (
-                    <option key={c.id} value={c.name}>
-                      {c.name}
-                    </option>
+                    <option key={c.id} value={c.name}>{c.name}</option>
                   ))
                 )}
               </select>
@@ -355,12 +362,10 @@ function RequestNewDrugTab({
           </div>
         </div>
 
-        {/* Row 3 — Supplier + Price */}
+        {/* Supplier + Price */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Supplier
-            </label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Supplier</label>
             <input
               value={form.supplier}
               onChange={(e) => update("supplier", e.target.value)}
@@ -387,7 +392,7 @@ function RequestNewDrugTab({
           </div>
         </div>
 
-        {/* Row 4 — Quantity + Expiry */}
+        {/* Quantity + Expiry */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -417,9 +422,7 @@ function RequestNewDrugTab({
 
         {/* Description */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">
-            Description
-          </label>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">Description</label>
           <textarea
             value={form.description}
             onChange={(e) => update("description", e.target.value)}
