@@ -14,8 +14,10 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  FileSpreadsheet,
 } from "lucide-react";
 import ProductModal from "../components/ProductModal";
+import ImportExcelModal from "../components/ImportExcelModal";
 import useInventory from "../../inventory item/hook/useInventoryItem";
 import useCategory from "../../category/hook/useCategory";
 import useDrugRequest from "../../drugRequests/hook/useDrugRequest";
@@ -85,6 +87,7 @@ export default function Products() {
   const { submit } = useDrugRequest();
 
   const [openModal, setOpenModal] = useState(false);
+  const [openImportModal, setOpenImportModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [dataReady, setDataReady] = useState(false);
@@ -99,7 +102,7 @@ export default function Products() {
   const filterRef = useRef(null);
   const statsFetched = useRef(false);
 
-  // Debounce Search
+  // ─── Debounce search ───────────────────────────────────────────────────────
   useEffect(() => {
     const timer = setTimeout(() => {
       setFilter((prev) => ({ ...prev, page: 1, searchTerm: rawSearch }));
@@ -107,22 +110,15 @@ export default function Products() {
     return () => clearTimeout(timer);
   }, [rawSearch]);
 
+  // ─── Stats — once on mount, re-callable after mutations ───────────────────
   const loadStats = useCallback(async () => {
     if (statsFetched.current) return;
     statsFetched.current = true;
     try {
       const [allRes, lowRes, outRes] = await Promise.all([
         getPagedInventoryItems({ PageNumber: 1, PageSize: 1 }),
-        getPagedInventoryItems({
-          PageNumber: 1,
-          PageSize: 1,
-          Status: "LowStock",
-        }),
-        getPagedInventoryItems({
-          PageNumber: 1,
-          PageSize: 1,
-          Status: "OutOfStock",
-        }),
+        getPagedInventoryItems({ PageNumber: 1, PageSize: 1, Status: "LowStock" }),
+        getPagedInventoryItems({ PageNumber: 1, PageSize: 1, Status: "OutOfStock" }),
       ]);
       setStats({
         total: allRes?.data?.totalCount ?? 0,
@@ -132,7 +128,12 @@ export default function Products() {
     } catch (_) {}
   }, []);
 
-  // Initial Data Loading
+  const refreshStats = useCallback(() => {
+    statsFetched.current = false;
+    loadStats();
+  }, [loadStats]);
+
+  // ─── Mount ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
       await fetchPharmacyCategories();
@@ -143,12 +144,11 @@ export default function Products() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Main Fetch Effect
+  // ─── Main fetch effect ────────────────────────────────────────────────────
   useEffect(() => {
     if (!dataReady) return;
 
     const apiFilter = { PageNumber: filter.page, PageSize: perPage };
-
     if (filter.categoryId != null) apiFilter.CategoryId = filter.categoryId;
     if (filter.status !== "All" && STATUS_TO_API[filter.status]) {
       apiFilter.Status = STATUS_TO_API[filter.status];
@@ -160,14 +160,18 @@ export default function Products() {
     fetchPaged(apiFilter).then((result) => {
       if (result) {
         setTotalCount(result.totalCount ?? 0);
-        setTotalPages(
-          Math.max(1, Math.ceil((result.totalCount ?? 0) / perPage)),
-        );
+        setTotalPages(Math.max(1, Math.ceil((result.totalCount ?? 0) / perPage)));
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataReady, filter]);
 
+  // ─── Reload helper ────────────────────────────────────────────────────────
+  const reloadCurrentPage = useCallback(() => {
+    setFilter((prev) => ({ ...prev }));
+  }, []);
+
+  // ─── Filter helpers ───────────────────────────────────────────────────────
   const handleCategoryChange = (name) => {
     const cat = pharmacyCategories.find((c) => c.name === name);
     setFilter((prev) => ({
@@ -199,7 +203,7 @@ export default function Products() {
     setRawSearch("");
   };
 
-  // Close dropdown on outside click
+  // ─── Close dropdown on outside click ─────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       if (filterRef.current && !filterRef.current.contains(e.target))
@@ -214,15 +218,13 @@ export default function Products() {
 
   const pageRange = buildPageRange(filter.page, totalPages);
 
-  const reloadCurrentPage = useCallback(() => {
-    setFilter((prev) => ({ ...prev }));
-  }, []);
-
+  // ─── CRUD handlers ────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
     if (!confirm("Delete this product?")) return;
     const success = await remove(String(id).replace("#", ""));
     if (success) {
       reloadCurrentPage();
+      refreshStats();
       setToast({ type: "success", message: "Product deleted successfully." });
     }
   };
@@ -231,19 +233,24 @@ export default function Products() {
     const isEdit = !!editingProduct;
     const editId = editingProduct?.raw?.id ?? editingProduct?.raw?.Id;
 
-    const success = isEdit ? await update(editId, data) : await create(data);
-
-    if (success) {
-      setOpenModal(false);
-      setEditingProduct(null);
-      reloadCurrentPage();
-      setToast({
-        type: "success",
-        message: isEdit
-          ? "Product updated successfully!"
-          : "Product added successfully!",
-      });
-    } else {
+    try {
+      const success = isEdit ? await update(editId, data) : await create(data);
+      if (success) {
+        setOpenModal(false);
+        setEditingProduct(null);
+        reloadCurrentPage();
+        refreshStats();
+        setToast({
+          type: "success",
+          message: isEdit ? "Product updated successfully!" : "Product added successfully!",
+        });
+      } else {
+        setToast({
+          type: "error",
+          message: "Something went wrong. Please try again.",
+        });
+      }
+    } catch {
       setToast({
         type: "error",
         message: "Something went wrong. Please try again.",
@@ -251,6 +258,14 @@ export default function Products() {
     }
   };
 
+  // ─── Import complete callback ─────────────────────────────────────────────
+  const handleImportComplete = useCallback(() => {
+    reloadCurrentPage();
+    refreshStats();
+    setToast({ type: "success", message: "Import complete! Inventory updated." });
+  }, [reloadCurrentPage, refreshStats]);
+
+  // ─── Export CSV ───────────────────────────────────────────────────────────
   const handleExport = () => {
     const rows = [
       ["ID", "Name", "Company", "Category", "Qty", "Price", "Expiry", "Status"],
@@ -266,9 +281,7 @@ export default function Products() {
       ]),
     ];
     const csv = rows
-      .map((r) =>
-        r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","),
-      )
+      .map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -279,6 +292,7 @@ export default function Products() {
     URL.revokeObjectURL(url);
   };
 
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4 p-3 sm:space-y-5 sm:p-4 md:space-y-6 md:p-0">
       {toast && (
@@ -313,6 +327,7 @@ export default function Products() {
 
       {/* Toolbar */}
       <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border bg-white p-3 shadow sm:p-4 md:flex-row md:items-center">
+        {/* Search */}
         <div className="flex w-full items-center gap-2 rounded-full bg-gray-100 px-3 py-2 md:w-1/3">
           <Search className="h-4 w-4 flex-shrink-0 text-gray-400" />
           <input
@@ -335,6 +350,7 @@ export default function Products() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Add Product */}
           <button
             onClick={() => {
               setEditingProduct(null);
@@ -344,6 +360,15 @@ export default function Products() {
           >
             <PlusCircle className="h-4 w-4" />
             Add Product
+          </button>
+
+          {/* Import Excel */}
+          <button
+            onClick={() => setOpenImportModal(true)}
+            className="flex items-center gap-1.5 rounded-full border border-secondary/40 bg-secondary/5 px-3 py-2 text-xs font-medium text-secondary transition hover:bg-secondary/10 sm:text-sm"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Import Excel
           </button>
 
           {/* Filters */}
@@ -424,6 +449,7 @@ export default function Products() {
             )}
           </div>
 
+          {/* Export CSV */}
           <button
             onClick={handleExport}
             className="flex items-center gap-1.5 rounded-full border bg-white px-3 py-2 text-xs transition hover:bg-gray-50 sm:text-sm"
@@ -434,7 +460,7 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Table with Company Name Column */}
+      {/* Table */}
       <div className="overflow-hidden rounded-2xl border bg-white shadow">
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16">
@@ -459,10 +485,7 @@ export default function Products() {
                     "Status",
                     "Actions",
                   ].map((h) => (
-                    <th
-                      key={h}
-                      className="whitespace-nowrap px-3 py-4 font-semibold"
-                    >
+                    <th key={h} className="whitespace-nowrap px-3 py-4 font-semibold">
                       {h}
                     </th>
                   ))}
@@ -487,19 +510,18 @@ export default function Products() {
                       <td className="max-w-[160px] truncate px-3 py-4 text-left text-sm">
                         {p.name}
                       </td>
-
-                      {/* Company Name Column */}
                       <td className="max-w-[150px] truncate px-3 py-4 text-left text-sm text-gray-700">
                         {p.companyName || "—"}
                       </td>
-
                       <td className="px-3 py-4 text-sm">{p.category ?? "—"}</td>
                       <td className="px-3 py-4 text-sm">{p.qty}</td>
                       <td className="px-3 py-4 text-sm">{p.price}</td>
                       <td className="px-3 py-4 text-sm">{p.expiry}</td>
                       <td className="px-3 py-4">
                         <span
-                          className={`inline-block rounded-full px-3 py-1 text-xs ${statusColor[p.status] ?? "bg-gray-100 text-gray-500"}`}
+                          className={`inline-block rounded-full px-3 py-1 text-xs ${
+                            statusColor[p.status] ?? "bg-gray-100 text-gray-500"
+                          }`}
                         >
                           {p.status}
                         </span>
@@ -565,9 +587,7 @@ export default function Products() {
             )}
 
             <button
-              onClick={() =>
-                handlePageChange(Math.min(totalPages, filter.page + 1))
-              }
+              onClick={() => handlePageChange(Math.min(totalPages, filter.page + 1))}
               disabled={filter.page === totalPages}
               className="flex items-center gap-1 rounded-full border px-4 py-2 text-sm disabled:opacity-50"
             >
@@ -575,12 +595,12 @@ export default function Products() {
             </button>
           </div>
           <p className="text-xs text-gray-500">
-            Page {filter.page} of {totalPages} • {totalCount.toLocaleString()}{" "}
-            results
+            Page {filter.page} of {totalPages} • {totalCount.toLocaleString()} results
           </p>
         </div>
       )}
 
+      {/* Single product modal */}
       <ProductModal
         open={openModal}
         onClose={() => {
@@ -592,6 +612,13 @@ export default function Products() {
         categories={pharmacyCategories}
         loadingCategories={false}
         initialData={editingProduct?.raw || null}
+      />
+
+      {/* Excel import modal */}
+      <ImportExcelModal
+        open={openImportModal}
+        onClose={() => setOpenImportModal(false)}
+        onImportComplete={handleImportComplete}
       />
     </div>
   );
