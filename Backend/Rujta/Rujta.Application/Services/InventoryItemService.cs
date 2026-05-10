@@ -7,7 +7,7 @@ using Rujta.Application.Services.Pharmcy;
 
 namespace Rujta.Application.Services
 {
-    public class InventoryItemService : IInventoryItemService 
+    public class InventoryItemService : IInventoryItemService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
@@ -41,7 +41,10 @@ namespace Rujta.Application.Services
             _logger = logger;
         }
 
-        public async Task<PagedResultDto<InventoryItemDto>> GetPagedAsync(int pharmacyId, InventoryItemFilterDto filter,CancellationToken cancellationToken = default)
+        public async Task<PagedResultDto<InventoryItemDto>> GetPagedAsync(
+            int pharmacyId,
+            InventoryItemFilterDto filter,
+            CancellationToken cancellationToken = default)
         {
             try
             {
@@ -49,7 +52,6 @@ namespace Rujta.Application.Services
 
                 string cacheKey = BuildCacheKey(pharmacyId, filter);
 
-                
                 if (_cache.TryGetValue<PagedResultDto<InventoryItemDto>>(cacheKey, out var cached)
                     && cached != null)
                 {
@@ -57,22 +59,28 @@ namespace Rujta.Application.Services
                     return cached;
                 }
 
-                var query = _unitOfWork.InventoryItems.GetQueryable().AsNoTracking().Where(i => i.PharmacyID == pharmacyId);
+                var query = _unitOfWork.InventoryItems
+                    .GetQueryable()
+                    .AsNoTracking()
+                    .Where(i => i.PharmacyID == pharmacyId);
 
-
+                // ✅ Free-text search against medicine name (case-insensitive)
+                if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+                {
+                    var term = filter.SearchTerm.Trim().ToLower();
+                    query = query.Where(i =>
+                        i.Medicine != null &&
+                        i.Medicine.Name.ToLower().Contains(term));
+                }
 
                 if (filter.MedicineId.HasValue)
-                {
                     query = query.Where(i => i.MedicineID == filter.MedicineId.Value);
-                }
 
                 if (filter.CategoryId.HasValue)
                     query = query.Where(i => i.Medicine!.CategoryId == filter.CategoryId.Value);
-                
 
                 if (filter.Status.HasValue)
                     query = query.Where(i => i.Status == filter.Status.Value);
-                
 
                 var totalCount = await query.CountAsync(cancellationToken);
 
@@ -227,13 +235,11 @@ namespace Rujta.Application.Services
                 entity.Id, entity.PharmacyID);
         }
 
-
         public async Task UpdateAsync(int id, InventoryItemDto dto, CancellationToken cancellationToken = default)
         {
             var existing = await _unitOfWork.InventoryItems.GetByIdAsync(id, cancellationToken)
                 ?? throw new KeyNotFoundException("Inventory item not found.");
 
-           
             int oldPharmacyId = existing.PharmacyID;
 
             _mapper.Map(dto, existing);
@@ -242,10 +248,8 @@ namespace Rujta.Application.Services
             await _unitOfWork.InventoryItems.UpdateAsync(existing, cancellationToken);
             await _unitOfWork.SaveAsync(cancellationToken);
 
-         
             InvalidateCache(existing.PharmacyID, id);
 
-           
             if (oldPharmacyId != existing.PharmacyID)
             {
                 InvalidateCache(oldPharmacyId, id);
@@ -258,7 +262,6 @@ namespace Rujta.Application.Services
                 "Inventory item {Id} updated in pharmacy {PharmacyId}. Caches invalidated.",
                 id, existing.PharmacyID);
         }
-
 
         public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
@@ -301,11 +304,8 @@ namespace Rujta.Application.Services
         private void InvalidateCache(int pharmacyId, int itemId)
         {
             _cache.Remove($"{ItemByIdPrefix}{itemId}");
-
             InvalidatePharmacyInventoryToken(pharmacyId);
-
             InvalidateInventoryListToken();
-
             PharmacyService.InvalidatePharmacyCache(pharmacyId);
         }
 
@@ -362,7 +362,8 @@ namespace Rujta.Application.Services
                    $"_p{f.PageNumber}_s{f.PageSize}" +
                    $"_m{f.MedicineId?.ToString() ?? "_"}" +
                    $"_c{f.CategoryId?.ToString() ?? "_"}" +
-                   $"_st{f.Status?.ToString() ?? "_"}";
+                   $"_st{f.Status?.ToString() ?? "_"}" +
+                   $"_q{f.SearchTerm ?? "_"}";   // ✅ include SearchTerm in cache key
         }
     }
 }

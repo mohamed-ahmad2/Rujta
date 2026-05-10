@@ -9,6 +9,9 @@
         public int? CategoryId { get; set; }
         public ProductStatus? Status { get; set; }
 
+        
+        public string? SearchTerm { get; set; }
+
         public int PageNumber { get; set; } = 1;
 
         public int PageSize
