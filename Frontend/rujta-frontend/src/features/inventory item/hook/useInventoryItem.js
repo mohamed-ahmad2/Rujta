@@ -1,7 +1,6 @@
 // src/features/inventory item/hook/useInventoryItem.js
 import { useState, useCallback, useRef } from "react";
 import {
-  getAllInventoryItems,
   getInventoryItemById,
   getInventoryProducts,
   getPagedInventoryItems,
@@ -31,8 +30,10 @@ const toNumber = (v, fallback = 0) => {
 
 const mapStatus = (rawStatus, expired) => {
   if (expired) return "Expired";
-  const s = rawStatus !== undefined && rawStatus !== null
-    ? String(rawStatus).toLowerCase() : "";
+  const s =
+    rawStatus !== undefined && rawStatus !== null
+      ? String(rawStatus).toLowerCase()
+      : "";
   if (s === "instock"    || s === "0") return "In stock";
   if (s === "lowstock"   || s === "1") return "Low stock";
   if (s === "outofstock" || s === "2") return "Out of stock";
@@ -48,15 +49,15 @@ const formatExpiry = (raw) => {
 };
 
 const mapItem = (item = {}) => {
-  const quantity       = toNumber(item.quantity ?? item.Quantity);
-  const price          = toNumber(item.price ?? item.Price);
+  const quantity        = toNumber(item.quantity ?? item.Quantity);
+  const price           = toNumber(item.price    ?? item.Price);
   const discountedPrice = toNumber(item.discountedPrice ?? item.DiscountedPrice);
-  const hasDiscount    = item.hasDiscount ?? item.HasDiscount ?? false;
+  const hasDiscount     = item.hasDiscount ?? item.HasDiscount ?? false;
 
   const expiryRaw =
-    item.expiryDate ?? item.ExpiryDate ??
+    item.expiryDate  ?? item.ExpiryDate  ??
     item.expiry_date ?? item.Expiry_Date ??
-    item.expiry ?? item.Expiry ?? null;
+    item.expiry      ?? item.Expiry      ?? null;
 
   const expiryObj = expiryRaw ? new Date(expiryRaw) : null;
   const expired   = expiryObj ? expiryObj < new Date() : false;
@@ -64,18 +65,18 @@ const mapItem = (item = {}) => {
   const status    = mapStatus(statusRaw, expired);
 
   return {
-    id: item.id ?? item.Id,
-    name: item.medicineName ?? item.MedicineName,
-    category: item.categoryName ?? item.CategoryName,
-    qty: quantity,
+    id:             item.id           ?? item.Id,
+    name:           item.medicineName ?? item.MedicineName,
+    category:       item.categoryName ?? item.CategoryName,
+    qty:            quantity,
     price,
     discountedPrice,
     effectivePrice: hasDiscount ? discountedPrice : price,
-    expiry: formatExpiry(expiryRaw),
+    expiry:         formatExpiry(expiryRaw),
     status,
     expired,
-    pharmacyId: item.pharmacyID ?? item.PharmacyID,
-    raw: item,
+    pharmacyId:     item.pharmacyID   ?? item.PharmacyID,
+    raw:            item,
   };
 };
 
@@ -84,7 +85,7 @@ export default function useInventory() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
 
-  // ── Remember the last filter used so create/update can refresh the same page ──
+  // Remembers the last filter so create/update/remove can refresh the same page
   const lastFilterRef = useRef(null);
 
   const fetchAll = useCallback(async () => {
@@ -101,10 +102,11 @@ export default function useInventory() {
     }
   }, []);
 
-  // ── fetchPaged: saves the last filter so we can re-use it ──────────────────
+  // fetchPaged: filter is passed straight through to the API file.
+  // Supports: PageNumber, PageSize, CategoryId, Status, SearchTerm
   const fetchPaged = useCallback(async (filter) => {
     setLoading(true);
-    lastFilterRef.current = filter; // ← remember it
+    lastFilterRef.current = filter;
     try {
       const res  = await getPagedInventoryItems(filter);
       const data = res?.data?.items ?? [];
@@ -119,7 +121,7 @@ export default function useInventory() {
     }
   }, []);
 
-  const fetchById = async (id) => {
+  const fetchById = useCallback(async (id) => {
     setLoading(true);
     try {
       const res = await getInventoryItemById(id);
@@ -130,22 +132,19 @@ export default function useInventory() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // ── create: after adding, re-fetch the same paged view ────────────────────
   const create = useCallback(async (data) => {
     setLoading(true);
     try {
-      const res = await addInventoryItem(data);
+      await addInventoryItem(data);
       setError(null);
-      // Refresh whichever page/filter was last active
       if (lastFilterRef.current) {
         const refreshed = await getPagedInventoryItems(lastFilterRef.current);
-        const refreshedData = refreshed?.data?.items ?? [];
-        setItems(refreshedData.map(mapItem));
+        setItems((refreshed?.data?.items ?? []).map(mapItem));
         return refreshed?.data;
       }
-      return res?.data;
+      return null;
     } catch (err) {
       setError(extractErrorMessage(err));
       return null;
@@ -154,7 +153,6 @@ export default function useInventory() {
     }
   }, []);
 
-  // ── update: after editing, re-fetch the same paged view ───────────────────
   const update = useCallback(async (id, data) => {
     setLoading(true);
     try {
@@ -162,33 +160,34 @@ export default function useInventory() {
       setError(null);
       if (lastFilterRef.current) {
         const refreshed = await getPagedInventoryItems(lastFilterRef.current);
-        const refreshedData = refreshed?.data?.items ?? [];
-        setItems(refreshedData.map(mapItem));
+        setItems((refreshed?.data?.items ?? []).map(mapItem));
         return refreshed?.data;
       }
+      return null;
     } catch (err) {
       setError(extractErrorMessage(err));
+      return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // ── remove: optimistic remove + re-fetch ──────────────────────────────────
   const remove = useCallback(async (id) => {
     setLoading(true);
     try {
       await deleteInventoryItem(id);
+      // Optimistic removal before refresh
       setItems((prev) => prev.filter((x) => String(x.id) !== String(id)));
       setError(null);
-      // Re-fetch to get accurate totalCount for pagination
       if (lastFilterRef.current) {
         const refreshed = await getPagedInventoryItems(lastFilterRef.current);
-        const refreshedData = refreshed?.data?.items ?? [];
-        setItems(refreshedData.map(mapItem));
+        setItems((refreshed?.data?.items ?? []).map(mapItem));
         return refreshed?.data;
       }
+      return null;
     } catch (err) {
       setError(extractErrorMessage(err));
+      return null;
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 // Products.jsx
-import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import ProductsCard from "../components/ProductsCard";
 import {
   Package, AlertTriangle, XCircle, Search, PlusCircle,
@@ -8,8 +8,8 @@ import {
 import ProductModal from "../components/ProductModal";
 import useInventory from "../../inventory item/hook/useInventoryItem";
 import useCategory from "../../category/hook/useCategory";
-import useMedicines from "../../medicines/hook/useMedicines";
 import useDrugRequest from "../../drugRequests/hook/useDrugRequest";
+import { getPagedInventoryItems } from "../../inventory item/api/inventoryItem";
 
 const statusColor = {
   "In stock":     "bg-green-100 text-green-700",
@@ -60,12 +60,12 @@ function Toast({ type, message, onClose }) {
 export default function Products() {
   const { items, loading, error, fetchPaged, remove, create, update } = useInventory();
   const { categories, fetchAll: fetchCategories, loading: loadingCategories } = useCategory();
-  const { medicines, fetchAll: fetchMedicines, loading: loadingMedicines }    = useMedicines();
   const { submit } = useDrugRequest();
 
   const [openModal,      setOpenModal]      = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [q,              setQ]              = useState("");
+  const [debouncedQ,     setDebouncedQ]     = useState("");
   const [page,           setPage]           = useState(1);
   const [totalCount,     setTotalCount]     = useState(0);
   const [totalPages,     setTotalPages]     = useState(1);
@@ -73,74 +73,101 @@ export default function Products() {
   const [filterCategory, setFilterCategory] = useState("All");
   const [filterStatus,   setFilterStatus]   = useState("All");
   const [toast,          setToast]          = useState(null);
-  const filterRef = useRef(null);
-  const [stats, setStats] = useState({ total: 0, lowStock: 0, outOfStock: 0 });
+  const [stats,          setStats]          = useState({ total: 0, lowStock: 0, outOfStock: 0 });
 
-  // ── Frontend-only search — never triggers a backend call ──────────────────
-  const filteredItems = useMemo(() => {
-    if (!q.trim()) return items;
-    const s = q.toLowerCase();
-    return items.filter(
-      (p) =>
-        (p.name     ?? "").toLowerCase().includes(s) ||
-        (p.id       ?? "").toString().includes(s)    ||
-        (p.category ?? "").toLowerCase().includes(s)
-    );
-  }, [items, q]);
+  const filterRef    = useRef(null);
+  // Prevent stats from re-fetching on every render
+  const statsFetched = useRef(false);
 
-  const buildFilter = useCallback(
-    (pageNumber, category, status) => {
-      const filter = { pageNumber, pageSize: perPage };
-      if (category !== "All") {
-        const cat = categories.find((c) => c.name === category);
-        if (cat) filter.categoryId = cat.id;
-      }
-      if (status !== "All" && STATUS_TO_API[status])
-        filter.status = STATUS_TO_API[status];
-      return filter;
-    },
-    [categories],
-  );
+  // ─── Debounce: only update debouncedQ 400ms after typing stops ───────────
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(q), 400);
+    return () => clearTimeout(timer);
+  }, [q]);
 
+  // ─── Stats: 3 parallel requests, fired once on mount only ─────────────────
+  const loadStats = useCallback(async () => {
+    if (statsFetched.current) return;
+    statsFetched.current = true;
+    try {
+      const [allRes, lowRes, outRes] = await Promise.all([
+        getPagedInventoryItems({ PageNumber: 1, PageSize: 1 }),
+        getPagedInventoryItems({ PageNumber: 1, PageSize: 1, Status: "LowStock" }),
+        getPagedInventoryItems({ PageNumber: 1, PageSize: 1, Status: "OutOfStock" }),
+      ]);
+      setStats({
+        total:      allRes?.data?.totalCount ?? 0,
+        lowStock:   lowRes?.data?.totalCount ?? 0,
+        outOfStock: outRes?.data?.totalCount ?? 0,
+      });
+    } catch (_) {}
+  }, []);
+
+  // ─── Mount: fetch categories + stats once ─────────────────────────────────
+  useEffect(() => {
+    fetchCategories();
+    loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ─── Build filter (plain function, not memoized — categories captured via closure) ──
+  const buildFilter = (pageNumber, category, status, searchTerm) => {
+    const filter = { PageNumber: pageNumber, PageSize: perPage };
+
+    if (category !== "All") {
+      const cat = categories.find((c) => c.name === category);
+      if (cat) filter.CategoryId = cat.id;
+    }
+
+    if (status !== "All" && STATUS_TO_API[status]) {
+      filter.Status = STATUS_TO_API[status];
+    }
+
+    if (searchTerm && searchTerm.trim()) {
+      filter.SearchTerm = searchTerm.trim();
+    }
+
+    return filter;
+  };
+
+  // ─── Single effect: fires whenever page/filter/search changes ────────────
+  // Using a ref to hold the current filter values avoids stale closures
+  // while keeping the dep array honest.
   const loadPage = useCallback(
-    async (pageNumber, category, status) => {
-      const result = await fetchPaged(buildFilter(pageNumber, category, status));
+    async (pageNumber, category, status, searchTerm) => {
+      const result = await fetchPaged(
+        buildFilter(pageNumber, category, status, searchTerm)
+      );
       if (result) {
         setTotalCount(result.totalCount ?? 0);
         setTotalPages(Math.max(1, Math.ceil((result.totalCount ?? 0) / perPage)));
       }
     },
-    [fetchPaged, buildFilter],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [fetchPaged, categories],
   );
 
-  const loadStats = useCallback(async () => {
-    try {
-      const [allRes, lowRes, outRes] = await Promise.all([
-        fetchPaged({ pageNumber: 1, pageSize: 1 }),
-        fetchPaged({ pageNumber: 1, pageSize: 1, status: "LowStock" }),
-        fetchPaged({ pageNumber: 1, pageSize: 1, status: "OutOfStock" }),
-      ]);
-      setStats({
-        total:      allRes?.totalCount ?? 0,
-        lowStock:   lowRes?.totalCount ?? 0,
-        outOfStock: outRes?.totalCount ?? 0,
-      });
-    } catch (_) {}
-  }, [fetchPaged]);
-
   useEffect(() => {
-    fetchCategories();
-    fetchMedicines();
-    loadStats();
+    loadPage(page, filterCategory, filterStatus, debouncedQ);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [page, filterCategory, filterStatus, debouncedQ]);
 
-  // Clear local search whenever we navigate to a new page or change filters
+  // ─── Reset page+search when filters change (track previous to avoid loop) ─
+  const prevCategory = useRef("All");
+  const prevStatus   = useRef("All");
   useEffect(() => {
-    setQ("");
-    loadPage(page, filterCategory, filterStatus);
-  }, [page, filterCategory, filterStatus]);
+    if (
+      prevCategory.current !== filterCategory ||
+      prevStatus.current   !== filterStatus
+    ) {
+      prevCategory.current = filterCategory;
+      prevStatus.current   = filterStatus;
+      setQ("");
+      setPage(1);
+    }
+  }, [filterCategory, filterStatus]);
 
+  // ─── Close dropdown on outside click ─────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       if (filterRef.current && !filterRef.current.contains(e.target))
@@ -153,7 +180,13 @@ export default function Products() {
   const hasActiveFilters = filterCategory !== "All" || filterStatus !== "All";
   const pageRange        = buildPageRange(page, totalPages);
 
-  // ── Delete ─────────────────────────────────────────────────────────────────
+  // ─── Refresh stats after mutations ────────────────────────────────────────
+  const refreshStats = () => {
+    statsFetched.current = false;
+    loadStats();
+  };
+
+  // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
     if (!confirm("Delete this product?")) return;
     const result = await remove(String(id).replace("#", ""));
@@ -161,15 +194,13 @@ export default function Products() {
       setTotalCount(result.totalCount ?? 0);
       setTotalPages(Math.max(1, Math.ceil((result.totalCount ?? 0) / perPage)));
     }
-    loadStats();
+    refreshStats();
     setToast({ type: "success", message: "Product deleted successfully." });
   };
 
-  // ── Add / Update ───────────────────────────────────────────────────────────
   const handleAddOrUpdate = async (data) => {
-    // Snapshot BEFORE any state mutation so we don't lose it mid-async
-    const isEdit  = !!editingProduct;
-    const editId  = editingProduct?.raw?.id;
+    const isEdit = !!editingProduct;
+    const editId = editingProduct?.raw?.id ?? editingProduct?.raw?.Id;
 
     try {
       const result = isEdit
@@ -184,7 +215,7 @@ export default function Products() {
         setTotalPages(Math.max(1, Math.ceil((result.totalCount ?? 0) / perPage)));
       }
 
-      loadStats();
+      refreshStats();
       setToast({
         type:    "success",
         message: isEdit ? "Product updated successfully!" : "Product added successfully!",
@@ -197,13 +228,12 @@ export default function Products() {
   const clearFilters = () => {
     setFilterCategory("All");
     setFilterStatus("All");
-    setPage(1);
   };
 
   const handleExport = () => {
     const rows = [
       ["ID", "Name", "Category", "Qty", "Price", "Expiry", "Status"],
-      ...filteredItems.map((p) => [p.id, p.name, p.category, p.qty, p.price, p.expiry, p.status]),
+      ...items.map((p) => [p.id, p.name, p.category, p.qty, p.price, p.expiry, p.status]),
     ];
     const csv = rows
       .map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
@@ -224,27 +254,25 @@ export default function Products() {
         <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />
       )}
 
+      {/* ── Stats ── */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 md:gap-6">
         <ProductsCard title="Total Products"  value={stats.total.toLocaleString()} icon={<Package size={18} />}       color="bg-secondary"  />
         <ProductsCard title="Low Stock Items" value={stats.lowStock}               icon={<AlertTriangle size={18} />} color="bg-yellow-500" />
         <ProductsCard title="Out of Stock"    value={stats.outOfStock}             icon={<XCircle size={18} />}       color="bg-red-500"    />
       </div>
 
+      {/* ── Toolbar ── */}
       <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border bg-white p-3 shadow sm:p-4 md:flex-row md:items-center">
-        {/* ── Search — purely frontend, no setPage ── */}
         <div className="flex w-full items-center gap-2 rounded-full bg-gray-100 px-3 py-2 md:w-1/3">
           <Search className="h-4 w-4 flex-shrink-0 text-gray-400" />
           <input
             value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by name, ID or category..."
+            onChange={(e) => { setQ(e.target.value); setPage(1); }}
+            placeholder="Search by drug name..."
             className="w-full bg-transparent text-xs outline-none sm:text-sm"
           />
           {q && (
-            <button
-              onClick={() => setQ("")}
-              className="flex-shrink-0 text-gray-400 hover:text-gray-600"
-            >
+            <button onClick={() => { setQ(""); setPage(1); }} className="flex-shrink-0 text-gray-400 hover:text-gray-600">
               <X className="h-3.5 w-3.5" />
             </button>
           )}
@@ -283,7 +311,7 @@ export default function Products() {
                   <label className="mb-1 block text-xs text-gray-500">Category</label>
                   <select
                     value={filterCategory}
-                    onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
+                    onChange={(e) => setFilterCategory(e.target.value)}
                     className="w-full rounded-lg border bg-white p-2 text-xs focus:outline-none focus:ring-2 focus:ring-secondary sm:text-sm"
                   >
                     <option>All</option>
@@ -294,7 +322,7 @@ export default function Products() {
                   <label className="mb-1 block text-xs text-gray-500">Status</label>
                   <select
                     value={filterStatus}
-                    onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                    onChange={(e) => setFilterStatus(e.target.value)}
                     className="w-full rounded-lg border bg-white p-2 text-xs focus:outline-none focus:ring-2 focus:ring-secondary sm:text-sm"
                   >
                     <option>All</option>
@@ -322,6 +350,7 @@ export default function Products() {
         </div>
       </div>
 
+      {/* ── Table ── */}
       <div className="overflow-hidden rounded-2xl border bg-white shadow">
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-12 sm:py-16">
@@ -343,14 +372,14 @@ export default function Products() {
                 </tr>
               </thead>
               <tbody>
-                {filteredItems.length === 0 ? (
+                {items.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-10 text-xs text-gray-500 sm:text-sm">
                       {q ? `No products match "${q}".` : "No products found."}
                     </td>
                   </tr>
                 ) : (
-                  filteredItems.map((p) => (
+                  items.map((p) => (
                     <tr key={p.id} className={`border-t transition hover:bg-gray-50 ${p.expired ? "bg-red-50" : ""}`}>
                       <td className="whitespace-nowrap px-2 py-3 text-xs font-medium sm:px-3 sm:text-sm md:px-4">{p.id}</td>
                       <td className="max-w-[120px] truncate px-2 py-3 text-xs sm:px-3 sm:text-sm md:px-4">{p.name}</td>
@@ -390,6 +419,7 @@ export default function Products() {
         )}
       </div>
 
+      {/* ── Pagination ── */}
       {totalPages > 1 && (
         <div className="mt-4 flex flex-col items-center gap-2">
           <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
@@ -436,8 +466,6 @@ export default function Products() {
         onSubmitRequest={submit}
         categories={categories}
         loadingCategories={loadingCategories}
-        medicines={medicines}
-        loadingMedicines={loadingMedicines}
         initialData={editingProduct?.raw || null}
       />
     </div>
