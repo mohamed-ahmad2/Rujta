@@ -1,29 +1,21 @@
-// useAdminNotifications.jsx
 import { useEffect, useState, useCallback, useContext, useRef } from "react";
-import { NotificationContext } from "../../../../context/NotificationContext"; // ✅ غيرناه
-import { ToastContext } from "../../../../context/ToastContext";
+import { NotificationContext } from "../../../../context/NotificationContext";
 import { useAuth } from "../../../auth/hooks/useAuth";
+import { toastEmitter } from "../../../../context/toastEmitter";
 import {
   getMyNotifications,
   getUnreadCount,
   markNotificationAsRead,
 } from "../../../notifications/api/notificationsApi";
 
-/**
- * @param {Object} [options]
- * @param {(data: any) => void} [options.onNewDrugRequest]
- * @param {(data: any) => void} [options.onDrugRequestReviewed]
- */
 export const useAdminNotifications = ({
   onNewDrugRequest,
   onDrugRequestReviewed,
 } = {}) => {
   const { user } = useAuth();
 
-  // ✅ Single SignalR connection — shared with NotificationProvider
   const { connection, notifications, setNotifications } =
     useContext(NotificationContext);
-  const { showToast } = useContext(ToastContext);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -31,7 +23,6 @@ export const useAdminNotifications = ({
 
   const isSuperAdmin = user?.role === "SuperAdmin";
 
-  // ─── Stable refs for external callbacks ──────────────────────────
   const onNewDrugRequestRef = useRef(onNewDrugRequest);
   const onDrugRequestReviewedRef = useRef(onDrugRequestReviewed);
 
@@ -40,17 +31,21 @@ export const useAdminNotifications = ({
     onDrugRequestReviewedRef.current = onDrugRequestReviewed;
   });
 
-  // ─── Fetch notifications from DB ─────────────────────────────────
+  // ─── Fetch from DB — MERGE not replace ───────────────────────────
   const fetchNotifications = useCallback(async () => {
-    if (!user) return;
-    if (isSuperAdmin) return; // SuperAdmin uses realtime only
+    if (!user || isSuperAdmin) return;
 
     setLoading(true);
     setError(null);
     try {
       const res = await getMyNotifications();
       const fromDb = res.data || [];
-      if (fromDb.length > 0) setNotifications(fromDb);
+
+      setNotifications((prev) => {
+        const dbIds = new Set(fromDb.map((n) => n.id ?? n.Id));
+        const realtimeOnly = prev.filter((n) => !dbIds.has(n.id ?? n.Id));
+        return [...fromDb, ...realtimeOnly];
+      });
     } catch (err) {
       console.error("Failed to fetch admin notifications", err);
       setError("Failed to load notifications");
@@ -59,11 +54,8 @@ export const useAdminNotifications = ({
     }
   }, [user, isSuperAdmin, setNotifications]);
 
-  // ─── Fetch unread count ──────────────────────────────────────────
   const fetchUnreadCount = useCallback(async () => {
-    if (!user) return;
-    if (isSuperAdmin) return;
-
+    if (!user || isSuperAdmin) return;
     try {
       const res = await getUnreadCount();
       setServerUnreadCount(res.data?.unreadCount ?? 0);
@@ -77,20 +69,16 @@ export const useAdminNotifications = ({
     fetchUnreadCount();
   }, [fetchNotifications, fetchUnreadCount]);
 
-  // ─── Re-fetch on reconnect ───────────────────────────────────────
   useEffect(() => {
     if (!connection) return;
-
     const handleReconnected = () => {
-      console.log("♻️ Admin SignalR reconnected — re-fetching");
       fetchNotifications();
       fetchUnreadCount();
     };
-
     connection.onreconnected(handleReconnected);
   }, [connection, fetchNotifications, fetchUnreadCount]);
 
-  // ─── 🔥 NewDrugRequest (SuperAdmin) — REALTIME ──────────────────
+  // ─── NewDrugRequest (SuperAdmin only) ────────────────────────────
   useEffect(() => {
     if (!connection || !isSuperAdmin) return;
 
@@ -111,9 +99,8 @@ export const useAdminNotifications = ({
       });
 
       setServerUnreadCount((c) => (c === null ? null : c + 1));
-      showToast({ title: dto.title, message: dto.message });
+      toastEmitter.emit({ title: dto.title, message: dto.message });
 
-      // ✅ Forward to ApprovalQueue (or any subscriber)
       try {
         onNewDrugRequestRef.current?.(data);
       } catch (e) {
@@ -123,7 +110,7 @@ export const useAdminNotifications = ({
 
     connection.on("NewDrugRequest", handleNewDrugRequest);
     return () => connection.off("NewDrugRequest", handleNewDrugRequest);
-  }, [connection, isSuperAdmin, setNotifications, showToast]);
+  }, [connection, isSuperAdmin, setNotifications]);
 
   // ─── DrugRequestReviewed ─────────────────────────────────────────
   useEffect(() => {
@@ -132,19 +119,14 @@ export const useAdminNotifications = ({
     const handleReviewed = (data) => {
       console.log("💊 Drug request reviewed:", data);
 
-      // For pharmacist: build a notification DTO
       if (!isSuperAdmin) {
         const isApproved = data.status === "Approved";
         const dto = {
           id: `drug-review-${data.requestId}-${Date.now()}`,
-          title: isApproved
-            ? "Drug Request Approved ✅"
-            : "Drug Request Rejected ❌",
+          title: isApproved ? "Drug Request Approved ✅" : "Drug Request Rejected ❌",
           message: isApproved
             ? `"${data.drugName}" has been approved and added to the database.`
-            : `"${data.drugName}" was rejected. Reason: ${
-                data.rejectionReason || "No reason provided"
-              }`,
+            : `"${data.drugName}" was rejected. Reason: ${data.rejectionReason || "No reason provided"}`,
           createdAt: new Date().toISOString(),
           isRead: false,
         };
@@ -155,10 +137,9 @@ export const useAdminNotifications = ({
         });
 
         setServerUnreadCount((c) => (c === null ? null : c + 1));
-        showToast({ title: dto.title, message: dto.message });
+        toastEmitter.emit({ title: dto.title, message: dto.message });
       }
 
-      // ✅ Forward to subscriber regardless of role
       try {
         onDrugRequestReviewedRef.current?.(data);
       } catch (e) {
@@ -168,35 +149,15 @@ export const useAdminNotifications = ({
 
     connection.on("DrugRequestReviewed", handleReviewed);
     return () => connection.off("DrugRequestReviewed", handleReviewed);
-  }, [connection, isSuperAdmin, setNotifications, showToast]);
+  }, [connection, isSuperAdmin, setNotifications]);
 
-  // ─── Generic NewNotification ─────────────────────────────────────
-  useEffect(() => {
-    if (!connection) return;
-
-    const handleNewNotification = (dto) => {
-      console.log("🔔 Admin notification received:", dto);
-
-      setNotifications((prev) => {
-        if (prev.some((n) => n.id === dto.id)) return prev;
-        return [dto, ...prev];
-      });
-
-      setServerUnreadCount((c) => (c === null ? null : c + 1));
-      showToast({ title: dto.title, message: dto.message });
-    };
-
-    connection.on("NewNotification", handleNewNotification);
-    return () => connection.off("NewNotification", handleNewNotification);
-  }, [connection, setNotifications, showToast]);
-
-  // ─── Mark As Read (optimistic) ───────────────────────────────────
+  // ─── Mark As Read ─────────────────────────────────────────────────
   const markAsRead = useCallback(
     async (id) => {
       const isClientOnly = typeof id === "string" && id.startsWith("drug-");
 
       setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
       setServerUnreadCount((c) => (c === null ? null : Math.max(0, c - 1)));
 
@@ -207,17 +168,16 @@ export const useAdminNotifications = ({
       } catch (err) {
         console.error("Failed to mark admin notification as read", err);
         setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, isRead: false } : n)),
+          prev.map((n) => (n.id === id ? { ...n, isRead: false } : n))
         );
         setServerUnreadCount((c) => (c === null ? null : c + 1));
       }
     },
-    [setNotifications],
+    [setNotifications]
   );
 
   const localUnreadCount = notifications.filter((n) => !n.isRead).length;
-  const unreadCount =
-    serverUnreadCount !== null ? serverUnreadCount : localUnreadCount;
+  const unreadCount = serverUnreadCount !== null ? serverUnreadCount : localUnreadCount;
 
   return {
     notifications,

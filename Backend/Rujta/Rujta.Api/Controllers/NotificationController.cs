@@ -28,7 +28,7 @@ namespace Rujta.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetMyNotifications()
         {
-            var userId = TryGetUserId();
+            var userId = GetUserId();
             if (userId is null)
                 return Unauthorized(ApiMessages.UnauthorizedAccess);
 
@@ -47,7 +47,7 @@ namespace Rujta.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetUnreadCount()
         {
-            var userId = TryGetUserId();
+            var userId = GetUserId();
             if (userId is null)
                 return Unauthorized(ApiMessages.UnauthorizedAccess);
 
@@ -61,7 +61,7 @@ namespace Rujta.Api.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> MarkAsRead(int id)
         {
-            var userId = TryGetUserId();
+            var userId = GetUserId();
             if (userId is null)
                 return Unauthorized(ApiMessages.UnauthorizedAccess);
 
@@ -131,8 +131,10 @@ namespace Rujta.Api.Controllers
             });
         }
 
-        private string? TryGetUserId()
-            => User.FindFirstValue(ClaimTypes.NameIdentifier);
+        private string GetUserId()
+            => User.FindFirstValue("domainPersonId")
+               ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+               ?? throw new UnauthorizedAccessException();
 
         private string? TryGetPharmacyId()
             => User.FindFirstValue(PharmacyIdClaim);
