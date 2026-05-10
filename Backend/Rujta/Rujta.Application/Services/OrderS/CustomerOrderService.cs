@@ -15,14 +15,17 @@ namespace Rujta.Application.Services
             _orderService = orderService;
         }
 
-        public async Task<IEnumerable<CustomerDto>> GetAllCustomersAsync()
+        public async Task<IEnumerable<CustomerDto>> GetAllCustomersAsync(int pharmacyId)
         {
-            var customers = await _unitOfWork.Customers.GetAllAsync();
+            var customers = await _unitOfWork.Customers
+                .FindAsync(c => c.PharmacyId == pharmacyId);
+
             var list = new List<CustomerDto>();
 
             foreach (var c in customers)
             {
                 var orders = await _unitOfWork.Customers.GetCustomerOrdersAsync(c.Id);
+
                 list.Add(new CustomerDto
                 {
                     Id = c.Id,
@@ -31,19 +34,24 @@ namespace Rujta.Application.Services
                     PhoneNumber = c.PhoneNumber,
                     OrdersPlaced = orders.Count(),
                     TotalSpend = orders.Sum(o => o.TotalPrice),
-                    LastOrderDate = orders.OrderByDescending(o => o.OrderDate).FirstOrDefault()?.OrderDate.ToString("dd-MM-yyyy") ?? ""
+                    LastOrderDate = orders
+                        .OrderByDescending(o => o.OrderDate)
+                        .FirstOrDefault()?.OrderDate.ToString("dd-MM-yyyy") ?? ""
                 });
             }
 
             return list;
         }
 
-        public async Task<CustomerDto?> GetCustomerByIdAsync(Guid id)
+        public async Task<CustomerDto?> GetCustomerByIdAsync(int pharmacyId, Guid id)
         {
-            var c = await _unitOfWork.Customers.GetByIdAsync(id);
+            var c = await _unitOfWork.Customers
+                .FindOneAsync(x => x.Id == id && x.PharmacyId == pharmacyId);
+
             if (c == null) return null;
 
             var orders = await _unitOfWork.Customers.GetCustomerOrdersAsync(c.Id);
+
             return new CustomerDto
             {
                 Id = c.Id,
@@ -52,7 +60,9 @@ namespace Rujta.Application.Services
                 PhoneNumber = c.PhoneNumber,
                 OrdersPlaced = orders.Count(),
                 TotalSpend = orders.Sum(o => o.TotalPrice),
-                LastOrderDate = orders.OrderByDescending(o => o.OrderDate).FirstOrDefault()?.OrderDate.ToString("dd-MM-yyyy") ?? ""
+                LastOrderDate = orders
+                    .OrderByDescending(o => o.OrderDate)
+                    .FirstOrDefault()?.OrderDate.ToString("dd-MM-yyyy") ?? ""
             };
         }
 
@@ -82,9 +92,11 @@ namespace Rujta.Application.Services
             };
         }
 
-        public async Task<CustomerDto?> UpdateCustomerAsync(Guid id, UpdateCustomerDto dto)
+        public async Task<CustomerDto?> UpdateCustomerAsync(int pharmacyId, Guid id, UpdateCustomerDto dto)
         {
-            var c = await _unitOfWork.Customers.GetByIdAsync(id);
+            var c = await _unitOfWork.Customers
+                .FindOneAsync(x => x.Id == id && x.PharmacyId == pharmacyId);
+
             if (c == null) return null;
 
             c.Name = dto.Name;
@@ -95,22 +107,27 @@ namespace Rujta.Application.Services
             await _unitOfWork.Customers.UpdateAsync(c);
             await _unitOfWork.SaveAsync();
 
-            return await GetCustomerByIdAsync(id);
+            return await GetCustomerByIdAsync(pharmacyId, id);
         }
 
-        public async Task<bool> DeleteCustomerAsync(Guid id)
+        public async Task<bool> DeleteCustomerAsync(int pharmacyId, Guid id)
         {
-            var c = await _unitOfWork.Customers.GetByIdAsync(id);
+            var c = await _unitOfWork.Customers
+                .FindOneAsync(x => x.Id == id && x.PharmacyId == pharmacyId);
+
             if (c == null) return false;
 
             await _unitOfWork.Customers.DeleteAsync(c);
             await _unitOfWork.SaveAsync();
+
             return true;
         }
 
-        public async Task<CustomerStatsDto> GetCustomerStatsAsync()
+        public async Task<CustomerStatsDto> GetCustomerStatsAsync(int pharmacyId)
         {
-            var all = await _unitOfWork.Customers.GetAllAsync();
+            var all = await _unitOfWork.Customers
+                .FindAsync(c => c.PharmacyId == pharmacyId);
+
             var total = all.Count();
             var newCustomers = all.Count(c => (DateTime.UtcNow - c.CreatedAt).TotalDays <= 7);
             var returning = total - newCustomers;
