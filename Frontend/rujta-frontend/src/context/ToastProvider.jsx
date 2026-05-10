@@ -1,31 +1,29 @@
-// src/context/ToastProvider.jsx
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { ToastContext } from "./ToastContext";
+import { toastEmitter } from "./toastEmitter";
 
 let toastId = 0;
 
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
-const showToast = useCallback(({ title, message }) => {
+  const showToast = useCallback(({ title, message }) => {
     const id = ++toastId;
+
     setToasts((prev) => [...prev, { id, title, message, visible: false }]);
 
     requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            setToasts((prev) =>
-                prev.map((t) => (t.id === id ? { ...t, visible: true } : t))
-            );
-        });
+      requestAnimationFrame(() => {
+        setToasts((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, visible: true } : t))
+        );
+      });
     });
 
-
-    // auto dismiss after 4s
     setTimeout(() => {
       setToasts((prev) =>
         prev.map((t) => (t.id === id ? { ...t, visible: false } : t))
       );
-      // remove from DOM after animation
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
       }, 400);
@@ -41,11 +39,14 @@ const showToast = useCallback(({ title, message }) => {
     }, 400);
   }, []);
 
+  useEffect(() => {
+    return toastEmitter.subscribe(showToast);
+  }, [showToast]);
+
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
 
-      {/* Toast container — fixed top right */}
       <div style={{
         position: "fixed", top: 20, right: 20,
         display: "flex", flexDirection: "column", gap: 10,
@@ -67,7 +68,6 @@ const showToast = useCallback(({ title, message }) => {
             opacity: t.visible ? 1 : 0,
             transition: "transform 0.35s cubic-bezier(0.22,1,0.36,1), opacity 0.35s ease",
           }}>
-            {/* Icon */}
             <div style={{
               width: 34, height: 34, borderRadius: "50%",
               background: "#EAF3DE", display: "flex",
@@ -76,28 +76,18 @@ const showToast = useCallback(({ title, message }) => {
               <BellIcon />
             </div>
 
-            {/* Body */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 13, fontWeight: 700, color: "#000", marginBottom: 3 }}>
-                {t.title}
-              </p>
-              <p style={{
-                fontSize: 12, color: "#6B7280", lineHeight: 1.45,
-                display: "-webkit-box", WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical", overflow: "hidden",
-              }}>
                 {t.message}
               </p>
             </div>
 
-            {/* Close */}
             <button onClick={() => dismiss(t.id)} style={{
               background: "none", border: "none", cursor: "pointer",
               color: "#6B7280", fontSize: 16, lineHeight: 1,
               padding: 0, flexShrink: 0, marginTop: -2,
             }}>✕</button>
 
-            {/* Progress bar */}
             <div style={{
               position: "absolute", bottom: 0, left: 0,
               height: 3, background: "#9DC873", borderRadius: "0 0 0 8px",

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useContext, useMemo } from "react";
+import { useEffect, useState, useCallback, useContext, useMemo, useRef } from "react";
 import {
   getMyNotifications,
   getUnreadCount,
@@ -8,28 +8,26 @@ import {
   markPharmacyNotificationAsRead,
 } from "../api/notificationsApi";
 import { NotificationContext } from "../../../context/NotificationContext";
-import { ToastContext } from "../../../context/ToastContext";
 import { useAuth } from "../../auth/hooks/useAuth";
 
 export const useNotifications = ({ isPharmacy = false } = {}) => {
   const { user } = useAuth();
-  const { connection, notifications, setNotifications, lastConnectedAt } =
+  const { notifications, setNotifications, lastConnectedAt } =
     useContext(NotificationContext);
-  const { showToast } = useContext(ToastContext);
 
   const [loading, setLoading] = useState(false);
-  const [serverUnreadCount, setServerUnreadCount] = useState(null);
+  const lastConnectedAtRef = useRef(null);
 
   const apis = useMemo(
     () =>
       isPharmacy
         ? {
-            getList: getPharmacyNotifications,
+            getList:  getPharmacyNotifications,
             getCount: getPharmacyUnreadCount,
             markRead: markPharmacyNotificationAsRead,
           }
         : {
-            getList: getMyNotifications,
+            getList:  getMyNotifications,
             getCount: getUnreadCount,
             markRead: markNotificationAsRead,
           },
@@ -42,8 +40,15 @@ export const useNotifications = ({ isPharmacy = false } = {}) => {
     try {
       const res = await apis.getList();
       const fromDb = res.data || [];
-      // ✅ always set, even if empty — so page clears stale data
-      setNotifications(fromDb);
+
+      // MERGE: DB is source of truth for existing items,
+      // but keep any real-time items not yet persisted to DB
+      setNotifications((prev) => {
+        const dbIds = new Set(fromDb.map((n) => n.id ?? n.Id));
+        // Items only in local state (arrived via SignalR in the race window)
+        const realtimeOnly = prev.filter((n) => !dbIds.has(n.id ?? n.Id));
+        return [...fromDb, ...realtimeOnly];
+      });
     } catch (err) {
       console.error("Failed to fetch notifications", err);
     } finally {
@@ -51,67 +56,34 @@ export const useNotifications = ({ isPharmacy = false } = {}) => {
     }
   }, [user, setNotifications, apis]);
 
-  const fetchUnreadCount = useCallback(async () => {
-    if (!user) return;
-    try {
-      const res = await apis.getCount();
-      setServerUnreadCount(res.data?.unreadCount ?? 0);
-    } catch (err) {
-      console.error("Failed to fetch unread count", err);
-    }
-  }, [user, apis]);
+  const fetchUnreadCount = useCallback(async () => {}, []);
 
-  // ✅ Initial fetch on mount
+  // Initial load
   useEffect(() => {
     fetchNotifications();
-    fetchUnreadCount();
-  }, [fetchNotifications, fetchUnreadCount]);
+  }, [fetchNotifications]);
 
-  // ✅ Re-fetch every time SignalR connects or reconnects with fresh token
+  // Re-fetch on SignalR reconnect — but skip the very first connect
+  // if we already have cached data, to avoid wiping real-time items
   useEffect(() => {
     if (!lastConnectedAt) return;
+    if (lastConnectedAtRef.current === null && notifications.length > 0) {
+      lastConnectedAtRef.current = lastConnectedAt;
+      return;
+    }
+    lastConnectedAtRef.current = lastConnectedAt;
     fetchNotifications();
-    fetchUnreadCount();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastConnectedAt]);
 
-  // ✅ Re-fetch when user returns to the tab
+  // Re-fetch on tab focus
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        fetchNotifications();
-        fetchUnreadCount();
-      }
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") fetchNotifications();
     };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [fetchNotifications, fetchUnreadCount]);
-
-  // ✅ Listen for real-time notifications
-  useEffect(() => {
-    if (!connection) return;
-
-    const handleNewNotification = (dto) => {
-      console.log("🔔 New notification received:", dto);
-
-      setNotifications((prev) => {
-        const alreadyExists = prev.some((n) => n.id === dto.id);
-        if (alreadyExists) return prev;
-        return [dto, ...prev];
-      });
-
-      setServerUnreadCount((c) => (c === null ? null : c + 1));
-
-      showToast({ title: dto.title, message: dto.message });
-    };
-
-    connection.off("NewNotification");
-    connection.on("NewNotification", handleNewNotification);
-
-    return () => {
-      connection.off("NewNotification", handleNewNotification);
-    };
-  }, [connection]);
-  
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [fetchNotifications]);
 
   const markAsRead = useCallback(
     async (id) => {
@@ -120,25 +92,14 @@ export const useNotifications = ({ isPharmacy = false } = {}) => {
         setNotifications((prev) =>
           prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
         );
-        setServerUnreadCount((c) =>
-          c === null ? null : Math.max(0, c - 1)
-        );
       } catch (err) {
-        console.error("Failed to mark notification as read", err);
+        console.error("Failed to mark as read", err);
       }
     },
     [setNotifications, apis]
   );
-useEffect(() => {
-    console.log("🔌 connection changed:", connection?.state);
-}, [connection]);
 
-useEffect(() => {
-    console.log("⏰ lastConnectedAt changed:", lastConnectedAt);
-}, [lastConnectedAt]);
-  const localUnreadCount = notifications.filter((n) => !n.isRead).length;
-  const unreadCount =
-    serverUnreadCount !== null ? serverUnreadCount : localUnreadCount;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return {
     notifications,
