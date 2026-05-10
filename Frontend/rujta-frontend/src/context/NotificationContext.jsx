@@ -5,4 +5,6 @@ export const NotificationContext = createContext({
   connection: null,
   notifications: [],
   setNotifications: () => {},
+  lastConnectedAt: null, // ✅ add this
+
 });

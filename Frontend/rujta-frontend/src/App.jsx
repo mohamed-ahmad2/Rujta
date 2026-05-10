@@ -134,8 +134,8 @@ const App = () => {
             />
           )}
 
-          <SpeedInsights />
-            </AdminNotificationProvider>
+           <SpeedInsights />
+          </AdminNotificationProvider>
          </NotificationProvider>
         </ToastProvider>
       </OrdersProvider>
