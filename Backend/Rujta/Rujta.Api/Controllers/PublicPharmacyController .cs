@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Rujta.Application.DTOs.OrderDto;
+using Rujta.Application.Interfaces.InterfaceRepositories;
 using Rujta.Application.Interfaces.InterfaceServices.IGeocoding;
 using Rujta.Application.Interfaces.InterfaceServices.IPharmacy;
 
@@ -15,13 +16,16 @@ namespace Rujta.API.Controllers
     {
         private readonly IPharmacyCartService _cartService;
         private readonly IGeocodingService _geocodingService;
+        private readonly IMedicineRepository _medicineRepo;
 
         public PublicPharmacyController(
             IPharmacyCartService cartService,
-            IGeocodingService geocodingService)
+            IGeocodingService geocodingService,
+            IMedicineRepository medicineRepo)
         {
             _cartService = cartService;
             _geocodingService = geocodingService;
+            _medicineRepo = medicineRepo;
         }
 
         [HttpPost("nearest")]
@@ -41,6 +45,28 @@ namespace Rujta.API.Controllers
             if (request.Items == null || !request.Items.Any())
                 return BadRequest("At least one medicine item is required.");
 
+            // Resolve all medicine names in one DB call
+            var medicines = await _medicineRepo.GetByNamesAsync(
+                request.Items.Select(i => i.MedicineName), cancellationToken);
+
+            var medicineMap = medicines
+                .ToDictionary(m => m.Name!.Trim().ToLowerInvariant(), m => m.Id);
+
+            var notFound = request.Items
+                .Where(i => !medicineMap.ContainsKey(i.MedicineName.Trim().ToLowerInvariant()))
+                .Select(i => i.MedicineName)
+                .ToList();
+
+            if (notFound.Any())
+                return BadRequest($"The following medicines were not found: {string.Join(", ", notFound)}");
+
+            var cartItems = request.Items.Select(i => new CartItemDto
+            {
+                MedicineId = medicineMap[i.MedicineName.Trim().ToLowerInvariant()],
+                Quantity = i.Quantity
+            }).ToList();
+
+            // Geocode address
             try
             {
                 var coords = await _geocodingService.GetCoordinatesAsync(
@@ -49,7 +75,7 @@ namespace Rujta.API.Controllers
 
                 var order = new ItemDto
                 {
-                    Items = request.Items,
+                    Items = cartItems,
                     MaxShortageRange = maxShortageRange
                 };
 
