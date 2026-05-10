@@ -6,19 +6,23 @@ namespace Rujta.Domain.Entities
 {
     public class Payment : BaseEntity
     {
-        public Guid UserId { get; set; }          
+        public Guid UserId { get; set; }
         public int PharmacyId { get; set; }
-        public PaymentType Type { get; set; }      
+        public PaymentType Type { get; set; }
 
         public int? OrderId { get; set; }
         public int? SubscriptionId { get; set; }
         public int? AdId { get; set; }
+
         public string PaymobOrderId { get; set; } = string.Empty;
-        public string PaymobTransactionId { get; set; } = string.Empty;
+        public string? PaymobTransactionId { get; set; } 
         public string PaymentToken { get; set; } = string.Empty;
+
         public decimal Amount { get; set; }
         public string Currency { get; set; } = "EGP";
 
         public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
+
+        public string? PendingOrderDtoJson { get; set; }
     }
 }

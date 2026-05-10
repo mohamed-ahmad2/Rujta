@@ -15,7 +15,7 @@ namespace Rujta.Application.DTOs.PaymentDto
         public string Currency { get; set; } = "EGP";
         public PaymentStatus Status { get; set; }
         public string StatusLabel => Status.ToString();
-        public string PaymobTransactionId { get; set; } = string.Empty;
+        public string? PaymobTransactionId { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
     }
 }

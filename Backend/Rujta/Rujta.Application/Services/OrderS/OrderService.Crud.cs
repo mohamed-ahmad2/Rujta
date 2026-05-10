@@ -1,5 +1,4 @@
 ﻿using Rujta.Application.DTOs.OrderDto;
-using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Services.OrderS
 {

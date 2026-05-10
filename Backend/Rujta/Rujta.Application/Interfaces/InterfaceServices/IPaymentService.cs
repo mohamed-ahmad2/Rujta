@@ -10,5 +10,6 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task<bool> HandleCallbackAsync(PaymobCallbackDto callback, string hmacSignature, CancellationToken cancellationToken = default);
         Task<IEnumerable<PaymentSummaryDto>> GetPharmacyPaymentsAsync(int pharmacyId, CancellationToken cancellationToken = default);
         Task<IEnumerable<PaymentSummaryDto>> GetPharmacyPaymentsByTypeAsync(int pharmacyId, PaymentType type, CancellationToken cancellationToken = default);
+        Task RefundAsync(string paymobTransactionId, decimal amount, CancellationToken cancellationToken = default);
     }
 }

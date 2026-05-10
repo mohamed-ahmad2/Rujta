@@ -11,5 +11,6 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
         Task<IEnumerable<Payment>> GetByPharmacyIdAsync(int pharmacyId, CancellationToken cancellationToken = default);
         Task<IEnumerable<Payment>> GetByPharmacyAndTypeAsync(int pharmacyId, PaymentType type, CancellationToken cancellationToken = default);
         Task<Payment?> GetByReferenceAsync(PaymentType type, int referenceId, CancellationToken cancellationToken = default);
+        Task<Payment?> GetByOrderIdAsync(int orderId, CancellationToken cancellationToken = default);
     }
 }

@@ -16,38 +16,13 @@ namespace Rujta.Application.Services.OrderS
             try
             {
                 var result = await _unitOfWork.ExecuteInTransactionAsync<(bool success, string message)>(
-                    async ct =>
-                    {
-                        var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(id, ct);
-
-                        if (order == null)
-                            return (false, OrderMessages.OrderNotFound);
-
-                        if (order.PharmacyId != pharmacyId)
-                            return (false, "Unauthorized pharmacy access");
-
-                        if (!CanChangeStatus(order.Status, OrderStatus.Delivered))
-                            return (false, OrderMessages.InvalidStateTransition);
-
-                        var stockResult = await DeductInventoryAsync(order, ct);
-                        if (!stockResult.success)
-                            return stockResult;
-
-                        order.Status = OrderStatus.Delivered;
-
-                        await _unitOfWork.SaveAsync(ct);
-
-                        deliveredOrder = order;
-
-                        return (true, OrderMessages.OrderMarkAsDelivered);
-                    },
+                    async ct => await ProcessDeliveryAsync(id, pharmacyId, ct, o => deliveredOrder = o),
                     cancellationToken);
 
+                if (!result.success || deliveredOrder == null)
+                    return result;
 
-                if (result.success && deliveredOrder != null)
-                {
-                    await SafeNotifyDeliveredAsync(deliveredOrder);
-                }
+                await HandlePostDeliveryAsync(deliveredOrder);
 
                 return result;
             }
@@ -63,6 +38,109 @@ namespace Rujta.Application.Services.OrderS
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────────────
+        // Core delivery processing
+        // ─────────────────────────────────────────────────────────────────────────
+        private async Task<(bool success, string message)> ProcessDeliveryAsync(
+            int orderId,
+            int pharmacyId,
+            CancellationToken ct,
+            Action<Order> setDeliveredOrder)
+        {
+            var order = await _unitOfWork.Orders.GetOrderWithItemsAsync(orderId, ct);
+
+            var validationResult = ValidateOrderForDelivery(order, pharmacyId);
+            if (!validationResult.success)
+                return validationResult;
+
+            // ── الكاش: PaymentStatus يتحول لـ Success عند الاستلام الفعلي
+            // ── Payment (Paymob): كان بالفعل Success من بعد الـ callback
+            HandlePaymentOnDelivery(order!);
+
+            var stockResult = await DeductInventoryAsync(order!, ct);
+            if (!stockResult.success)
+                return stockResult;
+
+            order!.Status = OrderStatus.Delivered;
+            await _unitOfWork.SaveAsync(ct);
+
+            setDeliveredOrder(order);
+
+            return (true, OrderMessages.OrderMarkAsDelivered);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Validation
+        // ─────────────────────────────────────────────────────────────────────────
+        private static (bool success, string message) ValidateOrderForDelivery(
+            Order? order, int pharmacyId)
+        {
+            if (order == null)
+                return (false, OrderMessages.OrderNotFound);
+
+            if (order.PharmacyId != pharmacyId)
+                return (false, "Unauthorized pharmacy access");
+
+            if (!CanChangeStatus(order.Status, OrderStatus.Delivered))
+                return (false, OrderMessages.InvalidStateTransition);
+
+            // أوردرات الـ Payment لازم تكون مدفوعة قبل التسليم
+            if (order.PaymentMethod == PaymentMethod.Payment &&
+                order.PaymentStatus != PaymentStatus.Success)
+            {
+                return (false, "Cannot deliver order: online payment has not been confirmed.");
+            }
+
+            return (true, string.Empty);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Payment handling on delivery
+        // الكاش: يُسجّل الدفع عند الاستلام
+        // Paymob: مدفوع مسبقاً — لا نعدّل شيئاً
+        // ─────────────────────────────────────────────────────────────────────────
+        private void HandlePaymentOnDelivery(Order order)
+        {
+            if (order.PaymentMethod == PaymentMethod.Cash)
+            {
+                _logger.LogInformation(
+                    "Order {OrderId} paid in cash on delivery — marking PaymentStatus as Success",
+                    order.Id);
+                order.PaymentStatus = PaymentStatus.Success;
+            }
+            else if (order.PaymentMethod == PaymentMethod.Payment)
+            {
+                // Paymob callback سبق وغيّر الـ PaymentStatus لـ Success
+                // لا نعدّل شيئاً هنا
+                _logger.LogInformation(
+                    "Order {OrderId} was pre-paid via Paymob — PaymentStatus already Success",
+                    order.Id);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Post-delivery notifications
+        // ─────────────────────────────────────────────────────────────────────────
+        private async Task HandlePostDeliveryAsync(Order order)
+        {
+            await SafeNotifyDeliveredAsync(order);
+
+            if (order.UserId == null)
+            {
+                _logger.LogError("UserId is null for delivered Order {OrderId}", order.Id);
+                return;
+            }
+
+            await NotifyService.SendNotificationAsync(
+                order.UserId.Value.ToString(),
+                "Order Delivered",
+                $"Your order #{order.Id} has been successfully delivered. Thank you for choosing us.",
+                order.Id.ToString());
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Inventory deduction
+        // ─────────────────────────────────────────────────────────────────────────
         private async Task<(bool success, string message)> DeductInventoryAsync(
             Order order,
             CancellationToken cancellationToken)

@@ -1,15 +1,4 @@
-﻿// ─────────────────────────────────────────────────────────────────────────────
-// FILE: Rujta.Application/Services/OrderS/OrderService.DrugInteraction.cs
-//
-// This is a PARTIAL CLASS — it extends your existing OrderService.
-// It adds the drug interaction check that runs when an order is created.
-// ─────────────────────────────────────────────────────────────────────────────
-
-using Rujta.Application.DTOs;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Microsoft.Extensions.Logging;
-
-namespace Rujta.Application.Services.OrderS;
+﻿namespace Rujta.Application.Services.OrderS;
 
 public partial class OrderService
 {
@@ -33,7 +22,6 @@ public partial class OrderService
         {
             _logger.LogError(ex, "Drug interaction check failed for user {UserId}", patientUserId);
 
-            // Return safe default — don't block order creation if check fails
             return new OrderDrugInteractionResponseDto
             {
                 MlServiceUnavailable = true,

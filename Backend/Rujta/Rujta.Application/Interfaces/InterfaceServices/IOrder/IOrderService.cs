@@ -7,6 +7,7 @@ namespace Rujta.Application.Interfaces.InterfaceServices.IOrder
     public interface IOrderService : IGenericService<OrderDto, int>
     {
         Task<OrderDto> CreateOrderAsync(CreateOrderDto createOrderDto, Guid userId, CancellationToken cancellationToken = default);
+        Task<OrderDto> CreateOrderAfterPaymentAsync(CreateOrderDto createOrderDto, Guid userId, int internalPaymentId, CancellationToken cancellationToken = default);
         Task<IEnumerable<List<OrderDto>>> GetUserOrdersGroupedAsync(Guid userId, CancellationToken cancellationToken = default);
         Task<OrderDto?> GetOrderDetailsAsync(int orderId, CancellationToken cancellationToken = default);
         Task<(bool success, string message)> AcceptOrderAsync(int id, int pharmacyId, CancellationToken cancellationToken = default);

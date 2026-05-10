@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Services.OrderS
 {
@@ -9,14 +8,6 @@ namespace Rujta.Application.Services.OrderS
             int id, int pharmacyId, CancellationToken cancellationToken = default) =>
             SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.Accepted, cancellationToken);
 
-        public Task<(bool success, string message)> CancelOrderByUserAsync(
-            int id, CancellationToken cancellationToken = default) =>
-            SafeUpdateOrderAsync(id, 0, OrderStatus.CancelledByUser, cancellationToken, isUser: true);
-
-        public Task<(bool success, string message)> CancelOrderByPharmacyAsync(
-            int id, int pharmacyId, CancellationToken cancellationToken = default) =>
-            SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.CancelledByPharmacy, cancellationToken);
-
         public Task<(bool success, string message)> ProcessOrderAsync(
             int id, int pharmacyId, CancellationToken cancellationToken = default) =>
             SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.Processing, cancellationToken);
@@ -24,6 +15,98 @@ namespace Rujta.Application.Services.OrderS
         public Task<(bool success, string message)> OutForDeliveryAsync(
             int id, int pharmacyId, CancellationToken cancellationToken = default) =>
             SafeUpdateOrderAsync(id, pharmacyId, OrderStatus.OutForDelivery, cancellationToken);
+
+        public async Task<(bool success, string message)> CancelOrderByUserAsync(
+            int id,
+            CancellationToken cancellationToken = default)
+        {
+            var (success, message) = await SafeUpdateOrderAsync(
+                id, 0, OrderStatus.CancelledByUser, cancellationToken, isUser: true);
+
+            if (!success) return (false, message);
+
+            await HandleRefundIfNeededAsync(id, cancelledByUser: true, cancellationToken);
+
+            return (true, message);
+        }
+
+        public async Task<(bool success, string message)> CancelOrderByPharmacyAsync(
+            int id,
+            int pharmacyId,
+            CancellationToken cancellationToken = default)
+        {
+            var (success, message) = await SafeUpdateOrderAsync(
+                id, pharmacyId, OrderStatus.CancelledByPharmacy, cancellationToken);
+
+            if (!success) return (false, message);
+
+            await HandleRefundIfNeededAsync(id, cancelledByUser: false, cancellationToken);
+
+            return (true, message);
+        }
+
+        private async Task HandleRefundIfNeededAsync(
+            int orderId,
+            bool cancelledByUser,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var order = await _unitOfWork.Orders.GetByIdAsync(orderId, cancellationToken);
+                if (order == null) return;
+
+                if (order.PaymentMethod != PaymentMethod.Payment) return;
+
+  
+                if (order.PaymentStatus != PaymentStatus.Success) return;
+
+                var payment = await _unitOfWork.Payments.GetByOrderIdAsync(orderId, cancellationToken);
+                if (payment == null)
+                {
+                    _logger.LogWarning(
+                        "Cannot refund Order {OrderId}: no Payment record found.", orderId);
+                    return;
+                }
+
+                _logger.LogInformation(
+                    "Initiating refund for Order {OrderId} | PaymobTransactionId: {TxId}",
+                    orderId, payment.PaymobTransactionId);
+
+           
+                payment.Status = PaymentStatus.Refunded;
+                await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
+
+              
+                order.PaymentStatus = PaymentStatus.Refunded;
+                await _unitOfWork.Orders.UpdateAsync(order, cancellationToken);
+
+                await _unitOfWork.SaveAsync(cancellationToken);
+
+         
+                await _paymentService.RefundAsync(payment.PaymobTransactionId!, payment.Amount, cancellationToken);
+
+                _logger.LogInformation(
+                    "Refund initiated successfully for Order {OrderId}", orderId);
+
+            
+                if (order.UserId != null)
+                {
+                    var refundBy = cancelledByUser ? "you" : "the pharmacy";
+                    await NotifyService.SendNotificationAsync(
+                        order.UserId.Value.ToString(),
+                        "Refund Initiated",
+                        $"Your order #{order.Id} was cancelled by {refundBy}. " +
+                        $"A refund of {payment.Amount:F2} {payment.Currency} has been initiated " +
+                        $"and will appear in your account within 3–5 business days.",
+                        order.Id.ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Refund failed for Order {OrderId}. Manual intervention may be required.", orderId);
+            }
+        }
 
 
         private async Task<(bool success, string message)> SafeUpdateOrderAsync(
@@ -36,30 +119,31 @@ namespace Rujta.Application.Services.OrderS
         {
             int retryCount = 0;
 
-            while (retryCount < maxRetries)                                         
+            while (retryCount < maxRetries)
             {
                 try
                 {
                     var (handled, success, message) = await TryUpdateOrderOnceAsync(
                         id, pharmacyId, newStatus, isUser, cancellationToken);
 
-                    if (handled) return (success, message);                         
+                    if (handled) return (success, message);
                 }
-                catch (DbUpdateConcurrencyException)                              
+                catch (DbUpdateConcurrencyException)
                 {
                     var (shouldStop, result) = await HandleConcurrencyExceptionAsync(
                         id, retryCount, maxRetries, cancellationToken);
 
-                    if (shouldStop) return result;                                  
+                    if (shouldStop) return result;
 
                     retryCount++;
                 }
-                catch (Exception ex)                                                
+                catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error updating order {OrderId}", id);
                     return (false, "An unexpected error occurred");
                 }
             }
+
             return (false, "Maximum retries exceeded due to concurrency conflicts.");
         }
 
@@ -72,16 +156,16 @@ namespace Rujta.Application.Services.OrderS
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(id, cancellationToken);
 
-            if (order == null)                                                       
+            if (order == null)
                 return (true, false, OrderMessages.OrderNotFound);
 
-            if (!isUser && order.PharmacyId != pharmacyId)                          
+            if (!isUser && order.PharmacyId != pharmacyId)
                 return (true, false, "Unauthorized pharmacy access");
 
-            if (!CanChangeStatus(order.Status, newStatus))                        
+            if (!CanChangeStatus(order.Status, newStatus))
                 return (true, false, OrderMessages.InvalidStateTransition);
 
-            if (order.Status == newStatus)                                            
+            if (order.Status == newStatus)
                 return (true, true, "Already updated");
 
             order.Status = newStatus;
@@ -89,6 +173,7 @@ namespace Rujta.Application.Services.OrderS
 
             await SafeNotifyAsync(order, newStatus);
             await SendOrderStatusNotification(order);
+
             if (newStatus == OrderStatus.CancelledByUser)
             {
                 await NotifyService.SendNotificationToPharmacyAsync(
@@ -96,6 +181,16 @@ namespace Rujta.Application.Services.OrderS
                     $"Order #{order.Id} cancelled by user",
                     $"The user cancelled order #{order.Id}. Please update your stock.",
                     order.Id.ToString());
+            }
+            else if (newStatus == OrderStatus.CancelledByPharmacy && order.UserId != null)
+            {
+
+                await NotifyService.SendNotificationAsync(
+                    order.UserId.Value.ToString(),
+                    $"Order #{order.Id} cancelled",
+                    $"Unfortunately, the pharmacy has cancelled your order #{order.Id}.",
+                    order.Id.ToString());
+
             }
 
             return (true, true, GetSuccessMessage(newStatus));
@@ -108,8 +203,13 @@ namespace Rujta.Application.Services.OrderS
                 (OrderStatus.Accepted, OrderStatus.Processing) => true,
                 (OrderStatus.Processing, OrderStatus.OutForDelivery) => true,
                 (OrderStatus.OutForDelivery, OrderStatus.Delivered) => true,
-                (OrderStatus.Pending or OrderStatus.Accepted, OrderStatus.CancelledByUser) => true,
-                (OrderStatus.Pending or OrderStatus.Accepted, OrderStatus.CancelledByPharmacy) => true,
+
+                (OrderStatus.Pending or OrderStatus.Accepted,
+                 OrderStatus.CancelledByUser) => true,
+
+                (OrderStatus.Pending or OrderStatus.Accepted,
+                 OrderStatus.CancelledByPharmacy) => true,
+
                 _ => false
             };
 

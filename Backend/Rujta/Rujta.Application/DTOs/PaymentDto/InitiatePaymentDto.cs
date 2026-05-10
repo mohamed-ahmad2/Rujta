@@ -1,23 +1,22 @@
 ﻿// Rujta.Application/DTOs/Payment/InitiatePaymentDto.cs
+using Rujta.Application.DTOs.OrderDto;
 using Rujta.Domain.Enums;
 
 namespace Rujta.Application.DTOs.PaymentDto
 {
-    /// <summary>
-    /// Sent by the pharmacy to start any payment.
-    /// Fill only the ID relevant to the Type.
-    /// </summary>
     public class InitiatePaymentDto
     {
         public PaymentType Type { get; set; }
 
-        public int? OrderId { get; set; }          // if Type == Order
-        public int? SubscriptionId { get; set; }   // if Type == Subscription
-        public int? AdId { get; set; }             // if Type == Ad
+        public int? SubscriptionId { get; set; }   
+        public int? AdId { get; set; }   
 
         public decimal Amount { get; set; }
         public string Currency { get; set; } = "EGP";
+
         public PaymobBillingDataDto BillingData { get; set; } = new();
+
+        public string? PendingOrderDtoJson { get; set; }
     }
 
     public class PaymentResponseDto

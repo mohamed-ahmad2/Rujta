@@ -5,10 +5,65 @@ namespace Rujta.Application.Services.OrderS
 {
     public partial class OrderService
     {
+        // ─────────────────────────────────────────────────────────────────────────
+        // PUBLIC: Cash flow — يُنشئ الـ order مباشرةً بدون دفع مسبق
+        // ─────────────────────────────────────────────────────────────────────────
         public async Task<OrderDto> CreateOrderAsync(
             CreateOrderDto createOrderDto,
             Guid userId,
             CancellationToken cancellationToken = default)
+        {
+            if (createOrderDto.PaymentMethod == PaymentMethod.Payment)
+                throw new InvalidOperationException(
+                    "Online payment orders must be created via CreateOrderAfterPaymentAsync " +
+                    "after a successful Paymob transaction.");
+
+            return await CreateOrderInternalAsync(createOrderDto, userId, cancellationToken);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // INTERNAL: يُستدعى من PaymentService بعد نجاح الـ callback من Paymob
+        // PaymentStatus يكون Success مباشرةً لأن الدفع تم فعلاً
+        // ─────────────────────────────────────────────────────────────────────────
+        public async Task<OrderDto> CreateOrderAfterPaymentAsync(
+            CreateOrderDto createOrderDto,
+            Guid userId,
+            int internalPaymentId,
+            CancellationToken cancellationToken = default)
+        {
+            if (createOrderDto.PaymentMethod != PaymentMethod.Payment)
+                throw new InvalidOperationException(
+                    "This method is only for online payment orders.");
+
+            // نتأكد إن الـ payment موجود وناجح فعلاً
+            var payment = await _unitOfWork.Payments.GetByIdAsync(internalPaymentId, cancellationToken)
+                ?? throw new InvalidOperationException(
+                    $"Payment record {internalPaymentId} not found.");
+
+            if (payment.Status != PaymentStatus.Success)
+                throw new InvalidOperationException(
+                    "Cannot create order: payment has not been confirmed as successful.");
+
+            var order = await CreateOrderInternalAsync(
+                createOrderDto, userId, cancellationToken,
+                overridePaymentStatus: PaymentStatus.Success);
+
+            // نربط الـ payment بالـ order الجديد
+            payment.OrderId = order.Id;
+            await _unitOfWork.Payments.UpdateAsync(payment, cancellationToken);
+            await _unitOfWork.SaveAsync(cancellationToken);
+
+            return order;
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // CORE: البناء الفعلي للـ order — مشترك بين الـ Cash والـ Payment
+        // ─────────────────────────────────────────────────────────────────────────
+        private async Task<OrderDto> CreateOrderInternalAsync(
+            CreateOrderDto createOrderDto,
+            Guid userId,
+            CancellationToken cancellationToken,
+            PaymentStatus overridePaymentStatus = PaymentStatus.Pending)
         {
             try
             {
@@ -35,6 +90,8 @@ namespace Rujta.Application.Services.OrderS
                     PharmacyId = createOrderDto.PharmacyID,
                     OrderDate = DateTime.UtcNow,
                     Status = OrderStatus.Pending,
+                    PaymentMethod = createOrderDto.PaymentMethod,
+                    PaymentStatus = overridePaymentStatus,   // Pending للكاش، Success للـ Payment
                     DeliveryAddress = deliveryAddressText,
                     OrderItems = new List<OrderItem>()
                 };
@@ -49,8 +106,8 @@ namespace Rujta.Application.Services.OrderS
                 }, cancellationToken);
 
                 _logger.LogInformation(
-                    "Order {OrderId} created successfully for UserId {UserId}",
-                    savedOrder.Id, userId);
+                    "Order {OrderId} created successfully for UserId {UserId} | PaymentMethod: {Method} | PaymentStatus: {Status}",
+                    savedOrder.Id, userId, createOrderDto.PaymentMethod, overridePaymentStatus);
 
                 var orderDto = _mapper.Map<OrderDto>(savedOrder);
                 orderDto.UserName = appUser.Name;
@@ -85,12 +142,15 @@ namespace Rujta.Application.Services.OrderS
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────────────
+        // Helpers
+        // ─────────────────────────────────────────────────────────────────────────
         private static string BuildAddressText(Address address)
         {
-            string street = address.Street ?? "";
-            string buildingNo = address.BuildingNo ?? "";
-            string city = address.City ?? "";
-            string governorate = address.Governorate ?? "";
+            var street = address.Street ?? "";
+            var buildingNo = address.BuildingNo ?? "";
+            var city = address.City ?? "";
+            var governorate = address.Governorate ?? "";
 
             var text = $"{street} {buildingNo}".Trim();
 

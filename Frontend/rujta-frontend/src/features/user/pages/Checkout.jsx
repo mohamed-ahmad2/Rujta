@@ -7,7 +7,6 @@ import AddressSelection from "../components/checkout/AddressSelection";
 import PharmacyList from "../components/checkout/PharmacyList";
 import PaymentModal from "../components/checkout/PaymentModal";
 import PaymentIframeModal from "../components/checkout/PaymentIframeModal";
-// ✅ NEW
 import DrugInteractionModal from "../pages/DrugInteractionModal";
 
 import { useCheckout } from "../hooks/useCheckout";
@@ -38,14 +37,13 @@ const Checkout = () => {
     setShowPaymentModal,
     selectedPharmacyForPayment,
     paymentMethod,
-    handleMultiOrderClick,      // ← ADD THIS LINE
     setPaymentMethod,
     selectedPharmacies,
     totalSelectedItems,
     totalSelectedQtyPerMedicine,
     creatingOrder,
-    selectedMedicines,
     initiatingPayment,
+    selectedMedicines,
     showPaymentIframe,
     paymentResult,
     userLocation,
@@ -56,12 +54,13 @@ const Checkout = () => {
     routeData,
     toast,
     setToast,
-    // ✅ NEW
+    // Drug interaction
     showInteractionModal,
     interactionResult,
     interactionLoading,
     handleInteractionProceed,
     handleInteractionBack,
+    // handlers
     handleSetLocation,
     handleNewAddressChange,
     handleAddNewAddress,
@@ -70,8 +69,9 @@ const Checkout = () => {
     handleTogglePharmacy,
     handleToggleMedicine,
     handleUpdateQty,
-    handleOrderClick,
-    handlePaymentConfirm,
+    handleOrderClick, // single-pharmacy order (from PharmacyCard button)
+    handleMultiOrderClick, // multi-pharmacy order (from bottom banner button)
+    handlePaymentConfirm, // called with billingData | null from PaymentModal
     handleCloseIframe,
   } = useCheckout();
 
@@ -82,7 +82,7 @@ const Checkout = () => {
       <Toast toast={toast} onClose={() => setToast(null)} />
 
       <div className="flex h-[700px] w-[1150px] flex-col rounded-3xl bg-white shadow-xl lg:flex-row">
-        {/*LEFT: MAP*/}
+        {/* LEFT: MAP */}
         <div className="relative h-full w-full overflow-hidden lg:w-1/2">
           <div className="absolute inset-0 z-0">
             <PharmacyMap
@@ -98,7 +98,7 @@ const Checkout = () => {
           </div>
         </div>
 
-        {/*RIGHT: CONTENT*/}
+        {/* RIGHT: CONTENT */}
         <div className="h-full w-full overflow-y-auto bg-white p-8 lg:w-1/2">
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-2xl font-semibold">
@@ -106,7 +106,7 @@ const Checkout = () => {
             </h1>
           </div>
 
-          {/*Location Prompt*/}
+          {/* Location Prompt */}
           {showLocationPrompt && (
             <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
               <p className="mb-2 text-sm text-yellow-700">
@@ -122,7 +122,7 @@ const Checkout = () => {
             </div>
           )}
 
-          {/*Address Selection OR Pharmacy List*/}
+          {/* Address Selection OR Pharmacy List */}
           {showAddressSelection ? (
             <AddressSelection
               addresses={addresses}
@@ -158,8 +158,7 @@ const Checkout = () => {
               onToggleMedicine={handleToggleMedicine}
               onUpdateQty={handleUpdateQty}
               onOrderClick={handleOrderClick}
-              onExpandRange={handleExpandRange}
-              onMultiOrderClick={handleMultiOrderClick}   // ← add this
+              onMultiOrderClick={handleMultiOrderClick}
               onOpenPaymentModal={() => setShowPaymentModal(true)}
               setHoveredPharmacyId={setHoveredPharmacyId}
             />
@@ -167,7 +166,7 @@ const Checkout = () => {
         </div>
       </div>
 
-      {/* ✅ NEW: Drug interaction modal — shown before payment modal */}
+      {/* Drug interaction modal — shown before payment modal */}
       {showInteractionModal && (
         <DrugInteractionModal
           result={interactionResult}
@@ -177,8 +176,11 @@ const Checkout = () => {
         />
       )}
 
-      {/* Payment method selection modal */}
-
+      {/*
+        Payment modal — Step 1: choose Cash / Online
+                        Step 2 (Online only): billing details
+        onConfirm receives billingData (object) for Online, null for Cash
+      */}
       {showPaymentModal && (
         <PaymentModal
           paymentMethod={paymentMethod}
@@ -190,11 +192,19 @@ const Checkout = () => {
         />
       )}
 
-      {/*Paymob Iframe Modal*/}
+      {/* Paymob Iframe Modal — shown only for Online payments */}
       {showPaymentIframe && paymentResult?.iframeUrl && (
         <PaymentIframeModal
           iframeUrl={paymentResult.iframeUrl}
           onClose={handleCloseIframe}
+          onPaymentSuccess={() => {
+            // Paymob redirects back with ?success=true — handled in Payments.jsx
+            // Here we just close and show a friendly message
+            handleCloseIframe();
+          }}
+          onPaymentFailed={() => {
+            handleCloseIframe();
+          }}
         />
       )}
     </div>
