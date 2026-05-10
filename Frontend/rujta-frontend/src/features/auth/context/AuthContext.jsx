@@ -19,6 +19,8 @@ import {
 } from "../../../authProvider/authTokenProvider";
 import jwtDecode from "jwt-decode";
 
+import { delay } from "../../../utils/delay";
+
 export const AuthContext = createContext(null);
 
 /* ================= Helpers ================= */
@@ -102,7 +104,8 @@ export const AuthProvider = ({ children }) => {
   setUser(newUser);
   applyAndStoreToken(res.accessToken, setTokenExp);
 
-  return newUser;  // ← must be here, no reload
+
+  return newUser;  
 };
   /* ================= Register ================= */
   const handleRegister = async (dto) => {

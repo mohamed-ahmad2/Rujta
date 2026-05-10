@@ -11,6 +11,8 @@ namespace Rujta.Application.DTOs.InventoryDto
         public int? CategoryId { get; set; }
         public string? MedicineName { get; set; }
         public string? CategoryName { get; set; }
+        public int? CompanyId { get; set; }
+        public string? CompanyName { get; set; }
         public int Quantity { get; set; }
         public decimal Price { get; set; }
         public ProductStatus Status { get; set; } = ProductStatus.InStock;
