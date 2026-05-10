@@ -9,8 +9,10 @@ export const getTopPharmacies = (
 ) => {
   const payload = { items };
   const params = { addressId, topK };
+
   if (maxShortageRange !== null && maxShortageRange !== undefined)
     params.maxShortageRange = maxShortageRange;
+
   return apiClient.post("/PriorityPharmacies/top-k", payload, { params });
 };
 
@@ -26,20 +28,20 @@ export const getNearestPharmacies = (
     params: { userLat, userLon, mode, topK },
   });
 
-// ─────────────────────────────────────────
-// تم تعديلها لتتوافق مع الـ Controller (PharmacyId من JWT)
-// ─────────────────────────────────────────
-export const getPharmacyMedicines = () =>
-  apiClient.get("/pharmacies/medicines");
+export const getPharmacyMedicines = (pharmacyId) =>
+  apiClient.get(`/pharmacies/${pharmacyId}/medicines`);
 
-export const getMedicineStockInPharmacy = (medicineId) =>
-  apiClient.get(`/pharmacies/medicine/${medicineId}/stock`);
+export const getMedicineStockInPharmacy = (pharmacyId, medicineId) =>
+  apiClient.get(`/pharmacies/${pharmacyId}/medicine/${medicineId}/stock`);
+
 
 export const getPagedPharmacyMedicines = (
+  pharmacyId,
   { pageNumber = 1, pageSize = 16, searchTerm, categoryId } = {},
-  signal = undefined
+  signal = undefined  
 ) => {
   const params = { pageNumber, pageSize };
+
   if (searchTerm && searchTerm.trim()) params.searchTerm = searchTerm.trim();
   if (
     categoryId !== undefined &&
@@ -48,7 +50,7 @@ export const getPagedPharmacyMedicines = (
   )
     params.categoryId = categoryId;
 
-  return apiClient.get("/pharmacies/medicines/paged", {
+  return apiClient.get(`/pharmacies/${pharmacyId}/medicines/paged`, {
     params,
     signal,
   });

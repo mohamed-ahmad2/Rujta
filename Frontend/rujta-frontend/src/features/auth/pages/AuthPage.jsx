@@ -8,7 +8,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 export const AuthPage = () => {
   const navigate = useNavigate();
-  const { handleLogin, handleRegister } = useAuth();
+  const { handleLogin, handleRegister, user } = useAuth();
 
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode") || "login";
@@ -37,24 +37,30 @@ export const AuthPage = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ✅ مسح الـ error لما المستخدم يبدل بين login و register
   useEffect(() => {
     setError("");
   }, [isSignUp]);
 
+  useEffect(() => {
+    if (user) {
+      redirectByRole(user);
+    }
+  }, [user]);
+
   const redirectByRole = (userData) => {
-  const role = userData?.role || "User";
+    const role = userData?.role || "User";
 
-  if (userData?.isFirstLogin && role === "PharmacyAdmin") {
-    navigate("/change-password");
-    return;
-  }
+    if (userData?.isFirstLogin && role === "PharmacyAdmin") {
+      navigate("/change-password");
+      return;
+    }
 
-  if (role === "SuperAdmin") navigate("/superadmin");
-  else if (role === "Pharmacist" || role === "PharmacyAdmin") navigate("/dashboard");
-  else if (role === "User") navigate("/user/");
-  else navigate("/");
-};
+    if (role === "SuperAdmin") navigate("/superadmin");
+    else if (role === "Pharmacist" || role === "PharmacyAdmin")
+      navigate("/dashboard");
+    else if (role === "User") navigate("/user/");
+    else navigate("/");
+  };
 
   // ✅ بياخد rememberMe من LoginForm
   const onLogin = async (e, rememberMe = false) => {
@@ -63,8 +69,7 @@ export const AuthPage = () => {
     setError("");
 
     try {
-      const userData = await handleLogin(email, password, rememberMe);
-      redirectByRole(userData);
+      await handleLogin(email, password, rememberMe);
     } catch (err) {
       const message =
         err.response?.data?.message ||
@@ -89,7 +94,7 @@ export const AuthPage = () => {
     }
 
     try {
-      const userData = await handleRegister({
+      await handleRegister({
         name,
         email,
         phoneNumber: phone,
@@ -98,8 +103,6 @@ export const AuthPage = () => {
         confirmPassword,
         rememberMe,
       });
-
-      redirectByRole(userData);
     } catch (err) {
       const message =
         err.response?.data?.message ||
