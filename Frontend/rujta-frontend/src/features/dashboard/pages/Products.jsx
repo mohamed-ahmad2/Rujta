@@ -4,11 +4,13 @@ import ProductsCard from "../components/ProductsCard";
 import {
   Package, AlertTriangle, XCircle, Search, PlusCircle,
   Trash2, Edit, UploadCloud, Filter, ChevronLeft, ChevronRight, X,
+  FileSpreadsheet,
 } from "lucide-react";
-import ProductModal from "../components/ProductModal";
-import useInventory from "../../inventory item/hook/useInventoryItem";
-import useCategory from "../../category/hook/useCategory";
-import useDrugRequest from "../../drugRequests/hook/useDrugRequest";
+import ProductModal       from "../components/ProductModal";
+import ImportExcelModal   from "../components/ImportExcelModal";
+import useInventory       from "../../inventory item/hook/useInventoryItem";
+import useCategory        from "../../category/hook/useCategory";
+import useDrugRequest     from "../../drugRequests/hook/useDrugRequest";
 import { getPagedInventoryItems } from "../../inventory item/api/inventoryItem";
 
 const statusColor = {
@@ -62,30 +64,30 @@ export default function Products() {
   const { categories, fetchAll: fetchCategories, loading: loadingCategories } = useCategory();
   const { submit } = useDrugRequest();
 
-  const [openModal,      setOpenModal]      = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [q,              setQ]              = useState("");
-  const [debouncedQ,     setDebouncedQ]     = useState("");
-  const [page,           setPage]           = useState(1);
-  const [totalCount,     setTotalCount]     = useState(0);
-  const [totalPages,     setTotalPages]     = useState(1);
-  const [filterOpen,     setFilterOpen]     = useState(false);
-  const [filterCategory, setFilterCategory] = useState("All");
-  const [filterStatus,   setFilterStatus]   = useState("All");
-  const [toast,          setToast]          = useState(null);
-  const [stats,          setStats]          = useState({ total: 0, lowStock: 0, outOfStock: 0 });
+  const [openModal,       setOpenModal]       = useState(false);
+  const [openImportModal, setOpenImportModal] = useState(false);
+  const [editingProduct,  setEditingProduct]  = useState(null);
+  const [q,               setQ]               = useState("");
+  const [debouncedQ,      setDebouncedQ]      = useState("");
+  const [page,            setPage]            = useState(1);
+  const [totalCount,      setTotalCount]      = useState(0);
+  const [totalPages,      setTotalPages]      = useState(1);
+  const [filterOpen,      setFilterOpen]      = useState(false);
+  const [filterCategory,  setFilterCategory]  = useState("All");
+  const [filterStatus,    setFilterStatus]    = useState("All");
+  const [toast,           setToast]           = useState(null);
+  const [stats,           setStats]           = useState({ total: 0, lowStock: 0, outOfStock: 0 });
 
   const filterRef    = useRef(null);
-  // Prevent stats from re-fetching on every render
   const statsFetched = useRef(false);
 
-  // ─── Debounce: only update debouncedQ 400ms after typing stops ───────────
+  // ─── Debounce search ──────────────────────────────────────────────────────
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q), 400);
     return () => clearTimeout(timer);
   }, [q]);
 
-  // ─── Stats: 3 parallel requests, fired once on mount only ─────────────────
+  // ─── Stats — once on mount, re-callable after mutations ───────────────────
   const loadStats = useCallback(async () => {
     if (statsFetched.current) return;
     statsFetched.current = true;
@@ -103,41 +105,34 @@ export default function Products() {
     } catch (_) {}
   }, []);
 
-  // ─── Mount: fetch categories + stats once ─────────────────────────────────
+  const refreshStats = useCallback(() => {
+    statsFetched.current = false;
+    loadStats();
+  }, [loadStats]);
+
+  // ─── Mount ────────────────────────────────────────────────────────────────
   useEffect(() => {
     fetchCategories();
     loadStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── Build filter (plain function, not memoized — categories captured via closure) ──
+  // ─── Build filter ─────────────────────────────────────────────────────────
   const buildFilter = (pageNumber, category, status, searchTerm) => {
     const filter = { PageNumber: pageNumber, PageSize: perPage };
-
     if (category !== "All") {
       const cat = categories.find((c) => c.name === category);
       if (cat) filter.CategoryId = cat.id;
     }
-
-    if (status !== "All" && STATUS_TO_API[status]) {
-      filter.Status = STATUS_TO_API[status];
-    }
-
-    if (searchTerm && searchTerm.trim()) {
-      filter.SearchTerm = searchTerm.trim();
-    }
-
+    if (status !== "All" && STATUS_TO_API[status]) filter.Status = STATUS_TO_API[status];
+    if (searchTerm?.trim()) filter.SearchTerm = searchTerm.trim();
     return filter;
   };
 
-  // ─── Single effect: fires whenever page/filter/search changes ────────────
-  // Using a ref to hold the current filter values avoids stale closures
-  // while keeping the dep array honest.
+  // ─── Load page ────────────────────────────────────────────────────────────
   const loadPage = useCallback(
     async (pageNumber, category, status, searchTerm) => {
-      const result = await fetchPaged(
-        buildFilter(pageNumber, category, status, searchTerm)
-      );
+      const result = await fetchPaged(buildFilter(pageNumber, category, status, searchTerm));
       if (result) {
         setTotalCount(result.totalCount ?? 0);
         setTotalPages(Math.max(1, Math.ceil((result.totalCount ?? 0) / perPage)));
@@ -152,14 +147,11 @@ export default function Products() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, filterCategory, filterStatus, debouncedQ]);
 
-  // ─── Reset page+search when filters change (track previous to avoid loop) ─
+  // ─── Reset page on filter change ──────────────────────────────────────────
   const prevCategory = useRef("All");
   const prevStatus   = useRef("All");
   useEffect(() => {
-    if (
-      prevCategory.current !== filterCategory ||
-      prevStatus.current   !== filterStatus
-    ) {
+    if (prevCategory.current !== filterCategory || prevStatus.current !== filterStatus) {
       prevCategory.current = filterCategory;
       prevStatus.current   = filterStatus;
       setQ("");
@@ -170,8 +162,7 @@ export default function Products() {
   // ─── Close dropdown on outside click ─────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
-      if (filterRef.current && !filterRef.current.contains(e.target))
-        setFilterOpen(false);
+      if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -179,12 +170,6 @@ export default function Products() {
 
   const hasActiveFilters = filterCategory !== "All" || filterStatus !== "All";
   const pageRange        = buildPageRange(page, totalPages);
-
-  // ─── Refresh stats after mutations ────────────────────────────────────────
-  const refreshStats = () => {
-    statsFetched.current = false;
-    loadStats();
-  };
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
@@ -201,48 +186,39 @@ export default function Products() {
   const handleAddOrUpdate = async (data) => {
     const isEdit = !!editingProduct;
     const editId = editingProduct?.raw?.id ?? editingProduct?.raw?.Id;
-
     try {
-      const result = isEdit
-        ? await update(editId, data)
-        : await create(data);
-
+      const result = isEdit ? await update(editId, data) : await create(data);
       setOpenModal(false);
       setEditingProduct(null);
-
       if (result) {
         setTotalCount(result.totalCount ?? 0);
         setTotalPages(Math.max(1, Math.ceil((result.totalCount ?? 0) / perPage)));
       }
-
       refreshStats();
-      setToast({
-        type:    "success",
-        message: isEdit ? "Product updated successfully!" : "Product added successfully!",
-      });
+      setToast({ type: "success", message: isEdit ? "Product updated!" : "Product added!" });
     } catch {
       setToast({ type: "error", message: "Something went wrong. Please try again." });
     }
   };
 
-  const clearFilters = () => {
-    setFilterCategory("All");
-    setFilterStatus("All");
-  };
+  // Called when ImportExcelModal finishes — refresh list + stats
+  const handleImportComplete = useCallback(() => {
+    loadPage(page, filterCategory, filterStatus, debouncedQ);
+    refreshStats();
+    setToast({ type: "success", message: "Import complete! Inventory updated." });
+  }, [loadPage, refreshStats, page, filterCategory, filterStatus, debouncedQ]);
+
+  const clearFilters = () => { setFilterCategory("All"); setFilterStatus("All"); };
 
   const handleExport = () => {
     const rows = [
       ["ID", "Name", "Category", "Qty", "Price", "Expiry", "Status"],
       ...items.map((p) => [p.id, p.name, p.category, p.qty, p.price, p.expiry, p.status]),
     ];
-    const csv = rows
-      .map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
-      .join("\n");
+    const csv  = rows.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
-    a.download = "products-export.csv";
+    const a    = Object.assign(document.createElement("a"), { href: url, download: "products-export.csv" });
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -250,9 +226,7 @@ export default function Products() {
   return (
     <div className="space-y-4 p-3 sm:space-y-5 sm:p-4 md:space-y-6 md:p-0">
 
-      {toast && (
-        <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />
-      )}
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 md:gap-6">
@@ -279,6 +253,7 @@ export default function Products() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Add single product */}
           <button
             onClick={() => { setEditingProduct(null); setOpenModal(true); }}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-secondary px-3 py-2 text-xs font-medium text-white transition hover:opacity-90 sm:flex-none sm:px-4 sm:text-sm"
@@ -287,6 +262,16 @@ export default function Products() {
             Add Product
           </button>
 
+          {/* ✅ Import from Excel */}
+          <button
+            onClick={() => setOpenImportModal(true)}
+            className="flex items-center gap-1.5 rounded-full border border-secondary/40 bg-secondary/5 px-3 py-2 text-xs font-medium text-secondary transition hover:bg-secondary/10 sm:text-sm"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Import Excel
+          </button>
+
+          {/* Filter */}
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => setFilterOpen(!filterOpen)}
@@ -340,6 +325,7 @@ export default function Products() {
             )}
           </div>
 
+          {/* Export CSV */}
           <button
             onClick={handleExport}
             className="flex items-center gap-1.5 rounded-full border bg-white px-3 py-2 text-xs transition hover:bg-gray-50 sm:text-sm"
@@ -459,6 +445,7 @@ export default function Products() {
         </div>
       )}
 
+      {/* ── Single product modal ── */}
       <ProductModal
         open={openModal}
         onClose={() => { setOpenModal(false); setEditingProduct(null); }}
@@ -467,6 +454,13 @@ export default function Products() {
         categories={categories}
         loadingCategories={loadingCategories}
         initialData={editingProduct?.raw || null}
+      />
+
+      {/* ── Excel import modal ── */}
+      <ImportExcelModal
+        open={openImportModal}
+        onClose={() => setOpenImportModal(false)}
+        onImportComplete={handleImportComplete}
       />
     </div>
   );
