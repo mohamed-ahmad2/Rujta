@@ -61,14 +61,13 @@ namespace Rujta.Infrastructure.Repositories
 
         public async Task ActivateAsync(int adId, int durationDays, CancellationToken cancellationToken = default)
         {
-            var ad = await _context.Ads.FindAsync([adId], cancellationToken);
+            var ad = await _context.Ads
+                .FirstOrDefaultAsync(a => a.Id == adId, cancellationToken);
             if (ad == null) return;
-
             ad.IsActive = true;
             ad.StartsAt = DateTime.UtcNow;
             ad.ExpiresAt = DateTime.UtcNow.AddDays(durationDays);
             ad.UpdatedAt = DateTime.UtcNow;
-
             await _context.SaveChangesAsync(cancellationToken);
         }
         public async Task<List<Ad>> GetExpiredActiveAdsAsync(DateTime now, CancellationToken cancellationToken = default)

@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using Rujta.Application.DTOs.AuthDto;
 using Rujta.Application.Interfaces.InterfaceServices.IAuth;
+using Rujta.Domain.Entities;
 using Rujta.Infrastructure.Constants;
 using Rujta.Infrastructure.Identity;
 using System.IdentityModel.Tokens.Jwt;
@@ -148,38 +149,32 @@ namespace Rujta.API.Controllers
             }
         }
 
+        private bool TryGetPharmacyId(out int pharmacyId)
+        {
+            pharmacyId = 0;
+
+            var claim = User.FindFirst("PharmacyId");
+            if (claim == null || !int.TryParse(claim.Value, out pharmacyId))
+                return false;
+
+            return true;
+        }
+
         [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)}")]
         [HttpPost("register/staff")]
-        public async Task<IActionResult> RegisterStaff([FromBody] RegisterByAdminDto dto)
+        public async Task<IActionResult> RegisterStaff(CreatePharmacistDto dto)
         {
-            if (dto == null)
-                return BadRequest(new { message = "Invalid request data." });
+            if (!TryGetPharmacyId(out var pharmacyId))
+                return Unauthorized("Pharmacy context missing.");
 
-            UserRole roleToAssign;
-
-            if (User.IsInRole(nameof(UserRole.PharmacyAdmin)))
-            {
-                roleToAssign = UserRole.Pharmacist;
-
-                var pharmacyIdClaim = User.FindFirst("PharmacyId");
-                if (pharmacyIdClaim == null)
-                    return Unauthorized("Pharmacy context missing.");
-
-                dto.PharmacyId = int.Parse(pharmacyIdClaim.Value);
-            }
-            else
-            {
-                roleToAssign = dto.Role ?? UserRole.User;
-            }
-
-            var userId = await _authService.CreateUserAsync(dto, roleToAssign);
+            var userId = await _authService.CreatePharmacistUserAsync(dto, pharmacyId);
 
             return Ok(new
             {
                 UserId = userId,
                 Email = dto.Email,
-                Role = roleToAssign.ToString(),
-                PharmacyId = dto.PharmacyId
+                Role = "Pharmacist",
+                PharmacyId = pharmacyId
             });
         }
 

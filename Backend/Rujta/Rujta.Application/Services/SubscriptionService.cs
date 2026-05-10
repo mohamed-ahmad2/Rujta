@@ -21,7 +21,7 @@ namespace Rujta.Application.Services
             {
                 PharmacyId = pharmacyId,
                 Plan = plan,
-                Status = SubscriptionStatus.Active,
+                Status = SubscriptionStatus.Pending,
                 StartDate = start,
                 EndDate = end
             };
@@ -76,7 +76,7 @@ namespace Rujta.Application.Services
             var (start, end) = CalculateDates(plan);
 
             subscription.Plan = plan;
-            subscription.Status = SubscriptionStatus.Active;
+            subscription.Status = SubscriptionStatus.Pending;
             subscription.StartDate = start;
             subscription.EndDate = end;
 
