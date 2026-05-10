@@ -4,14 +4,12 @@ import { NotificationContext } from "./NotificationContext";
 import { useAuth } from "../features/auth/hooks/useAuth";
 import { getAccessToken, subscribeTokenChange } from "../authProvider/authTokenProvider";
 
-// ✅ Read user ID directly from the token (works before React loads)
 function getUserIdFromToken() {
     try {
         const token = localStorage.getItem("accessToken");
         if (!token) return null;
         const payload = JSON.parse(atob(token.split(".")[1]));
-        // handles all common JWT claim names
-        return payload.sub || payload.userId || payload.id || payload.nameid || null;
+        return payload.domainPersonId || payload.sub || null;
     } catch {
         return null;
     }
@@ -26,8 +24,8 @@ export const NotificationProvider = ({ children }) => {
     const connectionRef = useRef(null);
     const startingRef = useRef(false);
     const [connection, setConnection] = useState(null);
+    const [lastConnectedAt, setLastConnectedAt] = useState(null);
 
-    // ✅ Load immediately on first render using token — no waiting for user object
     const [notifications, setNotificationsState] = useState(() => {
         try {
             const userId = getUserIdFromToken();
@@ -40,12 +38,12 @@ export const NotificationProvider = ({ children }) => {
         }
     });
 
-    // ✅ Always write to localStorage using current user or token
     const setNotifications = useCallback((updater) => {
         setNotificationsState((prev) => {
             const next = typeof updater === "function" ? updater(prev) : updater;
             try {
                 const userId =
+                    user?.domainPersonId ||
                     user?.id || user?.userId || user?.sub || getUserIdFromToken();
                 const key = getStorageKey(userId);
                 if (key) localStorage.setItem(key, JSON.stringify(next));
@@ -54,20 +52,18 @@ export const NotificationProvider = ({ children }) => {
         });
     }, [user]);
 
-    // ✅ When user object loads, re-load from localStorage to stay in sync
     useEffect(() => {
         if (!user) return;
         try {
-            const userId = user.id || user.userId || user.sub || getUserIdFromToken();
+            const userId =
+                user.domainPersonId ||
+                user.id || user.userId || user.sub || getUserIdFromToken();
             const key = getStorageKey(userId);
             if (!key) return;
             const stored = localStorage.getItem(key);
             if (stored) {
                 const parsed = JSON.parse(stored);
-                // Only update if stored has more data than current state
-                if (parsed.length > 0) {
-                    setNotificationsState(parsed);
-                }
+                if (parsed.length > 0) setNotificationsState(parsed);
             }
         } catch {}
     }, [user]);
@@ -93,8 +89,8 @@ export const NotificationProvider = ({ children }) => {
     const startHubConnection = useCallback(async () => {
         if (startingRef.current) return;
         if (!user || loading) return;
-        if (connectionRef.current) return;
 
+        // ✅ removed connectionRef.current check — always allow fresh start
         const token = getAccessToken();
         if (!token) return;
 
@@ -107,7 +103,7 @@ export const NotificationProvider = ({ children }) => {
 
         const hubConnection = new signalR.HubConnectionBuilder()
             .withUrl(hubUrl, {
-                accessTokenFactory: () => getAccessToken(),
+                accessTokenFactory: () => getAccessToken(), // ✅ always reads latest token
                 withCredentials: true,
             })
             .withAutomaticReconnect([0, 2000, 5000, 10000])
@@ -124,9 +120,11 @@ export const NotificationProvider = ({ children }) => {
             setConnection(null);
         });
 
+        // ✅ fixed: use setLastConnectedAt instead of undefined setNeedsRefetch
         hubConnection.onreconnected(() => {
             console.log("✅ SignalR reconnected");
             setConnection(hubConnection);
+            setLastConnectedAt(Date.now());
         });
 
         try {
@@ -134,6 +132,7 @@ export const NotificationProvider = ({ children }) => {
             console.log("✅ SignalR connected");
             connectionRef.current = hubConnection;
             setConnection(hubConnection);
+            setLastConnectedAt(Date.now());
         } catch (err) {
             console.error("❌ SignalR start failed:", err);
         } finally {
@@ -141,13 +140,15 @@ export const NotificationProvider = ({ children }) => {
         }
     }, [user, loading]);
 
+    // ✅ On token refresh: cleanup old connection then start fresh with new token
     useEffect(() => {
         const unsubscribe = subscribeTokenChange(async (token) => {
             if (!token) {
-                // ✅ Logout: close connection, clear memory only
                 await cleanupConnection();
                 setNotificationsState([]);
             } else {
+                // ✅ always reconnect with new token
+                await cleanupConnection();
                 await startHubConnection();
             }
         });
@@ -159,7 +160,7 @@ export const NotificationProvider = ({ children }) => {
     }, [startHubConnection]);
 
     return (
-        <NotificationContext.Provider value={{ connection, notifications, setNotifications }}>
+        <NotificationContext.Provider value={{ connection, notifications, setNotifications, lastConnectedAt }}>
             {children}
         </NotificationContext.Provider>
     );

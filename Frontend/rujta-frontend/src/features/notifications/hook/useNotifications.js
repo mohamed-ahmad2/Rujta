@@ -1,4 +1,3 @@
-// src/features/notification/hook/useNotifications.jsx
 import { useEffect, useState, useCallback, useContext, useMemo } from "react";
 import {
   getMyNotifications,
@@ -14,7 +13,7 @@ import { useAuth } from "../../auth/hooks/useAuth";
 
 export const useNotifications = ({ isPharmacy = false } = {}) => {
   const { user } = useAuth();
-  const { connection, notifications, setNotifications } =
+  const { connection, notifications, setNotifications, lastConnectedAt } =
     useContext(NotificationContext);
   const { showToast } = useContext(ToastContext);
 
@@ -43,10 +42,8 @@ export const useNotifications = ({ isPharmacy = false } = {}) => {
     try {
       const res = await apis.getList();
       const fromDb = res.data || [];
-
-      if (fromDb.length > 0) {
-        setNotifications(fromDb);
-      }
+      // ✅ always set, even if empty — so page clears stale data
+      setNotifications(fromDb);
     } catch (err) {
       console.error("Failed to fetch notifications", err);
     } finally {
@@ -64,23 +61,32 @@ export const useNotifications = ({ isPharmacy = false } = {}) => {
     }
   }, [user, apis]);
 
+  // ✅ Initial fetch on mount
   useEffect(() => {
     fetchNotifications();
     fetchUnreadCount();
   }, [fetchNotifications, fetchUnreadCount]);
 
+  // ✅ Re-fetch every time SignalR connects or reconnects with fresh token
   useEffect(() => {
-    if (!connection) return;
+    if (!lastConnectedAt) return;
+    fetchNotifications();
+    fetchUnreadCount();
+  }, [lastConnectedAt]);
 
-    const handleReconnected = () => {
-      console.log("♻️ SignalR reconnected — re-fetching notifications");
-      fetchNotifications();
-      fetchUnreadCount();
+  // ✅ Re-fetch when user returns to the tab
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchNotifications();
+        fetchUnreadCount();
+      }
     };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [fetchNotifications, fetchUnreadCount]);
 
-    connection.onreconnected(handleReconnected);
-  }, [connection, fetchNotifications, fetchUnreadCount]);
-
+  // ✅ Listen for real-time notifications
   useEffect(() => {
     if (!connection) return;
 
@@ -104,17 +110,16 @@ export const useNotifications = ({ isPharmacy = false } = {}) => {
     return () => {
       connection.off("NewNotification", handleNewNotification);
     };
-  }, [connection, setNotifications, showToast]);
+  }, [connection]);
+  
 
   const markAsRead = useCallback(
     async (id) => {
       try {
         await apis.markRead(id);
-
         setNotifications((prev) =>
           prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
         );
-
         setServerUnreadCount((c) =>
           c === null ? null : Math.max(0, c - 1)
         );
@@ -124,9 +129,14 @@ export const useNotifications = ({ isPharmacy = false } = {}) => {
     },
     [setNotifications, apis]
   );
+useEffect(() => {
+    console.log("🔌 connection changed:", connection?.state);
+}, [connection]);
 
+useEffect(() => {
+    console.log("⏰ lastConnectedAt changed:", lastConnectedAt);
+}, [lastConnectedAt]);
   const localUnreadCount = notifications.filter((n) => !n.isRead).length;
-
   const unreadCount =
     serverUnreadCount !== null ? serverUnreadCount : localUnreadCount;
 

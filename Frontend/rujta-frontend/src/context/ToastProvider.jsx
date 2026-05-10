@@ -7,9 +7,18 @@ let toastId = 0;
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
-  const showToast = useCallback(({ title, message }) => {
+const showToast = useCallback(({ title, message }) => {
     const id = ++toastId;
-    setToasts((prev) => [...prev, { id, title, message, visible: true }]);
+    setToasts((prev) => [...prev, { id, title, message, visible: false }]);
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            setToasts((prev) =>
+                prev.map((t) => (t.id === id ? { ...t, visible: true } : t))
+            );
+        });
+    });
+
 
     // auto dismiss after 4s
     setTimeout(() => {
