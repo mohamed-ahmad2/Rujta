@@ -10,16 +10,25 @@ import {
 } from "../api/inventoryItem";
 
 const extractErrorMessage = (err) => {
+  if (err?.name === "AbortError" || err?.code === "ERR_CANCELED") return null;
+
   const res = err?.response;
   if (res?.data?.message) return res.data.message;
   if (typeof res?.data === "string") return res.data;
+
   switch (res?.status) {
-    case 400: return "Invalid request data";
-    case 401: return "Unauthorized";
-    case 403: return "Forbidden";
-    case 404: return "Not found";
-    case 500: return "Server error";
-    default:  return err?.message || "Unexpected error";
+    case 400:
+      return "Invalid request data";
+    case 401:
+      return "Unauthorized";
+    case 403:
+      return "Forbidden";
+    case 404:
+      return "Not found";
+    case 500:
+      return "Server error";
+    default:
+      return err?.message || "Unexpected error";
   }
 };
 
@@ -30,94 +39,101 @@ const toNumber = (v, fallback = 0) => {
 
 const mapStatus = (rawStatus, expired) => {
   if (expired) return "Expired";
-  const s =
-    rawStatus !== undefined && rawStatus !== null
-      ? String(rawStatus).toLowerCase()
-      : "";
-  if (s === "instock"    || s === "0") return "In stock";
-  if (s === "lowstock"   || s === "1") return "Low stock";
+  const s = String(rawStatus ?? "").toLowerCase();
+  if (s === "instock" || s === "0") return "In stock";
+  if (s === "lowstock" || s === "1") return "Low stock";
   if (s === "outofstock" || s === "2") return "Out of stock";
-  if (s === "expired"    || s === "3") return "Expired";
+  if (s === "expired" || s === "3") return "Expired";
   return "Unknown";
 };
 
 const formatExpiry = (raw) => {
   if (!raw) return "—";
   const d = new Date(raw);
-  if (isNaN(d)) return "—";
-  return d.toISOString().slice(0, 10);
+  return isNaN(d) ? "—" : d.toISOString().slice(0, 10);
 };
 
 const mapItem = (item = {}) => {
-  const quantity        = toNumber(item.quantity ?? item.Quantity);
-  const price           = toNumber(item.price    ?? item.Price);
-  const discountedPrice = toNumber(item.discountedPrice ?? item.DiscountedPrice);
-  const hasDiscount     = item.hasDiscount ?? item.HasDiscount ?? false;
+  const quantity = toNumber(item.quantity ?? item.Quantity);
+  const price = toNumber(item.price ?? item.Price);
+  const discountedPrice = toNumber(
+    item.discountedPrice ?? item.DiscountedPrice,
+  );
+  const hasDiscount = item.hasDiscount ?? item.HasDiscount ?? false;
 
-  const expiryRaw =
-    item.expiryDate  ?? item.ExpiryDate  ??
-    item.expiry_date ?? item.Expiry_Date ??
-    item.expiry      ?? item.Expiry      ?? null;
-
+  const expiryRaw = item.expiryDate ?? item.ExpiryDate ?? item.expiry ?? null;
   const expiryObj = expiryRaw ? new Date(expiryRaw) : null;
-  const expired   = expiryObj ? expiryObj < new Date() : false;
-  const statusRaw = item.status ?? item.Status;
-  const status    = mapStatus(statusRaw, expired);
+  const expired = expiryObj ? expiryObj < new Date() : false;
 
   return {
-    id:             item.id           ?? item.Id,
-    name:           item.medicineName ?? item.MedicineName,
-    category:       item.categoryName ?? item.CategoryName,
-    qty:            quantity,
+    id: item.id ?? item.Id,
+    name: item.medicineName ?? item.MedicineName,
+    category: item.categoryName ?? item.CategoryName,
+
+    // ✅ Company Name (مهم جداً)
+    companyId: item.companyId ?? item.CompanyId,
+    companyName: item.companyName ?? item.CompanyName,
+
+    qty: quantity,
     price,
     discountedPrice,
     effectivePrice: hasDiscount ? discountedPrice : price,
-    expiry:         formatExpiry(expiryRaw),
-    status,
+    expiry: formatExpiry(expiryRaw),
+    status: mapStatus(item.status ?? item.Status, expired),
     expired,
-    pharmacyId:     item.pharmacyID   ?? item.PharmacyID,
-    raw:            item,
+    pharmacyId: item.pharmacyID ?? item.PharmacyID,
+    raw: item,
   };
 };
 
 export default function useInventory() {
-  const [items,   setItems]   = useState([]);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState(null);
+  const [error, setError] = useState(null);
 
-  // Remembers the last filter so create/update/remove can refresh the same page
-  const lastFilterRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const res  = await getInventoryProducts();
-      const data = res?.data ?? [];
-      setItems(data.map(mapItem));
+      const res = await getInventoryProducts();
+      setItems((res?.data ?? []).map(mapItem));
       setError(null);
     } catch (err) {
-      setError(extractErrorMessage(err));
+      const msg = extractErrorMessage(err);
+      if (msg) setError(msg);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // fetchPaged: filter is passed straight through to the API file.
-  // Supports: PageNumber, PageSize, CategoryId, Status, SearchTerm
-  const fetchPaged = useCallback(async (filter) => {
+  const fetchPaged = useCallback(async (filter = {}) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setLoading(true);
-    lastFilterRef.current = filter;
+    setError(null);
+
     try {
-      const res  = await getPagedInventoryItems(filter);
+      const res = await getPagedInventoryItems(filter, controller.signal);
+      if (controller.signal.aborted) return null;
+
       const data = res?.data?.items ?? [];
       setItems(data.map(mapItem));
-      setError(null);
       return res?.data;
     } catch (err) {
-      setError(extractErrorMessage(err));
+      if (controller.signal.aborted) return null;
+      const msg = extractErrorMessage(err);
+      if (msg) setError(msg);
       return null;
     } finally {
-      setLoading(false);
+      if (abortControllerRef.current === controller) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -127,7 +143,8 @@ export default function useInventory() {
       const res = await getInventoryItemById(id);
       return mapItem(res?.data);
     } catch (err) {
-      setError(extractErrorMessage(err));
+      const msg = extractErrorMessage(err);
+      if (msg) setError(msg);
       return null;
     } finally {
       setLoading(false);
@@ -138,16 +155,11 @@ export default function useInventory() {
     setLoading(true);
     try {
       await addInventoryItem(data);
-      setError(null);
-      if (lastFilterRef.current) {
-        const refreshed = await getPagedInventoryItems(lastFilterRef.current);
-        setItems((refreshed?.data?.items ?? []).map(mapItem));
-        return refreshed?.data;
-      }
-      return null;
+      return true;
     } catch (err) {
-      setError(extractErrorMessage(err));
-      return null;
+      const msg = extractErrorMessage(err);
+      if (msg) setError(msg);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -157,16 +169,11 @@ export default function useInventory() {
     setLoading(true);
     try {
       await updateInventoryItem(id, data);
-      setError(null);
-      if (lastFilterRef.current) {
-        const refreshed = await getPagedInventoryItems(lastFilterRef.current);
-        setItems((refreshed?.data?.items ?? []).map(mapItem));
-        return refreshed?.data;
-      }
-      return null;
+      return true;
     } catch (err) {
-      setError(extractErrorMessage(err));
-      return null;
+      const msg = extractErrorMessage(err);
+      if (msg) setError(msg);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -176,26 +183,25 @@ export default function useInventory() {
     setLoading(true);
     try {
       await deleteInventoryItem(id);
-      // Optimistic removal before refresh
-      setItems((prev) => prev.filter((x) => String(x.id) !== String(id)));
-      setError(null);
-      if (lastFilterRef.current) {
-        const refreshed = await getPagedInventoryItems(lastFilterRef.current);
-        setItems((refreshed?.data?.items ?? []).map(mapItem));
-        return refreshed?.data;
-      }
-      return null;
+      return true;
     } catch (err) {
-      setError(extractErrorMessage(err));
-      return null;
+      const msg = extractErrorMessage(err);
+      if (msg) setError(msg);
+      return false;
     } finally {
       setLoading(false);
     }
   }, []);
 
   return {
-    items, loading, error,
-    fetchAll, fetchPaged, fetchById,
-    create, update, remove,
+    items,
+    loading,
+    error,
+    fetchAll,
+    fetchPaged,
+    fetchById,
+    create,
+    update,
+    remove,
   };
 }

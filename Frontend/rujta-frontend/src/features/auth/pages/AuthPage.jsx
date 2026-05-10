@@ -42,7 +42,7 @@ export const AuthPage = () => {
   }, [isSignUp]);
 
   useEffect(() => {
-    if (user) {
+    if (user?.role) {
       redirectByRole(user);
     }
   }, [user]);
@@ -62,7 +62,6 @@ export const AuthPage = () => {
     else navigate("/");
   };
 
-  // ✅ بياخد rememberMe من LoginForm
   const onLogin = async (e, rememberMe = false) => {
     e.preventDefault();
     setLoading(true);
@@ -81,7 +80,6 @@ export const AuthPage = () => {
     }
   };
 
-  // ✅ بياخد rememberMe من RegisterForm
   const onRegister = async (e, rememberMe = false) => {
     e.preventDefault();
     setLoading(true);
