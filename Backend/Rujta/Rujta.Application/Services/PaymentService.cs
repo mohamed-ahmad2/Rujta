@@ -1,8 +1,9 @@
-﻿// Rujta.Infrastructure/Services/PaymentService.cs
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Rujta.Application.DTOs.PaymentDto;
 
 namespace Rujta.Infrastructure.Services
@@ -12,6 +13,7 @@ namespace Rujta.Infrastructure.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<PaymentService> _logger;
 
         private string BaseUrl => _configuration["Paymob:BaseUrl"]!;
         private string ApiKey => _configuration["Paymob:ApiKey"]!;
@@ -24,11 +26,15 @@ namespace Rujta.Infrastructure.Services
         public PaymentService(
             IUnitOfWork unitOfWork,
             HttpClient httpClient,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<PaymentService> logger)
         {
             _unitOfWork = unitOfWork;
             _httpClient = httpClient;
             _configuration = configuration;
+            _logger = logger;
+
+            _logger.LogInformation("[PaymentService] Initialized with BaseUrl: {BaseUrl}", BaseUrl);
         }
 
         public async Task<PaymentResponseDto> InitiateAsync(
@@ -36,12 +42,20 @@ namespace Rujta.Infrastructure.Services
             InitiatePaymentDto dto,
             CancellationToken cancellationToken = default)
         {
+            _logger.LogInformation("[InitiateAsync] Started - UserId: {UserId}, PharmacyId: {PharmacyId}, Type: {Type}", userId, pharmacyId, dto.Type);
+
             ValidateDto(dto);
 
             var amountCents = dto.Amount * 100;
+            _logger.LogInformation("[InitiateAsync] Amount in cents: {AmountCents}", amountCents);
+
             var authToken = await GetAuthTokenAsync();
+
             var paymobOrderId = await RegisterOrderAsync(authToken, amountCents, dto.Currency);
+
             var redirectUrl = dto.Type == PaymentType.Order ? UserRedirectUrl : AdminRedirectUrl;
+            _logger.LogInformation("[InitiateAsync] Redirect URL selected: {RedirectUrl}", redirectUrl);
+
             var paymentKey = await GetPaymentKeyAsync(
                 authToken, paymobOrderId, amountCents,
                 dto.Currency, dto.BillingData, redirectUrl);
@@ -64,8 +78,13 @@ namespace Rujta.Infrastructure.Services
 
             await _unitOfWork.ExecuteInTransactionAsync(async ct =>
             {
+                _logger.LogInformation("[InitiateAsync] Starting database transaction");
+
                 await _unitOfWork.Payments.AddAsync(payment, ct);
                 await _unitOfWork.SaveAsync(ct);
+
+                _logger.LogInformation("[InitiateAsync] Payment saved - InternalPaymentId: {PaymentId}", payment.Id);
+
             }, cancellationToken);
 
             return new PaymentResponseDto
@@ -82,15 +101,17 @@ namespace Rujta.Infrastructure.Services
             string hmacSignature,
             CancellationToken cancellationToken = default)
         {
+            _logger.LogInformation("[HandleCallbackAsync] Callback received");
+
             if (!VerifyHmac(callback.Obj, hmacSignature))
             {
-                Console.WriteLine("[Callback] HMAC verification failed");
+                _logger.LogWarning("[Callback] HMAC verification failed");
                 return false;
             }
 
             if (!callback.Obj.Success)
             {
-                Console.WriteLine("[Callback] Payment not successful, skipping");
+                _logger.LogInformation("[Callback] Payment not successful, skipping");
                 return true;
             }
 
@@ -99,44 +120,44 @@ namespace Rujta.Infrastructure.Services
 
             if (payment == null)
             {
-                Console.WriteLine($"[Callback] Payment not found for OrderId={callback.Obj.Order.Id}");
+                _logger.LogWarning("[Callback] Payment not found for OrderId={OrderId}", callback.Obj.Order.Id);
                 return false;
             }
 
             if (payment.Status == PaymentStatus.Success)
             {
-                Console.WriteLine($"[Callback] Already processed, skipping");
+                _logger.LogInformation("[Callback] Already processed, skipping");
                 return true;
             }
 
             await _unitOfWork.ExecuteInTransactionAsync(async ct =>
             {
+                _logger.LogInformation("[HandleCallbackAsync] Updating payment");
+
                 payment.Status = PaymentStatus.Success;
                 payment.PaymobTransactionId = callback.Obj.Id;
 
                 await _unitOfWork.Payments.UpdateAsync(payment, ct);
                 await _unitOfWork.SaveAsync(ct);
 
-                Console.WriteLine($"[Callback] Payment {payment.Id} saved successfully");
-
                 if (payment.Type == PaymentType.Ad && payment.AdId.HasValue)
                 {
                     var ad = await _unitOfWork.Ads.GetByIdAsync(payment.AdId.Value, ct);
+
                     if (ad != null)
                     {
-                        Console.WriteLine($"[Callback] Activating ad Id={ad.Id} for {ad.DurationDays} days");
                         ad.IsActive = true;
                         ad.StartsAt = DateTime.UtcNow;
                         ad.ExpiresAt = DateTime.UtcNow.AddDays(ad.DurationDays);
                         ad.UpdatedAt = DateTime.UtcNow;
+
                         await _unitOfWork.Ads.UpdateAsync(ad, ct);
                         await _unitOfWork.SaveAsync(ct);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[Callback] Ad not found for AdId={payment.AdId.Value}");
+
+                        _logger.LogInformation("[Callback] Ad activated - AdId: {AdId}", ad.Id);
                     }
                 }
+
             }, cancellationToken);
 
             return true;
@@ -147,6 +168,9 @@ namespace Rujta.Infrastructure.Services
         {
             var payments = await _unitOfWork.Payments
                 .GetByPharmacyIdAsync(pharmacyId, cancellationToken);
+
+            _logger.LogInformation("[GetPharmacyPaymentsAsync] Found {Count} payments", payments.Count());
+
             return payments.Select(MapToSummary);
         }
 
@@ -155,10 +179,11 @@ namespace Rujta.Infrastructure.Services
         {
             var payments = await _unitOfWork.Payments
                 .GetByPharmacyAndTypeAsync(pharmacyId, type, cancellationToken);
+
+            _logger.LogInformation("[GetPharmacyPaymentsByTypeAsync] Found {Count} payments", payments.Count());
+
             return payments.Select(MapToSummary);
         }
-
-        // ==================== Private Helpers ====================
 
         private static void ValidateDto(InitiatePaymentDto dto)
         {
@@ -193,7 +218,9 @@ namespace Rujta.Infrastructure.Services
             var response = await _httpClient.PostAsJsonAsync(
                 $"{BaseUrl}/api/auth/tokens",
                 new { api_key = ApiKey });
+
             response.EnsureSuccessStatusCode();
+
             var json = await response.Content.ReadFromJsonAsync<JsonElement>();
             return json.GetProperty("token").GetString()!;
         }
@@ -211,7 +238,9 @@ namespace Rujta.Infrastructure.Services
                     currency,
                     items = Array.Empty<object>()
                 });
+
             response.EnsureSuccessStatusCode();
+
             var json = await response.Content.ReadFromJsonAsync<JsonElement>();
             return json.GetProperty("id").GetInt32().ToString();
         }
@@ -249,24 +278,23 @@ namespace Rujta.Infrastructure.Services
                     currency,
                     integration_id = IntegrationId
                 });
+
             response.EnsureSuccessStatusCode();
+
             var json = await response.Content.ReadFromJsonAsync<JsonElement>();
             return json.GetProperty("token").GetString()!;
         }
 
         private bool VerifyHmac(PaymobCallbackObj obj, string receivedHmac)
         {
-            var amountCents = ((long)obj.AmountCents).ToString();
-            var integrationId = obj.IntegrationId.ToString();
-
             var data = string.Concat(
-                amountCents,
+                ((long)obj.AmountCents).ToString(),
                 obj.CreatedAt ?? string.Empty,
                 obj.Currency ?? string.Empty,
                 obj.ErrorOccured.ToString().ToLower(),
                 obj.HasParentTransaction.ToString().ToLower(),
                 obj.Id,
-                integrationId,
+                obj.IntegrationId.ToString(),         
                 obj.Is3dSecure.ToString().ToLower(),
                 obj.IsAuth.ToString().ToLower(),
                 obj.IsCapture.ToString().ToLower(),
@@ -274,7 +302,7 @@ namespace Rujta.Infrastructure.Services
                 obj.IsStandalonePayment.ToString().ToLower(),
                 obj.IsVoided.ToString().ToLower(),
                 obj.Order.Id,
-                string.Empty,   // owner — not included in HMAC
+                obj.Owner?.ToString() ?? string.Empty,  
                 obj.Pending.ToString().ToLower(),
                 obj.SourceData.Pan ?? string.Empty,
                 obj.SourceData.SubType ?? string.Empty,
@@ -282,14 +310,15 @@ namespace Rujta.Infrastructure.Services
                 obj.Success.ToString().ToLower()
             );
 
-            Console.WriteLine($"[HMAC Input] {data}");
-            Console.WriteLine($"[HMAC Received] {receivedHmac}");
+            _logger.LogWarning("[HMAC] Data: {Data}", data);
+            _logger.LogWarning("[HMAC] Received: {Rec}", receivedHmac);
 
-            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(HmacSecret));
+            using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(HmacSecret));
             var computed = Convert.ToHexString(
                 hmac.ComputeHash(Encoding.UTF8.GetBytes(data))).ToLower();
 
-            Console.WriteLine($"[HMAC Computed] {computed}");
+            _logger.LogWarning("[HMAC] Computed: {Comp}", computed);
+
             return computed == receivedHmac.ToLower();
         }
     }
