@@ -366,20 +366,31 @@ export default function Orders() {
                                 <span>🏪</span> {pharmacyLabel}
                               </p>
                             </div>
-                            <div className="flex flex-shrink-0 items-center gap-2">
-                              {getStatusBadge(order?.status)}
+                           <div className="flex flex-shrink-0 items-center gap-2">
+                      {getStatusBadge(order?.status)}
 
-                              {isActiveTab && canCancel(order?.status) && (
-                                <button
-                                  onClick={() => handleCancelOrder(order)}
-                                  disabled={loading}
-                                  className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:opacity-50"
-                                >
-                                  Cancel
-                                </button>
-                              )}
-                            </div>
-                          </div>
+                      {/* ✅ Payment Method badge */}
+                      <span
+                        className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                          order?.paymentMethod === "Payment"
+                            ? "bg-purple-100 text-purple-700 ring-purple-200"
+                            : "bg-gray-100 text-gray-600 ring-gray-200"
+                        }`}
+                      >
+                        {order?.paymentMethod === "Payment" ? "💳 Online" : "💵 Cash"}
+                      </span>
+
+                      {isActiveTab && canCancel(order?.status) && (
+                        <button
+                          onClick={() => handleCancelOrder(order)}
+                          disabled={loading}
+                          className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                     </div>
 
                           {/* Stepper */}
                           <div className="px-4 pb-2 pt-1">
