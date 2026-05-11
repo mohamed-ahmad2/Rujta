@@ -21,4 +21,7 @@ export const checkCustomerByPhone = (phoneNumber) =>
     params: { phoneNumber },
   });
 
-export const createOrder = (orders) => apiClient.post(`/Orders`, orders);
+export const createCustomerOrder = (orderData) =>
+  apiClient.post(`/customers/order`, orderData, {
+    headers: { "Content-Type": "application/json" },
+  });

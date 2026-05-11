@@ -57,24 +57,7 @@ function InteractionRow({ item }) {
         </p>
       </div>
 
-      <div className="flex shrink-0 flex-col items-end gap-1.5">
-        <span className="text-sm font-medium text-gray-800 tabular-nums">{pct}%</span>
-        <div className="h-1 w-20 overflow-hidden rounded-full bg-gray-200">
-          <div className={`h-full rounded-full ${styles.bar}`} style={{ width: `${pct}%` }} />
-        </div>
-        <div className="flex gap-1.5 mt-0.5">
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${styles.badge}`}>
-            {item.riskLevel}
-          </span>
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-            item.interacts
-              ? "bg-red-50 text-red-800 ring-1 ring-red-200"
-              : "bg-green-50 text-green-800 ring-1 ring-green-200"
-          }`}>
-            {item.interacts ? "Interacts" : "Safe"}
-          </span>
-        </div>
-      </div>
+      
     </div>
   );
 }
