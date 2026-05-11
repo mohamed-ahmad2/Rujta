@@ -7,5 +7,4 @@
         public int PharmacyId { get; set; }
         public List<OrderItemDto> Items { get; set; } = new();
     }
-
 }

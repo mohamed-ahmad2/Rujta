@@ -9,6 +9,7 @@ namespace Rujta.Application.Interfaces.InterfaceRepositories
         Task<List<Medicine>> GetAllMedicinesByPharmacyAsync(int pharmacyId);
 
         Task<List<InventoryItem>> GetInventoryItemsWithMedicineByPharmacyAsync(int pharmacyId);
+        Task<Pharmacy?> GetByIdWithAddressAsync(int pharmacyId, CancellationToken cancellationToken = default);
 
         Task<bool> PharmacyHasMedicineAsync(int pharmacyId, int medicineId); 
 

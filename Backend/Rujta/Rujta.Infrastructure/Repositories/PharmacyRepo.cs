@@ -12,6 +12,14 @@ namespace Rujta.Infrastructure.Repositories
                 .Include(p => p.Address)           
                 .Where(p => !p.IsDeleted)            
                 .ToListAsync(cancellationToken);
+
+        public async Task<Pharmacy?> GetByIdWithAddressAsync(int pharmacyId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Pharmacies
+                .Include(p => p.Address)
+                .FirstOrDefaultAsync(p => p.Id == pharmacyId && !p.IsDeleted, cancellationToken);
+        }
+
         public async Task<List<PharmacyDto>> GetAllPharmaciesSuperAdminAsync( CancellationToken cancellationToken = default)
         {
             return await _context.Pharmacies

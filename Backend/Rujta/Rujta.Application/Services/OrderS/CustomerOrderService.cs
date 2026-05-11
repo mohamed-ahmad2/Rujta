@@ -162,8 +162,15 @@ namespace Rujta.Application.Services
             var orderDto = new CreateOrderDto
             {
                 PharmacyID = request.PharmacyId,
-                OrderItems = request.Items.Select(i => new OrderItemDto { MedicineID = i.MedicineID, Quantity = i.Quantity }).ToList(),
-                DeliveryAddressId = null
+                OrderItems = request.Items.Select(i => new OrderItemDto
+                {
+                    MedicineID = i.MedicineID,
+                    Quantity = i.Quantity
+                }).ToList(),
+
+                DeliveryAddressId = null,
+
+                IsInStore = true
             };
 
             var order = await _orderService.CreateOrderAsync(orderDto, customer.Id, cancellationToken);

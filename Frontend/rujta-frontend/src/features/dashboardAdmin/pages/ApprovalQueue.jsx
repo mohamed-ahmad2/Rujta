@@ -637,68 +637,10 @@ export default function ApprovalQueue() {
             )}
           </div>
 
-          {/* Info button */}
-          <button
-            title="About this queue"
-            onClick={() =>
-              showToast(
-                "Approval Queue — Medication Database Management",
-                "success",
-              )
-            }
-            style={{
-              width: "30px",
-              height: "30px",
-              borderRadius: "6px",
-              border: "0.5px solid #e0e0d8",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "#fff",
-              cursor: "pointer",
-            }}
-          >
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="8" r="6" stroke="#666" strokeWidth="1.2" />
-              <path
-                d="M8 7v4M8 5v.5"
-                stroke="#666"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
+          
 
-          <div
-            style={{
-              padding: "5px 12px",
-              border: "0.5px solid #e0e0d8",
-              borderRadius: "6px",
-              fontSize: "12px",
-              color: "#555",
-              background: "#fff",
-            }}
-          >
-            Support
-          </div>
-
-          {/* Emergency Override */}
-          <button
-            onClick={() => setShowEmergency(true)}
-            style={{
-              padding: "5px 12px",
-              border: "1.5px solid #e53935",
-              borderRadius: "6px",
-              fontSize: "12px",
-              color: "#e53935",
-              fontWeight: 500,
-              background: "#fff",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Emergency
-          </button>
+          
+          
         </div>
       </div>
 
