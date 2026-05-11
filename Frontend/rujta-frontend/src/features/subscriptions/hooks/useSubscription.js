@@ -12,7 +12,6 @@ export const useSubscription = () => {
   const [error, setError]     = useState(null);
   const [status, setStatus]   = useState(null);
   const [all, setAll]         = useState([]);
-
   const run = useCallback(async (fn) => {
     setLoading(true);
     setError(null);

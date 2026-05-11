@@ -16,6 +16,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { usePayment } from "../../payment/hooks/usePayment";
+import { useSubscription } from "../../subscriptions/hooks/useSubscription";
+import useCampaigns from "../../campaigns/hook/useCampaigns";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,30 +39,27 @@ const daysLeft = (endDate) => {
 };
 
 // ─── Paymob Callback Handler ──────────────────────────────────────────────────
-// Reads ?success=true&id=... query params Paymob appends on redirect to
-// https://rujta.vercel.app/dashboard/payments
 
 function usePaymobCallback(refetchAll) {
-  const [callbackResult, setCallbackResult] = useState(null); // null | 'success' | 'fail'
-  const [callbackTxId,   setCallbackTxId]   = useState(null);
+  const [callbackResult, setCallbackResult] = useState(null);
+  const [callbackTxId, setCallbackTxId] = useState(null);
 
   useEffect(() => {
-    const params  = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search);
     const success = params.get("success");
-    if (success === null) return; // no Paymob redirect params present
+    if (success === null) return;
 
     const txId = params.get("id") || params.get("order");
 
     if (success === "true") {
       setCallbackResult("success");
       setCallbackTxId(txId);
-      refetchAll(); // reload lists after successful payment
+      refetchAll();
     } else {
       setCallbackResult("fail");
       setCallbackTxId(txId);
     }
 
-    // Clean URL so a page refresh doesn't re-trigger this
     window.history.replaceState({}, "", window.location.pathname);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -75,21 +74,28 @@ function PaymentResultBanner({ result, txId, onDismiss }) {
   return (
     <div
       className={`flex items-center justify-between gap-3 rounded-2xl px-5 py-4 text-sm font-medium shadow-sm
-        ${isSuccess
-          ? "bg-green-50 border border-green-200 text-green-800"
-          : "bg-red-50 border border-red-200 text-red-800"}`}
+        ${
+          isSuccess
+            ? "bg-green-50 border border-green-200 text-green-800"
+            : "bg-red-50 border border-red-200 text-red-800"
+        }`}
     >
       <div className="flex items-center gap-3">
-        {isSuccess
-          ? <CheckCircle2 size={20} className="text-green-500 flex-shrink-0" />
-          : <XCircle     size={20} className="text-red-500 flex-shrink-0" />}
+        {isSuccess ? (
+          <CheckCircle2 size={20} className="text-green-500 flex-shrink-0" />
+        ) : (
+          <XCircle size={20} className="text-red-500 flex-shrink-0" />
+        )}
         <span>
           {isSuccess
             ? `Payment successful! Your account has been updated.${txId ? ` (Ref: ${txId})` : ""}`
             : `Payment failed or was cancelled.${txId ? ` (Ref: ${txId})` : ""} Please try again.`}
         </span>
       </div>
-      <button onClick={onDismiss} className="ml-4 text-xs underline opacity-70 hover:opacity-100 flex-shrink-0">
+      <button
+        onClick={onDismiss}
+        className="ml-4 text-xs underline opacity-70 hover:opacity-100 flex-shrink-0"
+      >
         Dismiss
       </button>
     </div>
@@ -100,16 +106,18 @@ function PaymentResultBanner({ result, txId, onDismiss }) {
 
 function StatusBadge({ status }) {
   const map = {
-    active:    { label: "Active",    cls: "bg-green-100 text-green-700",   dot: "bg-green-500" },
-    expired:   { label: "Expired",   cls: "bg-gray-100 text-gray-500",     dot: "bg-gray-400" },
-    cancelled: { label: "Cancelled", cls: "bg-red-100 text-red-600",       dot: "bg-red-500" },
-    paid:      { label: "Paid",      cls: "bg-green-100 text-green-700",   dot: "bg-green-500" },
+    active:    { label: "Active",    cls: "bg-green-100 text-green-700",   dot: "bg-green-500"  },
+    expired:   { label: "Expired",   cls: "bg-gray-100 text-gray-500",     dot: "bg-gray-400"   },
+    cancelled: { label: "Cancelled", cls: "bg-red-100 text-red-600",       dot: "bg-red-500"    },
+    paid:      { label: "Paid",      cls: "bg-green-100 text-green-700",   dot: "bg-green-500"  },
     pending:   { label: "Pending",   cls: "bg-yellow-100 text-yellow-700", dot: "bg-yellow-400" },
-    failed:    { label: "Failed",    cls: "bg-red-100 text-red-600",       dot: "bg-red-500" },
+    failed:    { label: "Failed",    cls: "bg-red-100 text-red-600",       dot: "bg-red-500"    },
   };
   const s = map[String(status || "").toLowerCase()] || map.paid;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${s.cls}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${s.cls}`}
+    >
       <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
       {s.label}
     </span>
@@ -157,7 +165,10 @@ function ProgressBar({ pct, color = "#9DC873" }) {
 function MetricCard({ icon: Icon, iconBg, iconColor, label, value, sub }) {
   return (
     <div className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
-      <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: iconBg }}>
+      <div
+        className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl"
+        style={{ background: iconBg }}
+      >
         <Icon size={20} style={{ color: iconColor }} />
       </div>
       <div className="min-w-0">
@@ -170,14 +181,9 @@ function MetricCard({ icon: Icon, iconBg, iconColor, label, value, sub }) {
 }
 
 // ─── Subscription Card ────────────────────────────────────────────────────────
-// Data from GET /payments/my/subscriptions
+// Now driven by useSubscription().status — a single subscription object
 
-function SubscriptionCard({ subscriptions }) {
-  const sub =
-    subscriptions.find((s) => String(s.status || "").toLowerCase() === "active") ||
-    subscriptions[0] ||
-    null;
-
+function SubscriptionCard({ sub }) {
   if (!sub) {
     return (
       <div className="rounded-2xl bg-white p-5 shadow-sm border border-gray-100 flex items-center justify-center h-40 text-sm text-gray-400">
@@ -186,11 +192,24 @@ function SubscriptionCard({ subscriptions }) {
     );
   }
 
-  const endDate = sub.endDate ?? sub.expiresAt ?? sub.renewalDate;
-  const left    = daysLeft(endDate);
-  const total   = sub.daysTotal ?? sub.duration ?? 365;
-  const used    = Math.max(0, total - left);
-  const pct     = Math.round((used / total) * 100);
+  // Normalise field names — the API may return camelCase or PascalCase
+  const endDate =
+    sub.endDate ?? sub.EndDate ?? sub.expiresAt ?? sub.ExpiresAt ?? sub.renewalDate ?? sub.RenewalDate;
+  const startDate =
+    sub.startDate ?? sub.StartDate ?? sub.createdAt ?? sub.CreatedAt;
+  const planName =
+    sub.planName ?? sub.PlanName ?? sub.name ?? sub.Name ?? "Dashboard Access";
+  const planType =
+    sub.plan ?? sub.Plan ?? sub.planType ?? sub.PlanType ?? sub.subscriptionType ?? "—";
+  const status =
+    sub.status ?? sub.Status ?? sub.subscriptionStatus ?? sub.SubscriptionStatus ?? "active";
+  const amount =
+    sub.amount ?? sub.Amount ?? sub.price ?? sub.Price ?? 0;
+
+  const left  = daysLeft(endDate);
+  const total = sub.daysTotal ?? sub.DaysTotal ?? sub.duration ?? sub.Duration ?? 365;
+  const used  = Math.max(0, total - left);
+  const pct   = Math.round((used / total) * 100);
   const urgentColor = left < 30 ? "#ef4444" : left < 60 ? "#f59e0b" : "#9DC873";
 
   return (
@@ -201,23 +220,26 @@ function SubscriptionCard({ subscriptions }) {
             <ShieldCheck size={22} className="text-green-600" />
           </div>
           <div>
-            <p className="font-bold text-gray-800">{sub.planName ?? sub.name ?? "Dashboard Access"}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{sub.plan ?? sub.planType ?? "—"} plan</p>
+            <p className="font-bold text-gray-800">{planName}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{planType} plan</p>
           </div>
         </div>
-        <StatusBadge status={sub.status} />
+        <StatusBadge status={status} />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: "Amount paid",    value: `${fmt(sub.amount ?? sub.price)} EGP` },
-          { label: "Start date",     value: fmtDate(sub.startDate ?? sub.createdAt) },
+          { label: "Amount paid",    value: `${fmt(amount)} EGP` },
+          { label: "Start date",     value: fmtDate(startDate) },
           { label: "Renewal date",   value: fmtDate(endDate) },
           { label: "Days remaining", value: `${left} days`, valueColor: urgentColor },
         ].map((r) => (
           <div key={r.label} className="rounded-xl bg-gray-50 px-3 py-2.5">
             <p className="text-[11px] text-gray-400">{r.label}</p>
-            <p className="text-sm font-semibold text-gray-800 mt-0.5" style={r.valueColor ? { color: r.valueColor } : {}}>
+            <p
+              className="text-sm font-semibold text-gray-800 mt-0.5"
+              style={r.valueColor ? { color: r.valueColor } : {}}
+            >
               {r.value}
             </p>
           </div>
@@ -236,17 +258,42 @@ function SubscriptionCard({ subscriptions }) {
 }
 
 // ─── Ad Card ──────────────────────────────────────────────────────────────────
-// Data from GET /payments/my/ads
+// Driven by useCampaigns ads — normalises field names from campaignsApi shape
 
 function AdCard({ ad }) {
-  const endDate  = ad.endDate ?? ad.expiresAt;
-  const left     = daysLeft(endDate);
-  const total    = ad.daysTotal ?? ad.duration ?? 30;
-  const used     = Math.max(0, total - left);
-  const isExpired = String(ad.status || "").toLowerCase() === "expired" || left === 0;
+  // Normalise: campaigns API may use different field names than payment API
+  const endDate =
+    ad.endDate ?? ad.EndDate ?? ad.expiresAt ?? ad.ExpiresAt;
+  const status =
+    ad.status ?? ad.Status ?? ad.isActive
+      ? ad.isActive
+        ? "active"
+        : "expired"
+      : "expired";
+  const adStatus = String(status || "").toLowerCase();
+
+  const left      = daysLeft(endDate);
+  const total     = ad.daysTotal ?? ad.DaysTotal ?? ad.duration ?? ad.durationDays ?? ad.DurationDays ?? 30;
+  const used      = Math.max(0, total - left);
+  const isExpired = adStatus === "expired" || left === 0;
+
+  const title =
+    ad.title ?? ad.Title ?? ad.headline ?? ad.adTitle ?? ad.medicineName ?? ad.category ?? "Ad Campaign";
+  const target =
+    ad.target ?? ad.Target ?? ad.targetProduct ?? ad.category ?? ad.Category ?? "";
+  const amount =
+    ad.amount ?? ad.Amount ?? ad.price ?? ad.Price ?? 0;
+  const plan =
+    ad.plan ?? ad.Plan ?? (total ? `${total} days` : "");
 
   return (
-    <div className={`rounded-2xl p-4 border transition-all ${isExpired ? "bg-gray-50 border-gray-100 opacity-70" : "bg-white border-gray-100 shadow-sm"}`}>
+    <div
+      className={`rounded-2xl p-4 border transition-all ${
+        isExpired
+          ? "bg-gray-50 border-gray-100 opacity-70"
+          : "bg-white border-gray-100 shadow-sm"
+      }`}
+    >
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5">
           <div
@@ -256,21 +303,22 @@ function AdCard({ ad }) {
             {ad.emoji ?? "📢"}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-800 leading-tight">
-              {ad.title ?? ad.adTitle ?? ad.name ?? "Ad Campaign"}
-            </p>
-            <p className="text-[11px] text-gray-400 truncate">
-              {ad.target ?? ad.targetProduct ?? ad.category ?? ""}
-            </p>
+            <p className="text-sm font-semibold text-gray-800 leading-tight">{title}</p>
+            <p className="text-[11px] text-gray-400 truncate">{target}</p>
           </div>
         </div>
-        <StatusBadge status={ad.status} />
+        <StatusBadge status={adStatus} />
       </div>
 
       <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-        <span>{ad.plan ?? `${total} days`} · {fmt(ad.amount ?? ad.price)} EGP</span>
+        <span>
+          {plan} · {fmt(amount)} EGP
+        </span>
         {!isExpired ? (
-          <span className="font-medium" style={{ color: left <= 3 ? "#ef4444" : "#f59e0b" }}>
+          <span
+            className="font-medium"
+            style={{ color: left <= 3 ? "#ef4444" : "#f59e0b" }}
+          >
             {left} days left
           </span>
         ) : (
@@ -278,18 +326,20 @@ function AdCard({ ad }) {
         )}
       </div>
 
-      <ProgressBar pct={Math.round((used / total) * 100)} color={isExpired ? "#d1d5db" : "#f59e0b"} />
+      <ProgressBar
+        pct={Math.round((used / total) * 100)}
+        color={isExpired ? "#d1d5db" : "#f59e0b"}
+      />
     </div>
   );
 }
 
 // ─── History Table ────────────────────────────────────────────────────────────
-// Data from GET /payments/my (all payments)
 
 const ITEMS_PER_PAGE = 5;
 
 function HistoryTable({ data }) {
-  const [page,       setPage]       = useState(1);
+  const [page, setPage]             = useState(1);
   const [typeFilter, setTypeFilter] = useState("all");
 
   const filtered = useMemo(() => {
@@ -318,7 +368,9 @@ function HistoryTable({ data }) {
     const blob = new Blob([csv], { type: "text/csv" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
-    a.href = url; a.download = "payment-history.csv"; a.click();
+    a.href = url;
+    a.download = "payment-history.csv";
+    a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -329,12 +381,17 @@ function HistoryTable({ data }) {
         <div className="flex items-center gap-2">
           <CreditCard size={18} className="text-secondary" />
           <p className="font-bold text-gray-800">Payment History</p>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{filtered.length}</span>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+            {filtered.length}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <select
             value={typeFilter}
-            onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setTypeFilter(e.target.value);
+              setPage(1);
+            }}
             className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-secondary"
           >
             <option value="all">All types</option>
@@ -357,13 +414,22 @@ function HistoryTable({ data }) {
           <thead>
             <tr className="border-b border-gray-100">
               {["Invoice", "Date", "Description", "Type", "Amount", "Status"].map((h) => (
-                <th key={h} className="pb-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400">{h}</th>
+                <th
+                  key={h}
+                  className="pb-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400"
+                >
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {pageData.length === 0 ? (
-              <tr><td colSpan={6} className="py-8 text-center text-sm text-gray-400">No records found.</td></tr>
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-sm text-gray-400">
+                  No records found.
+                </td>
+              </tr>
             ) : (
               pageData.map((r, idx) => {
                 const id   = r.id ?? r.invoiceId ?? r.transactionId ?? `row-${idx}`;
@@ -373,13 +439,26 @@ function HistoryTable({ data }) {
                 const amt  = r.amount ?? r.price ?? 0;
                 const stat = r.status ?? "paid";
                 return (
-                  <tr key={id} className="border-b border-gray-50 transition hover:bg-gray-50/60">
+                  <tr
+                    key={id}
+                    className="border-b border-gray-50 transition hover:bg-gray-50/60"
+                  >
                     <td className="py-3 pr-4 font-mono text-xs text-gray-400">{id}</td>
-                    <td className="py-3 pr-4 text-xs text-gray-500 whitespace-nowrap">{fmtDate(date)}</td>
-                    <td className="py-3 pr-4 text-xs text-gray-700 max-w-[200px] truncate">{desc}</td>
-                    <td className="py-3 pr-4"><TypeBadge type={type} /></td>
-                    <td className="py-3 pr-4 text-sm font-semibold text-gray-800 whitespace-nowrap">{fmt(amt)} EGP</td>
-                    <td className="py-3"><StatusBadge status={stat} /></td>
+                    <td className="py-3 pr-4 text-xs text-gray-500 whitespace-nowrap">
+                      {fmtDate(date)}
+                    </td>
+                    <td className="py-3 pr-4 text-xs text-gray-700 max-w-[200px] truncate">
+                      {desc}
+                    </td>
+                    <td className="py-3 pr-4">
+                      <TypeBadge type={type} />
+                    </td>
+                    <td className="py-3 pr-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                      {fmt(amt)} EGP
+                    </td>
+                    <td className="py-3">
+                      <StatusBadge status={stat} />
+                    </td>
                   </tr>
                 );
               })
@@ -391,22 +470,35 @@ function HistoryTable({ data }) {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
-          <p className="text-xs text-gray-400">Page {page} of {totalPages}</p>
+          <p className="text-xs text-gray-400">
+            Page {page} of {totalPages}
+          </p>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-              className="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition hover:bg-gray-50 disabled:opacity-40">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition hover:bg-gray-50 disabled:opacity-40"
+            >
               <ChevronLeft size={14} />
             </button>
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button key={p} onClick={() => setPage(p)}
+              <button
+                key={p}
+                onClick={() => setPage(p)}
                 className={`rounded-lg px-2.5 py-1 text-xs transition ${
-                  page === p ? "bg-secondary text-white" : "border border-gray-200 text-gray-500 hover:bg-gray-50"
-                }`}>
+                  page === p
+                    ? "bg-secondary text-white"
+                    : "border border-gray-200 text-gray-500 hover:bg-gray-50"
+                }`}
+              >
                 {p}
               </button>
             ))}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition hover:bg-gray-50 disabled:opacity-40">
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition hover:bg-gray-50 disabled:opacity-40"
+            >
               <ChevronRight size={14} />
             </button>
           </div>
@@ -425,15 +517,20 @@ function Skeleton({ className = "" }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Payments() {
-  // Three separate hook instances — each has its own payments[], loading, error
+  // ── Payment history (all transactions) ──
   const allPayments = usePayment();
-  const subPayments = usePayment();
-  const adPayments  = usePayment();
+
+  // ── Subscription: use useSubscription().fetchStatus() which returns
+  //    the actual subscription object (status, endDate, planName, etc.)
+  const { status: subStatus, loading: subLoading, error: subError, fetchStatus } = useSubscription();
+
+  // ── Active ads: use useCampaigns().fetchActive() ──
+  const { ads, loading: adsLoading, error: adsError, fetchActive } = useCampaigns();
 
   const refetchAll = () => {
     allPayments.fetchMyPayments();
-    subPayments.fetchSubscriptionPayments();
-    adPayments.fetchAdPayments();
+    fetchStatus();
+    fetchActive();
   };
 
   useEffect(() => {
@@ -442,14 +539,32 @@ export default function Payments() {
 
   const { callbackResult, callbackTxId, dismiss } = usePaymobCallback(refetchAll);
 
-  const isLoading = allPayments.loading || subPayments.loading || adPayments.loading;
-  const hasError  = allPayments.error  || subPayments.error  || adPayments.error;
+  const isLoading = allPayments.loading || subLoading || adsLoading;
+  const hasError  = allPayments.error  || subError   || adsError;
 
   // ── Derived values ──
-  const totalPaid = (allPayments.payments ?? []).reduce((s, r) => s + (r.amount ?? r.price ?? 0), 0);
-  const activeAds = (adPayments.payments  ?? []).filter((a) => String(a.status || "").toLowerCase() === "active").length;
-  const activeSub = (subPayments.payments ?? []).find((s) => String(s.status || "").toLowerCase() === "active");
-  const subLeft   = activeSub ? daysLeft(activeSub.endDate ?? activeSub.expiresAt ?? activeSub.renewalDate) : 0;
+  const totalPaid = (allPayments.payments ?? []).reduce(
+    (s, r) => s + (r.amount ?? r.price ?? 0),
+    0
+  );
+
+  // Active ads from campaigns hook
+  const activeAds = (ads ?? []).filter(
+    (a) =>
+      String(a.status ?? a.Status ?? "").toLowerCase() === "active" ||
+      a.isActive === true
+  );
+
+  // Subscription from useSubscription().status
+  const activeSub = subStatus ?? null;
+  const subLeft   = activeSub
+    ? daysLeft(
+        activeSub.endDate ??
+        activeSub.EndDate ??
+        activeSub.expiresAt ??
+        activeSub.renewalDate
+      )
+    : 0;
 
   // ── Loading state ──
   if (isLoading) {
@@ -459,11 +574,17 @@ export default function Payments() {
           <Loader2 size={15} className="animate-spin" /> Loading your payment data…
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20" />)}
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-20" />
+          ))}
         </div>
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <Skeleton className="h-64" />
-          <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-24" />
+            ))}
+          </div>
         </div>
         <Skeleton className="h-64" />
       </div>
@@ -476,7 +597,7 @@ export default function Payments() {
       <div className="p-3 sm:p-4 md:p-6 max-w-6xl mx-auto flex flex-col items-center justify-center gap-4 py-20">
         <AlertTriangle size={32} className="text-red-400" />
         <p className="text-sm text-gray-600 text-center">
-          {allPayments.error ?? subPayments.error ?? adPayments.error}
+          {allPayments.error ?? subError ?? adsError}
         </p>
         <button
           onClick={refetchAll}
@@ -492,7 +613,11 @@ export default function Payments() {
     <div className="space-y-5 p-3 sm:p-4 md:p-6 max-w-6xl mx-auto">
 
       {/* Paymob redirect result banner */}
-      <PaymentResultBanner result={callbackResult} txId={callbackTxId} onDismiss={dismiss} />
+      <PaymentResultBanner
+        result={callbackResult}
+        txId={callbackTxId}
+        onDismiss={dismiss}
+      />
 
       {/* Refresh */}
       <div className="flex justify-end">
@@ -507,14 +632,35 @@ export default function Payments() {
       {/* Metric cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          icon={TrendingUp} iconBg="#dcfce7" iconColor="#16a34a"
-          label="Total paid" value={`${fmt(totalPaid)} EGP`} sub="All time"
+          icon={TrendingUp}
+          iconBg="#dcfce7"
+          iconColor="#16a34a"
+          label="Total paid"
+          value={`${fmt(totalPaid)} EGP`}
+          sub="All time"
         />
         <MetricCard
-          icon={ShieldCheck} iconBg="#dbeafe" iconColor="#2563eb"
+          icon={ShieldCheck}
+          iconBg="#dbeafe"
+          iconColor="#2563eb"
           label="Subscription"
-          value={activeSub?.planName ?? activeSub?.plan ?? (activeSub ? "Active" : "—")}
-          sub={activeSub ? `Renews ${fmtDate(activeSub.endDate ?? activeSub.expiresAt)}` : "No active plan"}
+          value={
+            activeSub?.planName ??
+            activeSub?.PlanName ??
+            activeSub?.plan ??
+            activeSub?.Plan ??
+            (activeSub ? "Active" : "—")
+          }
+          sub={
+            activeSub
+              ? `Renews ${fmtDate(
+                  activeSub.endDate ??
+                  activeSub.EndDate ??
+                  activeSub.expiresAt ??
+                  activeSub.renewalDate
+                )}`
+              : "No active plan"
+          }
         />
         <MetricCard
           icon={Clock}
@@ -522,36 +668,46 @@ export default function Payments() {
           iconColor={subLeft < 30 ? "#dc2626" : "#d97706"}
           label="Days left on plan"
           value={activeSub ? subLeft : "—"}
-          sub={!activeSub ? "No active plan" : subLeft < 30 ? "Renew soon!" : "Subscription active"}
+          sub={
+            !activeSub
+              ? "No active plan"
+              : subLeft < 30
+              ? "Renew soon!"
+              : "Subscription active"
+          }
         />
         <MetricCard
-          icon={Zap} iconBg="#fef3c7" iconColor="#d97706"
-          label="Active ads" value={activeAds}
-          sub={`${(adPayments.payments ?? []).length} total campaigns`}
+          icon={Zap}
+          iconBg="#fef3c7"
+          iconColor="#d97706"
+          label="Active ads"
+          value={activeAds.length}
+          sub={`${(ads ?? []).length} total campaigns`}
         />
       </div>
 
       {/* Subscription + Ads */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <SubscriptionCard subscriptions={subPayments.payments ?? []} />
+        {/* SubscriptionCard now receives the single sub object, not an array */}
+        <SubscriptionCard sub={activeSub} />
 
         <div className="space-y-3">
           <div className="flex items-center gap-2 px-1">
             <Megaphone size={16} className="text-secondary" />
             <p className="text-sm font-semibold text-gray-700">Ad Campaigns</p>
             <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-              {activeAds} active
+              {activeAds.length} active
             </span>
           </div>
-          {(adPayments.payments ?? []).length === 0 ? (
+          {(ads ?? []).length === 0 ? (
             <p className="text-sm text-gray-400 px-1">No ad campaigns yet.</p>
           ) : (
-            (adPayments.payments ?? []).map((ad, i) => <AdCard key={ad.id ?? i} ad={ad} />)
+            (ads ?? []).map((ad, i) => <AdCard key={ad.id ?? ad.Id ?? i} ad={ad} />)
           )}
         </div>
       </div>
 
-      {/* Full history — /payments/my */}
+      {/* Full history */}
       <HistoryTable data={allPayments.payments ?? []} />
     </div>
   );
