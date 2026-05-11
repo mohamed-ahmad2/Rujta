@@ -6,28 +6,89 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  PlusCircle,
   ChevronDown,
   Package,
+  CreditCard,
+  Banknote,
+  RotateCcw,
 } from "lucide-react";
 import StatCard from "../components/OrderCard";
 import { useOrders } from "../../orders/hooks/useOrders";
 import useMedicines from "../../medicines/hook/useMedicines";
 import { toast } from "react-toastify";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const fmtDate = (d) =>
+  d
+    ? new Date(d).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "—";
+
+// ─── Payment Method Badge ─────────────────────────────────────────────────────
+// Maps PaymentMethod enum: 0=Cash | 1=Payment (Paymob)
+
+function PaymentMethodBadge({ method }) {
+  const m = String(method ?? "").toLowerCase();
+  if (m === "cash" || m === "0")
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+        <Banknote className="h-3 w-3" /> Cash
+      </span>
+    );
+  if (m === "payment" || m === "1")
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+        <CreditCard className="h-3 w-3" /> Online
+      </span>
+    );
+  return null;
+}
+
+// ─── Payment Status Badge ─────────────────────────────────────────────────────
+// Maps PaymentStatus enum: Pending | Success | Failed | Refunded
+
+function PaymentStatusBadge({ status }) {
+  const s = String(status ?? "").toLowerCase();
+  const map = {
+    success: "bg-green-100 text-green-700",
+    pending: "bg-yellow-100 text-yellow-700",
+    failed: "bg-red-100 text-red-600",
+    refunded: "bg-purple-100 text-purple-700",
+  };
+  const label = {
+    success: "Paid",
+    pending: "Pending",
+    failed: "Failed",
+    refunded: "Refunded",
+  };
+  if (!map[s]) return null;
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${map[s]}`}
+    >
+      {label[s] ?? status}
+    </span>
+  );
+}
+
 // ─── Order Details Modal ──────────────────────────────────────────────────────
+
 function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
   if (!order) return null;
-
-  const items = order.items || order.orderItems || [];
+  const items = order.orderItems || order.items || [];
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 bg-gray-50">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
               Order Details
@@ -42,72 +103,77 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="space-y-5 p-6">
           <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-xl bg-gray-50 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
-                Customer
-              </p>
-              <p className="text-sm font-semibold text-gray-800">
-                {order.userName || "—"}
-              </p>
+            {[
+              { label: "Customer", value: order.userName || "—" },
+              { label: "Pharmacy", value: order.pharmacyName || "—" },
+              { label: "Date", value: fmtDate(order.orderDate) },
+              { label: "Total", value: `${order.totalPrice} EGP`, bold: true },
+              {
+                label: "Address",
+                value: order.deliveryAddress || "—",
+                full: true,
+              },
+            ].map((f) => (
+              <div
+                key={f.label}
+                className={`rounded-xl bg-gray-50 p-3 ${f.full ? "col-span-2" : ""}`}
+              >
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                  {f.label}
+                </p>
+                <p
+                  className={`text-sm ${f.bold ? "font-bold text-secondary" : "font-semibold text-gray-800"}`}
+                >
+                  {f.value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Status + Payment */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-gray-500">Status:</p>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle(order.status)}`}
+              >
+                {order.status}
+              </span>
             </div>
-            <div className="rounded-xl bg-gray-50 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
-                Pharmacy
-              </p>
-              <p className="text-sm font-semibold text-gray-800">
-                {order.pharmacyName || "—"}
-              </p>
-            </div>
-            <div className="rounded-xl bg-gray-50 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
-                Date
-              </p>
-              <p className="text-sm font-semibold text-gray-800">
-                {order.orderDate
-                  ? new Date(order.orderDate).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })
-                  : "—"}
-              </p>
-            </div>
-            <div className="rounded-xl bg-gray-50 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
-                Total
-              </p>
-              <p className="text-sm font-bold text-secondary">
-                {order.totalPrice} EGP
-              </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-gray-500">Payment:</p>
+              <PaymentMethodBadge method={order.paymentMethod} />
+              <PaymentStatusBadge status={order.paymentStatus} />
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <p className="text-sm text-gray-500">Status:</p>
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyle(order.status)}`}
-            >
-              {order.status}
-            </span>
-          </div>
+          {/* Refund notice */}
+          {String(order.paymentStatus ?? "").toLowerCase() === "refunded" && (
+            <div className="flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-xs text-purple-700">
+              <RotateCcw className="h-4 w-4 flex-shrink-0" />
+              Refund has been initiated for this order.
+            </div>
+          )}
 
+          {/* Items */}
           <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+            <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
               <Package className="h-3.5 w-3.5" />
               Items ({items.length})
             </p>
             {items.length > 0 ? (
-              <ul className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
                 {items.map((item, i) => {
+                  // OrderItemDto: { medicineID, medicineName, quantity }
                   const name =
-                    item.name ||
                     item.medicineName ||
+                    item.name ||
                     (item.medicineID
                       ? getMedicineName(item.medicineID)
                       : `Item #${i + 1}`);
-                  const qty = item.qty || item.quantity || 0;
+                  const qty = item.quantity || item.qty || 0;
                   return (
                     <li
                       key={i}
@@ -128,14 +194,14 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
               </ul>
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                <Package className="h-8 w-8 mb-2 opacity-30" />
+                <Package className="mb-2 h-8 w-8 opacity-30" />
                 <p className="text-sm">No items data available</p>
               </div>
             )}
           </div>
         </div>
 
-        <div className="border-t border-gray-100 px-6 py-4 bg-gray-50 flex justify-end">
+        <div className="flex justify-end border-t border-gray-100 bg-gray-50 px-6 py-4">
           <button
             onClick={onClose}
             className="rounded-full border border-gray-200 px-5 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
@@ -148,254 +214,8 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
   );
 }
 
-// ─── Add Order Modal ──────────────────────────────────────────────────────────
-function AddOrderModal({ open, onClose, onAdd }) {
-  const [form, setForm] = useState({
-    userName: "",
-    
-    orderDate: new Date().toISOString().split("T")[0],
-    totalPrice: "",
-    status: "Pending",
-    items: [{ name: "", qty: 1, price: "" }],
-  });
-
-  const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-
-  const updateItem = (idx, k, v) =>
-    setForm((f) => {
-      const items = [...f.items];
-      items[idx] = { ...items[idx], [k]: v };
-      return { ...f, items };
-    });
-
-  const addItem = () =>
-    setForm((f) => ({
-      ...f,
-      items: [...f.items, { name: "", qty: 1, price: "" }],
-    }));
-
-  const removeItem = (idx) =>
-    setForm((f) => ({
-      ...f,
-      items: f.items.filter((_, i) => i !== idx),
-    }));
-
-  const calcTotal = () =>
-    form.items
-      .reduce(
-        (sum, it) => sum + (Number(it.price) || 0) * (Number(it.qty) || 1),
-        0
-      )
-      .toFixed(2);
-
-  const handleSubmit = () => {
-    if (!form.userName.trim()) return toast.error("Customer name is required.");
-    if (!form.pharmacyName.trim())
-      return toast.error("Pharmacy name is required.");
-    if (form.items.some((it) => !it.name.trim()))
-      return toast.error("All items must have a name.");
-
-    const newOrder = {
-      id: Date.now(),
-      userName: form.userName,
-      
-      orderDate: form.orderDate,
-      totalPrice: form.totalPrice || calcTotal(),
-      status: form.status,
-      items: form.items,
-    };
-
-    onAdd(newOrder);
-    toast.success("Order added successfully!");
-    onClose();
-    setForm({
-      userName: "",
-      pharmacyName: "",
-      orderDate: new Date().toISOString().split("T")[0],
-      totalPrice: "",
-      status: "Pending",
-      items: [{ name: "", qty: 1, price: "" }],
-    });
-  };
-
-  if (!open) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="max-h-[95vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-xl sm:max-h-[90vh] sm:w-[90%] sm:rounded-2xl md:w-[75%] lg:w-[60%] xl:max-w-2xl">
-        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h3 className="text-base font-semibold text-gray-800 sm:text-lg">
-            Add New Order
-          </h3>
-          <button
-            onClick={onClose}
-            className="rounded-full p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-          >
-            <X className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
-        </div>
-
-        <div className="space-y-5 p-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Customer Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                value={form.userName}
-                onChange={(e) => update("userName", e.target.value)}
-                placeholder="e.g. Ahmed Mohamed"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
-              />
-            </div>
-            <div>
-              
-             
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Order Date
-              </label>
-              <input
-                type="date"
-                value={form.orderDate}
-                onChange={(e) => update("orderDate", e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Status
-              </label>
-              <div className="relative">
-                <select
-                  value={form.status}
-                  onChange={(e) => update("status", e.target.value)}
-                  className="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 pr-8 text-sm text-gray-700 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Accepted">Accepted</option>
-                  <option value="Processing">Processing</option>
-                  <option value="OutForDelivery">Out For Delivery</option>
-                  <option value="Delivered">Delivered</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">
-                Order Items <span className="text-red-500">*</span>
-              </label>
-              <button
-                type="button"
-                onClick={addItem}
-                className="flex items-center gap-1 rounded-full bg-secondary/10 px-3 py-1 text-xs font-medium text-secondary transition hover:bg-secondary/20"
-              >
-                <PlusCircle className="h-3.5 w-3.5" />
-                Add Item
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <div className="grid grid-cols-12 gap-2 px-1 text-xs font-medium text-gray-400">
-                <span className="col-span-6">Item Name</span>
-                <span className="col-span-2 text-center">Qty</span>
-                <span className="col-span-3 text-center">Price (EGP)</span>
-                <span className="col-span-1" />
-              </div>
-
-              {form.items.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="grid grid-cols-12 items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 p-2"
-                >
-                  <input
-                    value={item.name}
-                    onChange={(e) => updateItem(idx, "name", e.target.value)}
-                    placeholder="Medicine name"
-                    className="col-span-6 rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary/20"
-                  />
-                  <input
-                    type="number"
-                    min={1}
-                    value={item.qty}
-                    onChange={(e) => updateItem(idx, "qty", e.target.value)}
-                    className="col-span-2 rounded-lg border border-gray-200 bg-white px-2 py-2 text-center text-xs focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary/20"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={item.price}
-                    onChange={(e) => updateItem(idx, "price", e.target.value)}
-                    placeholder="0.00"
-                    className="col-span-3 rounded-lg border border-gray-200 bg-white px-2 py-2 text-center text-xs focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary/20"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeItem(idx)}
-                    disabled={form.items.length === 1}
-                    className="col-span-1 flex justify-center text-gray-300 transition hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Total Price (EGP)
-              <span className="ml-1.5 text-xs font-normal text-gray-400">
-                — auto-calculated from items, or override manually
-              </span>
-            </label>
-            <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 focus-within:border-secondary focus-within:ring-2 focus-within:ring-secondary/20">
-              <span className="mr-2 text-sm text-gray-400">EGP</span>
-              <input
-                type="number"
-                step="0.01"
-                value={form.totalPrice}
-                onChange={(e) => update("totalPrice", e.target.value)}
-                placeholder={calcTotal()}
-                className="w-full bg-transparent text-sm outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full border border-gray-200 px-5 py-2 text-sm text-gray-600 transition hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              className="flex items-center gap-2 rounded-full bg-secondary px-6 py-2 text-sm font-medium text-white transition hover:opacity-90"
-            >
-              <PlusCircle className="h-4 w-4" />
-              Add Order
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Orders Page ─────────────────────────────────────────────────────────
+
 export default function Orders() {
   const {
     orders: rawOrders,
@@ -409,19 +229,11 @@ export default function Orders() {
     cancelByPharmacy,
   } = useOrders();
 
-  // ✅ Added — needed for OrderDetailsModal
   const { medicines, fetchAll } = useMedicines();
 
-  // rawOrders is order[][] — flatten to order[] for the pharmacy table
-  const apiOrders = useMemo(() => rawOrders.flat(), [rawOrders]);
+  // rawOrders is OrderDto[][] — flatten for the pharmacy table
+  const orders = useMemo(() => rawOrders.flat(), [rawOrders]);
 
-  const [localOrders, setLocalOrders] = useState([]);
-  const orders = useMemo(
-    () => [...localOrders, ...apiOrders],
-    [localOrders, apiOrders]
-  );
-
-  const [openModal, setOpenModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -430,20 +242,20 @@ export default function Orders() {
   const [filterOrderId, setFilterOrderId] = useState("");
   const [filterCustomer, setFilterCustomer] = useState("");
   const [filterDate, setFilterDate] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterPayMethod, setFilterPayMethod] = useState("");
   const filterRef = useRef(null);
 
   useEffect(() => {
     fetchPharmacy();
-    fetchAll(); // ✅ Added — load medicines for the details modal
+    fetchAll();
   }, [fetchPharmacy]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (error) {
+    if (error)
       toast.error(
-        error?.message ||
-          (typeof error === "string" ? error : "An unexpected error occurred")
+        typeof error === "string" ? error : "An unexpected error occurred",
       );
-    }
   }, [error]);
 
   useEffect(() => {
@@ -455,7 +267,6 @@ export default function Orders() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ✅ Added — resolves a medicine ID to its name for the details modal
   const getMedicineName = (id) => {
     const med = medicines.find((m) => m.id === id);
     return med ? med.name : `Medicine #${id}`;
@@ -469,21 +280,40 @@ export default function Orders() {
         (o) =>
           o.userName?.toLowerCase().includes(s) ||
           o.pharmacyName?.toLowerCase().includes(s) ||
-          o.id?.toString().includes(s)
+          o.id?.toString().includes(s),
       );
     }
     if (filterOrderId)
       list = list.filter((o) => o.id?.toString().includes(filterOrderId));
     if (filterCustomer)
       list = list.filter((o) =>
-        o.userName?.toLowerCase().includes(filterCustomer.toLowerCase())
+        o.userName?.toLowerCase().includes(filterCustomer.toLowerCase()),
       );
     if (filterDate)
       list = list.filter(
-        (o) => new Date(o.orderDate).toLocaleDateString("en-CA") === filterDate
+        (o) => new Date(o.orderDate).toLocaleDateString("en-CA") === filterDate,
+      );
+    if (filterStatus)
+      list = list.filter(
+        (o) =>
+          String(o.status ?? "").toLowerCase() === filterStatus.toLowerCase(),
+      );
+    if (filterPayMethod)
+      list = list.filter(
+        (o) =>
+          String(o.paymentMethod ?? "").toLowerCase() ===
+          filterPayMethod.toLowerCase(),
       );
     return list;
-  }, [orders, q, filterOrderId, filterCustomer, filterDate]);
+  }, [
+    orders,
+    q,
+    filterOrderId,
+    filterCustomer,
+    filterDate,
+    filterStatus,
+    filterPayMethod,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const pageData = filtered.slice((page - 1) * perPage, page * perPage);
@@ -508,7 +338,16 @@ export default function Orders() {
 
   const handleExport = () => {
     const rows = [
-      ["Order ID", "User", "Pharmacy", "Date", "Total", "Status"],
+      [
+        "Order ID",
+        "User",
+        "Pharmacy",
+        "Date",
+        "Total",
+        "Status",
+        "Payment Method",
+        "Payment Status",
+      ],
       ...filtered.map((o) => [
         o.id,
         o.userName,
@@ -516,10 +355,14 @@ export default function Orders() {
         new Date(o.orderDate).toLocaleDateString(),
         o.totalPrice,
         o.status,
+        o.paymentMethod,
+        o.paymentStatus,
       ]),
     ];
     const csv = rows
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .map((r) =>
+        r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","),
+      )
       .join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -534,24 +377,26 @@ export default function Orders() {
     setFilterOrderId("");
     setFilterCustomer("");
     setFilterDate("");
+    setFilterStatus("");
+    setFilterPayMethod("");
     setShowFilters(false);
   };
 
-  const handleMutation = async (mutationFn, id, successMessagePrefix) => {
+  /**
+   * Wraps a mutation, shows toast, and re-fetches on success.
+   * Mutations return { success, message } from backend.
+   */
+  const handleMutation = async (mutationFn, id, successMsg) => {
     try {
-      const res = await mutationFn(id);
-      if (res?.success) {
-        toast.success(res.message || `${successMessagePrefix} successfully`);
-        await fetchPharmacy();
-      } else {
-        toast.error(res?.message || "Something went wrong");
-      }
-    } catch {
-      toast.error("Operation failed");
+      await mutationFn(id);
+      toast.success(successMsg);
+      await fetchPharmacy();
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message || err?.message || "Operation failed";
+      toast.error(msg);
     }
   };
-
-  const isLocal = (id) => localOrders.some((o) => o.id === id);
 
   const statsData = [
     { title: "Total Orders", value: orders.length },
@@ -562,7 +407,7 @@ export default function Orders() {
     {
       title: "Pending",
       value: orders.filter((o) =>
-        ["Pending", "Accepted", "Processing"].includes(o.status)
+        ["Pending", "Accepted", "Processing"].includes(o.status),
       ).length,
     },
     {
@@ -570,6 +415,13 @@ export default function Orders() {
       value: orders.filter((o) => o.status?.startsWith("Cancelled")).length,
     },
   ];
+
+  const hasActiveFilters =
+    filterOrderId ||
+    filterCustomer ||
+    filterDate ||
+    filterStatus ||
+    filterPayMethod;
 
   return (
     <div className="space-y-4 p-3 sm:space-y-5 sm:p-4 md:space-y-6 md:p-0">
@@ -596,22 +448,16 @@ export default function Orders() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setOpenModal(true)}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-secondary px-3 py-2 text-xs font-medium text-white transition hover:opacity-90 sm:flex-none sm:px-4 sm:text-sm"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Add New Order
-          </button>
-
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs transition sm:px-4 sm:text-sm ${showFilters ? "border-gray-400 bg-gray-100" : "hover:bg-gray-50"}`}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs transition sm:px-4 sm:text-sm ${
+                showFilters ? "border-gray-400 bg-gray-100" : "hover:bg-gray-50"
+              }`}
             >
               <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Filters
-              {(filterOrderId || filterCustomer || filterDate) && (
+              {hasActiveFilters && (
                 <span className="h-2 w-2 rounded-full bg-secondary" />
               )}
             </button>
@@ -656,6 +502,45 @@ export default function Orders() {
                   }}
                   className="w-full rounded-lg border px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-secondary sm:text-sm"
                 />
+                {/* Order Status filter */}
+                <div className="relative">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => {
+                      setFilterStatus(e.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full appearance-none rounded-lg border px-3 py-2 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-secondary sm:text-sm"
+                  >
+                    <option value="">All statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Accepted">Accepted</option>
+                    <option value="Processing">Processing</option>
+                    <option value="OutForDelivery">Out For Delivery</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="CancelledByUser">Cancelled by User</option>
+                    <option value="CancelledByPharmacy">
+                      Cancelled by Pharmacy
+                    </option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                </div>
+                {/* Payment Method filter */}
+                <div className="relative">
+                  <select
+                    value={filterPayMethod}
+                    onChange={(e) => {
+                      setFilterPayMethod(e.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full appearance-none rounded-lg border px-3 py-2 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-secondary sm:text-sm"
+                  >
+                    <option value="">All payment methods</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Payment">Online (Paymob)</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                </div>
                 <button
                   onClick={clearFilters}
                   className="w-full py-1 text-center text-xs text-red-500 transition hover:text-red-700 sm:text-sm"
@@ -679,35 +564,46 @@ export default function Orders() {
       {/* Table */}
       <div className="overflow-hidden rounded-2xl border bg-white shadow">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-xs sm:text-sm">
+          <table className="w-full min-w-[800px] text-xs sm:text-sm">
             <thead className="bg-gray-50 text-gray-500">
               <tr>
-                {["Order", "User", "Pharmacy", "Date", "Total", "Status", "Action"].map(
-                  (h, i) => (
-                    <th
-                      key={h}
-                      className={`px-3 py-3 font-semibold sm:px-4 sm:py-4 md:px-6 ${i >= 3 ? "text-center" : "text-left"}`}
-                    >
-                      {h}
-                    </th>
-                  )
-                )}
+                {[
+                  "Order",
+                  "Customer",
+                  "Pharmacy",
+                  "Date",
+                  "Total",
+                  "Payment",
+                  "Status",
+                  "Action",
+                ].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`px-3 py-3 font-semibold sm:px-4 sm:py-4 md:px-5 ${
+                      i >= 3 ? "text-center" : "text-left"
+                    }`}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center">
+                  <td colSpan={8} className="py-10 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-500">
                       <div className="h-6 w-6 animate-spin rounded-full border-2 border-secondary border-t-transparent" />
-                      <span className="text-xs sm:text-sm">Loading orders...</span>
+                      <span className="text-xs sm:text-sm">
+                        Loading orders...
+                      </span>
                     </div>
                   </td>
                 </tr>
               ) : pageData.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="py-10 text-center text-xs text-gray-500 sm:text-sm"
                   >
                     No orders found.
@@ -715,94 +611,135 @@ export default function Orders() {
                 </tr>
               ) : (
                 pageData.map((o) => (
-                  <tr key={o.id} className="border-t transition hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-3 py-3 sm:px-4 sm:py-4 md:px-6">
+                  <tr
+                    key={o.id}
+                    className="border-t transition hover:bg-gray-50"
+                  >
+                    {/* Order ID */}
+                    <td className="whitespace-nowrap px-3 py-3 sm:px-4 sm:py-4 md:px-5">
                       <button
                         onClick={() => setSelectedOrder(o)}
-                        className="font-bold text-secondary hover:underline underline-offset-2 transition"
+                        className="font-bold text-secondary underline-offset-2 transition hover:underline"
                       >
                         #{o.id}
                       </button>
-                      {isLocal(o.id) && (
-                        <span className="ml-1.5 rounded-full bg-secondary/10 px-1.5 py-0.5 text-[10px] text-secondary">
-                          new
-                        </span>
-                      )}
                     </td>
-                    <td className="max-w-[100px] truncate px-3 py-3 sm:max-w-[140px] sm:px-4 sm:py-4 md:px-6">
+                    {/* Customer */}
+                    <td className="max-w-[100px] truncate px-3 py-3 sm:max-w-[130px] sm:px-4 sm:py-4 md:px-5">
                       {o.userName}
                     </td>
-                    <td className="max-w-[100px] truncate px-3 py-3 sm:max-w-[140px] sm:px-4 sm:py-4 md:px-6">
+                    {/* Pharmacy */}
+                    <td className="max-w-[100px] truncate px-3 py-3 sm:max-w-[130px] sm:px-4 sm:py-4 md:px-5">
                       {o.pharmacyName}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-center sm:px-4 sm:py-4 md:px-6">
+                    {/* Date */}
+                    <td className="whitespace-nowrap px-3 py-3 text-center sm:px-4 sm:py-4 md:px-5">
                       {new Date(o.orderDate).toLocaleDateString()}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-center font-medium sm:px-4 sm:py-4 md:px-6">
+                    {/* Total */}
+                    <td className="whitespace-nowrap px-3 py-3 text-center font-medium sm:px-4 sm:py-4 md:px-5">
                       {o.totalPrice} EGP
                     </td>
-                    <td className="px-3 py-3 text-center sm:px-4 sm:py-4 md:px-6">
+                    {/* Payment Method + Status */}
+                    <td className="px-3 py-3 text-center sm:px-4 sm:py-4 md:px-5">
+                      <div className="flex flex-col items-center gap-1">
+                        <PaymentMethodBadge method={o.paymentMethod} />
+                        <PaymentStatusBadge status={o.paymentStatus} />
+                      </div>
+                    </td>
+                    {/* Order Status */}
+                    <td className="px-3 py-3 text-center sm:px-4 sm:py-4 md:px-5">
                       <span
                         className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs sm:px-3 sm:py-1 ${statusStyle(o.status)}`}
                       >
                         {o.status}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-center sm:px-4 sm:py-4 md:px-6">
-                      {isLocal(o.id) ? (
-                        <span className="text-xs italic text-gray-400">
-                          Pending API
-                        </span>
-                      ) : (
-                        <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
-                          {o.status === "Pending" && (
-                            <button
-                              disabled={loading}
-                              onClick={() => handleMutation(accept, o.id, "Order accepted")}
-                              className="whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700 transition hover:bg-green-200 disabled:opacity-50 sm:px-3 sm:py-1"
-                            >
-                              Accept
-                            </button>
-                          )}
-                          {o.status === "Accepted" && (
-                            <button
-                              disabled={loading}
-                              onClick={() => handleMutation(process, o.id, "Order processed")}
-                              className="whitespace-nowrap rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700 transition hover:bg-yellow-200 disabled:opacity-50 sm:px-3 sm:py-1"
-                            >
-                              Process
-                            </button>
-                          )}
-                          {o.status === "Processing" && (
-                            <button
-                              disabled={loading}
-                              onClick={() => handleMutation(outForDelivery, o.id, "Order out for delivery")}
-                              className="whitespace-nowrap rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 transition hover:bg-blue-200 disabled:opacity-50 sm:px-3 sm:py-1"
-                            >
-                              Out For Delivery
-                            </button>
-                          )}
-                          {o.status === "OutForDelivery" && (
-                            <button
-                              disabled={loading}
-                              onClick={() => handleMutation(deliver, o.id, "Order delivered")}
-                              className="whitespace-nowrap rounded-full bg-green-200 px-2 py-0.5 text-xs text-green-800 transition hover:bg-green-300 disabled:opacity-50 sm:px-3 sm:py-1"
-                            >
-                              Delivered
-                            </button>
-                          )}
-                          {!["Delivered", "OutForDelivery"].includes(o.status) &&
-                            !o.status?.startsWith("Cancelled") && (
-                              <button
-                                disabled={loading}
-                                onClick={() => handleMutation(cancelByPharmacy, o.id, "Order cancelled")}
-                                className="whitespace-nowrap rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 transition hover:bg-red-200 disabled:opacity-50 sm:px-3 sm:py-1"
-                              >
-                                Cancel
-                              </button>
-                            )}
-                        </div>
-                      )}
+                    {/* Action buttons — driven by order status transitions */}
+                    <td className="px-3 py-3 text-center sm:px-4 sm:py-4 md:px-5">
+                      <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
+                        {o.status === "Pending" && (
+                          <button
+                            disabled={loading}
+                            onClick={() =>
+                              handleMutation(accept, o.id, "Order accepted")
+                            }
+                            className="whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700 transition hover:bg-green-200 disabled:opacity-50 sm:px-3 sm:py-1"
+                          >
+                            Accept
+                          </button>
+                        )}
+                        {o.status === "Accepted" && (
+                          <button
+                            disabled={loading}
+                            onClick={() =>
+                              handleMutation(
+                                process,
+                                o.id,
+                                "Order is now processing",
+                              )
+                            }
+                            className="whitespace-nowrap rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700 transition hover:bg-yellow-200 disabled:opacity-50 sm:px-3 sm:py-1"
+                          >
+                            Process
+                          </button>
+                        )}
+                        {o.status === "Processing" && (
+                          <button
+                            disabled={loading}
+                            onClick={() =>
+                              handleMutation(
+                                outForDelivery,
+                                o.id,
+                                "Order out for delivery",
+                              )
+                            }
+                            className="whitespace-nowrap rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 transition hover:bg-blue-200 disabled:opacity-50 sm:px-3 sm:py-1"
+                          >
+                            Out For Delivery
+                          </button>
+                        )}
+                        {o.status === "OutForDelivery" && (
+                          <button
+                            disabled={loading}
+                            onClick={() =>
+                              handleMutation(deliver, o.id, "Order delivered")
+                            }
+                            className="whitespace-nowrap rounded-full bg-green-200 px-2 py-0.5 text-xs text-green-800 transition hover:bg-green-300 disabled:opacity-50 sm:px-3 sm:py-1"
+                          >
+                            Delivered
+                          </button>
+                        )}
+                        {/* Cancel — only allowed on Pending or Accepted */}
+                        {(o.status === "Pending" ||
+                          o.status === "Accepted") && (
+                          <button
+                            disabled={loading}
+                            onClick={() =>
+                              handleMutation(
+                                cancelByPharmacy,
+                                o.id,
+                                String(o.paymentMethod ?? "").toLowerCase() ===
+                                  "payment" ||
+                                  String(o.paymentMethod ?? "") === "1"
+                                  ? "Order cancelled — refund initiated"
+                                  : "Order cancelled",
+                              )
+                            }
+                            className="whitespace-nowrap rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 transition hover:bg-red-200 disabled:opacity-50 sm:px-3 sm:py-1"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        {/* No actions for Delivered or already-Cancelled */}
+                        {(o.status === "Delivered" ||
+                          o.status === "CancelledByUser" ||
+                          o.status === "CancelledByPharmacy") && (
+                          <span className="text-xs italic text-gray-400">
+                            —
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -828,15 +765,16 @@ export default function Orders() {
             disabled={page === 1}
             className="flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition hover:bg-gray-50 disabled:opacity-50 sm:px-3 sm:text-sm"
           >
-            <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-            Prev
+            <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" /> Prev
           </button>
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <button
               key={p}
               onClick={() => setPage(p)}
               className={`rounded-full px-2 py-1 text-xs transition sm:px-3 sm:text-sm ${
-                page === p ? "bg-secondary text-white" : "border hover:bg-gray-50"
+                page === p
+                  ? "bg-secondary text-white"
+                  : "border hover:bg-gray-50"
               }`}
             >
               {p}
@@ -847,8 +785,7 @@ export default function Orders() {
             disabled={page === totalPages}
             className="flex items-center gap-1 rounded-full border px-2 py-1 text-xs transition hover:bg-gray-50 disabled:opacity-50 sm:px-3 sm:text-sm"
           >
-            Next
-            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+            Next <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
           </button>
           <button
             onClick={() => setPage(totalPages)}
@@ -860,16 +797,6 @@ export default function Orders() {
           </button>
         </div>
       )}
-
-      {/* Add Order Modal */}
-      <AddOrderModal
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        onAdd={(newOrder) => {
-          setLocalOrders((prev) => [newOrder, ...prev]);
-          setPage(1);
-        }}
-      />
 
       {/* Order Details Modal */}
       <OrderDetailsModal

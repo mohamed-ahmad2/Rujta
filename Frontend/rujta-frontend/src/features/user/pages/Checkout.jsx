@@ -69,9 +69,11 @@ const Checkout = () => {
     handleTogglePharmacy,
     handleToggleMedicine,
     handleUpdateQty,
-    handleOrderClick, // single-pharmacy order (from PharmacyCard button)
-    handleMultiOrderClick, // multi-pharmacy order (from bottom banner button)
-    handlePaymentConfirm, // called with billingData | null from PaymentModal
+    handleOrderClick,
+    handleMultiOrderClick,
+    handlePaymentConfirm, // fn(billingData | null)
+    handlePaymentSuccess, // called when Paymob redirects with ?success=true
+    handlePaymentFailed, // called when Paymob redirects with ?success=false
     handleCloseIframe,
   } = useCheckout();
 
@@ -166,7 +168,7 @@ const Checkout = () => {
         </div>
       </div>
 
-      {/* Drug interaction modal — shown before payment modal */}
+
       {showInteractionModal && (
         <DrugInteractionModal
           result={interactionResult}
@@ -176,11 +178,6 @@ const Checkout = () => {
         />
       )}
 
-      {/*
-        Payment modal — Step 1: choose Cash / Online
-                        Step 2 (Online only): billing details
-        onConfirm receives billingData (object) for Online, null for Cash
-      */}
       {showPaymentModal && (
         <PaymentModal
           paymentMethod={paymentMethod}
@@ -192,19 +189,12 @@ const Checkout = () => {
         />
       )}
 
-      {/* Paymob Iframe Modal — shown only for Online payments */}
       {showPaymentIframe && paymentResult?.iframeUrl && (
         <PaymentIframeModal
           iframeUrl={paymentResult.iframeUrl}
           onClose={handleCloseIframe}
-          onPaymentSuccess={() => {
-            // Paymob redirects back with ?success=true — handled in Payments.jsx
-            // Here we just close and show a friendly message
-            handleCloseIframe();
-          }}
-          onPaymentFailed={() => {
-            handleCloseIframe();
-          }}
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentFailed={handlePaymentFailed}
         />
       )}
     </div>

@@ -1,552 +1,615 @@
-// src/features/user/hooks/useCheckout.js
-/**
- * useCheckout
- *
- * Manages the full checkout flow:
- *
- * ── CASH ──────────────────────────────────────────────────────────────────────
- *  1. User selects medicines / pharmacy(ies)
- *  2. Clicks "Order" or "Order X items"
- *  3. Drug-interaction check (if applicable)
- *  4. PaymentModal opens → user chooses "Cash"
- *  5. handlePaymentConfirm(null) →  POST /orders  (createCashOrder)
- *     Backend: PaymentStatus = Pending → Success on Delivered
- *  6. Toast success, reset state
- *
- * ── ONLINE (Paymob) ────────────────────────────────────────────────────────────
- *  1–3. Same as above
- *  4. PaymentModal opens → user chooses "Online" → fills billing details
- *  5. handlePaymentConfirm(billingData) →  POST /payments/initiate
- *     Payload: { type:"Order", amount, currency, billingData, pendingOrderDtoJson }
- *  6. Backend returns { iframeUrl, paymentToken, … }
- *  7. PaymentIframeModal opens with iframeUrl
- *  8. Paymob processes payment, calls our webhook callback (/payments/callback)
- *  9. Callback handler creates the order & sets PaymentStatus = Success
- * 10. Paymob redirects browser to UserRedirectUrl with ?success=true&id=…
- * 11. Payments.jsx reads query params and shows PaymentResultBanner
- *
- * ── CANCEL + REFUND ────────────────────────────────────────────────────────────
- *  Handled server-side (OrderService.StatusManagement.cs / HandleRefundIfNeeded)
- *  when Cancel endpoint is called. Frontend just calls the cancel endpoint
- *  and the backend triggers Paymob refund automatically.
- *  The Orders page shows "Refunded" payment status after refresh.
- */
-
-import { useState, useCallback, useEffect, useRef } from "react";
+// src/features/pharmacies/hooks/useCheckout.js
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
+import { useOrders } from "../../orders/hooks/useOrders";
+import { useAuth } from "../../auth/hooks/useAuth";
+import useAddress from "../../address/hook/useAddress";
 import { usePayment } from "../../payment/hooks/usePayment";
-import useAddresses from "../../address/hooks/useAddresses";
-import { checkDrugInteractions } from "../../medicines/api/medicinesApi";
+import apiClient from "../../../shared/api/apiClient";
+import { decodePolyline } from "../../../utils/decodePolyline";
+import useDrugInteraction from "../../druginteraction/hook/useDrugInteraction";
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-/** Build CreateOrderDto for a single pharmacy's selected medicines */
-const buildOrderDto = (pharmacyId, medicinesMap, deliveryAddressId) => ({
-  pharmacyID: pharmacyId,
-  deliveryAddressId,
-  paymentMethod: "Cash", // overridden to "Payment" for online
-  orderItems: Object.entries(medicinesMap).map(([medicineId, qty]) => ({
-    medicineID: Number(medicineId),
-    quantity: qty,
-  })),
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
+const getAvailableQty = (medicine) => {
+  const shortage = medicine.shortageQuantity ?? 0;
+  return Math.max(medicine.requestedQuantity - shortage, 1);
+};
 
 export const useCheckout = () => {
-  // ── external hooks ────────────────────────────────────────────────────────
-  const {
-    paymentResult,
-    loading: paymentLoading,
-    error: paymentError,
-    placeCashOrder,
-    initiateOnlineOrder,
-    showPaymentIframe: paymentIframeVisible, // from hook state if you expose it
-  } = usePayment();
-
+  const [cart, setCart] = useState([]);
+  const { pharmacies, loading, error, fetchPharmacies } = usePharmacies();
+  const { fetchUser } = useOrders();
+  const { user } = useAuth();
   const {
     addresses,
     loading: addressesLoading,
     error: addressesError,
-    fetchAddresses,
-    addAddress,
-  } = useAddresses?.() ?? {
-    addresses: [],
-    loading: false,
-    error: null,
-    fetchAddresses: () => {},
-    addAddress: () => {},
-  };
+    fetchUserAddresses,
+    create: createAddress,
+    fetchById,
+  } = useAddress();
 
-  // ── pharmacy / medicine state (from parent context or local) ──────────────
-  const [pharmacies, setPharmacies] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const {
+    initiate,
+    paymentResult,
+    loading: initiatingPayment,
+    reset: resetPayment,
+  } = usePayment();
 
-  // ── selection state ───────────────────────────────────────────────────────
-  /**
-   * selectedMedicines: { [pharmacyId]: { [medicineId]: qty } }
-   */
-  const [selectedMedicines, setSelectedMedicines] = useState({});
-  const [expandedPharmacies, setExpandedPharmacies] = useState({});
-  const [hoveredPharmacyId, setHoveredPharmacyId] = useState(null);
-  const [routeData, setRouteData] = useState({});
+  const {
+    result: interactionResult,
+    loading: interactionLoading,
+    checkInteractions,
+    reset: resetInteraction,
+  } = useDrugInteraction();
+  const [showInteractionModal, setShowInteractionModal] = useState(false);
 
-  // ── address state ─────────────────────────────────────────────────────────
+  const [pharmaciesRange, setPharmaciesRange] = useState(5);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
-  const [showAddressSelection, setShowAddressSelection] = useState(false);
+  const [showAddressSelection, setShowAddressSelection] = useState(true);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [isConfirmingAddress, setIsConfirmingAddress] = useState(false);
   const [newAddressForm, setNewAddressForm] = useState({
-    street: "",
-    buildingNo: "",
-    city: "",
-    governorate: "",
+    Street: "",
+    BuildingNo: "",
+    City: "",
+    Governorate: "",
+    IsDefault: false,
   });
-  const [userLocation, setUserLocation] = useState(null);
-  const [deliveryAddressLocation, setDeliveryAddressLocation] = useState(null);
-  const [deliveryAddress, setDeliveryAddress] = useState(null);
 
-  // ── payment modal state ───────────────────────────────────────────────────
+  // ── Pharmacy / Order States ─────────────────────────────────────
+  const [expandedPharmacies, setExpandedPharmacies] = useState({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPaymentIframe, setShowPaymentIframe] = useState(false);
   const [selectedPharmacyForPayment, setSelectedPharmacyForPayment] =
     useState(null);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [creatingOrder, setCreatingOrder] = useState(false);
-  const [initiatingPayment, setInitiatingPayment] = useState(false);
-  const [showPaymentIframe, setShowPaymentIframe] = useState(false);
-  const [localPaymentResult, setLocalPaymentResult] = useState(null);
+  const [selectedMedicines, setSelectedMedicines] = useState({});
 
-  // ── drug interaction state ────────────────────────────────────────────────
-  const [showInteractionModal, setShowInteractionModal] = useState(false);
-  const [interactionResult, setInteractionResult] = useState(null);
-  const [interactionLoading, setInteractionLoading] = useState(false);
+  // ── Map States ──────────────────────────────────────────────────
+  const [userLocation, setUserLocation] = useState(null);
+  const [deliveryAddressLocation, setDeliveryAddressLocation] = useState(null);
+  const [deliveryAddress, setDeliveryAddress] = useState(null);
+  const [hoveredPharmacyId, setHoveredPharmacyId] = useState(null);
+  const [routeData, setRouteData] = useState({});
 
-  // ── pending order context (saved before interaction check) ────────────────
-  const pendingOrderRef = useRef(null); // { pharmacy?, isMulti }
-
-  // ── toast ─────────────────────────────────────────────────────────────────
+  // ── Toast State ─────────────────────────────────────────────────
   const [toast, setToast] = useState(null);
 
-  const showToast = useCallback((message, type = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+  const showToast = useCallback((type, message) => {
+    setToast({ type, message });
+    if (type !== "error") setTimeout(() => setToast(null), 3200);
   }, []);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Derived
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const selectedPharmacies = Object.keys(selectedMedicines).filter(
-    (pid) => Object.keys(selectedMedicines[pid] ?? {}).length > 0,
+  // ── Selected Pharmacies (derived) ───────────────────────────────
+  const selectedPharmacies = useMemo(
+    () =>
+      Object.entries(selectedMedicines)
+        .filter(([, meds]) => Object.keys(meds).length > 0)
+        .map(([pharmacyId]) => pharmacyId),
+    [selectedMedicines],
   );
 
-  const totalSelectedItems = selectedPharmacies.reduce(
-    (acc, pid) =>
-      acc +
-      Object.values(selectedMedicines[pid] ?? {}).reduce((s, q) => s + q, 0),
-    0,
+  const totalSelectedItems = useMemo(
+    () =>
+      Object.values(selectedMedicines).reduce(
+        (sum, meds) => sum + Object.keys(meds).length,
+        0,
+      ),
+    [selectedMedicines],
   );
 
-  const totalSelectedQtyPerMedicine = Object.values(selectedMedicines).reduce(
-    (acc, medsMap) => {
-      Object.entries(medsMap).forEach(([mid, qty]) => {
-        acc[mid] = (acc[mid] ?? 0) + qty;
+  const totalSelectedQtyPerMedicine = useMemo(() => {
+    const result = {};
+    Object.values(selectedMedicines).forEach((medsMap) => {
+      Object.entries(medsMap).forEach(([medicineId, qty]) => {
+        result[medicineId] = (result[medicineId] ?? 0) + qty;
       });
-      return acc;
-    },
-    {},
-  );
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Selection handlers
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const handleTogglePharmacy = useCallback((pharmacyId, allMedicines) => {
-    setSelectedMedicines((prev) => {
-      const current = prev[pharmacyId] ?? {};
-      const allSelected = allMedicines.every((m) => m.medicineId in current);
-
-      if (allSelected) {
-        const next = { ...prev };
-        delete next[pharmacyId];
-        return next;
-      }
-
-      const newMap = {};
-      allMedicines.forEach((m) => {
-        newMap[m.medicineId] = current[m.medicineId] ?? 1;
-      });
-      return { ...prev, [pharmacyId]: newMap };
     });
-  }, []);
+    return result;
+  }, [selectedMedicines]);
 
+  // ── Medicine / Pharmacy Toggles ─────────────────────────────────
   const handleToggleMedicine = useCallback((pharmacyId, medicine) => {
     setSelectedMedicines((prev) => {
-      const current = { ...(prev[pharmacyId] ?? {}) };
-      if (medicine.medicineId in current) {
-        delete current[medicine.medicineId];
-      } else {
-        current[medicine.medicineId] = 1;
+      const current = prev[pharmacyId] ?? {};
+      const exists = medicine.medicineId in current;
+      if (exists) {
+        const { [medicine.medicineId]: _removed, ...rest } = current;
+        return { ...prev, [pharmacyId]: rest };
       }
-      return { ...prev, [pharmacyId]: current };
+      return {
+        ...prev,
+        [pharmacyId]: {
+          ...current,
+          [medicine.medicineId]: getAvailableQty(medicine),
+        },
+      };
     });
   }, []);
 
-  const handleUpdateQty = useCallback((pharmacyId, medicineId, newQty, max) => {
-    setSelectedMedicines((prev) => ({
-      ...prev,
-      [pharmacyId]: {
-        ...(prev[pharmacyId] ?? {}),
-        [medicineId]: Math.min(max, Math.max(1, newQty)),
-      },
-    }));
+  const handleUpdateQty = useCallback(
+    (pharmacyId, medicineId, newQty, maxQty) => {
+      const clamped = Math.min(Math.max(1, newQty), maxQty);
+      setSelectedMedicines((prev) => ({
+        ...prev,
+        [pharmacyId]: { ...(prev[pharmacyId] ?? {}), [medicineId]: clamped },
+      }));
+    },
+    [],
+  );
+
+  const handleTogglePharmacy = useCallback((pharmacyId, allMedicines = []) => {
+    setSelectedMedicines((prev) => {
+      const current = prev[pharmacyId] ?? {};
+      const allSelected =
+        allMedicines.length > 0 &&
+        allMedicines.every((m) => m.medicineId in current);
+      if (allSelected) return { ...prev, [pharmacyId]: {} };
+      const newMeds = { ...current };
+      allMedicines.forEach((m) => {
+        if (!(m.medicineId in current))
+          newMeds[m.medicineId] = getAvailableQty(m);
+      });
+      return { ...prev, [pharmacyId]: newMeds };
+    });
   }, []);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Location / Address
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Route Fetching ──────────────────────────────────────────────
+  const fetchRoute = useCallback(
+    (pharmacy) => {
+      const start = deliveryAddressLocation || userLocation;
+      if (!start || !pharmacy) return;
+      const cacheKey = pharmacy.pharmacyId;
+      setRouteData((prev) => {
+        if (prev[cacheKey]) return prev;
+        const url =
+          `https://router.project-osrm.org/route/v1/driving/` +
+          `${start.lng},${start.lat};${pharmacy.longitude},${pharmacy.latitude}` +
+          `?overview=full&geometries=polyline`;
+        fetch(url)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.code === "Ok" && data.routes?.[0]) {
+              const coordinates = decodePolyline(data.routes[0].geometry);
+              const distanceKm = (data.routes[0].distance / 1000).toFixed(2);
+              const durationMin = Math.round(data.routes[0].duration / 60);
+              setRouteData((p) => ({
+                ...p,
+                [cacheKey]: { coordinates, distanceKm, durationMin },
+              }));
+            }
+          })
+          .catch((err) =>
+            console.error("OSRM error:", pharmacy.pharmacyId, err),
+          );
+        return prev;
+      });
+    },
+    [deliveryAddressLocation, userLocation],
+  );
 
-  const handleSetLocation = useCallback(() => {
+  // ── Effects ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (pharmacies.length > 0) pharmacies.forEach(fetchRoute);
+  }, [pharmacies, fetchRoute]);
+
+  useEffect(() => {
+    if (!user) return;
+    const stored = JSON.parse(localStorage.getItem(`cart_${user.email}`)) || [];
+    setCart(stored);
+    fetchUserAddresses();
+  }, [user, fetchUserAddresses]);
+
+  useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
-      (pos) => {
+      (pos) =>
         setUserLocation({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
-        });
-        setShowLocationPrompt(false);
-      },
-      () => setShowLocationPrompt(true),
+        }),
+      (err) => console.error("Geolocation error:", err),
     );
   }, []);
 
-  const handleNewAddressChange = useCallback((field, value) => {
-    setNewAddressForm((f) => ({ ...f, [field]: value }));
-  }, []);
+  useEffect(() => {
+    const msg = typeof error === "string" ? error : error?.message || "";
+    if (msg.includes("location not set")) setShowLocationPrompt(true);
+  }, [error]);
 
-  const handleAddNewAddress = useCallback(async () => {
-    try {
-      await addAddress(newAddressForm);
-      await fetchAddresses();
-      setShowNewAddressForm(false);
-      setNewAddressForm({
-        street: "",
-        buildingNo: "",
-        city: "",
-        governorate: "",
-      });
-    } catch {
-      showToast("Failed to add address", "error");
+  useEffect(() => {
+    if (paymentResult?.iframeUrl) {
+      setShowPaymentModal(false);
+      setShowPaymentIframe(true);
     }
-  }, [addAddress, fetchAddresses, newAddressForm, showToast]);
+  }, [paymentResult]);
 
-  const handleConfirmAddress = useCallback(async () => {
+  // ── Handlers ────────────────────────────────────────────────────
+  const handleSetLocation = () => {
+    navigator.geolocation?.getCurrentPosition(async ({ coords }) => {
+      try {
+        await apiClient.put("/users/location", {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        });
+        setUserLocation({ lat: coords.latitude, lng: coords.longitude });
+        setShowLocationPrompt(false);
+      } catch (err) {
+        console.error("Failed to update location:", err);
+      }
+    });
+  };
+
+  const handleNewAddressChange = (e) => {
+    const { name, value } = e.target;
+    setNewAddressForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddNewAddress = async () => {
+    try {
+      await createAddress(newAddressForm);
+      await fetchUserAddresses();
+      setShowNewAddressForm(false);
+    } catch (err) {
+      console.error("Failed to add address:", err);
+    }
+  };
+
+  const handleConfirmAddress = async () => {
     if (!selectedAddressId) {
-      showToast("Please select a delivery address", "error");
+      showToast("error", "Please select a delivery address!");
       return;
     }
     setIsConfirmingAddress(true);
     try {
-      const addr = addresses.find((a) => a.id === selectedAddressId);
-      if (addr) {
-        setDeliveryAddress(addr);
-        setDeliveryAddressLocation(addr.location ?? null);
+      if (cart.length > 0)
+        await fetchPharmacies(cart, selectedAddressId, pharmaciesRange);
+      const fullAddress = await fetchById(selectedAddressId);
+      if (fullAddress?.latitude && fullAddress?.longitude) {
+        setDeliveryAddressLocation({
+          lat: fullAddress.latitude,
+          lng: fullAddress.longitude,
+        });
+        setDeliveryAddress(fullAddress);
       }
       setShowAddressSelection(false);
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsConfirmingAddress(false);
     }
-  }, [selectedAddressId, addresses]);
+  };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Range expand
-  // ─────────────────────────────────────────────────────────────────────────
+  const handleExpandRange = async () => {
+    const newRange = pharmaciesRange + 5;
+    setPharmaciesRange(newRange);
+    if (selectedAddressId && cart.length > 0)
+      await fetchPharmacies(cart, selectedAddressId, newRange);
+  };
 
-  const handleExpandRange = useCallback(() => {
-    // trigger parent search with expanded radius — implementation depends on
-    // how pharmacies are fetched (pass this up or call a context action)
-    console.log("Expanding search range by +5km");
-  }, []);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Drug interaction check
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const runInteractionCheck = useCallback(async (medicineIds) => {
-    if (!medicineIds || medicineIds.length < 2) return true; // no check needed
-    setInteractionLoading(true);
-    setInteractionResult(null);
-    try {
-      const result = await checkDrugInteractions(medicineIds);
-      if (result?.hasInteractions) {
-        setInteractionResult(result);
-        setShowInteractionModal(true);
-        return false; // caller should wait for user decision
-      }
-      return true;
-    } catch {
-      return true; // if check fails, proceed anyway
-    } finally {
-      setInteractionLoading(false);
-    }
-  }, []);
-
-  const handleInteractionProceed = useCallback(() => {
-    setShowInteractionModal(false);
-    setInteractionResult(null);
-    // Re-open payment modal that was pending
-    setShowPaymentModal(true);
-  }, []);
-
-  const handleInteractionBack = useCallback(() => {
-    setShowInteractionModal(false);
-    setInteractionResult(null);
-    pendingOrderRef.current = null;
-  }, []);
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Order click handlers
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /**
-   * Single-pharmacy Order button (PharmacyCard)
-   */
-  const handleOrderClick = useCallback(
-    async (pharmacy) => {
-      if (!selectedAddressId) {
-        setShowAddressSelection(true);
-        return;
-      }
-
-      setSelectedPharmacyForPayment(pharmacy);
-      pendingOrderRef.current = { pharmacy, isMulti: false };
-
-      const medicineIds = Object.keys(
-        selectedMedicines[pharmacy.pharmacyId] ?? {},
-      ).map(Number);
-      const canProceed = await runInteractionCheck(medicineIds);
-      if (canProceed) setShowPaymentModal(true);
-    },
-    [selectedAddressId, selectedMedicines, runInteractionCheck],
-  );
-
-  /**
-   * Multi-pharmacy Order button (PharmacyList bottom banner)
-   */
-  const handleMultiOrderClick = useCallback(async () => {
-    if (!selectedAddressId) {
-      setShowAddressSelection(true);
-      return;
-    }
-
-    pendingOrderRef.current = { isMulti: true };
-
-    const allMedicineIds = [
-      ...new Set(
-        Object.values(selectedMedicines).flatMap((m) =>
-          Object.keys(m).map(Number),
-        ),
+  // ── Drug Interaction Check ──────────────────────────────────────
+  const handleOrderClick = async (pharmacy) => {
+    setSelectedPharmacyForPayment(pharmacy);
+    setSelectedMedicines({
+      [pharmacy.pharmacyId]: Object.fromEntries(
+        pharmacy.foundMedicines.map((m) => [m.medicineId, getAvailableQty(m)]),
       ),
-    ];
-    const canProceed = await runInteractionCheck(allMedicineIds);
-    if (canProceed) setShowPaymentModal(true);
-  }, [selectedAddressId, selectedMedicines, runInteractionCheck]);
+    });
+    resetInteraction();
+    setShowInteractionModal(true);
+    await checkInteractions(
+      pharmacy.foundMedicines.map((m) => m.medicineId),
+      0.5,
+    );
+  };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Payment confirm — called by PaymentModal
-  //  billingData = null  → Cash
-  //  billingData = {...} → Online (Paymob)
-  // ─────────────────────────────────────────────────────────────────────────
+  const handleMultiOrderClick = async () => {
+    const allMedicineIds = Object.values(selectedMedicines)
+      .flatMap((medsMap) => Object.keys(medsMap).map(Number))
+      .filter((id, index, self) => self.indexOf(id) === index);
+    if (allMedicineIds.length === 0) return;
+    resetInteraction();
+    setShowInteractionModal(true);
+    await checkInteractions(allMedicineIds, 0.5);
+  };
 
-  const handlePaymentConfirm = useCallback(
-    async (billingData) => {
-      const isOnline = billingData !== null;
-      const isMulti = pendingOrderRef.current?.isMulti ?? false;
+  const handleInteractionProceed = () => {
+    setShowInteractionModal(false);
+    setShowPaymentModal(true);
+  };
 
-      setShowPaymentModal(false);
+  const handleInteractionBack = () => {
+    setShowInteractionModal(false);
+    resetInteraction();
+    setSelectedPharmacyForPayment(null);
+    setSelectedMedicines({});
+  };
 
-      // ── Build order DTO(s) ────────────────────────────────────────────────
-      const buildDtos = () => {
-        if (!isMulti && selectedPharmacyForPayment) {
-          const pid = selectedPharmacyForPayment.pharmacyId;
-          const meds = selectedMedicines[pid] ?? {};
-          return [buildOrderDto(pid, meds, selectedAddressId)];
-        }
-        // multi-pharmacy
-        return selectedPharmacies.map((pid) =>
-          buildOrderDto(pid, selectedMedicines[pid] ?? {}, selectedAddressId),
+  // ── Build order DTOs (shared by both flows) ─────────────────────
+  /**
+   * Builds CreateOrderDto[] from the current selectedMedicines state.
+   * paymentMethod: "Cash" | "Payment"
+   */
+  const buildOrderDtos = useCallback(
+    (pmMethod) => {
+      if (!cart.length) throw new Error("Your cart is empty!");
+      if (!selectedAddressId) throw new Error("No delivery address selected!");
+      if (!selectedPharmacies.length)
+        throw new Error("No pharmacies selected!");
+
+      const orderDtos = selectedPharmacies.reduce((acc, pharmacyId) => {
+        const pharmacy = pharmacies.find(
+          (p) => String(p.pharmacyId) === String(pharmacyId),
         );
-      };
+        if (!pharmacy) return acc;
 
-      const orderDtos = buildDtos();
-      if (!orderDtos.length) {
-        showToast("No items selected", "error");
-        return;
-      }
-
-      // ── CASH ──────────────────────────────────────────────────────────────
-      if (!isOnline) {
-        setCreatingOrder(true);
-        try {
-          // For multi-pharmacy, POST /orders accepts an array
-          const cashDtos = orderDtos.map((d) => ({
-            ...d,
-            paymentMethod: "Cash",
-          }));
-          await placeCashOrder(cashDtos.length === 1 ? cashDtos[0] : cashDtos);
-          showToast(
-            "Order placed successfully! Pay when your delivery arrives. 🎉",
-          );
-          resetCheckoutState();
-        } catch (err) {
-          showToast(
-            err?.response?.data?.message ||
-              "Failed to place order. Please try again.",
-            "error",
-          );
-        } finally {
-          setCreatingOrder(false);
-        }
-        return;
-      }
-
-      // ── ONLINE (Paymob) ───────────────────────────────────────────────────
-      // Note: Paymob supports one payment per initiation.
-      // For multi-pharmacy online, we initiate one payment per order
-      // (or handle it as a single payment if the backend aggregates).
-      // Current backend: one InitiatePaymentDto → one Paymob order.
-      // We initiate for each pharmacy order separately.
-      setInitiatingPayment(true);
-      try {
-        // Calculate total for this payment
-        const dto = orderDtos[0]; // primary / single order
-        const total = computeTotal(dto, pharmacies);
-
-        const onlineDto = { ...dto, paymentMethod: "Payment" };
-        await initiateOnlineOrder(onlineDto, billingData, total);
-        // paymentResult is now set in usePayment → contains iframeUrl
-        setShowPaymentIframe(true);
-      } catch (err) {
-        showToast(
-          err?.response?.data?.message ||
-            "Failed to initiate payment. Please try again.",
-          "error",
+        const selectedMedsMap = selectedMedicines[pharmacyId] ?? {};
+        const normalizedMedsMap = Object.fromEntries(
+          Object.entries(selectedMedsMap).map(([k, v]) => [String(k), v]),
         );
-      } finally {
-        setInitiatingPayment(false);
-      }
+
+        const items = pharmacy.foundMedicines.filter(
+          (m) => String(m.medicineId) in normalizedMedsMap,
+        );
+        if (!items.length) return acc;
+
+        acc.push({
+          PharmacyID: pharmacy.pharmacyId,
+          DeliveryAddressId: selectedAddressId,
+          PaymentMethod: pmMethod, // "Cash" | "Payment"
+          OrderItems: items.map((m) => ({
+            MedicineID: m.medicineId,
+            Quantity: normalizedMedsMap[String(m.medicineId)],
+          })),
+        });
+        return acc;
+      }, []);
+
+      if (!orderDtos.length)
+        throw new Error(
+          "No valid orders. Check selected medicines & quantities.",
+        );
+
+      return orderDtos;
     },
     [
-      selectedPharmacyForPayment,
-      selectedMedicines,
-      selectedPharmacies,
+      cart,
       selectedAddressId,
+      selectedPharmacies,
       pharmacies,
-      placeCashOrder,
-      initiateOnlineOrder,
-      showToast,
+      selectedMedicines,
     ],
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Iframe close
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Clear cart after successful order ───────────────────────────
+  const clearCartAfterOrder = useCallback(
+    async (orderDtos) => {
+      const orderedIds = new Set(
+        orderDtos.flatMap((d) => d.OrderItems.map((i) => String(i.MedicineID))),
+      );
+      const updatedCart = cart.filter(
+        (item) => !orderedIds.has(String(item.id)),
+      );
+      localStorage.setItem(`cart_${user.email}`, JSON.stringify(updatedCart));
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: `cart_${user.email}` }),
+      );
+      setCart(updatedCart);
+      setSelectedMedicines({});
+      await fetchUser();
+    },
+    [cart, user, fetchUser],
+  );
 
-  const handleCloseIframe = useCallback(() => {
-    setShowPaymentIframe(false);
-    setLocalPaymentResult(null);
-    // Don't reset full state here — let the Paymob redirect handle it.
-    // If user just closed without paying, show a gentle notice.
+  // ── FLOW 1: Cash ────────────────────────────────────────────────
+  /**
+   * POST /api/orders  with PaymentMethod: "Cash"
+   * PaymentStatus starts as Pending → becomes Success on Delivered
+   */
+  const handleCashOrder = async () => {
+    setCreatingOrder(true);
+    try {
+      const orderDtos = buildOrderDtos("Cash");
+      const { data: results } = await apiClient.post("/orders", orderDtos);
+
+      if (results?.length > 0) {
+        await clearCartAfterOrder(orderDtos);
+        showToast(
+          "success",
+          `${results.length} order${results.length > 1 ? "s" : ""} placed! 🎉`,
+        );
+        setTimeout(() => window.location.reload(), 3200);
+      } else {
+        showToast("error", "Failed to create orders. Please try again.");
+      }
+    } catch (err) {
+      console.error("Cash order error:", err);
+      const msg =
+        err?.response?.data?.message ||
+        err.message ||
+        "Failed to create orders.";
+      showToast("error", msg);
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
+  // ── FLOW 2: Online (Paymob) ─────────────────────────────────────
+  /**
+   * Does NOT call POST /api/orders directly.
+   * Instead calls POST /api/payments/initiate with PendingOrderDtoJson.
+   * The backend creates the Order AFTER the Paymob callback fires with success.
+   *
+   * billingData: object collected from PaymentModal Step 2
+   */
+  const handleOnlinePayment = async (billingData) => {
+    setCreatingOrder(true);
+    try {
+      // Build order DTOs with PaymentMethod = "Payment"
+      // Backend requires exactly one order per initiate call (multi-pharmacy →
+      // initiate per pharmacy; here we take the first selected pharmacy for now)
+      // If you need multi-pharmacy online payments, loop and initiate separately.
+      const orderDtos = buildOrderDtos("Payment");
+
+      // Fetch delivery address details for amount calculation
+      const fullAddress = await fetchById(selectedAddressId);
+
+      // Build billing data in the shape the backend expects (PascalCase)
+      const billing = {
+        FirstName: billingData.firstName,
+        LastName: billingData.lastName,
+        Email: billingData.email,
+        PhoneNumber: billingData.phoneNumber,
+        Apartment: billingData.apartment || "NA",
+        Floor: billingData.floor || "NA",
+        Street: billingData.street || fullAddress?.street || "NA",
+        Building: billingData.building || fullAddress?.buildingNo || "NA",
+        ShippingMethod: billingData.shippingMethod || "PKG",
+        PostalCode: billingData.postalCode || "NA",
+        City: billingData.city || fullAddress?.city || "Cairo",
+        Country: billingData.country || "EG",
+        State: billingData.state || fullAddress?.governorate || "NA",
+      };
+
+      // Initiate one payment per pharmacy order
+      // (Paymob initiate accepts one CreateOrderDto per call via PendingOrderDtoJson)
+      for (const orderDto of orderDtos) {
+        await initiate({
+          Type: "Order",
+          // Amount will be calculated by the backend from inventory prices;
+          // we pass 0 as a placeholder — adjust if your backend requires a real amount.
+          // If you have a known total, replace 0 with the actual value.
+          Amount: 0,
+          Currency: "EGP",
+          BillingData: billing,
+          // Serialize the single CreateOrderDto as JSON string
+          PendingOrderDtoJson: JSON.stringify(orderDto),
+        });
+      }
+
+      // Cart is cleared AFTER the iframe is shown and payment is confirmed.
+      // We intentionally do NOT clear the cart here — the PaymentService
+      // creates the order after the callback, so we clear on success redirect.
+    } catch (err) {
+      console.error("Online payment error:", err);
+      const msg =
+        err?.response?.data?.message ||
+        err.message ||
+        "Failed to initiate payment.";
+      showToast("error", msg);
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
+  // ── Payment modal confirm — receives billingData from PaymentModal ─
+  /**
+   * Called by PaymentModal:
+   *   Cash   → onConfirm(null)
+   *   Online → onConfirm(billingData)  (billing object from Step 2 form)
+   */
+  const handlePaymentConfirm = async (billingData) => {
+    if (paymentMethod === "Cash") {
+      setShowPaymentModal(false);
+      await handleCashOrder();
+    } else {
+      // billingData is the object collected in PaymentModal Step 2
+      await handleOnlinePayment(billingData);
+    }
+  };
+
+  // ── Paymob iframe success/failure ───────────────────────────────
+  /**
+   * Called when Paymob redirects back with ?success=true
+   * At this point the backend has already created the order via webhook callback.
+   * We clear the cart and show a success toast.
+   */
+  const handlePaymentSuccess = useCallback(async () => {
+    handleCloseIframe();
+    // Clear cart — backend already created the order
+    try {
+      const orderDtos = buildOrderDtos("Payment");
+      await clearCartAfterOrder(orderDtos);
+    } catch {
+      // Cart cleanup is best-effort; don't block the success message
+      setSelectedMedicines({});
+      setCart([]);
+    }
+    showToast("success", "Payment successful! Your order has been placed. 🎉");
+    setTimeout(() => window.location.reload(), 3200);
+  }, [buildOrderDtos, clearCartAfterOrder, showToast]);
+
+  /**
+   * Called when Paymob redirects back with ?success=false
+   * The backend marks the payment as Failed; no order is created.
+   */
+  const handlePaymentFailed = useCallback(() => {
+    handleCloseIframe();
     showToast(
-      "Payment window closed. If you completed payment, your order will appear shortly.",
-      "info",
+      "error",
+      "Payment failed or was cancelled. No order was created. Please try again.",
     );
   }, [showToast]);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Helpers
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const resetCheckoutState = () => {
-    setSelectedMedicines({});
-    setSelectedPharmacyForPayment(null);
-    pendingOrderRef.current = null;
-    setPaymentMethod("Cash");
-  };
-
-  /**
-   * Compute total from selected medicines + pharmacy price data.
-   * Falls back to 0 if prices are not available client-side.
-   */
-  const computeTotal = (dto, pharmacyList) => {
-    const pharmacy = pharmacyList.find((p) => p.pharmacyId === dto.pharmacyID);
-    if (!pharmacy) return 0;
-
-    return dto.orderItems.reduce((sum, item) => {
-      const med = pharmacy.foundMedicines?.find(
-        (m) => m.medicineId === item.medicineID,
-      );
-      const price = med?.price ?? med?.unitPrice ?? 0;
-      return sum + price * item.quantity;
-    }, 0);
-  };
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Exposed state & handlers
-  // ─────────────────────────────────────────────────────────────────────────
+  const handleCloseIframe = useCallback(() => {
+    setShowPaymentIframe(false);
+    resetPayment();
+  }, [resetPayment]);
 
   return {
-    // pharmacy list
+    // data
+    cart,
     pharmacies,
     loading,
     error,
-    // address
     addresses,
     addressesLoading,
     addressesError,
+    // address states
+    pharmaciesRange,
     showLocationPrompt,
     showAddressSelection,
-    setShowAddressSelection,
     selectedAddressId,
-    setSelectedAddressId,
     showNewAddressForm,
-    setShowNewAddressForm,
     isConfirmingAddress,
     newAddressForm,
-    setNewAddressForm,
-    // map
+    // pharmacy / order states
+    expandedPharmacies,
+    showPaymentModal,
+    selectedPharmacyForPayment,
+    paymentMethod,
+    selectedPharmacies,
+    totalSelectedItems,
+    creatingOrder,
+    selectedMedicines,
+    totalSelectedQtyPerMedicine,
+    // payment states
+    initiatingPayment,
+    showPaymentIframe,
+    paymentResult,
+    // map states
     userLocation,
     deliveryAddressLocation,
     deliveryAddress,
     hoveredPharmacyId,
-    setHoveredPharmacyId,
     routeData,
-    // pharmacy card
-    expandedPharmacies,
-    setExpandedPharmacies,
-    // selection
-    selectedMedicines,
-    selectedPharmacies,
-    totalSelectedItems,
-    totalSelectedQtyPerMedicine,
-    // payment modal
-    showPaymentModal,
-    setShowPaymentModal,
-    selectedPharmacyForPayment,
-    paymentMethod,
-    setPaymentMethod,
-    creatingOrder,
-    initiatingPayment,
-    // iframe
-    showPaymentIframe,
-    paymentResult: localPaymentResult ?? paymentResult,
+    // toast
+    toast,
     // drug interaction
     showInteractionModal,
     interactionResult,
     interactionLoading,
-    // toast
-    toast,
+    // setters
+    setSelectedAddressId,
+    setShowNewAddressForm,
+    setNewAddressForm,
+    setExpandedPharmacies,
+    setShowPaymentModal,
+    setPaymentMethod,
+    setHoveredPharmacyId,
     setToast,
+    setShowAddressSelection,
     // handlers
     handleSetLocation,
     handleNewAddressChange,
@@ -559,6 +622,8 @@ export const useCheckout = () => {
     handleOrderClick,
     handleMultiOrderClick,
     handlePaymentConfirm,
+    handlePaymentSuccess,
+    handlePaymentFailed,
     handleCloseIframe,
     handleInteractionProceed,
     handleInteractionBack,

@@ -25,7 +25,9 @@ const PAYMENT_OPTIONS = [
  *  setPaymentMethod     fn(string)
  *  creatingOrder        bool
  *  initiatingPayment    bool
- *  onConfirm            fn(billingData | null)   — billingData is null for Cash
+ *  onConfirm            fn(billingData | null)
+ *                         — billingData (camelCase object) for Online
+ *                         — null for Cash
  *  onClose              fn()
  */
 const PaymentModal = ({
@@ -38,8 +40,8 @@ const PaymentModal = ({
 }) => {
   const isLoading = creatingOrder || initiatingPayment;
 
-  // ── Billing form state (only needed for Online) ──────────────────────────
-  const [step, setStep] = useState(1); // 1 = choose method, 2 = billing form
+  // ── Billing form state (only needed for Online) ─────────────────
+  const [step, setStep] = useState(1);
   const [billing, setBilling] = useState({
     firstName: "",
     lastName: "",
@@ -64,6 +66,8 @@ const PaymentModal = ({
     if (!billing.firstName.trim()) errs.firstName = "Required";
     if (!billing.lastName.trim()) errs.lastName = "Required";
     if (!billing.email.trim()) errs.email = "Required";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billing.email))
+      errs.email = "Enter a valid email";
     if (!billing.phoneNumber.trim()) errs.phoneNumber = "Required";
     if (!billing.street.trim()) errs.street = "Required";
     if (!billing.city.trim()) errs.city = "Required";
@@ -82,6 +86,7 @@ const PaymentModal = ({
 
   const handleBillingConfirm = () => {
     if (!validateBilling()) return;
+    // Pass the billing object (camelCase) — useCheckout maps it to PascalCase
     onConfirm(billing);
   };
 
@@ -92,9 +97,7 @@ const PaymentModal = ({
         : "border-gray-200 bg-gray-50"
     }`;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // STEP 1 — Choose method
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── STEP 1 — Choose method ──────────────────────────────────────
   if (step === 1) {
     return (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40">
@@ -132,7 +135,6 @@ const PaymentModal = ({
             ))}
           </div>
 
-          {/* Info banner for Online */}
           {paymentMethod === "Online" && (
             <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700">
               💡 Your order is created <strong>after</strong> payment is
@@ -141,7 +143,6 @@ const PaymentModal = ({
             </div>
           )}
 
-          {/* Info banner for Cash */}
           {paymentMethod === "Cash" && (
             <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-3 text-xs text-green-700">
               💡 Your order is created immediately. Payment is collected when
@@ -174,9 +175,7 @@ const PaymentModal = ({
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // STEP 2 — Billing data (Online only)
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── STEP 2 — Billing data (Online only) ────────────────────────
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40">
       <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
@@ -184,6 +183,7 @@ const PaymentModal = ({
           <button
             onClick={() => setStep(1)}
             className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100"
+            disabled={isLoading}
           >
             ←
           </button>
@@ -198,6 +198,7 @@ const PaymentModal = ({
         </div>
 
         <div className="space-y-4">
+          {/* Name */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
@@ -233,6 +234,7 @@ const PaymentModal = ({
             </div>
           </div>
 
+          {/* Email */}
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
               Email <span className="text-red-500">*</span>
@@ -251,6 +253,7 @@ const PaymentModal = ({
             )}
           </div>
 
+          {/* Phone */}
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
               Phone Number <span className="text-red-500">*</span>
@@ -268,6 +271,7 @@ const PaymentModal = ({
             )}
           </div>
 
+          {/* Street + City */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">

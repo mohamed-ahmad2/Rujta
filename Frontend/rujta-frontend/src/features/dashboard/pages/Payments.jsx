@@ -17,7 +17,7 @@ import {
   Banknote,
   RotateCcw,
 } from "lucide-react";
-import { usePayment } from "../../payment/hooks/usePayment";
+import { usePayment, usePaymobRedirect } from "../../payment/hooks/usePayment";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -38,40 +38,8 @@ const daysLeft = (endDate) => {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 };
 
-// ─── Paymob Callback Handler ──────────────────────────────────────────────────
-// Reads ?success=true&id=... query params Paymob appends on redirect
-
-function usePaymobCallback(refetchAll) {
-  const [callbackResult, setCallbackResult] = useState(null); // null | 'success' | 'fail'
-  const [callbackTxId, setCallbackTxId] = useState(null);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const success = params.get("success");
-    if (success === null) return;
-
-    const txId = params.get("id") || params.get("order");
-
-    if (success === "true") {
-      setCallbackResult("success");
-      setCallbackTxId(txId);
-      refetchAll();
-    } else {
-      setCallbackResult("fail");
-      setCallbackTxId(txId);
-    }
-
-    window.history.replaceState({}, "", window.location.pathname);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return {
-    callbackResult,
-    callbackTxId,
-    dismiss: () => setCallbackResult(null),
-  };
-}
-
 // ─── Payment Result Banner ────────────────────────────────────────────────────
+// Shown after Paymob redirects the user back to this page
 
 function PaymentResultBanner({ result, txId, onDismiss }) {
   if (!result) return null;
@@ -107,29 +75,11 @@ function PaymentResultBanner({ result, txId, onDismiss }) {
 }
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
+// Maps PaymentStatus enum values from backend
 
 function StatusBadge({ status }) {
   const map = {
-    active: {
-      label: "Active",
-      cls: "bg-green-100 text-green-700",
-      dot: "bg-green-500",
-    },
-    expired: {
-      label: "Expired",
-      cls: "bg-gray-100 text-gray-500",
-      dot: "bg-gray-400",
-    },
-    cancelled: {
-      label: "Cancelled",
-      cls: "bg-red-100 text-red-600",
-      dot: "bg-red-500",
-    },
-    paid: {
-      label: "Paid",
-      cls: "bg-green-100 text-green-700",
-      dot: "bg-green-500",
-    },
+    // PaymentStatus enum values from backend
     success: {
       label: "Success",
       cls: "bg-green-100 text-green-700",
@@ -150,6 +100,27 @@ function StatusBadge({ status }) {
       cls: "bg-purple-100 text-purple-700",
       dot: "bg-purple-500",
     },
+    // Legacy / subscription-specific labels
+    active: {
+      label: "Active",
+      cls: "bg-green-100 text-green-700",
+      dot: "bg-green-500",
+    },
+    expired: {
+      label: "Expired",
+      cls: "bg-gray-100 text-gray-500",
+      dot: "bg-gray-400",
+    },
+    cancelled: {
+      label: "Cancelled",
+      cls: "bg-red-100 text-red-600",
+      dot: "bg-red-500",
+    },
+    paid: {
+      label: "Paid",
+      cls: "bg-green-100 text-green-700",
+      dot: "bg-green-500",
+    },
   };
   const s = map[String(status || "").toLowerCase()] || map.pending;
   return (
@@ -163,23 +134,29 @@ function StatusBadge({ status }) {
 }
 
 // ─── Payment Method Badge ─────────────────────────────────────────────────────
+// Maps PaymentMethod enum: 0=Cash, 1=Payment (Paymob)
 
 function MethodBadge({ method }) {
-  const m = String(method || "").toLowerCase();
+  const m = String(method ?? "").toLowerCase();
+  // "cash" string or enum int 0
   if (m === "cash" || m === "0")
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-semibold text-green-700">
         <Banknote className="h-3 w-3" /> Cash
       </span>
     );
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-      <CreditCard className="h-3 w-3" /> Online
-    </span>
-  );
+  // "payment" string or enum int 1
+  if (m === "payment" || m === "1")
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+        <CreditCard className="h-3 w-3" /> Online
+      </span>
+    );
+  return <span className="text-xs text-gray-400">—</span>;
 }
 
 // ─── Type Badge ───────────────────────────────────────────────────────────────
+// Maps PaymentType enum: Order | Subscription | Ad
 
 function TypeBadge({ type }) {
   const t = String(type || "").toLowerCase();
@@ -334,7 +311,11 @@ function AdCard({ ad }) {
 
   return (
     <div
-      className={`rounded-2xl border p-4 transition-all ${isExpired ? "border-gray-100 bg-gray-50 opacity-70" : "border-gray-100 bg-white shadow-sm"}`}
+      className={`rounded-2xl border p-4 transition-all ${
+        isExpired
+          ? "border-gray-100 bg-gray-50 opacity-70"
+          : "border-gray-100 bg-white shadow-sm"
+      }`}
     >
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
@@ -381,6 +362,7 @@ function AdCard({ ad }) {
 }
 
 // ─── History Table ────────────────────────────────────────────────────────────
+// Displays PaymentSummaryDto[] from GET /api/payments/my
 
 const ITEMS_PER_PAGE = 5;
 
@@ -393,8 +375,7 @@ function HistoryTable({ data }) {
     let list = data;
     if (typeFilter !== "all")
       list = list.filter(
-        (r) =>
-          String(r.type ?? r.paymentType ?? "").toLowerCase() === typeFilter,
+        (r) => String(r.type ?? "").toLowerCase() === typeFilter,
       );
     if (statusFilter !== "all")
       list = list.filter(
@@ -412,21 +393,27 @@ function HistoryTable({ data }) {
   const handleExport = () => {
     const rows = [
       [
-        "Invoice",
+        "ID",
         "Date",
         "Type",
-        "Method",
         "Amount (EGP)",
-        "Payment Status",
-        "Paymob Tx",
+        "Currency",
+        "Status",
+        "Order ID",
+        "Subscription ID",
+        "Ad ID",
+        "Paymob Tx ID",
       ],
       ...filtered.map((r) => [
         r.id ?? "—",
-        fmtDate(r.createdAt ?? r.date ?? r.paidAt),
-        r.type ?? r.paymentType ?? "—",
-        r.paymentMethod ?? "—",
-        r.amount ?? r.price ?? 0,
+        fmtDate(r.createdAt),
+        r.type ?? "—",
+        r.amount ?? 0,
+        r.currency ?? "EGP",
         r.status ?? "—",
+        r.orderId ?? "—",
+        r.subscriptionId ?? "—",
+        r.adId ?? "—",
         r.paymobTransactionId ?? "—",
       ]),
     ];
@@ -442,8 +429,6 @@ function HistoryTable({ data }) {
     URL.revokeObjectURL(url);
   };
 
-  const resetPage = () => setPage(1);
-
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       {/* Header */}
@@ -456,26 +441,26 @@ function HistoryTable({ data }) {
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Type filter */}
+          {/* Type filter — matches PaymentType enum */}
           <select
             value={typeFilter}
             onChange={(e) => {
               setTypeFilter(e.target.value);
-              resetPage();
+              setPage(1);
             }}
             className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-secondary"
           >
             <option value="all">All types</option>
+            <option value="order">Order</option>
             <option value="subscription">Subscription</option>
             <option value="ad">Ad</option>
-            <option value="order">Order</option>
           </select>
-          {/* Status filter */}
+          {/* Status filter — matches PaymentStatus enum */}
           <select
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
-              resetPage();
+              setPage(1);
             }}
             className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-secondary"
           >
@@ -494,19 +479,19 @@ function HistoryTable({ data }) {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table — columns match PaymentSummaryDto */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-[700px] text-sm">
           <thead>
             <tr className="border-b border-gray-100">
               {[
                 "ID",
                 "Date",
                 "Type",
-                "Method",
                 "Amount",
+                "Currency",
                 "Status",
-                "Tx Ref",
+                "Reference",
               ].map((h) => (
                 <th
                   key={h}
@@ -529,48 +514,45 @@ function HistoryTable({ data }) {
               </tr>
             ) : (
               pageData.map((r, idx) => {
-                const id = r.id ?? `row-${idx}`;
-                const date = r.createdAt ?? r.date ?? r.paidAt;
-                const type = r.type ?? r.paymentType ?? "order";
-                const method =
-                  r.paymentMethod ??
-                  (r.type === "Order" ? r.paymentMethod : "—");
-                const amt = r.amount ?? r.price ?? 0;
-                const stat = r.status ?? "pending";
-                const txRef = r.paymobTransactionId ?? "—";
+                // PaymentSummaryDto fields from backend
+                const ref = r.orderId
+                  ? `Order #${r.orderId}`
+                  : r.subscriptionId
+                    ? `Sub #${r.subscriptionId}`
+                    : r.adId
+                      ? `Ad #${r.adId}`
+                      : r.paymobTransactionId
+                        ? r.paymobTransactionId
+                        : "—";
 
                 return (
                   <tr
-                    key={id}
+                    key={r.id ?? idx}
                     className="border-b border-gray-50 transition hover:bg-gray-50/60"
                   >
                     <td className="py-3 pr-4 font-mono text-xs text-gray-400">
-                      #{id}
+                      #{r.id}
                     </td>
                     <td className="whitespace-nowrap py-3 pr-4 text-xs text-gray-500">
-                      {fmtDate(date)}
+                      {fmtDate(r.createdAt)}
                     </td>
                     <td className="py-3 pr-4">
-                      <TypeBadge type={type} />
-                    </td>
-                    <td className="py-3 pr-4">
-                      {method && method !== "—" ? (
-                        <MethodBadge method={method} />
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
+                      <TypeBadge type={r.type} />
                     </td>
                     <td className="whitespace-nowrap py-3 pr-4 text-sm font-semibold text-gray-800">
-                      {fmt(amt)} EGP
+                      {fmt(r.amount)} EGP
+                    </td>
+                    <td className="py-3 pr-4 text-xs text-gray-500">
+                      {r.currency ?? "EGP"}
                     </td>
                     <td className="py-3 pr-4">
-                      <StatusBadge status={stat} />
+                      <StatusBadge status={r.status} />
                     </td>
                     <td
-                      className="max-w-[120px] truncate py-3 font-mono text-[11px] text-gray-400"
-                      title={txRef}
+                      className="max-w-[140px] truncate py-3 font-mono text-[11px] text-gray-400"
+                      title={ref}
                     >
-                      {txRef}
+                      {ref}
                     </td>
                   </tr>
                 );
@@ -629,7 +611,7 @@ function Skeleton({ className = "" }) {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Main Payments Page ───────────────────────────────────────────────────────
 
 export default function Payments() {
   const allPayments = usePayment();
@@ -646,25 +628,32 @@ export default function Payments() {
     refetchAll();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { callbackResult, callbackTxId, dismiss } =
-    usePaymobCallback(refetchAll);
+  // ── Paymob redirect handling ──────────────────────────────────────────────
+  // After user pays (or fails), Paymob redirects to UserRedirectUrl with
+  // ?success=true|false&id=<paymobOrderId> query params.
+  // The server has already handled the webhook by this point.
+  const {
+    result: callbackResult,
+    txId: callbackTxId,
+    dismiss,
+  } = usePaymobRedirect({ onSuccess: refetchAll });
 
   const isLoading =
     allPayments.loading || subPayments.loading || adPayments.loading;
   const hasError = allPayments.error || subPayments.error || adPayments.error;
 
-  // ── Derived values ──
+  // ── Derived values from PaymentSummaryDto[] ──
   const allList = allPayments.payments ?? [];
 
-  // Only count payments that actually succeeded
+  // Total confirmed payments (PaymentStatus.Success)
   const totalPaid = allList
     .filter((r) => String(r.status ?? "").toLowerCase() === "success")
-    .reduce((s, r) => s + (r.amount ?? r.price ?? 0), 0);
+    .reduce((s, r) => s + (r.amount ?? 0), 0);
 
-  // Refunded amount for info
+  // Total refunded (PaymentStatus.Refunded — cancelled after Paymob payment)
   const totalRefunded = allList
     .filter((r) => String(r.status ?? "").toLowerCase() === "refunded")
-    .reduce((s, r) => s + (r.amount ?? r.price ?? 0), 0);
+    .reduce((s, r) => s + (r.amount ?? 0), 0);
 
   const activeAds = (adPayments.payments ?? []).filter(
     (a) => String(a.status || "").toLowerCase() === "active",
@@ -679,7 +668,7 @@ export default function Payments() {
       )
     : 0;
 
-  // ── Loading state ──
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="mx-auto max-w-6xl space-y-5 p-3 sm:p-4 md:p-6">
@@ -705,7 +694,7 @@ export default function Payments() {
     );
   }
 
-  // ── Error state ──
+  // ── Error ──────────────────────────────────────────────────────────────────
   if (hasError) {
     return (
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-4 p-3 py-20 sm:p-4 md:p-6">
@@ -796,7 +785,7 @@ export default function Payments() {
         />
       </div>
 
-      {/* Refund notice */}
+      {/* Refund notice — only shown when there are refunded payments */}
       {totalRefunded > 0 && (
         <div className="flex items-center gap-3 rounded-2xl border border-purple-200 bg-purple-50 px-5 py-3 text-sm text-purple-700">
           <RotateCcw size={16} className="flex-shrink-0" />
