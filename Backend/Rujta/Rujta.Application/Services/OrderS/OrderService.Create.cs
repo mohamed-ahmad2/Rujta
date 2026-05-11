@@ -1,6 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Rujta.Application.DTOs.OrderDto;
-using Rujta.Domain.Entities;
+﻿using Rujta.Application.DTOs.OrderDto;
 
 namespace Rujta.Application.Services.OrderS
 {
@@ -18,16 +16,15 @@ namespace Rujta.Application.Services.OrderS
                 var appUser = await _unitOfWork.People.GetByGuidAsync(userId, cancellationToken)
                     ?? throw new InvalidOperationException($"User with ID {userId} not found.");
 
-                var pharmacy = await _unitOfWork.Pharmacies.GetByIdWithAddressAsync(createOrderDto.PharmacyID, cancellationToken)
+                var pharmacy = await _unitOfWork.Pharmacies.GetByIdWithAddressAsync(
+                    createOrderDto.PharmacyID,
+                    cancellationToken)
                     ?? throw new InvalidOperationException($"Pharmacy with ID {createOrderDto.PharmacyID} not found.");
 
-                if(pharmacy.Address == null)
-                {
-                    throw new InvalidOperationException($"Pharmacy with Address is null.");
-                }
+                if (pharmacy.Address == null)
+                    throw new InvalidOperationException("Pharmacy address is null.");
 
-
-                string deliveryAddressText = "";
+                string deliveryAddressText;
 
                 if (!createOrderDto.IsInStore)
                 {
@@ -35,8 +32,9 @@ namespace Rujta.Application.Services.OrderS
                         throw new InvalidOperationException("Delivery address ID is required.");
 
                     var address = await _unitOfWork.Address.GetByIdAsync(
-                        createOrderDto.DeliveryAddressId.Value, cancellationToken)
-                        ?? throw new InvalidOperationException("The delivery address does not exist.");
+                        createOrderDto.DeliveryAddressId.Value,
+                        cancellationToken)
+                        ?? throw new InvalidOperationException("Delivery address not found.");
 
                     deliveryAddressText = BuildAddressText(address);
                 }
@@ -45,15 +43,16 @@ namespace Rujta.Application.Services.OrderS
                     deliveryAddressText = BuildAddressText(pharmacy.Address);
                 }
 
-                    var order = new Order
-                    {
-                        UserId = userId,
-                        PharmacyId = createOrderDto.PharmacyID,
-                        OrderDate = DateTime.UtcNow,
-                        Status = OrderStatus.Pending,
-                        DeliveryAddress = deliveryAddressText,
-                        OrderItems = new List<OrderItem>()
-                    };
+                var order = new Order
+                {
+                    UserId = userId,
+                    CustomerId = createOrderDto.CustomerId,
+                    PharmacyId = createOrderDto.PharmacyID,
+                    OrderDate = DateTime.UtcNow,
+                    Status = OrderStatus.Pending,
+                    DeliveryAddress = deliveryAddressText,
+                    OrderItems = new List<OrderItem>()
+                };
 
                 order.TotalPrice = await BuildOrderItemsAsync(order, createOrderDto, cancellationToken);
 
@@ -63,10 +62,6 @@ namespace Rujta.Application.Services.OrderS
                     await _unitOfWork.SaveAsync(ct);
                     return order;
                 }, cancellationToken);
-
-                _logger.LogInformation(
-                    "Order {OrderId} created successfully for UserId {UserId}",
-                    savedOrder.Id, userId);
 
                 var orderDto = _mapper.Map<OrderDto>(savedOrder);
                 orderDto.UserName = appUser.Name;
@@ -89,31 +84,11 @@ namespace Rujta.Application.Services.OrderS
 
                 return orderDto;
             }
-            catch (InvalidOperationException)
-            {
-                throw;
-            }
             catch (Exception ex)
             {
-                var message = $"Failed to create order for UserId {userId}";
-                _logger.LogError(ex, message);
-                throw new InvalidOperationException(message, ex);
+                _logger.LogError(ex, "Failed to create order for UserId {UserId}", userId);
+                throw new InvalidOperationException("Order creation failed.", ex);
             }
-        }
-
-        private static string BuildAddressText(Address address)
-        {
-            string street = address.Street ?? "";
-            string buildingNo = address.BuildingNo ?? "";
-            string city = address.City ?? "";
-            string governorate = address.Governorate ?? "";
-
-            var text = $"{street} {buildingNo}".Trim();
-
-            if (!string.IsNullOrEmpty(city) || !string.IsNullOrEmpty(governorate))
-                text += $"\n{city} {governorate}".Trim();
-
-            return text;
         }
 
         private async Task<decimal> BuildOrderItemsAsync(
@@ -123,16 +98,14 @@ namespace Rujta.Application.Services.OrderS
         {
             var medicineIds = createOrderDto.OrderItems
                 .Select(i => i.MedicineID)
+                .Distinct()
                 .ToList();
 
-            var inventoryItems = await _unitOfWork.InventoryItems
-                .FindAsync(
-                    i => medicineIds.Contains(i.MedicineID)
-                      && i.PharmacyID == createOrderDto.PharmacyID,
-                    cancellationToken,
-                    include: q => q.Include(i => i.Medicine));
-
-            var inventoryDict = inventoryItems.ToDictionary(i => i.MedicineID);
+            var inventoryDict = await _unitOfWork.InventoryItems
+                .GetBestInventoryItemsAsync(
+                    createOrderDto.PharmacyID,
+                    medicineIds,
+                    cancellationToken);
 
             decimal totalPrice = 0;
 
@@ -140,11 +113,11 @@ namespace Rujta.Application.Services.OrderS
             {
                 if (!inventoryDict.TryGetValue(itemDto.MedicineID, out var inventoryItem))
                     throw new InvalidOperationException(
-                        $"Medicine with ID {itemDto.MedicineID} not found in pharmacy inventory.");
+                        $"Medicine {itemDto.MedicineID} not found in pharmacy inventory.");
 
                 if (inventoryItem.Quantity < itemDto.Quantity)
                     throw new InvalidOperationException(
-                        $"Insufficient stock for Medicine ID {itemDto.MedicineID}. " +
+                        $"Insufficient stock for Medicine {itemDto.MedicineID}. " +
                         $"Available: {inventoryItem.Quantity}, Requested: {itemDto.Quantity}");
 
                 var pricePerUnit = await _discountService.ApplyDiscountAsync(inventoryItem);
@@ -162,6 +135,21 @@ namespace Rujta.Application.Services.OrderS
             }
 
             return totalPrice;
+        }
+
+        private static string BuildAddressText(Address address)
+        {
+            var street = address.Street ?? "";
+            var buildingNo = address.BuildingNo ?? "";
+            var city = address.City ?? "";
+            var governorate = address.Governorate ?? "";
+
+            var text = $"{street} {buildingNo}".Trim();
+
+            if (!string.IsNullOrWhiteSpace(city) || !string.IsNullOrWhiteSpace(governorate))
+                text += $"\n{city} {governorate}".Trim();
+
+            return text;
         }
     }
 }

@@ -106,6 +106,7 @@ namespace Rujta.Application.Services.OrderS
 
             return groups;
         }
+        
 
         public async Task<bool> CanAccessOrderAsync(int orderId, string? userId, string? pharmacyId)
         {

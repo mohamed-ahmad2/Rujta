@@ -18,6 +18,7 @@
     "aos": "^2.3.4",
     "axios": "^1.13.2",
     "base64-arraybuffer": "^1.0.2",
+    "date-fns": "^4.1.0",
     "dompurify": "^3.1.2",
     "firebase": "^12.6.0",
     "framer-motion": "^12.23.24",
