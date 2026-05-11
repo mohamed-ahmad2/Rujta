@@ -4,19 +4,26 @@ export const getAllOrders = () => apiClient.get("/orders");
 export const getOrderById = (id) => apiClient.get(`/orders/${id}`);
 export const getOrderDetails = (id) => apiClient.get(`/orders/${id}/details`);
 
+// User & Pharmacy
 export const getUserOrders = () => apiClient.get("/orders/user");
 export const getPharmacyOrders = () => apiClient.get("/orders/pharmacy/orders");
 
-export const createOrder = (data) => apiClient.post("/orders", Array.isArray(data) ? data : [data]); // Wrap in array to match backend List<CreateOrderDto>
+// CRUD
+export const createOrder = (data) =>
+  apiClient.post("/orders", Array.isArray(data) ? data : [data]);
+
 export const updateOrder = (id, data) => apiClient.put(`/orders/${id}`, data);
 export const deleteOrder = (id) => apiClient.delete(`/orders/${id}`);
 
+// Status Mutations
 export const acceptOrder = (id) => apiClient.put(`/orders/${id}/accept`, {});
-export const processOrder = (id) => apiClient.put(`/orders/${id}/process`);
+export const processOrder = (id) => apiClient.put(`/orders/${id}/process`, {});
 export const outForDelivery = (id) =>
-  apiClient.put(`/orders/${id}/out-for-delivery`);
-export const markAsDelivered = (id) => apiClient.put(`/orders/${id}/delivered`);
+  apiClient.put(`/orders/${id}/out-for-delivery`, {});
+export const markAsDelivered = (id) =>
+  apiClient.put(`/orders/${id}/delivered`, {});
+
 export const cancelOrderByUser = (id) =>
-  apiClient.put(`/orders/${id}/cancel/user`);
+  apiClient.put(`/orders/${id}/cancel/user`, {});
 export const cancelOrderByPharmacy = (id) =>
-  apiClient.put(`/orders/${id}/cancel/pharmacy`);
+  apiClient.put(`/orders/${id}/cancel/pharmacy`, {});

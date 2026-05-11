@@ -77,5 +77,46 @@ namespace Rujta.Infrastructure.Repositories
                 .Select(i => i.Medicine!.Price)
                 .MinAsync(cancellationToken);
         }
+
+        public async Task<Dictionary<int, List<InventoryItem>>> GetInventoryByMedicineIdsAsync(
+    int pharmacyId,
+    IEnumerable<int> medicineIds,
+    CancellationToken cancellationToken = default)
+        {
+            var items = await _context.InventoryItems
+                .AsNoTracking()
+                .Include(i => i.Medicine)
+                .Where(i => i.PharmacyID == pharmacyId && medicineIds.Contains(i.MedicineID))
+                .ToListAsync(cancellationToken);
+
+            return items.GroupBy(i => i.MedicineID)
+                        .ToDictionary(g => g.Key, g => g.ToList());
+        }
+
+        public async Task<Dictionary<int, InventoryItem>> GetBestInventoryItemsAsync(
+            int pharmacyId,
+            IEnumerable<int> medicineIds,
+            CancellationToken cancellationToken = default)
+        {
+            var items = await _context.InventoryItems
+                .AsNoTracking()
+                .Include(i => i.Medicine)
+                .Where(i => i.PharmacyID == pharmacyId
+                         && medicineIds.Contains(i.MedicineID)
+                         && i.Quantity > 0)
+                .ToListAsync(cancellationToken);
+
+            return items
+                .GroupBy(i => i.MedicineID)
+                .Select(g => new
+                {
+                    MedicineId = g.Key,
+                    BestItem = g.OrderByDescending(i => i.ExpiryDate) 
+                               .ThenByDescending(i => i.Quantity)
+                               .FirstOrDefault()
+                })
+                .Where(x => x.BestItem != null)
+                .ToDictionary(x => x.MedicineId, x => x.BestItem!);
+        }
     }
 }

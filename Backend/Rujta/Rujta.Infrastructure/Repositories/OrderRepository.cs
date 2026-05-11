@@ -58,9 +58,13 @@ namespace Rujta.Infrastructure.Repositories
         public async Task<IEnumerable<Order>> GetOrdersByCustomerAsync(Guid customerId)
         {
             return await _context.Orders
+                .AsNoTracking()
+                .Include(o => o.Customer)
+                .Include(o => o.Pharmacy)
                 .Include(o => o.OrderItems)
-                .Where(o => o.UserId == customerId)
-                .OrderByDescending(o => o.CreatedAt)
+                    .ThenInclude(i => i.Medicine)
+                .Where(o => o.CustomerId == customerId)
+                .OrderByDescending(o => o.OrderDate)
                 .ToListAsync();
         }
 
