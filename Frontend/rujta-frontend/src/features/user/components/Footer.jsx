@@ -19,8 +19,7 @@ const Footer = () => {
           <div className="py-4 px-4">
             <h1 className="text-2xl font-bold mb-3">Rujta</h1>
             <p className="text-gray-400 text-sm leading-6">
-              Lorem ipsum dolor sit amet consectetur adipisicing elit.
-              Cum in beatae ea recusandae blanditiis veritatis.
+              At Rujta, we aim to enhance the experience of obtaining medications through a trusted platform that directly connects users with pharmacies, focusing on safety, speed, and ease of use.
             </p>
           </div>
 
@@ -41,18 +40,7 @@ const Footer = () => {
               ))}
             </ul>
 
-            {/* Social icons */}
-            <div className="flex items-center gap-4 mt-6">
-              <a href="#" className="hover:text-secondary">
-                <FaInstagram className="text-2xl" />
-              </a>
-              <a href="#" className="hover:text-secondary">
-                <FaFacebook className="text-2xl" />
-              </a>
-              <a href="#" className="hover:text-secondary">
-                <FaLinkedin className="text-2xl" />
-              </a>
-            </div>
+           
           </div>
         </div>
 
