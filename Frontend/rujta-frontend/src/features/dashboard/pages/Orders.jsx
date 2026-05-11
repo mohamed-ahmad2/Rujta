@@ -586,13 +586,7 @@ export default function Orders() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setOpenModal(true)}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-secondary px-3 py-2 text-xs font-medium text-white transition hover:opacity-90 sm:flex-none sm:px-4 sm:text-sm"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Add New Order
-          </button>
+          
 
           <div className="relative" ref={filterRef}>
             <button

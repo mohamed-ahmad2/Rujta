@@ -144,7 +144,7 @@ export default function ServicePricing() {
             </svg>
             <span style={{ fontSize: 15 }}>Subscription Pricing</span>
           </div>
-          <span style={styles.badge}>Active Plan</span>
+          <span style={baseStyles.badge}>Active Plan</span>
         </div>
         <div style={styles.cardBody}>
           <div style={styles.subPlan}>
@@ -158,7 +158,7 @@ export default function ServicePricing() {
               <div style={styles.rateBox}>
                 <div style={styles.rateLabel}>Monthly Rate</div>
                 <InputField value={monthlyRate} onChange={setMonthlyRate} />
-                <div style={styles.rateNote}>Billed every 30 days</div>
+                <div style={baseStyles.rateNote}>Billed every 30 days</div>
               </div>
               <div style={styles.rateBox}>
                 <div style={styles.rateLabel}>Yearly Rate</div>
