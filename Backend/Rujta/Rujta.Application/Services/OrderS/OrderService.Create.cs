@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Rujta.Application.DTOs.OrderDto;
+using Rujta.Domain.Entities;
 
 namespace Rujta.Application.Services.OrderS
 {
@@ -17,27 +18,42 @@ namespace Rujta.Application.Services.OrderS
                 var appUser = await _unitOfWork.People.GetByGuidAsync(userId, cancellationToken)
                     ?? throw new InvalidOperationException($"User with ID {userId} not found.");
 
-                var pharmacy = await _unitOfWork.Pharmacies.GetByIdAsync(createOrderDto.PharmacyID, cancellationToken)
+                var pharmacy = await _unitOfWork.Pharmacies.GetByIdWithAddressAsync(createOrderDto.PharmacyID, cancellationToken)
                     ?? throw new InvalidOperationException($"Pharmacy with ID {createOrderDto.PharmacyID} not found.");
 
-                if (!createOrderDto.DeliveryAddressId.HasValue)
-                    throw new InvalidOperationException("Delivery address ID is required.");
-
-                var address = await _unitOfWork.Address.GetByIdAsync(
-                    createOrderDto.DeliveryAddressId.Value, cancellationToken)
-                    ?? throw new InvalidOperationException("The delivery address does not exist.");
-
-                var deliveryAddressText = BuildAddressText(address);
-
-                var order = new Order
+                if(pharmacy.Address == null)
                 {
-                    UserId = userId,
-                    PharmacyId = createOrderDto.PharmacyID,
-                    OrderDate = DateTime.UtcNow,
-                    Status = OrderStatus.Pending,
-                    DeliveryAddress = deliveryAddressText,
-                    OrderItems = new List<OrderItem>()
-                };
+                    throw new InvalidOperationException($"Pharmacy with Address is null.");
+                }
+
+
+                string deliveryAddressText = "";
+
+                if (!createOrderDto.IsInStore)
+                {
+                    if (!createOrderDto.DeliveryAddressId.HasValue)
+                        throw new InvalidOperationException("Delivery address ID is required.");
+
+                    var address = await _unitOfWork.Address.GetByIdAsync(
+                        createOrderDto.DeliveryAddressId.Value, cancellationToken)
+                        ?? throw new InvalidOperationException("The delivery address does not exist.");
+
+                    deliveryAddressText = BuildAddressText(address);
+                }
+                else
+                {
+                    deliveryAddressText = BuildAddressText(pharmacy.Address);
+                }
+
+                    var order = new Order
+                    {
+                        UserId = userId,
+                        PharmacyId = createOrderDto.PharmacyID,
+                        OrderDate = DateTime.UtcNow,
+                        Status = OrderStatus.Pending,
+                        DeliveryAddress = deliveryAddressText,
+                        OrderItems = new List<OrderItem>()
+                    };
 
                 order.TotalPrice = await BuildOrderItemsAsync(order, createOrderDto, cancellationToken);
 

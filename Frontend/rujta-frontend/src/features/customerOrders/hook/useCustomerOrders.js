@@ -6,6 +6,7 @@ import {
   deleteCustomer,
   getCustomerStats,
   checkCustomerByPhone,
+  createCustomerOrder,
 } from "../api/customerOrdersApi";
 
 export const useCustomers = (pharmacyId) => {
@@ -67,15 +68,15 @@ export const useCustomers = (pharmacyId) => {
       Name: data.Name || data.name || "",
       PhoneNumber: data.PhoneNumber || data.phoneNumber || "",
       Email: data.Email || data.email || "",
-      PharmacyId: pharmacyId,
     };
-    if (id) payload.Id = id;
 
     const res = await updateCustomer(id, payload);
     const updatedCustomer = res.data;
 
     setCustomers((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updatedCustomer } : c)),
+      prev.map((c) =>
+        c.id === id || c.Id === id ? { ...c, ...updatedCustomer } : c,
+      ),
     );
 
     return updatedCustomer;
@@ -83,8 +84,7 @@ export const useCustomers = (pharmacyId) => {
 
   const removeCustomer = async (id) => {
     await deleteCustomer(id);
-
-    setCustomers((prev) => prev.filter((c) => c.id !== id));
+    setCustomers((prev) => prev.filter((c) => c.id !== id && c.Id !== id));
     setStats((prev) => ({
       ...prev,
       totalCustomers: prev.totalCustomers - 1,
@@ -92,6 +92,11 @@ export const useCustomers = (pharmacyId) => {
   };
 
   const searchByPhone = async (phone) => checkCustomerByPhone(phone);
+
+  const addCustomerOrder = async (orderData) => {
+    const res = await createCustomerOrder(orderData);
+    return res.data;
+  };
 
   return {
     customers,
@@ -102,5 +107,6 @@ export const useCustomers = (pharmacyId) => {
     editCustomer,
     removeCustomer,
     searchByPhone,
+    addCustomerOrder,
   };
 };
