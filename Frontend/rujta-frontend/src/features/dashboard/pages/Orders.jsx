@@ -152,7 +152,6 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
 function AddOrderModal({ open, onClose, onAdd }) {
   const [form, setForm] = useState({
     userName: "",
-    
     orderDate: new Date().toISOString().split("T")[0],
     totalPrice: "",
     status: "Pending",
@@ -190,15 +189,12 @@ function AddOrderModal({ open, onClose, onAdd }) {
 
   const handleSubmit = () => {
     if (!form.userName.trim()) return toast.error("Customer name is required.");
-    if (!form.pharmacyName.trim())
-      return toast.error("Pharmacy name is required.");
     if (form.items.some((it) => !it.name.trim()))
       return toast.error("All items must have a name.");
 
     const newOrder = {
       id: Date.now(),
       userName: form.userName,
-      
       orderDate: form.orderDate,
       totalPrice: form.totalPrice || calcTotal(),
       status: form.status,
@@ -210,7 +206,6 @@ function AddOrderModal({ open, onClose, onAdd }) {
     onClose();
     setForm({
       userName: "",
-      pharmacyName: "",
       orderDate: new Date().toISOString().split("T")[0],
       totalPrice: "",
       status: "Pending",
@@ -251,10 +246,7 @@ function AddOrderModal({ open, onClose, onAdd }) {
                 className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
               />
             </div>
-            <div>
-              
-             
-            </div>
+            <div />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -409,10 +401,8 @@ export default function Orders() {
     cancelByPharmacy,
   } = useOrders();
 
-  // ✅ Added — needed for OrderDetailsModal
   const { medicines, fetchAll } = useMedicines();
 
-  // rawOrders is order[][] — flatten to order[] for the pharmacy table
   const apiOrders = useMemo(() => rawOrders.flat(), [rawOrders]);
 
   const [localOrders, setLocalOrders] = useState([]);
@@ -434,7 +424,7 @@ export default function Orders() {
 
   useEffect(() => {
     fetchPharmacy();
-    fetchAll(); // ✅ Added — load medicines for the details modal
+    fetchAll();
   }, [fetchPharmacy]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -455,7 +445,6 @@ export default function Orders() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ✅ Added — resolves a medicine ID to its name for the details modal
   const getMedicineName = (id) => {
     const med = medicines.find((m) => m.id === id);
     return med ? med.name : `Medicine #${id}`;
@@ -508,7 +497,7 @@ export default function Orders() {
 
   const handleExport = () => {
     const rows = [
-      ["Order ID", "User", "Pharmacy", "Date", "Total", "Status"],
+      ["Order ID", "User", "Pharmacy", "Date", "Total", "Status", "Payment"],
       ...filtered.map((o) => [
         o.id,
         o.userName,
@@ -516,6 +505,7 @@ export default function Orders() {
         new Date(o.orderDate).toLocaleDateString(),
         o.totalPrice,
         o.status,
+        o.paymentMethod === "Payment" ? "Online" : "Cash",
       ]),
     ];
     const csv = rows
@@ -679,10 +669,10 @@ export default function Orders() {
       {/* Table */}
       <div className="overflow-hidden rounded-2xl border bg-white shadow">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-xs sm:text-sm">
+          <table className="w-full min-w-[800px] text-xs sm:text-sm">
             <thead className="bg-gray-50 text-gray-500">
               <tr>
-                {["Order", "User", "Pharmacy", "Date", "Total", "Status", "Action"].map(
+                {["Order", "User", "Pharmacy", "Date", "Total", "Status", "Payment", "Action"].map(
                   (h, i) => (
                     <th
                       key={h}
@@ -697,7 +687,7 @@ export default function Orders() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center">
+                  <td colSpan={8} className="py-10 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-500">
                       <div className="h-6 w-6 animate-spin rounded-full border-2 border-secondary border-t-transparent" />
                       <span className="text-xs sm:text-sm">Loading orders...</span>
@@ -707,7 +697,7 @@ export default function Orders() {
               ) : pageData.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="py-10 text-center text-xs text-gray-500 sm:text-sm"
                   >
                     No orders found.
@@ -748,6 +738,20 @@ export default function Orders() {
                         {o.status}
                       </span>
                     </td>
+
+                    {/* ✅ NEW: Payment Method column */}
+                    <td className="px-3 py-3 text-center sm:px-4 sm:py-4 md:px-6">
+                      <span
+                        className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs sm:px-3 sm:py-1 ${
+                          o.paymentMethod === "Payment"
+                            ? "bg-purple-100 text-purple-700"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {o.paymentMethod === "Payment" ? "Online" : "Cash"}
+                      </span>
+                    </td>
+
                     <td className="px-3 py-3 text-center sm:px-4 sm:py-4 md:px-6">
                       {isLocal(o.id) ? (
                         <span className="text-xs italic text-gray-400">
