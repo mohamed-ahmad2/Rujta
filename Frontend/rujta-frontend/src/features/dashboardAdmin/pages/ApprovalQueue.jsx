@@ -637,14 +637,10 @@ export default function ApprovalQueue() {
             )}
           </div>
 
-<<<<<<< HEAD
-
-=======
           
 
           
           
->>>>>>> 0d31de5af2a5822ae0d16503f0e29c2697d543e4
         </div>
       </div>
 

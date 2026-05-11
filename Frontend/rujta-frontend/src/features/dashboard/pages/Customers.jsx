@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Plus,
   Trash2,
@@ -9,33 +9,15 @@ import {
   ShoppingCart,
   Package,
   ClipboardList,
-  Clock,
+  ChevronDown,
+  User,
 } from "lucide-react";
 import { useCustomers } from "../../customerOrders/hook/useCustomerOrders";
 import CustomersCard from "../components/CustomersCard";
 import { useSpring, animated } from "@react-spring/web";
 import { toast } from "react-toastify";
 import useMedicine from "../../medicines/hook/useMedicines";
-import { createOrder } from "../../customerOrders/api/customerOrdersApi";
 
-// ─── Toast Component ─────────────────────────────────────────────────────────
-const Toast = ({ type, message, onClose }) => (
-  <div
-    className={`animate-fadeIn fixed left-4 right-4 top-4 z-50 flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm text-white shadow-lg sm:left-auto sm:right-6 sm:top-6 sm:px-4 sm:py-3 sm:text-base ${
-      type === "success" ? "bg-green-600" : "bg-red-600"
-    }`}
-  >
-    <span>{message}</span>
-    <button
-      onClick={onClose}
-      className="flex-shrink-0 transition hover:opacity-80"
-    >
-      <X className="h-4 w-4" />
-    </button>
-  </div>
-);
-
-// ─── Medicine Search Input ───────────────────────────────────────────────────
 function MedicineSearchInput({ value, onChange, onSelect, medicines }) {
   const [query, setQuery] = useState(value?.name || "");
   const [open, setOpen] = useState(false);
@@ -118,11 +100,113 @@ function MedicineSearchInput({ value, onChange, onSelect, medicines }) {
   );
 }
 
-// ─── Customer Orders Modal ───────────────────────────────────────────────────
-function CustomerOrdersModal({ customer, orders, onClose, onAddOrder }) {
-  if (!customer) return null;
+function CustomerSelectDropdown({
+  customers,
+  value,
+  onChange,
+  onSelectCustomer,
+}) {
+  const [query, setQuery] = useState(value || "");
+  const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
 
-  const customerOrders = orders.filter((o) => o.userName === customer.name);
+  useEffect(() => {
+    setQuery(value || "");
+  }, [value]);
+
+  const filtered = customers.filter(
+    (c) =>
+      c.name?.toLowerCase().includes(query.toLowerCase()) ||
+      c.phoneNumber?.includes(query),
+  );
+
+  const handleSelect = (customer) => {
+    setQuery(customer.name);
+    setOpen(false);
+    onSelectCustomer(customer);
+  };
+
+  return (
+    <div className="relative">
+      <div
+        className={`flex items-center rounded-xl border bg-gray-50 px-3 transition ${
+          focused
+            ? "border-secondary ring-2 ring-secondary/20"
+            : "border-gray-200"
+        }`}
+      >
+        <User className="h-4 w-4 flex-shrink-0 text-gray-400" />
+        <input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+            onChange(e.target.value);
+          }}
+          onFocus={() => {
+            setFocused(true);
+            setOpen(true);
+          }}
+          onBlur={() => {
+            setFocused(false);
+            setTimeout(() => setOpen(false), 200);
+          }}
+          placeholder="Search for a customer by name or number..."
+          className="w-full bg-transparent py-2.5 pl-2 text-sm outline-none"
+        />
+        <ChevronDown className="h-4 w-4 text-gray-400" />
+      </div>
+
+      {open && filtered.length > 0 && (
+        <ul className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-xl border border-gray-100 bg-white shadow-lg">
+          {filtered.map((c) => (
+            <li
+              key={c.id}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleSelect(c)}
+              className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-secondary/5"
+            >
+              <div>
+                <p className="font-medium text-gray-800">{c.name}</p>
+                <p className="text-xs text-gray-400">{c.phoneNumber}</p>
+              </div>
+              <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-xs text-secondary">
+                {c.email || "—"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {open && filtered.length === 0 && query.trim() && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-gray-100 bg-white p-3 shadow-lg">
+          <p className="text-center text-xs text-gray-400">
+            No customer found with this name/number
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CustomerOrdersModal({
+  customer,
+  onClose,
+  onAddOrder,
+  fetchCustomerOrders,
+}) {
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  useEffect(() => {
+    if (!customer) return;
+    setLoadingOrders(true);
+    fetchCustomerOrders(customer.id)
+      .then((data) => setOrders(data))
+      .finally(() => setLoadingOrders(false));
+  }, [customer, fetchCustomerOrders]);
+
+  if (!customer) return null;
 
   return (
     <div
@@ -142,7 +226,7 @@ function CustomerOrdersModal({ customer, orders, onClose, onAddOrder }) {
             <button
               onClick={() => {
                 onClose();
-                onAddOrder(customer.name);
+                onAddOrder(customer);
               }}
               className="flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
             >
@@ -159,7 +243,12 @@ function CustomerOrdersModal({ customer, orders, onClose, onAddOrder }) {
         </div>
 
         <div className="max-h-[60vh] overflow-y-auto p-6">
-          {customerOrders.length === 0 ? (
+          {loadingOrders ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <div className="mb-3 h-6 w-6 animate-spin rounded-full border-2 border-secondary border-t-transparent" />
+              <p className="text-sm">Loading orders...</p>
+            </div>
+          ) : orders.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-400">
               <ClipboardList className="mb-3 h-10 w-10 opacity-30" />
               <p className="text-sm font-medium">No orders yet</p>
@@ -169,57 +258,73 @@ function CustomerOrdersModal({ customer, orders, onClose, onAddOrder }) {
             </div>
           ) : (
             <div className="space-y-3">
-              {customerOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50"
-                >
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <div className="flex flex-col gap-0.5">
+              {orders.map((order) => {
+                const items = order.orderItems || order.items || [];
+                return (
+                  <div
+                    key={order.id}
+                    className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50"
+                  >
+                    <div className="flex items-center justify-between px-4 py-3">
                       <div className="flex items-center gap-3">
                         <span className="text-xs font-bold text-secondary">
                           #{order.id}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {new Date(
-                            order.orderDate || order.createdAt,
-                          ).toLocaleDateString()}
+                          {new Date(order.orderDate).toLocaleDateString(
+                            "en-GB",
+                          )}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            order.status === "Delivered"
+                              ? "bg-green-100 text-green-700"
+                              : order.status?.startsWith("Cancelled")
+                                ? "bg-red-100 text-red-600"
+                                : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          {order.status}
                         </span>
                       </div>
+                      <span className="text-xs font-bold text-secondary">
+                        {order.totalPrice} EGP
+                      </span>
                     </div>
-                    <span className="text-xs font-bold text-secondary">
-                      {order.totalPrice} EGP
-                    </span>
-                  </div>
 
-                  {order.items?.length > 0 && (
-                    <div className="border-t border-gray-100 px-4 py-2">
-                      <p className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                        <Package className="h-3 w-3" />
-                        Items ({order.items.length})
-                      </p>
-                      <ul className="space-y-1">
-                        {order.items.map((item, i) => (
-                          <li
-                            key={i}
-                            className="flex items-center justify-between text-xs"
-                          >
-                            <span className="text-gray-600">{item.name}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-secondary">
-                                ×{item.qty}
+                    {items.length > 0 && (
+                      <div className="border-t border-gray-100 px-4 py-2">
+                        <p className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                          <Package className="h-3 w-3" />
+                          Items ({items.length})
+                        </p>
+                        <ul className="space-y-1">
+                          {items.map((item, i) => (
+                            <li
+                              key={i}
+                              className="flex items-center justify-between text-xs"
+                            >
+                              <span className="text-gray-600">
+                                {item.medicineName ||
+                                  item.name ||
+                                  `Medicine #${item.medicineID}`}
                               </span>
-                              <span className="text-gray-400">
-                                {item.price} EGP
-                              </span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ))}
+                              <div className="flex items-center gap-2">
+                                <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-secondary">
+                                  ×{item.quantity || item.qty}
+                                </span>
+                                <span className="text-gray-400">
+                                  {item.pricePerUnit || item.price} EGP
+                                </span>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -228,14 +333,14 @@ function CustomerOrdersModal({ customer, orders, onClose, onAddOrder }) {
   );
 }
 
-// ─── Add Order Modal ─────────────────────────────────────────────────────────
 function AddOrderModal({
   open,
   onClose,
   onAdd,
-  defaultCustomerName = "",
+  defaultCustomer = null,
   pharmacyId,
   addCustomerOrder,
+  customers = [],
 }) {
   const { medicines, fetchAll } = useMedicine();
 
@@ -245,46 +350,51 @@ function AddOrderModal({
 
   const emptyItem = { medicine: null, qty: 1, price: "" };
 
-  const [form, setForm] = useState({
-    fullName: defaultCustomerName,
-    phoneNumber: "",
-    items: [emptyItem],
-  });
-
+  const [selectedCustomer, setSelectedCustomer] = useState(defaultCustomer);
+  const [customerQuery, setCustomerQuery] = useState(
+    defaultCustomer?.name || "",
+  );
+  const [phoneNumber, setPhoneNumber] = useState(
+    defaultCustomer?.phoneNumber || "",
+  );
+  const [items, setItems] = useState([emptyItem]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setForm({
-        fullName: defaultCustomerName,
-        phoneNumber: "",
-        items: [emptyItem],
-      });
+      setSelectedCustomer(defaultCustomer);
+      setCustomerQuery(defaultCustomer?.name || "");
+      setPhoneNumber(defaultCustomer?.phoneNumber || "");
+      setItems([emptyItem]);
     }
-  }, [open, defaultCustomerName]);
+  }, [open, defaultCustomer]);
 
-  const update = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const handleSelectCustomer = (customer) => {
+    setSelectedCustomer(customer);
+    setCustomerQuery(customer.name);
+    setPhoneNumber(customer.phoneNumber || "");
+  };
 
   const updateItem = (idx, patch) =>
-    setForm((f) => {
-      const items = [...f.items];
-      items[idx] = { ...items[idx], ...patch };
-      return { ...f, items };
+    setItems((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], ...patch };
+      return next;
     });
 
   const handleSelectMedicine = (idx, med) => {
     updateItem(idx, { medicine: med, price: med?.price ?? "" });
   };
 
-  const addItem = () =>
-    setForm((f) => ({ ...f, items: [...f.items, emptyItem] }));
+  const addItem = () => setItems((prev) => [...prev, emptyItem]);
+
   const removeItem = (idx) => {
-    if (form.items.length === 1) return;
-    setForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
+    if (items.length === 1) return;
+    setItems((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const calcTotal = () =>
-    form.items
+    items
       .reduce(
         (sum, item) =>
           sum + (Number(item.price) || 0) * (Number(item.qty) || 1),
@@ -293,17 +403,17 @@ function AddOrderModal({
       .toFixed(2);
 
   const handleSubmit = async () => {
-    if (!form.fullName.trim()) return toast.error("Customer name is required");
-    if (!form.phoneNumber.trim())
-      return toast.error("Phone number is required");
-    if (form.items.some((i) => !i.medicine))
+    if (!selectedCustomer && !customerQuery.trim())
+      return toast.error("Please select a customer from the list");
+    if (!phoneNumber.trim()) return toast.error("Phone number is required");
+    if (items.some((i) => !i.medicine))
       return toast.error("Please select medicine for all items");
 
     const payload = {
-      fullName: form.fullName,
-      phoneNumber: form.phoneNumber,
-      pharmacyId: pharmacyId,
-      items: form.items.map((item) => ({
+      fullName: selectedCustomer?.name || customerQuery,
+      phoneNumber: selectedCustomer?.phoneNumber || phoneNumber,
+      pharmacyId,
+      items: items.map((item) => ({
         medicineID: item.medicine.id,
         quantity: Number(item.qty),
       })),
@@ -315,13 +425,16 @@ function AddOrderModal({
 
       onAdd({
         id: result.orderId || Date.now(),
-        userName: form.fullName,
+        userName:
+          result.customerName || selectedCustomer?.name || customerQuery,
+        customerId: result.customerId,
         orderDate: new Date().toISOString(),
         totalPrice: calcTotal(),
-        items: form.items.map((it) => ({
-          name: it.medicine.name,
-          qty: it.qty,
-          price: it.price,
+        status: "Pending",
+        orderItems: items.map((it) => ({
+          medicineName: it.medicine.name,
+          quantity: it.qty,
+          pricePerUnit: it.price,
         })),
       });
 
@@ -343,7 +456,6 @@ function AddOrderModal({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="max-h-[95vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-xl sm:max-h-[90vh] sm:w-[90%] sm:rounded-2xl md:w-[75%] lg:w-[60%] xl:max-w-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <h3 className="text-base font-semibold text-gray-800 sm:text-lg">
             Add New Order
@@ -357,31 +469,37 @@ function AddOrderModal({
         </div>
 
         <div className="space-y-5 p-5">
-          {/* Customer Info */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Customer Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                value={form.fullName}
-                onChange={(e) => update("fullName", e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:ring-2 focus:ring-secondary/20"
-                placeholder="Ahmed Mohamed"
-              />
-            </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Customer <span className="text-red-500">*</span>
+            </label>
+            <CustomerSelectDropdown
+              customers={customers}
+              value={customerQuery}
+              onChange={setCustomerQuery}
+              onSelectCustomer={handleSelectCustomer}
+            />
+            {selectedCustomer && (
+              <p className="mt-1 text-xs text-green-600">
+                ✓ Selected: {selectedCustomer.name} —{" "}
+                {selectedCustomer.phoneNumber}
+              </p>
+            )}
+          </div>
+
+          {!selectedCustomer && (
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
                 Phone Number <span className="text-red-500">*</span>
               </label>
               <input
-                value={form.phoneNumber}
-                onChange={(e) => update("phoneNumber", e.target.value)}
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
                 className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:border-secondary focus:ring-2 focus:ring-secondary/20"
                 placeholder="01234567890"
               />
             </div>
-          </div>
+          )}
 
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -397,7 +515,7 @@ function AddOrderModal({
             </div>
 
             <div className="space-y-3">
-              {form.items.map((item, idx) => (
+              {items.map((item, idx) => (
                 <div
                   key={idx}
                   className="grid grid-cols-12 gap-2 rounded-xl border border-gray-100 bg-gray-50 p-2"
@@ -426,7 +544,7 @@ function AddOrderModal({
 
                   <button
                     onClick={() => removeItem(idx)}
-                    disabled={form.items.length === 1}
+                    disabled={items.length === 1}
                     className="col-span-1 text-gray-400 hover:text-red-500 disabled:opacity-40"
                   >
                     <X className="h-5 w-5" />
@@ -436,7 +554,6 @@ function AddOrderModal({
             </div>
           </div>
 
-          {/* Total */}
           <div className="flex items-center justify-between rounded-xl border border-secondary/20 bg-secondary/5 px-4 py-4">
             <span className="text-lg font-medium text-gray-700">
               Total Price
@@ -446,7 +563,6 @@ function AddOrderModal({
             </span>
           </div>
 
-          {/* Buttons */}
           <div className="flex justify-end gap-3 pt-4">
             <button
               onClick={onClose}
@@ -469,9 +585,8 @@ function AddOrderModal({
   );
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
 export default function Customers() {
-  const pharmacyId = 1; // غيّرها لاحقاً حسب الـ Authentication
+  const pharmacyId = 1;
 
   const {
     customers,
@@ -483,6 +598,7 @@ export default function Customers() {
     searchByPhone,
     refetch,
     addCustomerOrder,
+    fetchCustomerOrders,
   } = useCustomers(pharmacyId);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -491,9 +607,8 @@ export default function Customers() {
   const [editing, setEditing] = useState(null);
   const [searchPhone, setSearchPhone] = useState("");
   const [filteredCustomers, setFilteredCustomers] = useState([]);
-  const [localOrders, setLocalOrders] = useState([]);
   const [orderModalOpen, setOrderModalOpen] = useState(false);
-  const [orderDefaultCustomer, setOrderDefaultCustomer] = useState("");
+  const [orderDefaultCustomer, setOrderDefaultCustomer] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   useEffect(() => {
@@ -531,8 +646,8 @@ export default function Customers() {
     setModalOpen(true);
   };
 
-  const openAddOrder = (customerName = "") => {
-    setOrderDefaultCustomer(customerName);
+  const openAddOrder = (customer = null) => {
+    setOrderDefaultCustomer(customer);
     setOrderModalOpen(true);
   };
 
@@ -605,8 +720,6 @@ export default function Customers() {
 
   return (
     <div className="relative mx-auto max-w-7xl space-y-6 p-4 md:p-6">
-      {/* Toast Notification */}
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <CustomersCard
           title="Total Customers"
@@ -634,7 +747,6 @@ export default function Customers() {
         />
       </div>
 
-      {/* Controls */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-2">
           <input
@@ -655,7 +767,7 @@ export default function Customers() {
 
         <div className="flex gap-2">
           <button
-            onClick={() => openAddOrder("")}
+            onClick={() => openAddOrder(null)}
             className="flex items-center gap-2 rounded-lg border border-secondary px-4 py-2 text-secondary hover:bg-secondary/10"
           >
             <ShoppingCart className="h-4 w-4" /> New Order
@@ -669,26 +781,22 @@ export default function Customers() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="overflow-hidden rounded-2xl bg-white shadow">
         <table className="w-full min-w-[700px]">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
-                Name
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
-                Email
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">
-                Phone
-              </th>
-              <th className="px-6 py-4 text-center text-sm font-semibold text-gray-600">
-                Orders
-              </th>
-              <th className="px-6 py-4 text-center text-sm font-semibold text-gray-600">
-                Actions
-              </th>
+              {["Name", "Email", "Phone", "Orders", "Actions"].map((h) => (
+                <th
+                  key={h}
+                  className={`px-6 py-4 text-sm font-semibold text-gray-600 ${
+                    ["Orders", "Actions"].includes(h)
+                      ? "text-center"
+                      : "text-left"
+                  }`}
+                >
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -728,7 +836,7 @@ export default function Customers() {
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => openAddOrder(c.name)}
+                        onClick={() => openAddOrder(c)}
                         className="text-secondary hover:text-secondary/80"
                       >
                         <ShoppingCart className="h-4 w-4" />
@@ -748,7 +856,6 @@ export default function Customers() {
         </table>
       </div>
 
-      {/* Add / Edit Customer Modal */}
       {modalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -798,7 +905,6 @@ export default function Customers() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteModalOpen && deleteTarget && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -830,22 +936,24 @@ export default function Customers() {
         </div>
       )}
 
-      {/* Customer Orders Modal */}
       <CustomerOrdersModal
         customer={selectedCustomer}
-        orders={localOrders}
         onClose={() => setSelectedCustomer(null)}
-        onAddOrder={openAddOrder}
+        onAddOrder={(customer) => {
+          setSelectedCustomer(null);
+          openAddOrder(customer);
+        }}
+        fetchCustomerOrders={fetchCustomerOrders}
       />
 
-      {/* ✅ pharmacyId اتضاف هنا */}
       <AddOrderModal
         open={orderModalOpen}
         onClose={() => setOrderModalOpen(false)}
-        defaultCustomerName={orderDefaultCustomer}
-        onAdd={(newOrder) => setLocalOrders((prev) => [newOrder, ...prev])}
+        defaultCustomer={orderDefaultCustomer}
+        onAdd={() => {}}
         pharmacyId={pharmacyId}
         addCustomerOrder={addCustomerOrder}
+        customers={customers}
       />
     </div>
   );

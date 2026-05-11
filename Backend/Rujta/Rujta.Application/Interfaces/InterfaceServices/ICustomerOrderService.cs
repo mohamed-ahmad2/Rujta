@@ -13,5 +13,9 @@ namespace Rujta.Application.Interfaces.InterfaceServices
         Task<CustomerStatsDto> GetCustomerStatsAsync(int pharmacyId);
         Task<CustomerOrderResponse> CreateCustomerOrderAsync(CreateCustomerOrderRequest request, CancellationToken cancellationToken = default);
         Task<CheckCustomerResponse> CheckCustomerByPhoneAsync(int pharmacyId, string phoneNumber, CancellationToken cancellationToken = default);
+        Task<IEnumerable<OrderDto>> GetCustomerOrdersAsync(
+        Guid customerId,
+        int pharmacyId,
+        CancellationToken cancellationToken = default);
     }
 }

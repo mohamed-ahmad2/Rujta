@@ -26,8 +26,8 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 bg-gray-50">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
               Order Details
@@ -42,18 +42,18 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="space-y-5 p-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-xl bg-gray-50 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                 Customer
               </p>
               <p className="text-sm font-semibold text-gray-800">
-                {order.userName || "—"}
+                {order.customerName || order.userName || "—"}
               </p>
             </div>
             <div className="rounded-xl bg-gray-50 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                 Pharmacy
               </p>
               <p className="text-sm font-semibold text-gray-800">
@@ -61,7 +61,7 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
               </p>
             </div>
             <div className="rounded-xl bg-gray-50 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                 Date
               </p>
               <p className="text-sm font-semibold text-gray-800">
@@ -75,7 +75,7 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
               </p>
             </div>
             <div className="rounded-xl bg-gray-50 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                 Total
               </p>
               <p className="text-sm font-bold text-secondary">
@@ -94,12 +94,12 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
           </div>
 
           <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+            <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
               <Package className="h-3.5 w-3.5" />
               Items ({items.length})
             </p>
             {items.length > 0 ? (
-              <ul className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
                 {items.map((item, i) => {
                   const name =
                     item.name ||
@@ -128,14 +128,14 @@ function OrderDetailsModal({ order, onClose, getMedicineName, statusStyle }) {
               </ul>
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                <Package className="h-8 w-8 mb-2 opacity-30" />
+                <Package className="mb-2 h-8 w-8 opacity-30" />
                 <p className="text-sm">No items data available</p>
               </div>
             )}
           </div>
         </div>
 
-        <div className="border-t border-gray-100 px-6 py-4 bg-gray-50 flex justify-end">
+        <div className="flex justify-end border-t border-gray-100 bg-gray-50 px-6 py-4">
           <button
             onClick={onClose}
             className="rounded-full border border-gray-200 px-5 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
@@ -183,7 +183,7 @@ function AddOrderModal({ open, onClose, onAdd }) {
     form.items
       .reduce(
         (sum, it) => sum + (Number(it.price) || 0) * (Number(it.qty) || 1),
-        0
+        0,
       )
       .toFixed(2);
 
@@ -194,6 +194,7 @@ function AddOrderModal({ open, onClose, onAdd }) {
 
     const newOrder = {
       id: Date.now(),
+      customerName: form.userName,
       userName: form.userName,
       orderDate: form.orderDate,
       totalPrice: form.totalPrice || calcTotal(),
@@ -204,6 +205,8 @@ function AddOrderModal({ open, onClose, onAdd }) {
     onAdd(newOrder);
     toast.success("Order added successfully!");
     onClose();
+
+    // Reset form
     setForm({
       userName: "",
       orderDate: new Date().toISOString().split("T")[0],
@@ -408,7 +411,7 @@ export default function Orders() {
   const [localOrders, setLocalOrders] = useState([]);
   const orders = useMemo(
     () => [...localOrders, ...apiOrders],
-    [localOrders, apiOrders]
+    [localOrders, apiOrders],
   );
 
   const [openModal, setOpenModal] = useState(false);
@@ -425,13 +428,13 @@ export default function Orders() {
   useEffect(() => {
     fetchPharmacy();
     fetchAll();
-  }, [fetchPharmacy]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchPharmacy]);
 
   useEffect(() => {
     if (error) {
       toast.error(
         error?.message ||
-          (typeof error === "string" ? error : "An unexpected error occurred")
+          (typeof error === "string" ? error : "An unexpected error occurred"),
       );
     }
   }, [error]);
@@ -445,6 +448,10 @@ export default function Orders() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const getCustomerName = (order) => {
+    return order.customerName || order.userName || "Unknown";
+  };
+
   const getMedicineName = (id) => {
     const med = medicines.find((m) => m.id === id);
     return med ? med.name : `Medicine #${id}`;
@@ -456,20 +463,20 @@ export default function Orders() {
       const s = q.toLowerCase();
       list = list.filter(
         (o) =>
-          o.userName?.toLowerCase().includes(s) ||
+          getCustomerName(o).toLowerCase().includes(s) ||
           o.pharmacyName?.toLowerCase().includes(s) ||
-          o.id?.toString().includes(s)
+          o.id?.toString().includes(s),
       );
     }
     if (filterOrderId)
       list = list.filter((o) => o.id?.toString().includes(filterOrderId));
     if (filterCustomer)
       list = list.filter((o) =>
-        o.userName?.toLowerCase().includes(filterCustomer.toLowerCase())
+        getCustomerName(o).toLowerCase().includes(filterCustomer.toLowerCase()),
       );
     if (filterDate)
       list = list.filter(
-        (o) => new Date(o.orderDate).toLocaleDateString("en-CA") === filterDate
+        (o) => new Date(o.orderDate).toLocaleDateString("en-CA") === filterDate,
       );
     return list;
   }, [orders, q, filterOrderId, filterCustomer, filterDate]);
@@ -497,10 +504,18 @@ export default function Orders() {
 
   const handleExport = () => {
     const rows = [
-      ["Order ID", "User", "Pharmacy", "Date", "Total", "Status", "Payment"],
+      [
+        "Order ID",
+        "Customer",
+        "Pharmacy",
+        "Date",
+        "Total",
+        "Status",
+        "Payment",
+      ],
       ...filtered.map((o) => [
         o.id,
-        o.userName,
+        getCustomerName(o),
         o.pharmacyName,
         new Date(o.orderDate).toLocaleDateString(),
         o.totalPrice,
@@ -552,7 +567,7 @@ export default function Orders() {
     {
       title: "Pending",
       value: orders.filter((o) =>
-        ["Pending", "Accepted", "Processing"].includes(o.status)
+        ["Pending", "Accepted", "Processing"].includes(o.status),
       ).length,
     },
     {
@@ -586,12 +601,12 @@ export default function Orders() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          
-
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs transition sm:px-4 sm:text-sm ${showFilters ? "border-gray-400 bg-gray-100" : "hover:bg-gray-50"}`}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs transition sm:px-4 sm:text-sm ${
+                showFilters ? "border-gray-400 bg-gray-100" : "hover:bg-gray-50"
+              }`}
             >
               <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Filters
@@ -666,16 +681,23 @@ export default function Orders() {
           <table className="w-full min-w-[800px] text-xs sm:text-sm">
             <thead className="bg-gray-50 text-gray-500">
               <tr>
-                {["Order", "User", "Pharmacy", "Date", "Total", "Status", "Payment", "Action"].map(
-                  (h, i) => (
-                    <th
-                      key={h}
-                      className={`px-3 py-3 font-semibold sm:px-4 sm:py-4 md:px-6 ${i >= 3 ? "text-center" : "text-left"}`}
-                    >
-                      {h}
-                    </th>
-                  )
-                )}
+                {[
+                  "Order",
+                  "Customer",
+                  "Pharmacy",
+                  "Date",
+                  "Total",
+                  "Status",
+                  "Payment",
+                  "Action",
+                ].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`px-3 py-3 font-semibold sm:px-4 sm:py-4 md:px-6 ${i >= 3 ? "text-center" : "text-left"}`}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -684,7 +706,9 @@ export default function Orders() {
                   <td colSpan={8} className="py-10 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-500">
                       <div className="h-6 w-6 animate-spin rounded-full border-2 border-secondary border-t-transparent" />
-                      <span className="text-xs sm:text-sm">Loading orders...</span>
+                      <span className="text-xs sm:text-sm">
+                        Loading orders...
+                      </span>
                     </div>
                   </td>
                 </tr>
@@ -699,11 +723,14 @@ export default function Orders() {
                 </tr>
               ) : (
                 pageData.map((o) => (
-                  <tr key={o.id} className="border-t transition hover:bg-gray-50">
+                  <tr
+                    key={o.id}
+                    className="border-t transition hover:bg-gray-50"
+                  >
                     <td className="whitespace-nowrap px-3 py-3 sm:px-4 sm:py-4 md:px-6">
                       <button
                         onClick={() => setSelectedOrder(o)}
-                        className="font-bold text-secondary hover:underline underline-offset-2 transition"
+                        className="font-bold text-secondary underline-offset-2 transition hover:underline"
                       >
                         #{o.id}
                       </button>
@@ -713,18 +740,23 @@ export default function Orders() {
                         </span>
                       )}
                     </td>
-                    <td className="max-w-[100px] truncate px-3 py-3 sm:max-w-[140px] sm:px-4 sm:py-4 md:px-6">
-                      {o.userName}
+
+                    <td className="max-w-[140px] truncate px-3 py-3 font-medium text-gray-800 sm:px-4 sm:py-4 md:px-6">
+                      {getCustomerName(o)}
                     </td>
-                    <td className="max-w-[100px] truncate px-3 py-3 sm:max-w-[140px] sm:px-4 sm:py-4 md:px-6">
+
+                    <td className="max-w-[140px] truncate px-3 py-3 sm:px-4 sm:py-4 md:px-6">
                       {o.pharmacyName}
                     </td>
+
                     <td className="whitespace-nowrap px-3 py-3 text-center sm:px-4 sm:py-4 md:px-6">
                       {new Date(o.orderDate).toLocaleDateString()}
                     </td>
+
                     <td className="whitespace-nowrap px-3 py-3 text-center font-medium sm:px-4 sm:py-4 md:px-6">
                       {o.totalPrice} EGP
                     </td>
+
                     <td className="px-3 py-3 text-center sm:px-4 sm:py-4 md:px-6">
                       <span
                         className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs sm:px-3 sm:py-1 ${statusStyle(o.status)}`}
@@ -733,7 +765,6 @@ export default function Orders() {
                       </span>
                     </td>
 
-                    {/* ✅ NEW: Payment Method column */}
                     <td className="px-3 py-3 text-center sm:px-4 sm:py-4 md:px-6">
                       <span
                         className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs sm:px-3 sm:py-1 ${
@@ -756,7 +787,9 @@ export default function Orders() {
                           {o.status === "Pending" && (
                             <button
                               disabled={loading}
-                              onClick={() => handleMutation(accept, o.id, "Order accepted")}
+                              onClick={() =>
+                                handleMutation(accept, o.id, "Order accepted")
+                              }
                               className="whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700 transition hover:bg-green-200 disabled:opacity-50 sm:px-3 sm:py-1"
                             >
                               Accept
@@ -765,7 +798,9 @@ export default function Orders() {
                           {o.status === "Accepted" && (
                             <button
                               disabled={loading}
-                              onClick={() => handleMutation(process, o.id, "Order processed")}
+                              onClick={() =>
+                                handleMutation(process, o.id, "Order processed")
+                              }
                               className="whitespace-nowrap rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700 transition hover:bg-yellow-200 disabled:opacity-50 sm:px-3 sm:py-1"
                             >
                               Process
@@ -774,7 +809,13 @@ export default function Orders() {
                           {o.status === "Processing" && (
                             <button
                               disabled={loading}
-                              onClick={() => handleMutation(outForDelivery, o.id, "Order out for delivery")}
+                              onClick={() =>
+                                handleMutation(
+                                  outForDelivery,
+                                  o.id,
+                                  "Order out for delivery",
+                                )
+                              }
                               className="whitespace-nowrap rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 transition hover:bg-blue-200 disabled:opacity-50 sm:px-3 sm:py-1"
                             >
                               Out For Delivery
@@ -783,17 +824,27 @@ export default function Orders() {
                           {o.status === "OutForDelivery" && (
                             <button
                               disabled={loading}
-                              onClick={() => handleMutation(deliver, o.id, "Order delivered")}
+                              onClick={() =>
+                                handleMutation(deliver, o.id, "Order delivered")
+                              }
                               className="whitespace-nowrap rounded-full bg-green-200 px-2 py-0.5 text-xs text-green-800 transition hover:bg-green-300 disabled:opacity-50 sm:px-3 sm:py-1"
                             >
                               Delivered
                             </button>
                           )}
-                          {!["Delivered", "OutForDelivery"].includes(o.status) &&
+                          {!["Delivered", "OutForDelivery"].includes(
+                            o.status,
+                          ) &&
                             !o.status?.startsWith("Cancelled") && (
                               <button
                                 disabled={loading}
-                                onClick={() => handleMutation(cancelByPharmacy, o.id, "Order cancelled")}
+                                onClick={() =>
+                                  handleMutation(
+                                    cancelByPharmacy,
+                                    o.id,
+                                    "Order cancelled",
+                                  )
+                                }
                                 className="whitespace-nowrap rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 transition hover:bg-red-200 disabled:opacity-50 sm:px-3 sm:py-1"
                               >
                                 Cancel
@@ -829,17 +880,21 @@ export default function Orders() {
             <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
             Prev
           </button>
+
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <button
               key={p}
               onClick={() => setPage(p)}
               className={`rounded-full px-2 py-1 text-xs transition sm:px-3 sm:text-sm ${
-                page === p ? "bg-secondary text-white" : "border hover:bg-gray-50"
+                page === p
+                  ? "bg-secondary text-white"
+                  : "border hover:bg-gray-50"
               }`}
             >
               {p}
             </button>
           ))}
+
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}

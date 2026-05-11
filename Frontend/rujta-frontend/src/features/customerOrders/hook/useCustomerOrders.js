@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+// customerOrders/hook/useCustomerOrders.js
+
+import { useEffect, useState, useCallback } from "react";
 import {
   getCustomers,
   createCustomer,
@@ -7,6 +9,7 @@ import {
   getCustomerStats,
   checkCustomerByPhone,
   createCustomerOrder,
+  getCustomerOrders,
 } from "../api/customerOrdersApi";
 
 export const useCustomers = (pharmacyId) => {
@@ -18,7 +21,7 @@ export const useCustomers = (pharmacyId) => {
   });
   const [loading, setLoading] = useState(false);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
       const res = await getCustomers();
@@ -29,21 +32,21 @@ export const useCustomers = (pharmacyId) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const res = await getCustomerStats();
       setStats(res.data);
     } catch (err) {
       console.error("Fetch stats error:", err.response?.data || err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchCustomers();
     fetchStats();
-  }, []);
+  }, [fetchCustomers, fetchStats]);
 
   const refetch = async () => {
     await Promise.all([fetchCustomers(), fetchStats()]);
@@ -52,14 +55,12 @@ export const useCustomers = (pharmacyId) => {
   const addCustomer = async (data) => {
     const res = await createCustomer(data);
     const newCustomer = res.data;
-
     setCustomers((prev) => [...prev, newCustomer]);
     setStats((prev) => ({
       ...prev,
       totalCustomers: prev.totalCustomers + 1,
       newCustomers: prev.newCustomers + 1,
     }));
-
     return newCustomer;
   };
 
@@ -69,16 +70,13 @@ export const useCustomers = (pharmacyId) => {
       PhoneNumber: data.PhoneNumber || data.phoneNumber || "",
       Email: data.Email || data.email || "",
     };
-
     const res = await updateCustomer(id, payload);
     const updatedCustomer = res.data;
-
     setCustomers((prev) =>
       prev.map((c) =>
         c.id === id || c.Id === id ? { ...c, ...updatedCustomer } : c,
       ),
     );
-
     return updatedCustomer;
   };
 
@@ -98,6 +96,16 @@ export const useCustomers = (pharmacyId) => {
     return res.data;
   };
 
+  const fetchCustomerOrders = async (customerId) => {
+    try {
+      const res = await getCustomerOrders(customerId);
+      return res.data || [];
+    } catch (err) {
+      console.error("Fetch customer orders error:", err.response?.data || err);
+      return [];
+    }
+  };
+
   return {
     customers,
     stats,
@@ -108,5 +116,6 @@ export const useCustomers = (pharmacyId) => {
     removeCustomer,
     searchByPhone,
     addCustomerOrder,
+    fetchCustomerOrders,
   };
 };
