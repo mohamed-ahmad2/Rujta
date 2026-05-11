@@ -140,6 +140,7 @@ namespace Rujta.Infrastructure.Services
                 await _unitOfWork.Payments.UpdateAsync(payment, ct);
                 await _unitOfWork.SaveAsync(ct);
 
+                // ✅ Ad
                 if (payment.Type == PaymentType.Ad && payment.AdId.HasValue)
                 {
                     var ad = await _unitOfWork.Ads.GetByIdAsync(payment.AdId.Value, ct);
@@ -158,8 +159,32 @@ namespace Rujta.Infrastructure.Services
                     }
                 }
 
-            }, cancellationToken);
+                // ✅ Subscription
+                if (payment.Type == PaymentType.Subscription && payment.SubscriptionId.HasValue)
+                {
+                    await _unitOfWork.Subscriptions.ActivateAsync(payment.PharmacyId, ct);
 
+                    _logger.LogInformation("[Callback] Subscription activated - PharmacyId: {PharmacyId}", payment.PharmacyId);
+                }
+
+                // ✅ Order
+                if (payment.Type == PaymentType.Order && payment.OrderId.HasValue)
+                {
+                    var order = await _unitOfWork.Orders.GetByIdAsync(payment.OrderId.Value, ct);
+
+                    if (order != null)
+                    {
+                        order.PaymentStatus = PaymentStatus.Success;
+                        order.PaymentMethod = PaymentMethod.Payment;
+
+                        await _unitOfWork.Orders.UpdateAsync(order, ct);
+                        await _unitOfWork.SaveAsync(ct);
+
+                        _logger.LogInformation("[Callback] Order payment confirmed - OrderId: {OrderId}", order.Id);
+                    }
+                }
+
+            }, cancellationToken);
             return true;
         }
 

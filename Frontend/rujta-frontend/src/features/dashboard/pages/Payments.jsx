@@ -120,27 +120,29 @@ const normalizePayment = (raw) => {
 };
 
 // ─── Paymob Callback Handler ──────────────────────────────────────────────────
+// Reads ?success=true&id=... query params Paymob appends on redirect
 
 function usePaymobCallback(refetchAll) {
-  const [callbackResult, setCallbackResult] = useState(null);
+  const [callbackResult, setCallbackResult] = useState(null); // null | 'success' | 'fail'
   const [callbackTxId,   setCallbackTxId]   = useState(null);
 
   useEffect(() => {
     const params  = new URLSearchParams(window.location.search);
     const success = params.get("success");
-    if (success === null) return;
+    if (success === null) return; // no Paymob redirect params present
 
     const txId = params.get("id") || params.get("order");
 
     if (success === "true") {
       setCallbackResult("success");
       setCallbackTxId(txId);
-      refetchAll();
+      refetchAll(); // reload lists after successful payment
     } else {
       setCallbackResult("fail");
       setCallbackTxId(txId);
     }
 
+    // Clean URL so a page refresh doesn't re-trigger this
     window.history.replaceState({}, "", window.location.pathname);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -373,19 +375,15 @@ function AdsSection({ ads, activeCount }) {
         </div>
       ) : (
         <>
-          {visible.map((ad) => (
-            <AdCard key={ad.id} ad={ad} />
-          ))}
+          {visible.map((ad) => <AdCard key={ad.id} ad={ad} />)}
           {hasMore && (
             <button
               onClick={() => setShowAll((v) => !v)}
               className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-gray-200 bg-white py-2.5 text-xs font-medium text-gray-500 transition hover:bg-gray-50"
             >
-              {showAll ? (
-                <><ChevronUp size={14} /> Show less</>
-              ) : (
-                <><ChevronDown size={14} /> Show all {ads.length} campaigns</>
-              )}
+              {showAll
+                ? <><ChevronUp size={14} /> Show less</>
+                : <><ChevronDown size={14} /> Show all {ads.length} campaigns</>}
             </button>
           )}
         </>
@@ -414,7 +412,7 @@ function HistoryTable({ data }) {
 
   const handleExport = () => {
     const rows = [
-      ["Invoice", "Date", "Type", "Amount (EGP)"],
+      ["Invoice", "Date", "Description", "Type", "Amount (EGP)", "Status"],
       ...filtered.map((r) => [r.id, fmtDate(r.date), r.type, r.amount]),
     ];
     const csv  = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -437,6 +435,7 @@ function HistoryTable({ data }) {
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm border border-gray-100">
+      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div className="flex items-center gap-2">
           <CreditCard size={18} className="text-secondary" />
@@ -452,7 +451,7 @@ function HistoryTable({ data }) {
             <option value="all">All types</option>
             <option value="subscription">Subscription</option>
             <option value="ad">Ad</option>
-            
+           
           </select>
           <button
             onClick={handleExport}
@@ -463,6 +462,7 @@ function HistoryTable({ data }) {
         </div>
       </div>
 
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
@@ -482,10 +482,10 @@ function HistoryTable({ data }) {
                 <tr key={r.id || i} className="border-b border-gray-50 transition hover:bg-gray-50/60">
                   <td className="py-3 pr-4 font-mono text-xs text-gray-400">{r.id}</td>
                   <td className="py-3 pr-4 text-xs text-gray-500 whitespace-nowrap">{fmtDate(r.date)}</td>
-                  
+                
                   <td className="py-3 pr-4"><TypeBadge type={r.type} /></td>
                   <td className="py-3 pr-4 text-sm font-semibold text-gray-800 whitespace-nowrap">{fmt(r.amount)} EGP</td>
-                 
+                  
                 </tr>
               ))
             )}
@@ -493,6 +493,7 @@ function HistoryTable({ data }) {
         </table>
       </div>
 
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
           <p className="text-xs text-gray-400">Page {page} of {totalPages}</p>
@@ -560,9 +561,10 @@ export default function Payments() {
   );
 
   const normalizedSub = useMemo(() => {
-    const active = (subPayments.payments ?? []).find(
-      (s) => String(s.status || "").toLowerCase() === "active"
-    ) || (subPayments.payments ?? [])[0] || null;
+    const active =
+      (subPayments.payments ?? []).find((s) => String(s.status || "").toLowerCase() === "active") ||
+      (subPayments.payments ?? [])[0] ||
+      null;
     return normalizeSubscription(active);
   }, [subPayments.payments]);
 
@@ -633,11 +635,7 @@ export default function Payments() {
           icon={ShieldCheck} iconBg="#dbeafe" iconColor="#2563eb"
           label="Subscription"
           value={normalizedSub?.plan || "—"}
-          sub={
-            normalizedSub
-              ? `Active · renews ${fmtDate(normalizedSub.endDate)}`
-              : "No active plan"
-          }
+          sub={normalizedSub ? `Active · renews ${fmtDate(normalizedSub.endDate)}` : "No active plan"}
         />
         <MetricCard
           icon={Clock}

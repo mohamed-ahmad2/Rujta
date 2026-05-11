@@ -32,6 +32,29 @@ export default function DashboardLayout() {
     return <Navigate to="/superadmin/pharmacies" replace />;
   }
 
+  // ✅ يقفل في الموبايل عند تغيير الصفحة
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname]);
+
+  // ✅ يتحكم حسب حجم الشاشة
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   return (
     <div className="flex min-h-screen bg-[#F6F7F9]">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
