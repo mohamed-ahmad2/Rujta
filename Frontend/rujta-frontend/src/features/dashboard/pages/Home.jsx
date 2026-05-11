@@ -60,8 +60,8 @@ export default function HomePage() {
   const formatCurrency = (value) =>
     value
       ? `
-$${Number(value).toLocaleString()}`
-      : "$0";
+${Number(value).toLocaleString()}`
+      : "0";
 
   return (
     <div className="space-y-4 p-3 sm:space-y-6 sm:p-4 md:space-y-8 md:p-0">
@@ -124,7 +124,7 @@ $${Number(value).toLocaleString()}`
 
                     <Tooltip
                       formatter={(value) => `
-$${Number(value).toLocaleString()}`}
+${Number(value).toLocaleString()}`}
                       contentStyle={{ fontSize: "12px" }}
                     />
                     <Bar

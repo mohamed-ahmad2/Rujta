@@ -16,6 +16,7 @@ import CustomersCard from "../components/CustomersCard";
 import { useSpring, animated } from "@react-spring/web";
 import { toast } from "react-toastify";
 import useMedicine from "../../medicines/hook/useMedicines";
+import { createOrder } from "../../customerOrders/api/customerOrdersApi";
 
 // ─── Toast Component ─────────────────────────────────────────────────────────
 const Toast = ({ type, message, onClose }) => (
@@ -382,7 +383,6 @@ function AddOrderModal({
             </div>
           </div>
 
-          {/* Order Items */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700">
@@ -838,7 +838,7 @@ export default function Customers() {
         onAddOrder={openAddOrder}
       />
 
-      {/* Add Order Modal */}
+      {/* ✅ pharmacyId اتضاف هنا */}
       <AddOrderModal
         open={orderModalOpen}
         onClose={() => setOrderModalOpen(false)}
