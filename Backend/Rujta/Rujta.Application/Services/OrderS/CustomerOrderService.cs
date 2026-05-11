@@ -1,7 +1,6 @@
 ﻿using Rujta.Application.DTOs.CustomerDtos;
 using Rujta.Application.DTOs.OrderDto;
 using Rujta.Application.Interfaces.InterfaceServices.IOrder;
-using System.Security.Cryptography.Xml;
 
 namespace Rujta.Application.Services
 {
@@ -148,7 +147,16 @@ namespace Rujta.Application.Services
 
             if (customer == null)
             {
-                throw new InvalidOperationException("Customer not found.");
+                isNewCustomer = true;
+                customer = new Customer
+                {
+                    Id = Guid.NewGuid(),
+                    Name = request.FullName,
+                    PhoneNumber = request.PhoneNumber,
+                    PharmacyId = request.PharmacyId
+                };
+                await _unitOfWork.Customers.AddAsync(customer, cancellationToken);
+                await _unitOfWork.SaveAsync(cancellationToken);
             }
 
             var orderDto = new CreateOrderDto
@@ -165,7 +173,7 @@ namespace Rujta.Application.Services
                 IsInStore = true
             };
 
-            var order = await _orderService.CreateOrderAsync(orderDto, customer!.Id, cancellationToken);
+            var order = await _orderService.CreateOrderAsync(orderDto, customer.Id, cancellationToken);
 
             return new CustomerOrderResponse
             {
