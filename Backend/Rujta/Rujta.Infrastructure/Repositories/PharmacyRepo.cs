@@ -1,4 +1,7 @@
-﻿namespace Rujta.Infrastructure.Repositories
+﻿using Rujta.Application.DTOs.CustomerDtos;
+using Rujta.Application.DTOs.PharmacyDtos;
+
+namespace Rujta.Infrastructure.Repositories
 {
     public class PharmacyRepo : GenericRepository<Pharmacy, int>, IPharmacyRepository
     {
@@ -9,6 +12,33 @@
                 .Include(p => p.Address)           
                 .Where(p => !p.IsDeleted)            
                 .ToListAsync(cancellationToken);
+        public async Task<List<PharmacyDto>> GetAllPharmaciesSuperAdminAsync( CancellationToken cancellationToken = default)
+        {
+            return await _context.Pharmacies
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted)
+                .Select(p => new PharmacyDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    ImageUrl = p.ImageUrl,
+
+                    Address = p.Address == null ? null : new AddressDto
+                    {
+                        Street = p.Address.Street,
+                        City = p.Address.City,
+                        Governorate = p.Address.Governorate,
+                        Latitude = p.Address.Latitude,
+                        Longitude = p.Address.Longitude
+                    },
+
+                    ManagerName = p.Manager != null ? p.Manager.Name : null,
+                    AdminName = p.Admin != null ? p.Admin.Name : null,
+
+                    BranchesCount = p.Branches.Count(b => !b.IsDeleted)
+                })
+                .ToListAsync(cancellationToken);
+        }
 
         public async Task<List<Medicine>> GetAllMedicinesByPharmacyAsync(int pharmacyId)
             => await _context.InventoryItems
@@ -75,12 +105,12 @@
                 .AnyAsync(p => p.Id == pharmacyId && p.ParentPharmacyID == null, cancellationToken);
 
         public async Task<(List<InventoryItem> Items, int TotalCount)> GetPagedInventoryByPharmacyAsync(
-    int pharmacyId,
-    int pageNumber,
-    int pageSize,
-    string? searchTerm,
-    int? categoryId,
-    CancellationToken cancellationToken = default)
+            int pharmacyId,
+            int pageNumber,
+            int pageSize,
+            string? searchTerm,
+            int? categoryId,
+            CancellationToken cancellationToken = default)
         {
             
             var baseQuery = _context.InventoryItems

@@ -21,9 +21,10 @@ namespace Rujta.Application.Interfaces
         ISuperAdminRepository SuperAdmin { get; }
         ISubscriptionRepository Subscriptions { get; }
         IAdRepository Ads { get; }
+        IPaymentRepository Payments { get; }
         IDiscountRepository Discount { get; }
         ICompanyRepository Companies { get; }
-
+        IPricingRepository Pricing { get; }
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
         IExecutionStrategy CreateExecutionStrategy();
      

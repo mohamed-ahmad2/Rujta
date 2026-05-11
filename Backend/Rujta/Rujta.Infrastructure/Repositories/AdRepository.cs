@@ -18,12 +18,11 @@ namespace Rujta.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<IEnumerable<Ad>> GetByPharmacyIdAsync(
-            int pharmacyId,
-            CancellationToken cancellationToken = default)
+       
+        public async Task<IEnumerable<Ad>> GetByPharmacyIdAsync(int pharmacyId, CancellationToken cancellationToken = default)
         {
             return await _context.Ads
-                .Where(a => a.PharmacyId == pharmacyId && a.IsActive)
+                .Where(a => a.PharmacyId == pharmacyId)
                 .OrderByDescending(a => a.CreatedAt)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
@@ -62,14 +61,13 @@ namespace Rujta.Infrastructure.Repositories
 
         public async Task ActivateAsync(int adId, int durationDays, CancellationToken cancellationToken = default)
         {
-            var ad = await _context.Ads.FindAsync([adId], cancellationToken);
+            var ad = await _context.Ads
+                .FirstOrDefaultAsync(a => a.Id == adId, cancellationToken);
             if (ad == null) return;
-
             ad.IsActive = true;
             ad.StartsAt = DateTime.UtcNow;
             ad.ExpiresAt = DateTime.UtcNow.AddDays(durationDays);
             ad.UpdatedAt = DateTime.UtcNow;
-
             await _context.SaveChangesAsync(cancellationToken);
         }
         public async Task<List<Ad>> GetExpiredActiveAdsAsync(DateTime now, CancellationToken cancellationToken = default)

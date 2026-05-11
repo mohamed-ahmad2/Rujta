@@ -27,5 +27,22 @@ namespace Rujta.Infrastructure.Repositories
                 .Include(s => s.Pharmacy)
                 .Where(s => s.Status == SubscriptionStatus.Active && s.EndDate < DateTime.UtcNow)
                 .ToListAsync(cancellationToken);
+
+
+        public async Task ActivateAsync(int pharmacyId, CancellationToken cancellationToken = default)
+        {
+            var subscription = await _context.Subscriptions
+                .Include(s => s.Pharmacy)
+                .FirstOrDefaultAsync(s => s.PharmacyId == pharmacyId, cancellationToken);
+
+            if (subscription is null) return;
+
+            subscription.Status = SubscriptionStatus.Active;
+
+            if (subscription.Pharmacy is not null)
+                subscription.Pharmacy.IsActive = true;
+
+            await _context.SaveChangesAsync(cancellationToken);
+        }
     }
 }

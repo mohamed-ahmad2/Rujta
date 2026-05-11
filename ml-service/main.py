@@ -19,7 +19,7 @@ from inference import DDIPredictor
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-CHECKPOINT_PATH = os.getenv("CHECKPOINT_PATH", "best_mrgnn_v2.pt")
+CHECKPOINT_PATH = os.getenv("CHECKPOINT_PATH", "best_model.pt")
 THRESHOLD       = float(os.getenv("DDI_THRESHOLD", "0.5"))
 
 predictor: Optional[DDIPredictor] = None

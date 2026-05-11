@@ -10,23 +10,16 @@ namespace Rujta.Application.DTOs
     public class DrugInteractionResultDto
     {
         public int Drug1Id { get; set; }
-        public string Drug1Name { get; set; } = string.Empty;
+        public string? Drug1Name { get; set; }
+        public bool Drug1IsFromHistory { get; set; }  // ← NEW
+
         public int Drug2Id { get; set; }
-        public string Drug2Name { get; set; } = string.Empty;
+        public string? Drug2Name { get; set; }
+        public bool Drug2IsFromHistory { get; set; }  // ← NEW
 
-        /// <summary>Probability of interaction (0.0 – 1.0)</summary>
         public double Probability { get; set; }
-
-        /// <summary>True if probability >= threshold (default 0.5)</summary>
         public bool Interacts { get; set; }
-
-        /// <summary>Human-readable risk level derived from probability</summary>
-        public string RiskLevel => Probability switch
-        {
-            >= 0.85 => "High",
-            >= 0.65 => "Medium",
-            _ => "Low"
-        };
+        public string? Confidence { get; set; }    // ← NEW (high/medium/low)
     }
 
     /// <summary>
@@ -34,25 +27,10 @@ namespace Rujta.Application.DTOs
     /// </summary>
     public class OrderDrugInteractionResponseDto
     {
-        /// <summary>Total drugs checked (new order + patient history)</summary>
         public int TotalDrugsChecked { get; set; }
-
-        /// <summary>Total unique pairs evaluated</summary>
         public int TotalPairsChecked { get; set; }
-
-        /// <summary>Number of interactions found</summary>
         public int InteractionsFound { get; set; }
-
-        /// <summary>
-        /// True if ML service was unavailable — order was allowed through
-        /// but frontend should show a warning.
-        /// </summary>
         public bool MlServiceUnavailable { get; set; }
-
-        /// <summary>
-        /// List of drug pairs with interactions, sorted by probability desc.
-        /// Empty list = no interactions detected.
-        /// </summary>
         public List<DrugInteractionResultDto> Interactions { get; set; } = new();
     }
 

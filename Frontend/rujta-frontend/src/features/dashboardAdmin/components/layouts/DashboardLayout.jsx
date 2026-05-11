@@ -4,13 +4,27 @@ import { MdMenuOpen } from "react-icons/md";
 import Sidebar from "../Sidebar";
 
 export default function DashboardLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(
-    window.innerWidth >= 768
-  );
-
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
   const location = useLocation();
 
-  // ✅ Redirect
+  // ✅ All hooks before any return
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setSidebarOpen(window.innerWidth >= 768);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // ✅ Redirect AFTER all hooks
   if (
     location.pathname === "/superadmin" ||
     location.pathname === "/superadmin/"
@@ -43,13 +57,9 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex min-h-screen bg-[#F6F7F9]">
-      {/* Sidebar */}
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
 
-      {/* Content */}
       <div className="flex-1 min-w-0 relative">
-
-        {/* ✅ زرار نفس شكل sidebar */}
         <MdMenuOpen
           size={30}
           onClick={() => setSidebarOpen(!sidebarOpen)}

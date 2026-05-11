@@ -4,7 +4,8 @@ using Rujta.Application.DTOs.OrderDto;
 namespace Rujta.API.Controllers
 {
     [ApiController]
-    [Route("api/pharmacies/{pharmacyId:int}/customers")]
+    [Route("api/customers")]
+    [Authorize] // IMPORTANT
     public class CustomersController : ControllerBase
     {
         private readonly ICustomerOrderService _service;
@@ -14,45 +15,61 @@ namespace Rujta.API.Controllers
             _service = service;
         }
 
-        // GET: api/pharmacies/1/customers
-        [HttpGet]
-        public async Task<IActionResult> GetAll(int pharmacyId)
+        private bool TryGetPharmacyId(out int pharmacyId)
         {
-            var result = await _service.GetAllCustomersAsync();
+            pharmacyId = 0;
+            var claim = User.FindFirst("PharmacyId");
+            if (claim == null) return false;
+            return int.TryParse(claim.Value, out pharmacyId);
+        }
+
+        // GET: api/customers
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
+
+            var result = await _service.GetAllCustomersAsync(pharmacyId);
             return Ok(result);
         }
 
-        // GET: api/pharmacies/1/customers/5
+        // GET: api/customers/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int pharmacyId, Guid id)
+        public async Task<IActionResult> Get(Guid id)
         {
-            var customer = await _service.GetCustomerByIdAsync(id);
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
+
+            var customer = await _service.GetCustomerByIdAsync(pharmacyId, id);
+
             if (customer == null)
                 return NotFound();
 
             return Ok(customer);
         }
 
-        // POST: api/pharmacies/1/customers
+        // POST: api/customers
         [HttpPost]
-        public async Task<IActionResult> Create(
-            int pharmacyId,
-            [FromBody] CreateCustomerDto dto)
+        public async Task<IActionResult> Create([FromBody] CreateCustomerDto dto)
         {
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
+
             dto.PharmacyId = pharmacyId;
 
             var result = await _service.CreateCustomerAsync(dto);
             return Ok(result);
         }
 
-        // PUT: api/pharmacies/1/customers/5
+        // PUT: api/customers/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(
-            int pharmacyId,
-            Guid id,
-            [FromBody] UpdateCustomerDto dto)
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCustomerDto dto)
         {
-            var updated = await _service.UpdateCustomerAsync(id, dto);
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
+
+            var updated = await _service.UpdateCustomerAsync(pharmacyId, id, dto);
 
             if (updated == null)
                 return NotFound();
@@ -60,11 +77,14 @@ namespace Rujta.API.Controllers
             return Ok(updated);
         }
 
-        // DELETE: api/pharmacies/1/customers/5
+        // DELETE: api/customers/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int pharmacyId, Guid id)
+        public async Task<IActionResult> Delete(Guid id)
         {
-            var deleted = await _service.DeleteCustomerAsync(id);
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
+
+            var deleted = await _service.DeleteCustomerAsync(pharmacyId, id);
 
             if (!deleted)
                 return NotFound();
@@ -72,34 +92,41 @@ namespace Rujta.API.Controllers
             return NoContent();
         }
 
-        // GET: api/pharmacies/1/customers/stats
+        // GET: api/customers/stats
         [HttpGet("stats")]
-        public async Task<IActionResult> Stats(int pharmacyId)
+        public async Task<IActionResult> Stats()
         {
-            var stats = await _service.GetCustomerStatsAsync();
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
+
+            var stats = await _service.GetCustomerStatsAsync(pharmacyId);
             return Ok(stats);
         }
 
-        // POST: api/pharmacies/1/customers/order
+        // POST: api/customers/order
         [HttpPost("order")]
         public async Task<IActionResult> CreateOrder(
-            int pharmacyId,
             [FromBody] CreateCustomerOrderRequest request,
             CancellationToken cancellationToken)
         {
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
+
             request.PharmacyId = pharmacyId;
 
             var result = await _service.CreateCustomerOrderAsync(request, cancellationToken);
             return Ok(result);
         }
 
-        // GET: api/pharmacies/1/customers/check?phoneNumber=010...
+
         [HttpGet("check")]
         public async Task<IActionResult> CheckCustomer(
-            int pharmacyId,
             [FromQuery] string phoneNumber,
             CancellationToken cancellationToken)
         {
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
+
             var result = await _service.CheckCustomerByPhoneAsync(pharmacyId, phoneNumber, cancellationToken);
             return Ok(result);
         }

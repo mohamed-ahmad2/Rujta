@@ -1,0 +1,30 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# System libs required by RDKit
+RUN apt-get update && apt-get install -y \
+    libxrender1 libxext6 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# 1. Install PyTorch (CPU — HF free tier has no GPU)
+RUN pip install --no-cache-dir \
+    torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
+
+# 2. Install torch-geometric
+RUN pip install --no-cache-dir torch-geometric
+
+# 3. Install torch-scatter & torch-sparse (need matching torch version)
+RUN pip install --no-cache-dir torch-scatter torch-sparse \
+    -f https://data.pyg.org/whl/torch-2.2.0+cpu.html
+
+# 4. Install remaining deps
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 5. Copy all project files
+COPY . .
+
+# HF Spaces requires port 7860
+EXPOSE 7860
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
