@@ -13,18 +13,21 @@ export const createCustomer = (pharmacyId, data) =>
 
 export const updateCustomer = (pharmacyId, id, data) =>
   apiClient.put(`/pharmacies/${pharmacyId}/customers/${id}`, data, {
-    headers: { "Content-Type": "application/json" }
+    headers: { "Content-Type": "application/json" },
   });
 
 export const deleteCustomer = (pharmacyId, id) =>
   apiClient.delete(`/pharmacies/${pharmacyId}/customers/${id}`, {
     headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem("token")}`
-      // No Content-Type needed for DELETE without body
-    }
+      Accept: "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
   });
+
 export const checkCustomerByPhone = (pharmacyId, phoneNumber) =>
   apiClient.get(`/pharmacies/${pharmacyId}/customers/check`, {
     params: { phoneNumber },
   });
+
+export const createOrder = (orders) =>
+  apiClient.post(`/Orders`, orders);
