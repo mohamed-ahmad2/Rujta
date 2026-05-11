@@ -1,33 +1,29 @@
 import { useState, useCallback } from "react";
 import {
-  initiatePayment,
-  handleCallback,
-  getMyPayments,
-  getOrderPayments,
-  getSubscriptionPayments,
-  getAdPayments,
+  initiatePayment, handleCallback, getMyPayments,
+  getOrderPayments, getSubscriptionPayments, getAdPayments,
 } from "../api/paymentApi";
 
 export const usePayment = () => {
   const [paymentResult, setPaymentResult] = useState(null);
-  const [payments, setPayments]           = useState([]);
-  const [loading, setLoading]             = useState(false);
-  const [error, setError]                 = useState(null);
+  const [payments,      setPayments]      = useState([]);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState(null);
 
-  // usePayment.js
-const withLoading = useCallback(async (fn) => {
-  try {
-    setLoading(true);
-    setError(null);
-    await fn();
-  } catch (err) {
-    // Log the whole data object to see the validation array
-    console.error("❌ Full Error Response:", err?.response?.data);
-    setError(err?.response?.data?.message || "Payment request failed");
-  } finally {
-    setLoading(false);
-  }
-}, []);
+  const withLoading = useCallback(async (fn) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await fn();
+    } catch (err) {
+      console.error("❌ Full Error Response:", err?.response?.data);
+      setError(err?.response?.data?.message || "Payment request failed");
+      throw err; // ✅ re-throw so callers (Ads.jsx) can catch it
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const initiate = useCallback(
     (dto) =>
       withLoading(async () => {
@@ -49,38 +45,34 @@ const withLoading = useCallback(async (fn) => {
   );
 
   const fetchMyPayments = useCallback(
-    () =>
-      withLoading(async () => {
-        const response = await getMyPayments();
-        setPayments(response.data);
-      }),
+    () => withLoading(async () => {
+      const response = await getMyPayments();
+      setPayments(response.data);
+    }),
     [withLoading]
   );
 
   const fetchOrderPayments = useCallback(
-    () =>
-      withLoading(async () => {
-        const response = await getOrderPayments();
-        setPayments(response.data);
-      }),
+    () => withLoading(async () => {
+      const response = await getOrderPayments();
+      setPayments(response.data);
+    }),
     [withLoading]
   );
 
   const fetchSubscriptionPayments = useCallback(
-    () =>
-      withLoading(async () => {
-        const response = await getSubscriptionPayments();
-        setPayments(response.data);
-      }),
+    () => withLoading(async () => {
+      const response = await getSubscriptionPayments();
+      setPayments(response.data);
+    }),
     [withLoading]
   );
 
   const fetchAdPayments = useCallback(
-    () =>
-      withLoading(async () => {
-        const response = await getAdPayments();
-        setPayments(response.data);
-      }),
+    () => withLoading(async () => {
+      const response = await getAdPayments();
+      setPayments(response.data);
+    }),
     [withLoading]
   );
 
@@ -91,16 +83,10 @@ const withLoading = useCallback(async (fn) => {
   }, []);
 
   return {
-    paymentResult,
-    payments,
-    loading,
-    error,
-    initiate,
-    processCallback,
-    fetchMyPayments,
-    fetchOrderPayments,
-    fetchSubscriptionPayments,
-    fetchAdPayments,
+    paymentResult, payments, loading, error,
+    initiate, processCallback,
+    fetchMyPayments, fetchOrderPayments,
+    fetchSubscriptionPayments, fetchAdPayments,
     reset,
   };
 };

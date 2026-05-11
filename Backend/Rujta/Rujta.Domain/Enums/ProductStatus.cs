@@ -4,6 +4,7 @@
     {
         InStock,     
         LowStock,    
-        OutOfStock
+        OutOfStock,
+        Expired
     }
 }

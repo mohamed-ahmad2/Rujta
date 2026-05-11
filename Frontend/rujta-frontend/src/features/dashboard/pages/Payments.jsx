@@ -9,15 +9,19 @@ import {
   ChevronRight,
   TrendingUp,
   Zap,
-  AlertCircle,
+  AlertTriangle,
   ChevronDown,
   ChevronUp,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
-import { usePayments } from "../../payments/hooks/usePayments";
+import { usePayment } from "../../payment/hooks/usePayment";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const fmt = (n) => Number(n).toLocaleString("en-EG");
+const fmt = (n) => Number(n || 0).toLocaleString("en-EG");
 
 const fmtDate = (d) =>
   d
@@ -56,7 +60,7 @@ const normalizeSubscription = (raw) => {
     currency:  raw.currency  || "EGP",
     startDate: start,
     endDate:   end,
-    status:    raw.status    || "active",
+    
     daysTotal: total,
     daysUsed:  Math.min(used, total),
   };
@@ -75,7 +79,6 @@ const normalizeAd = (raw, idx) => {
       ? Math.max(0, Math.ceil((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24)))
       : 0;
 
-  // حساب الـ status الصح بناءً على الـ endDate مش من الـ API
   const computedLeft = daysLeft(endDate);
   const rawStatus    = raw.status || "active";
   const status =
@@ -112,9 +115,66 @@ const normalizePayment = (raw) => {
    
     type:        type.toLowerCase(),
     amount:      raw.amount      || raw.price      || 0,
-  
+   
   };
 };
+
+// ─── Paymob Callback Handler ──────────────────────────────────────────────────
+
+function usePaymobCallback(refetchAll) {
+  const [callbackResult, setCallbackResult] = useState(null);
+  const [callbackTxId,   setCallbackTxId]   = useState(null);
+
+  useEffect(() => {
+    const params  = new URLSearchParams(window.location.search);
+    const success = params.get("success");
+    if (success === null) return;
+
+    const txId = params.get("id") || params.get("order");
+
+    if (success === "true") {
+      setCallbackResult("success");
+      setCallbackTxId(txId);
+      refetchAll();
+    } else {
+      setCallbackResult("fail");
+      setCallbackTxId(txId);
+    }
+
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { callbackResult, callbackTxId, dismiss: () => setCallbackResult(null) };
+}
+
+// ─── Payment Result Banner ────────────────────────────────────────────────────
+
+function PaymentResultBanner({ result, txId, onDismiss }) {
+  if (!result) return null;
+  const isSuccess = result === "success";
+  return (
+    <div
+      className={`flex items-center justify-between gap-3 rounded-2xl px-5 py-4 text-sm font-medium shadow-sm
+        ${isSuccess
+          ? "bg-green-50 border border-green-200 text-green-800"
+          : "bg-red-50 border border-red-200 text-red-800"}`}
+    >
+      <div className="flex items-center gap-3">
+        {isSuccess
+          ? <CheckCircle2 size={20} className="text-green-500 flex-shrink-0" />
+          : <XCircle      size={20} className="text-red-500 flex-shrink-0" />}
+        <span>
+          {isSuccess
+            ? `Payment successful! Your account has been updated.${txId ? ` (Ref: ${txId})` : ""}`
+            : `Payment failed or was cancelled.${txId ? ` (Ref: ${txId})` : ""} Please try again.`}
+        </span>
+      </div>
+      <button onClick={onDismiss} className="ml-4 text-xs underline opacity-70 hover:opacity-100 flex-shrink-0">
+        Dismiss
+      </button>
+    </div>
+  );
+}
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
@@ -125,8 +185,9 @@ function StatusBadge({ status }) {
     cancelled: { label: "Cancelled", cls: "bg-red-100 text-red-600",       dot: "bg-red-500"    },
     paid:      { label: "Paid",      cls: "bg-green-100 text-green-700",   dot: "bg-green-500"  },
     pending:   { label: "Pending",   cls: "bg-yellow-100 text-yellow-700", dot: "bg-yellow-400" },
+    failed:    { label: "Failed",    cls: "bg-red-100 text-red-600",       dot: "bg-red-500"    },
   };
-  const s = map[status?.toLowerCase()] || map.paid;
+  const s = map[String(status || "").toLowerCase()] || map.paid;
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${s.cls}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
@@ -138,25 +199,22 @@ function StatusBadge({ status }) {
 // ─── Type Badge ───────────────────────────────────────────────────────────────
 
 function TypeBadge({ type }) {
-  const t = type?.toLowerCase();
+  const t = String(type || "").toLowerCase();
   if (t === "subscription")
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-        <ShieldCheck className="h-3 w-3" />
-        Sub
+        <ShieldCheck className="h-3 w-3" /> Sub
       </span>
     );
-  if (t === "order")
+  if (t === "ad")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-[11px] font-semibold text-purple-700">
-        <CreditCard className="h-3 w-3" />
-        Order
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+        <Megaphone className="h-3 w-3" /> Ad
       </span>
     );
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
-      <Megaphone className="h-3 w-3" />
-      Ad
+    <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-[11px] font-semibold text-purple-700">
+      <CreditCard className="h-3 w-3" /> Order
     </span>
   );
 }
@@ -169,7 +227,7 @@ function ProgressBar({ used, total, color = "#9DC873" }) {
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
       <div
         className="h-full rounded-full transition-all duration-700"
-        style={{ width: `${pct}%`, background: color }}
+        style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: color }}
       />
     </div>
   );
@@ -180,10 +238,7 @@ function ProgressBar({ used, total, color = "#9DC873" }) {
 function MetricCard({ icon: Icon, iconBg, iconColor, label, value, sub }) {
   return (
     <div className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
-      <div
-        className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl"
-        style={{ background: iconBg }}
-      >
+      <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: iconBg }}>
         <Icon size={20} style={{ color: iconColor }} />
       </div>
       <div className="min-w-0">
@@ -206,7 +261,6 @@ function SubscriptionCard({ sub }) {
     );
 
   const left        = daysLeft(sub.endDate);
-  const pct         = Math.round((sub.daysUsed / Math.max(sub.daysTotal, 1)) * 100);
   const urgentColor = left < 30 ? "#ef4444" : left < 60 ? "#f59e0b" : "#9DC873";
 
   return (
@@ -233,10 +287,7 @@ function SubscriptionCard({ sub }) {
         ].map((r) => (
           <div key={r.label} className="rounded-xl bg-gray-50 px-3 py-2.5">
             <p className="text-[11px] text-gray-400">{r.label}</p>
-            <p
-              className="text-sm font-semibold text-gray-800 mt-0.5"
-              style={r.valueColor ? { color: r.valueColor } : {}}
-            >
+            <p className="text-sm font-semibold text-gray-800 mt-0.5" style={r.valueColor ? { color: r.valueColor } : {}}>
               {r.value}
             </p>
           </div>
@@ -246,7 +297,7 @@ function SubscriptionCard({ sub }) {
       <div>
         <div className="flex justify-between text-xs text-gray-400 mb-1.5">
           <span>Time elapsed</span>
-          <span>{pct}%</span>
+          <span>{Math.round((sub.daysUsed / Math.max(sub.daysTotal, 1)) * 100)}%</span>
         </div>
         <ProgressBar used={sub.daysUsed} total={sub.daysTotal} color={urgentColor} />
       </div>
@@ -257,17 +308,10 @@ function SubscriptionCard({ sub }) {
 // ─── Ad Card ──────────────────────────────────────────────────────────────────
 
 function AdCard({ ad }) {
-  const left      = ad.daysLeft; // ✅ محسوب من endDate مش من الـ API
   const isExpired = ad.status?.toLowerCase() === "expired";
 
   return (
-    <div
-      className={`rounded-2xl p-4 border transition-all ${
-        isExpired
-          ? "bg-gray-50 border-gray-100 opacity-70"
-          : "bg-white border-gray-100 shadow-sm"
-      }`}
-    >
+    <div className={`rounded-2xl p-4 border transition-all ${isExpired ? "bg-gray-50 border-gray-100 opacity-70" : "bg-white border-gray-100 shadow-sm"}`}>
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5">
           <div
@@ -289,20 +333,16 @@ function AdCard({ ad }) {
         {!isExpired ? (
           <span
             className="font-medium"
-            style={{ color: left <= 3 ? "#ef4444" : left <= 7 ? "#f59e0b" : "#6b7280" }}
+            style={{ color: ad.daysLeft <= 3 ? "#ef4444" : ad.daysLeft <= 7 ? "#f59e0b" : "#6b7280" }}
           >
-            {left} {left === 1 ? "day" : "days"} left
+            {ad.daysLeft} {ad.daysLeft === 1 ? "day" : "days"} left
           </span>
         ) : (
           <span className="text-gray-400">Ended {fmtDate(ad.endDate)}</span>
         )}
       </div>
 
-      <ProgressBar
-        used={ad.daysUsed}
-        total={ad.daysTotal}
-        color={isExpired ? "#d1d5db" : "#f59e0b"}
-      />
+      <ProgressBar used={ad.daysUsed} total={ad.daysTotal} color={isExpired ? "#d1d5db" : "#f59e0b"} />
     </div>
   );
 }
@@ -313,7 +353,6 @@ const ADS_INITIAL_LIMIT = 3;
 
 function AdsSection({ ads, activeCount }) {
   const [showAll, setShowAll] = useState(false);
-
   const visible = showAll ? ads : ads.slice(0, ADS_INITIAL_LIMIT);
   const hasMore = ads.length > ADS_INITIAL_LIMIT;
 
@@ -360,7 +399,7 @@ function AdsSection({ ads, activeCount }) {
 const ITEMS_PER_PAGE = 5;
 
 function HistoryTable({ data }) {
-  const [page, setPage]             = useState(1);
+  const [page,       setPage]       = useState(1);
   const [typeFilter, setTypeFilter] = useState("all");
 
   const filtered = useMemo(() => {
@@ -375,10 +414,8 @@ function HistoryTable({ data }) {
 
   const handleExport = () => {
     const rows = [
-      ["Invoice", "Date",  "Type", "Amount (EGP)"],
-      ...filtered.map((r) => [
-        r.id, fmtDate(r.date), r.type, r.amount,
-      ]),
+      ["Invoice", "Date", "Type", "Amount (EGP)"],
+      ...filtered.map((r) => [r.id, fmtDate(r.date), r.type, r.amount]),
     ];
     const csv  = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -404,9 +441,7 @@ function HistoryTable({ data }) {
         <div className="flex items-center gap-2">
           <CreditCard size={18} className="text-secondary" />
           <p className="font-bold text-gray-800">Payment History</p>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-            {filtered.length}
-          </span>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{filtered.length}</span>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -423,8 +458,7 @@ function HistoryTable({ data }) {
             onClick={handleExport}
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 transition hover:bg-gray-50"
           >
-            <Download size={13} />
-            Export
+            <Download size={13} /> Export
           </button>
         </div>
       </div>
@@ -434,10 +468,7 @@ function HistoryTable({ data }) {
           <thead>
             <tr className="border-b border-gray-100">
               {["Invoice", "Date", "Type", "Amount"].map((h) => (
-                <th
-                  key={h}
-                  className="pb-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400"
-                >
+                <th key={h} className="pb-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                   {h}
                 </th>
               ))}
@@ -445,11 +476,7 @@ function HistoryTable({ data }) {
           </thead>
           <tbody>
             {pageData.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-8 text-center text-sm text-gray-400">
-                  No records found.
-                </td>
-              </tr>
+              <tr><td colSpan={6} className="py-8 text-center text-sm text-gray-400">No records found.</td></tr>
             ) : (
               pageData.map((r, i) => (
                 <tr key={r.id || i} className="border-b border-gray-50 transition hover:bg-gray-50/60">
@@ -457,9 +484,7 @@ function HistoryTable({ data }) {
                   <td className="py-3 pr-4 text-xs text-gray-500 whitespace-nowrap">{fmtDate(r.date)}</td>
                   
                   <td className="py-3 pr-4"><TypeBadge type={r.type} /></td>
-                  <td className="py-3 pr-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
-                    {fmt(r.amount)} EGP
-                  </td>
+                  <td className="py-3 pr-4 text-sm font-semibold text-gray-800 whitespace-nowrap">{fmt(r.amount)} EGP</td>
                  
                 </tr>
               ))
@@ -472,31 +497,20 @@ function HistoryTable({ data }) {
         <div className="mt-4 flex items-center justify-between">
           <p className="text-xs text-gray-400">Page {page} of {totalPages}</p>
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition hover:bg-gray-50 disabled:opacity-40"
-            >
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+              className="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition hover:bg-gray-50 disabled:opacity-40">
               <ChevronLeft size={14} />
             </button>
             {getPageNumbers().map((p) => (
-              <button
-                key={p}
-                onClick={() => setPage(p)}
+              <button key={p} onClick={() => setPage(p)}
                 className={`rounded-lg px-2.5 py-1 text-xs transition ${
-                  page === p
-                    ? "bg-secondary text-white"
-                    : "border border-gray-200 text-gray-500 hover:bg-gray-50"
-                }`}
-              >
+                  page === p ? "bg-secondary text-white" : "border border-gray-200 text-gray-500 hover:bg-gray-50"
+                }`}>
                 {p}
               </button>
             ))}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition hover:bg-gray-50 disabled:opacity-40"
-            >
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="rounded-lg border border-gray-200 p-1.5 text-gray-500 transition hover:bg-gray-50 disabled:opacity-40">
               <ChevronRight size={14} />
             </button>
           </div>
@@ -508,67 +522,86 @@ function HistoryTable({ data }) {
 
 // ─── Loading Skeleton ─────────────────────────────────────────────────────────
 
-function Skeleton({ className }) {
+function Skeleton({ className = "" }) {
   return <div className={`animate-pulse rounded-xl bg-gray-100 ${className}`} />;
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Payments() {
-  const {
-    payments: rawPayments,
-    subscription: subData,
-    ads: adsData,
-    loading,
-    error,
-    fetchAll,
-  } = usePayments();
+  const allPayments = usePayment();
+  const subPayments = usePayment();
+  const adPayments  = usePayment();
+
+  const refetchAll = () => {
+    allPayments.fetchMyPayments();
+    subPayments.fetchSubscriptionPayments();
+    adPayments.fetchAdPayments();
+  };
 
   useEffect(() => {
-    fetchAll();
+    refetchAll();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const normalizedSub = normalizeSubscription(subData);
+  const { callbackResult, callbackTxId, dismiss } = usePaymobCallback(refetchAll);
+
+  const isLoading = allPayments.loading || subPayments.loading || adPayments.loading;
+  const hasError  = allPayments.error   || subPayments.error   || adPayments.error;
+
+  // ── Derived values ──
+  const normalizedPayments = useMemo(
+    () => (allPayments.payments ?? []).map(normalizePayment),
+    [allPayments.payments]
+  );
 
   const normalizedAds = useMemo(
-    () => (adsData || []).map((a, i) => normalizeAd(a, i)),
-    [adsData]
+    () => (adPayments.payments ?? []).map((a, i) => normalizeAd(a, i)),
+    [adPayments.payments]
   );
 
-  const normalizedPayments = useMemo(
-    () => (rawPayments || []).map(normalizePayment),
-    [rawPayments]
-  );
+  const normalizedSub = useMemo(() => {
+    const active = (subPayments.payments ?? []).find(
+      (s) => String(s.status || "").toLowerCase() === "active"
+    ) || (subPayments.payments ?? [])[0] || null;
+    return normalizeSubscription(active);
+  }, [subPayments.payments]);
 
   const totalPaid = normalizedPayments.reduce((s, r) => s + Number(r.amount || 0), 0);
   const activeAds = normalizedAds.filter((a) => a.status?.toLowerCase() === "active").length;
   const subLeft   = normalizedSub ? daysLeft(normalizedSub.endDate) : 0;
 
-  if (loading) {
+  // ── Loading state ──
+  if (isLoading) {
     return (
       <div className="space-y-5 p-3 sm:p-4 md:p-6 max-w-6xl mx-auto">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Loader2 size={15} className="animate-spin" /> Loading your payment data…
+        </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24" />)}
         </div>
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <Skeleton className="h-64" />
-          <Skeleton className="h-64" />
+          <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-24" />)}</div>
         </div>
         <Skeleton className="h-72" />
       </div>
     );
   }
 
-  if (error) {
+  // ── Error state ──
+  if (hasError) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
-        <AlertCircle className="h-10 w-10 text-red-400" />
-        <p className="text-sm font-medium text-red-500">{error}</p>
+        <AlertTriangle size={32} className="text-red-400" />
+        <p className="text-sm font-medium text-red-500">
+          {allPayments.error ?? subPayments.error ?? adPayments.error}
+        </p>
         <button
-          onClick={fetchAll}
-          className="rounded-full bg-secondary px-5 py-2 text-sm text-white transition hover:opacity-90"
+          onClick={refetchAll}
+          className="flex items-center gap-2 rounded-full bg-secondary px-5 py-2 text-sm text-white transition hover:opacity-90"
         >
-          Retry
+          <RefreshCw size={14} /> Retry
         </button>
       </div>
     );
@@ -577,20 +610,27 @@ export default function Payments() {
   return (
     <div className="space-y-5 p-3 sm:p-4 md:p-6 max-w-6xl mx-auto">
 
+      {/* Paymob redirect result banner */}
+      <PaymentResultBanner result={callbackResult} txId={callbackTxId} onDismiss={dismiss} />
+
+      {/* Refresh button */}
+      <div className="flex justify-end">
+        <button
+          onClick={refetchAll}
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 transition"
+        >
+          <RefreshCw size={12} /> Refresh
+        </button>
+      </div>
+
       {/* Metric cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          icon={TrendingUp}
-          iconBg="#dcfce7"
-          iconColor="#16a34a"
-          label="Total paid"
-          value={`${fmt(totalPaid)} EGP`}
-          sub="All time"
+          icon={TrendingUp} iconBg="#dcfce7" iconColor="#16a34a"
+          label="Total paid" value={`${fmt(totalPaid)} EGP`} sub="All time"
         />
         <MetricCard
-          icon={ShieldCheck}
-          iconBg="#dbeafe"
-          iconColor="#2563eb"
+          icon={ShieldCheck} iconBg="#dbeafe" iconColor="#2563eb"
           label="Subscription"
           value={normalizedSub?.plan || "—"}
           sub={
@@ -604,15 +644,12 @@ export default function Payments() {
           iconBg={subLeft < 30 ? "#fee2e2" : "#fef3c7"}
           iconColor={subLeft < 30 ? "#dc2626" : "#d97706"}
           label="Days left on plan"
-          value={subLeft}
-          sub={subLeft < 30 ? "Renew soon!" : "Subscription active"}
+          value={normalizedSub ? subLeft : "—"}
+          sub={!normalizedSub ? "No active plan" : subLeft < 30 ? "Renew soon!" : "Subscription active"}
         />
         <MetricCard
-          icon={Zap}
-          iconBg="#fef3c7"
-          iconColor="#d97706"
-          label="Active ads"
-          value={activeAds}
+          icon={Zap} iconBg="#fef3c7" iconColor="#d97706"
+          label="Active ads" value={activeAds}
           sub={`${normalizedAds.length} total campaigns`}
         />
       </div>

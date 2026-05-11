@@ -1,95 +1,52 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import useCampaigns from "../../campaigns/hook/useCampaigns";
 import { usePharmacies } from "../../pharmacies/hooks/usePharmacies";
+const staticAds = [];
 
 // ─── Pharmacy Badge ────────────────────────────────────────────────────────────
 const PharmacyBadge = ({ imageUrl, name, pharmacyId, navigate }) => {
   const [hovered, setHovered] = useState(false);
   if (!imageUrl && !name) return null;
 
-  const canNavigate = !!pharmacyId;
-
   return (
     <div
-      onClick={() => canNavigate && navigate(`/user/pharmacy/${pharmacyId}`)}
+      onClick={() => pharmacyId && navigate(`/user/pharmacy/${pharmacyId}`)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         position: "absolute",
-        top: "28px",
-        right: "32px",
+        top: 16,
+        right: 20,
         zIndex: 30,
         display: "flex",
         alignItems: "center",
-        gap: "16px",
+        gap: 10,
         background: hovered ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.13)",
         backdropFilter: "blur(18px)",
         WebkitBackdropFilter: "blur(18px)",
-        border: `2px solid ${hovered ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)"}`,
-        borderRadius: "100px",
-        padding: "10px 24px 10px 10px",
-        boxShadow: hovered
-          ? "0 20px 60px rgba(0,0,0,0.4), 0 0 0 4px rgba(255,255,255,0.12)"
-          : "0 10px 40px rgba(0,0,0,0.28)",
-        cursor: canNavigate ? "pointer" : "default",
-        transform: hovered ? "translateY(-4px) scale(1.04)" : "translateY(0) scale(1)",
-        transition: "all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        border: `1.5px solid ${hovered ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.25)"}`,
+        borderRadius: 100,
+        padding: "6px 16px 6px 6px",
+        boxShadow: hovered ? "0 8px 24px rgba(0,0,0,0.25)" : "0 4px 16px rgba(0,0,0,0.15)",
+        cursor: pharmacyId ? "pointer" : "default",
+        transform: hovered ? "translateY(-2px)" : "translateY(0)",
+        transition: "all 0.25s ease",
       }}
     >
       {imageUrl && (
-        <div
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: "50%",
-            overflow: "hidden",
-            border: "3px solid rgba(255,255,255,0.9)",
-            flexShrink: 0,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-            background: "#fff",
-            transform: hovered ? "scale(1.06)" : "scale(1)",
-            transition: "transform 0.28s ease",
-          }}
-        >
-          <img
-            src={imageUrl}
-            alt={name || "Pharmacy"}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
+        <div style={{ width: 40, height: 40, borderRadius: "50%", overflow: "hidden", border: "2px solid rgba(255,255,255,0.85)", flexShrink: 0, background: "#fff" }}>
+          <img src={imageUrl} alt={name || "Pharmacy"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
       )}
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
         {name && (
-          <span
-            style={{
-              color: "#fff",
-              fontSize: "16px",
-              fontWeight: 800,
-              letterSpacing: "0.01em",
-              textShadow: "0 2px 8px rgba(0,0,0,0.35)",
-              whiteSpace: "nowrap",
-              maxWidth: 180,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              lineHeight: 1.2,
-            }}
-          >
+          <span style={{ color: "#fff", fontSize: 13, fontWeight: 700, textShadow: "0 1px 4px rgba(0,0,0,0.3)", whiteSpace: "nowrap", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>
             {name}
           </span>
         )}
-        {canNavigate && (
-          <span
-            style={{
-              color: hovered ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.65)",
-              fontSize: "11px",
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              transition: "color 0.2s",
-            }}
-          >
+        {pharmacyId && (
+          <span style={{ color: hovered ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.5)", fontSize: 10, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", transition: "color 0.2s" }}>
             Visit Store →
           </span>
         )}
@@ -98,224 +55,272 @@ const PharmacyBadge = ({ imageUrl, name, pharmacyId, navigate }) => {
   );
 };
 
-// ─── Dynamic Slide ─────────────────────────────────────────────────────────────
-const DynamicSlide = ({ ad, pharmacyMap, navigate }) => {
+// ─── Progress Bar ─────────────────────────────────────────────────────────────
+const ProgressBar = ({ duration, running, slideIndex }) => {
+  const [width, setWidth] = useState(0);
+  const rafRef = useRef();
+  const startRef = useRef();
+
+  useEffect(() => {
+    cancelAnimationFrame(rafRef.current);
+    setWidth(0);
+    startRef.current = null;
+    if (!running) return;
+    const animate = (ts) => {
+      if (!startRef.current) startRef.current = ts;
+      const pct = Math.min(((ts - startRef.current) / duration) * 100, 100);
+      setWidth(pct);
+      if (pct < 100) rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [running, duration, slideIndex]);
+
+  return (
+    <div style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 3, background: "rgba(255,255,255,0.15)", zIndex: 40 }}>
+      <div style={{ height: "100%", width: `${width}%`, background: "rgba(255,255,255,0.65)", transition: "width 0.08s linear" }} />
+    </div>
+  );
+};
+
+// ─── Dynamic Slide ────────────────────────────────────────────────────────────
+const DynamicSlide = ({ ad, pharmacyMap, navigate, isActive }) => {
   const pid = ad.pharmacyId || ad.PharmacyId || null;
   const livePharmacy = pid ? pharmacyMap[pid] : null;
 
   const resolvedPharmacy = livePharmacy
     ? { imageUrl: livePharmacy.imageUrl || livePharmacy.ImageUrl || null, name: livePharmacy.name || null, pharmacyId: pid }
-    : (ad.pharmacyImage || ad.pharmacyName)
+    : ad.pharmacyImage || ad.pharmacyName
     ? { imageUrl: ad.pharmacyImage || null, name: ad.pharmacyName || null, pharmacyId: null }
     : null;
 
-  const medicineId = ad.medicineId || ad.MedicineId || null;
   const handleShopNow = () => {
-    if (medicineId) navigate(`/medicines/${medicineId}`);
+    if (pid) navigate(`/user/pharmacy/${pid}`);
+    else if (ad.medicineId || ad.MedicineId) navigate(`/medicines/${ad.medicineId || ad.MedicineId}`);
     else if (ad.category) navigate(`/user/products?category=${encodeURIComponent(ad.category)}`);
     else navigate("/user/products");
   };
 
   return (
-    <section
-      className="relative w-full min-h-screen overflow-hidden flex items-center justify-center"
+    <div
       style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         background: `radial-gradient(circle at top left, ${ad.colorTo || "#0369a1"}, ${ad.colorFrom || "#0ea5e9"})`,
+        opacity: isActive ? 1 : 0,
+        transition: "opacity 0.6s ease",
+        pointerEvents: isActive ? "auto" : "none",
+        overflow: "hidden",
+        borderRadius: "inherit",
       }}
     >
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-white/10 blur-[120px] animate-pulse" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] rounded-full bg-black/20 blur-[100px]" />
+      <div style={{ position: "absolute", top: "-10%", right: "-10%", width: "40%", height: "40%", borderRadius: "50%", background: "rgba(255,255,255,0.08)", filter: "blur(60px)" }} />
+      <div style={{ position: "absolute", bottom: "-10%", left: "-10%", width: "30%", height: "30%", borderRadius: "50%", background: "rgba(0,0,0,0.15)", filter: "blur(60px)" }} />
 
-      {/* ── Corner ribbon ── */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          zIndex: 30,
-          width: "180px",
-          height: "180px",
-          overflow: "hidden",
-          pointerEvents: "none",
-          userSelect: "none",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: "42px",
-            left: "-48px",
-            width: "210px",
-            padding: "10px 0",
-            background: "linear-gradient(135deg, #1a5c2a 0%, #2d8c45 100%)",
-            transform: "rotate(-45deg)",
-            textAlign: "center",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.35)",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "clamp(0.75rem, 1.2vw, 0.95rem)",
-              fontWeight: 900,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: "#fff",
-              textShadow: "0 1px 4px rgba(0,0,0,0.4)",
-              whiteSpace: "nowrap",
-            }}
-          >
+      {/* Corner ribbon */}
+      <div style={{ position: "absolute", top: 0, left: 0, width: 120, height: 120, overflow: "hidden", pointerEvents: "none", zIndex: 30 }}>
+        <div style={{ position: "absolute", top: 28, left: -36, width: 160, padding: "6px 0", background: "linear-gradient(135deg, #1a5c2a 0%, #2d8c45 100%)", transform: "rotate(-45deg)", textAlign: "center", boxShadow: "0 3px 10px rgba(0,0,0,0.3)" }}>
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff" }}>
             {ad.badge || "NEW ARRIVAL"}
           </span>
         </div>
       </div>
 
       {resolvedPharmacy && (
-        <PharmacyBadge
-          imageUrl={resolvedPharmacy.imageUrl}
-          name={resolvedPharmacy.name}
-          pharmacyId={resolvedPharmacy.pharmacyId}
-          navigate={navigate}
-        />
+        <PharmacyBadge imageUrl={resolvedPharmacy.imageUrl} name={resolvedPharmacy.name} pharmacyId={resolvedPharmacy.pharmacyId} navigate={navigate} />
       )}
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-8 grid md:grid-cols-2 gap-16 items-center">
-        <div className="order-2 md:order-1 space-y-8 text-center md:text-left">
-          <div className="space-y-4">
-            <h1
-              className="text-white font-extrabold leading-[1.1] drop-shadow-md"
-              style={{ fontSize: "clamp(3rem, 5vw, 5.5rem)" }}
-            >
-              {ad.headline}
-            </h1>
-            <div className="h-1 w-24 bg-white/40 inline-block rounded-full" />
-
-            {ad.subtext && (
-              <div className="relative group">
-                <p
-                  className="text-white font-black leading-none max-w-lg select-none"
-                  style={{
-                    fontSize: "clamp(2.5rem, 6vw, 5rem)",
-                    textTransform: "uppercase",
-                    letterSpacing: "-0.02em",
-                    transform: "perspective(1000px) rotateX(15deg) rotateY(-5deg)",
-                    textShadow: `
-                      1px 1px 0px #d1d1d1,
-                      2px 2px 0px #c1c1c1,
-                      3px 3px 0px #b1b1b1,
-                      4px 4px 0px #a1a1a1,
-                      5px 5px 0px #919191,
-                      6px 6px 10px rgba(0,0,0,0.4),
-                      0px 10px 20px rgba(0,0,0,0.3)
-                    `,
-                    WebkitTextStroke: "1px rgba(255,255,255,0.1)",
-                    animation: "float 4s ease-in-out infinite",
-                  }}
-                >
-                  {ad.subtext}
-                </p>
-                <style>{`
-                  @keyframes float {
-                    0%, 100% { transform: perspective(1000px) rotateX(15deg) rotateY(-5deg) translateY(0px); }
-                    50% { transform: perspective(1000px) rotateX(15deg) rotateY(-5deg) translateY(-15px); }
-                  }
-                `}</style>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start items-center">
-            <button
-              onClick={handleShopNow}
-              className="group relative bg-white text-gray-900 px-12 py-5 rounded-full font-black text-lg overflow-hidden transition-all hover:pl-16 active:scale-95 shadow-2xl"
-            >
-              <span className="relative z-10">SHOP NOW</span>
-              <span className="absolute left-6 opacity-0 transition-all group-hover:opacity-100 group-hover:left-8">→</span>
-            </button>
-          </div>
+      <div style={{ position: "relative", zIndex: 10, width: "100%", padding: "0 32px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, alignItems: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <h1 style={{ color: "#fff", fontWeight: 800, lineHeight: 1.1, fontSize: "clamp(1rem, 1.6vw, 1.6rem)", textShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
+            {ad.headline}
+          </h1>
+          <div style={{ width: 36, height: 3, background: "rgba(255,255,255,0.45)", borderRadius: 4 }} />
+          {ad.subtext && (
+            <p style={{ color: "rgba(255,255,255,0.88)", fontWeight: 900, fontSize: "clamp(2rem, 4.5vw, 5rem)", lineHeight: 1, textShadow: "0 2px 10px rgba(0,0,0,0.18)" }}>
+              {ad.subtext}
+            </p>
+          )}
+          <button
+            onClick={handleShopNow}
+            style={{ alignSelf: "flex-start", background: "#fff", color: "#111", border: "none", borderRadius: 100, padding: "10px 24px", fontWeight: 700, fontSize: 13, cursor: "pointer", letterSpacing: "0.04em", boxShadow: "0 6px 20px rgba(0,0,0,0.18)", transition: "transform 0.15s, box-shadow 0.15s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 10px 28px rgba(0,0,0,0.28)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.18)"; }}
+          >
+            SHOP NOW
+          </button>
         </div>
 
-        <div className="relative order-1 md:order-2 flex justify-center items-center group">
-          <div
-            className="absolute w-[80%] h-[80%] rounded-full border-2 border-white/20 animate-[spin_10s_linear_infinite]"
-            style={{ boxShadow: `0 0 50px ${ad.colorFrom}44` }}
+        <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+          <div style={{ position: "absolute", width: "75%", height: "75%", borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.18)", animation: "spin 12s linear infinite" }} />
+          <img
+            src={ad.medicineImage || ad.imageDataUrl}
+            alt={ad.headline}
+            style={{ width: "clamp(120px, 18vw, 260px)", objectFit: "contain", filter: "drop-shadow(0 16px 16px rgba(0,0,0,0.4))", position: "relative", zIndex: 1, animation: "float 5s ease-in-out infinite" }}
           />
-          <div className="relative z-10 animate-[bounce_4s_ease-in-out_infinite]">
-            <img
-              src={ad.medicineImage || ad.imageDataUrl}
-              alt={ad.headline}
-              className="w-[280px] sm:w-[350px] md:w-[500px] object-contain drop-shadow-[0_35px_35px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:scale-105"
-            />
-          </div>
-          <div className="absolute bottom-[-20px] w-1/2 h-10 bg-black/30 blur-2xl rounded-[100%]" />
+          <div style={{ position: "absolute", bottom: 0, width: "45%", height: 16, background: "rgba(0,0,0,0.2)", filter: "blur(8px)", borderRadius: "50%" }} />
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 
-// --- Main Hero Page ---
+// ─── Static Slide ─────────────────────────────────────────────────────────────
+const StaticSlide = ({ ad, isActive }) => (
+  <div
+    style={{
+      position: "absolute",
+      inset: 0,
+      backgroundImage: `url(${ad.bgImage})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      display: "flex",
+      alignItems: "center",
+      opacity: isActive ? 1 : 0,
+      transition: "opacity 0.6s ease",
+      pointerEvents: isActive ? "auto" : "none",
+      overflow: "hidden",
+      borderRadius: "inherit",
+    }}
+  >
+    <div style={{ position: "relative", zIndex: 20, maxWidth: 1280, margin: "0 auto", padding: "0 24px", width: "100%", display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+      <div style={{ marginTop: "-30px", display: "flex", flexDirection: "column", gap: 6 }}>
+        <p className={`font-medium ${ad.textColor1} ${ad.textSize1}`}>{ad.text1}</p>
+        <p className={`font-extrabold ${ad.textColor2} ${ad.textSize2}`}>{ad.text2}</p>
+      </div>
+      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <img src={ad.productImg} className={`absolute ${ad.productPosition} ${ad.productSize} z-10`} alt="product" />
+        <img src={ad.modelImg}   className={`absolute ${ad.modelPosition} ${ad.modelSize} z-10`}   alt="model" />
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Dots ─────────────────────────────────────────────────────────────────────
+const Dots = ({ count, current, onChange }) => (
+  <div style={{ position: "absolute", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 30, display: "flex", gap: 6 }}>
+    {Array.from({ length: count }).map((_, i) => (
+      <button
+        key={i}
+        onClick={() => onChange(i)}
+        aria-label={`Go to slide ${i + 1}`}
+        style={{ width: i === current ? 22 : 7, height: 7, borderRadius: 4, background: i === current ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)", border: "none", cursor: "pointer", padding: 0, transition: "all 0.3s ease" }}
+      />
+    ))}
+  </div>
+);
+
+// ─── Arrow ────────────────────────────────────────────────────────────────────
+const Arrow = ({ direction, onClick }) => (
+  <button
+    onClick={onClick}
+    aria-label={direction === "left" ? "Previous slide" : "Next slide"}
+    style={{
+      position: "absolute",
+      top: "50%",
+      transform: "translateY(-50%)",
+      [direction === "left" ? "left" : "right"]: 12,
+      zIndex: 30,
+      width: 34,
+      height: 34,
+      borderRadius: "50%",
+      background: "rgba(255,255,255,0.1)",
+      border: "1px solid rgba(255,255,255,0.2)",
+      color: "rgba(255,255,255,0.8)",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 16,
+      transition: "background 0.2s, color 0.2s",
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.22)"; e.currentTarget.style.color = "#fff"; }}
+    onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "rgba(255,255,255,0.8)"; }}
+  >
+    {direction === "left" ? "‹" : "›"}
+  </button>
+);
+
+// ─── Main Hero ────────────────────────────────────────────────────────────────
+const SLIDE_DURATION = 6000;
+
 const Hero = () => {
   const navigate = useNavigate();
   const { fetchAll, ads: backendAds } = useCampaigns();
   const { pharmacies, fetchAllPharmacies } = usePharmacies();
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [allSlides, setAllSlides] = useState([]);
-
+  const [allSlides, setAllSlides] = useState(staticAds);
+  const [isPaused, setIsPaused] = useState(false);
   const fetchedRef = useRef(false);
+
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
     fetchAll();
     fetchAllPharmacies();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line
 
-  const pharmacyMap = React.useMemo(() => {
+  const pharmacyMap = useMemo(() => {
     const map = {};
     (pharmacies || []).forEach((ph) => { map[ph.id] = ph; });
     return map;
   }, [pharmacies]);
 
   useEffect(() => {
-    if (!backendAds || !Array.isArray(backendAds) || backendAds.length === 0) return;
-    const dynamicSlides = backendAds.map((ad) => ({
-      ...ad,
-      id: `dynamic-${ad.id}`,
-      type: "dynamic",
-    }));
-    setAllSlides(dynamicSlides);
+    if (!backendAds?.length) return;
+    const dynamicSlides = backendAds.map((ad) => ({ ...ad, id: `dynamic-${ad.id}`, type: "dynamic" }));
+    setAllSlides([...staticAds, ...dynamicSlides]);
   }, [backendAds]);
 
-  useEffect(() => {
-    if (allSlides.length <= 1) return;
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % allSlides.length);
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [allSlides.length]);
+  const goTo = (index) => setCurrentIndex((index + allSlides.length) % allSlides.length);
 
-  const activeSlide = allSlides[currentIndex];
-  if (!activeSlide) return null;
+  useEffect(() => {
+    if (allSlides.length <= 1 || isPaused) return;
+    const t = setInterval(() => setCurrentIndex((prev) => (prev + 1) % allSlides.length), SLIDE_DURATION);
+    return () => clearInterval(t);
+  }, [allSlides.length, isPaused, currentIndex]);
+
+  if (!allSlides.length) return null;
 
   return (
-    <div className="relative w-full min-h-screen">
-      <DynamicSlide ad={activeSlide} pharmacyMap={pharmacyMap} navigate={navigate} />
+    <>
+      <style>{`
+        @keyframes spin  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+      `}</style>
 
-      {allSlides.length > 1 && (
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 flex gap-3">
-          {allSlides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentIndex(i)}
-              className={`transition-all duration-300 rounded-full ${
-                i === currentIndex ? "w-10 h-3 bg-white" : "w-3 h-3 bg-white/40 hover:bg-white/60"
-              }`}
-              aria-label={`Go to slide ${i + 1}`}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "420px",         /* fixed card height — change to suit your layout */
+          borderRadius: "20px",
+          overflow: "hidden",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+          margin: "24px auto",     /* top/bottom space */
+          maxWidth: "calc(100% - 48px)", /* left/right space */
+        }}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+      >
+        {allSlides.map((slide, i) =>
+          slide.type === "dynamic" ? (
+            <DynamicSlide key={slide.id} ad={slide} pharmacyMap={pharmacyMap} navigate={navigate} isActive={i === currentIndex} />
+          ) : (
+            <StaticSlide key={slide.id} ad={slide} isActive={i === currentIndex} />
+          )
+        )}
+
+        <Arrow direction="left"  onClick={() => goTo(currentIndex - 1)} />
+        <Arrow direction="right" onClick={() => goTo(currentIndex + 1)} />
+        <Dots count={allSlides.length} current={currentIndex} onChange={goTo} />
+        <ProgressBar duration={SLIDE_DURATION} running={!isPaused} slideIndex={currentIndex} />
+      </div>
+    </>
   );
 };
 

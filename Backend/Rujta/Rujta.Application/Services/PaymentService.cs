@@ -1,23 +1,19 @@
-﻿// Rujta.Infrastructure/Services/PaymentService.cs
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Rujta.Application.DTOs.PaymentDto;
-using Rujta.Application.Interfaces.InterfaceRepositories;
-using Rujta.Application.Interfaces.InterfaceServices;
-using Rujta.Domain.Entities;
-using Rujta.Domain.Enums;
 
 namespace Rujta.Infrastructure.Services
 {
     public class PaymentService : IPaymentService
     {
-        private readonly IPaymentRepository _paymentRepository;
-        private readonly IAdRepository _adRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<PaymentService> _logger;
 
         private string BaseUrl => _configuration["Paymob:BaseUrl"]!;
         private string ApiKey => _configuration["Paymob:ApiKey"]!;
@@ -26,16 +22,19 @@ namespace Rujta.Infrastructure.Services
         private string HmacSecret => _configuration["Paymob:HmacSecret"]!;
         private string UserRedirectUrl => _configuration["Paymob:UserRedirectUrl"]!;
         private string AdminRedirectUrl => _configuration["Paymob:AdminRedirectUrl"]!;
+
         public PaymentService(
-            IPaymentRepository paymentRepository,
-            IAdRepository adRepository,
+            IUnitOfWork unitOfWork,
             HttpClient httpClient,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<PaymentService> logger)
         {
-            _paymentRepository = paymentRepository;
-            _adRepository = adRepository;
+            _unitOfWork = unitOfWork;
             _httpClient = httpClient;
             _configuration = configuration;
+            _logger = logger;
+
+            _logger.LogInformation("[PaymentService] Initialized with BaseUrl: {BaseUrl}", BaseUrl);
         }
 
         public async Task<PaymentResponseDto> InitiateAsync(
@@ -43,14 +42,23 @@ namespace Rujta.Infrastructure.Services
             InitiatePaymentDto dto,
             CancellationToken cancellationToken = default)
         {
+            _logger.LogInformation("[InitiateAsync] Started - UserId: {UserId}, PharmacyId: {PharmacyId}, Type: {Type}", userId, pharmacyId, dto.Type);
+
             ValidateDto(dto);
 
             var amountCents = dto.Amount * 100;
-            var authToken = await GetAuthTokenAsync();
-            var paymobOrderId = await RegisterOrderAsync(authToken, amountCents, dto.Currency);
-            var redirectUrl = dto.Type == PaymentType.Order ? UserRedirectUrl: AdminRedirectUrl;
+            _logger.LogInformation("[InitiateAsync] Amount in cents: {AmountCents}", amountCents);
 
-            var paymentKey = await GetPaymentKeyAsync(authToken, paymobOrderId, amountCents, dto.Currency, dto.BillingData, redirectUrl);
+            var authToken = await GetAuthTokenAsync();
+
+            var paymobOrderId = await RegisterOrderAsync(authToken, amountCents, dto.Currency);
+
+            var redirectUrl = dto.Type == PaymentType.Order ? UserRedirectUrl : AdminRedirectUrl;
+            _logger.LogInformation("[InitiateAsync] Redirect URL selected: {RedirectUrl}", redirectUrl);
+
+            var paymentKey = await GetPaymentKeyAsync(
+                authToken, paymobOrderId, amountCents,
+                dto.Currency, dto.BillingData, redirectUrl);
 
             var payment = new Payment
             {
@@ -68,7 +76,16 @@ namespace Rujta.Infrastructure.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            await _paymentRepository.AddAsync(payment, cancellationToken);
+            await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+            {
+                _logger.LogInformation("[InitiateAsync] Starting database transaction");
+
+                await _unitOfWork.Payments.AddAsync(payment, ct);
+                await _unitOfWork.SaveAsync(ct);
+
+                _logger.LogInformation("[InitiateAsync] Payment saved - InternalPaymentId: {PaymentId}", payment.Id);
+
+            }, cancellationToken);
 
             return new PaymentResponseDto
             {
@@ -84,22 +101,64 @@ namespace Rujta.Infrastructure.Services
             string hmacSignature,
             CancellationToken cancellationToken = default)
         {
-            if (!VerifyHmac(callback.Obj, hmacSignature))
-                return false;
+            _logger.LogInformation("[HandleCallbackAsync] Callback received");
 
-            var payment = await _paymentRepository
+            if (!VerifyHmac(callback.Obj, hmacSignature))
+            {
+                _logger.LogWarning("[Callback] HMAC verification failed");
+                return false;
+            }
+
+            if (!callback.Obj.Success)
+            {
+                _logger.LogInformation("[Callback] Payment not successful, skipping");
+                return true;
+            }
+
+            var payment = await _unitOfWork.Payments
                 .GetByPaymobOrderIdAsync(callback.Obj.Order.Id, cancellationToken);
 
-            if (payment == null) return false;
-
-            payment.Status = callback.Obj.Success ? PaymentStatus.Success : PaymentStatus.Failed;
-            payment.PaymobTransactionId = callback.Obj.Id;
-            payment.UpdatedAt = DateTime.UtcNow;
-
-            await _paymentRepository.UpdateAsync(payment, cancellationToken);
+            if (payment == null)
+            {
+                _logger.LogWarning("[Callback] Payment not found for OrderId={OrderId}", callback.Obj.Order.Id);
+                return false;
+            }
 
             if (payment.Status == PaymentStatus.Success)
-                await HandlePostPaymentAsync(payment, cancellationToken);
+            {
+                _logger.LogInformation("[Callback] Already processed, skipping");
+                return true;
+            }
+
+            await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+            {
+                _logger.LogInformation("[HandleCallbackAsync] Updating payment");
+
+                payment.Status = PaymentStatus.Success;
+                payment.PaymobTransactionId = callback.Obj.Id;
+
+                await _unitOfWork.Payments.UpdateAsync(payment, ct);
+                await _unitOfWork.SaveAsync(ct);
+
+                if (payment.Type == PaymentType.Ad && payment.AdId.HasValue)
+                {
+                    var ad = await _unitOfWork.Ads.GetByIdAsync(payment.AdId.Value, ct);
+
+                    if (ad != null)
+                    {
+                        ad.IsActive = true;
+                        ad.StartsAt = DateTime.UtcNow;
+                        ad.ExpiresAt = DateTime.UtcNow.AddDays(ad.DurationDays);
+                        ad.UpdatedAt = DateTime.UtcNow;
+
+                        await _unitOfWork.Ads.UpdateAsync(ad, ct);
+                        await _unitOfWork.SaveAsync(ct);
+
+                        _logger.LogInformation("[Callback] Ad activated - AdId: {AdId}", ad.Id);
+                    }
+                }
+
+            }, cancellationToken);
 
             return true;
         }
@@ -107,33 +166,23 @@ namespace Rujta.Infrastructure.Services
         public async Task<IEnumerable<PaymentSummaryDto>> GetPharmacyPaymentsAsync(
             int pharmacyId, CancellationToken cancellationToken = default)
         {
-            var payments = await _paymentRepository.GetByPharmacyIdAsync(pharmacyId, cancellationToken);
+            var payments = await _unitOfWork.Payments
+                .GetByPharmacyIdAsync(pharmacyId, cancellationToken);
+
+            _logger.LogInformation("[GetPharmacyPaymentsAsync] Found {Count} payments", payments.Count());
+
             return payments.Select(MapToSummary);
         }
 
         public async Task<IEnumerable<PaymentSummaryDto>> GetPharmacyPaymentsByTypeAsync(
             int pharmacyId, PaymentType type, CancellationToken cancellationToken = default)
         {
-            var payments = await _paymentRepository.GetByPharmacyAndTypeAsync(pharmacyId, type, cancellationToken);
+            var payments = await _unitOfWork.Payments
+                .GetByPharmacyAndTypeAsync(pharmacyId, type, cancellationToken);
+
+            _logger.LogInformation("[GetPharmacyPaymentsByTypeAsync] Found {Count} payments", payments.Count());
+
             return payments.Select(MapToSummary);
-        }
-
-        // ─── Private Helpers ─────────────────────────────────────────────
-
-        private async Task HandlePostPaymentAsync(Payment payment, CancellationToken cancellationToken)
-        {
-            switch (payment.Type)
-            {
-                case PaymentType.Ad when payment.AdId.HasValue:
-                    // Activate ad with its stored duration
-                    var ad = await _adRepository.GetByIdAsync(payment.AdId.Value, cancellationToken);
-                    if (ad != null)
-                        await _adRepository.ActivateAsync(ad.Id, ad.DurationDays, cancellationToken);
-                    break;
-
-                case PaymentType.Order:
-                    break;
-            }
         }
 
         private static void ValidateDto(InitiatePaymentDto dto)
@@ -169,12 +218,15 @@ namespace Rujta.Infrastructure.Services
             var response = await _httpClient.PostAsJsonAsync(
                 $"{BaseUrl}/api/auth/tokens",
                 new { api_key = ApiKey });
+
             response.EnsureSuccessStatusCode();
+
             var json = await response.Content.ReadFromJsonAsync<JsonElement>();
             return json.GetProperty("token").GetString()!;
         }
 
-        private async Task<string> RegisterOrderAsync(string authToken, decimal amountCents, string currency)
+        private async Task<string> RegisterOrderAsync(
+            string authToken, decimal amountCents, string currency)
         {
             var response = await _httpClient.PostAsJsonAsync(
                 $"{BaseUrl}/api/ecommerce/orders",
@@ -186,7 +238,9 @@ namespace Rujta.Infrastructure.Services
                     currency,
                     items = Array.Empty<object>()
                 });
+
             response.EnsureSuccessStatusCode();
+
             var json = await response.Content.ReadFromJsonAsync<JsonElement>();
             return json.GetProperty("id").GetInt32().ToString();
         }
@@ -194,8 +248,7 @@ namespace Rujta.Infrastructure.Services
         private async Task<string> GetPaymentKeyAsync(
             string authToken, string paymobOrderId,
             decimal amountCents, string currency,
-            PaymobBillingDataDto billing,
-    string redirectUrl)
+            PaymobBillingDataDto billing, string redirectUrl)
         {
             var response = await _httpClient.PostAsJsonAsync(
                 $"{BaseUrl}/api/acceptance/payment_keys",
@@ -225,7 +278,9 @@ namespace Rujta.Infrastructure.Services
                     currency,
                     integration_id = IntegrationId
                 });
+
             response.EnsureSuccessStatusCode();
+
             var json = await response.Content.ReadFromJsonAsync<JsonElement>();
             return json.GetProperty("token").GetString()!;
         }
@@ -233,27 +288,36 @@ namespace Rujta.Infrastructure.Services
         private bool VerifyHmac(PaymobCallbackObj obj, string receivedHmac)
         {
             var data = string.Concat(
-                obj.AmountCents, obj.CreatedAt, obj.Currency,
+                ((long)obj.AmountCents).ToString(),
+                obj.CreatedAt ?? string.Empty,
+                obj.Currency ?? string.Empty,
                 obj.ErrorOccured.ToString().ToLower(),
                 obj.HasParentTransaction.ToString().ToLower(),
-                obj.Id, obj.IntegrationId,
+                obj.Id,
+                obj.IntegrationId.ToString(),         
                 obj.Is3dSecure.ToString().ToLower(),
                 obj.IsAuth.ToString().ToLower(),
                 obj.IsCapture.ToString().ToLower(),
                 obj.IsRefunded.ToString().ToLower(),
                 obj.IsStandalonePayment.ToString().ToLower(),
                 obj.IsVoided.ToString().ToLower(),
-                obj.Order.Id, obj.OwnerUsername,
-                obj.PendingAction, obj.SourceDataPan,
-                obj.SourceDataSubType, obj.SourceDataType,
+                obj.Order.Id,
+                obj.Owner?.ToString() ?? string.Empty,  
+                obj.Pending.ToString().ToLower(),
+                obj.SourceData.Pan ?? string.Empty,
+                obj.SourceData.SubType ?? string.Empty,
+                obj.SourceData.Type ?? string.Empty,
                 obj.Success.ToString().ToLower()
             );
 
-            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(HmacSecret));
+            _logger.LogWarning("[HMAC] Data: {Data}", data);
+            _logger.LogWarning("[HMAC] Received: {Rec}", receivedHmac);
+
+            using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(HmacSecret));
             var computed = Convert.ToHexString(
                 hmac.ComputeHash(Encoding.UTF8.GetBytes(data))).ToLower();
 
-            
+            _logger.LogWarning("[HMAC] Computed: {Comp}", computed);
 
             return computed == receivedHmac.ToLower();
         }

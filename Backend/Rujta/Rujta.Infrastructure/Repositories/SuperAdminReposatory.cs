@@ -28,5 +28,19 @@ namespace Rujta.Infrastructure.Repositories
                     })
                 .ToListAsync(cancellationToken);
         }
+
+
+        public async Task<Dictionary<int, int>> GetTotalOrdersForPharmaciesAsync(List<int> pharmacyIds, CancellationToken cancellationToken = default)
+        {
+            return await _context.Orders
+                .Where(o => pharmacyIds.Contains(o.PharmacyId))
+                .GroupBy(o => o.PharmacyId)
+                .Select(g => new
+                {
+                    PharmacyId = g.Key,
+                    Count = g.Count()
+                })
+                .ToDictionaryAsync(x => x.PharmacyId, x => x.Count, cancellationToken);
+        }
     }
 }

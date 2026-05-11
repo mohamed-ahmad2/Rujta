@@ -36,9 +36,7 @@ namespace Rujta.Infrastructure.Repositories
             await _dbSet.AddAsync(entity, cancellationToken);
         }
 
-        public virtual Task UpdateAsync(
-    T entity,
-    CancellationToken cancellationToken = default)
+        public virtual Task UpdateAsync(T entity,CancellationToken cancellationToken = default)
         {
             _dbSet.Update(entity);
             return Task.CompletedTask;
@@ -102,6 +100,23 @@ namespace Rujta.Infrastructure.Repositories
                 .First();
 
             return await query.FirstOrDefaultAsync( e => EF.Property<TKey>(e, keyName)!.Equals(id),cancellationToken);
+        }
+        
+        public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        public virtual async Task<T?> FindOneAsync(Expression<Func<T, bool>> predicate,CancellationToken cancellationToken = default,Func<IQueryable<T>, IQueryable<T>>? include = null)
+        {
+            IQueryable<T> query = _dbSet
+                .AsNoTracking()
+                .Where(predicate);
+
+            if (include != null)
+                query = include(query);
+
+            return await query.FirstOrDefaultAsync(cancellationToken);
         }
     }
 }

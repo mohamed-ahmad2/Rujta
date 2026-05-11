@@ -8,6 +8,6 @@ namespace Rujta.Application.DTOs.AdDto
 {
     public class AdStatusDto
     {
-        public bool IsActive { get; set; }
+        public bool IsActive { get; set; } = false;
     }
 }

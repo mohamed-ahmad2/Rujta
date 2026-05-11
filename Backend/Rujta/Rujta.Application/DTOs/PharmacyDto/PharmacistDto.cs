@@ -9,7 +9,7 @@ namespace Rujta.Application.DTOs.PharmacyDto
         public string? Email { get; set; }
         public string? Phone { get; set; }
 
-        // Pharmacist-specific
+
         public string? Position { get; set; }
         public DateTime? HireDate { get; set; }  
         public decimal? Salary { get; set; }

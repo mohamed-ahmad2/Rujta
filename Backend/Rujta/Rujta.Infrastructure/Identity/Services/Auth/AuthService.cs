@@ -1,7 +1,4 @@
-﻿
-using Rujta.Application.Interfaces.InterfaceServices.IAuth;
-
-namespace Rujta.Infrastructure.Identity.Services.Auth
+﻿namespace Rujta.Infrastructure.Identity.Services.Auth
 {
     public partial class AuthService : IAuthService
     {
