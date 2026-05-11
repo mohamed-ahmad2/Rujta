@@ -6,7 +6,6 @@ import {
   Search,
   X,
   PlusCircle,
-  ChevronDown,
   ShoppingCart,
   Package,
   ClipboardList,
@@ -17,6 +16,7 @@ import CustomersCard from "../components/CustomersCard";
 import { useSpring, animated } from "@react-spring/web";
 import { toast } from "react-toastify";
 import useMedicine from "../../medicines/hook/useMedicines";
+import { createOrder } from "../../customerOrders/api/customerOrdersApi";
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 const Toast = ({ type, message, onClose }) => (
@@ -31,18 +31,6 @@ const Toast = ({ type, message, onClose }) => (
     </button>
   </div>
 );
-
-// ─── Status style helper ──────────────────────────────────────────────────────
-const statusStyle = (status) => {
-  switch (status) {
-    case "Delivered":      return "bg-green-100 text-green-700";
-    case "Pending":
-    case "Accepted":
-    case "Processing":     return "bg-yellow-100 text-yellow-700";
-    case "OutForDelivery": return "bg-blue-100 text-blue-700";
-    default:               return "bg-gray-100 text-gray-600";
-  }
-};
 
 // ─── Medicine Search Input ────────────────────────────────────────────────────
 function MedicineSearchInput({ value, onChange, onSelect, medicines }) {
@@ -125,7 +113,6 @@ function CustomerOrdersModal({ customer, orders, onClose, onAddOrder }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
@@ -151,7 +138,6 @@ function CustomerOrdersModal({ customer, orders, onClose, onAddOrder }) {
           </div>
         </div>
 
-        {/* Orders list */}
         <div className="max-h-[60vh] overflow-y-auto p-6">
           {customerOrders.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-400">
@@ -182,15 +168,12 @@ function CustomerOrdersModal({ customer, orders, onClose, onAddOrder }) {
                               : "—"}
                           </span>
                         </div>
-                        {/* ── Created At Time ── */}
                         {order.createdAt && (
                           <div className="flex items-center gap-1 text-[10px] text-gray-400">
                             <Clock className="h-3 w-3" />
                             <span>
                               {new Date(order.createdAt).toLocaleTimeString("en-US", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: true,
+                                hour: "2-digit", minute: "2-digit", hour12: true,
                               })}
                             </span>
                           </div>
@@ -251,7 +234,7 @@ function CustomerOrdersModal({ customer, orders, onClose, onAddOrder }) {
 }
 
 // ─── Add Order Modal ──────────────────────────────────────────────────────────
-function AddOrderModal({ open, onClose, onAdd, defaultCustomerName = "" }) {
+function AddOrderModal({ open, onClose, onAdd, defaultCustomerName = "", pharmacyId }) {
   const { medicines, fetchAll } = useMedicine();
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
@@ -263,6 +246,8 @@ function AddOrderModal({ open, onClose, onAdd, defaultCustomerName = "" }) {
     orderDate: new Date().toISOString().split("T")[0],
     items:     [{ ...emptyItem }],
   });
+
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -298,26 +283,53 @@ function AddOrderModal({ open, onClose, onAdd, defaultCustomerName = "" }) {
       .reduce((sum, it) => sum + (Number(it.price) || 0) * (Number(it.qty) || 1), 0)
       .toFixed(2);
 
-  const handleSubmit = () => {
-    if (!form.userName.trim()) return toast.error("Customer name is required.");
-    if (form.items.some((it) => !it.medicine)) return toast.error("Please select a medicine for each item.");
+  // ✅ handleSubmit بيبعت للـ API دلوقتي
+  const handleSubmit = async () => {
+    if (!form.userName.trim())
+      return toast.error("Customer name is required.");
+    if (form.items.some((it) => !it.medicine))
+      return toast.error("Please select a medicine for each item.");
 
-    onAdd({
-      id:         Date.now(),
-      userName:   form.userName,
-      orderDate:  form.orderDate,
-      createdAt:  new Date().toISOString(), // ← الوقت بيتسجل هنا أوتوماتيك
-      totalPrice: calcTotal(),
-      items: form.items.map((it) => ({
-        name:     it.medicine?.name || "",
-        qty:      it.qty,
-        quantity: it.qty,
-        price:    it.price,
-      })),
-    });
+    const payload = [
+      {
+        pharmacyID:        pharmacyId,
+        prescriptionID:    null,
+        deliveryAddressId: null,
+        orderItems: form.items.map((it) => ({
+          medicineID:   it.medicine.id,
+          medicineName: it.medicine.name,
+          quantity:     Number(it.qty),
+        })),
+      },
+    ];
 
-    toast.success("Order added successfully!");
-    onClose();
+    setSubmitting(true);
+    try {
+      const res = await createOrder(payload);
+      const createdOrder = res.data?.[0];
+
+      onAdd({
+        id:         createdOrder?.id || Date.now(),
+        userName:   form.userName,
+        orderDate:  form.orderDate,
+        createdAt:  new Date().toISOString(),
+        totalPrice: calcTotal(),
+        items: form.items.map((it) => ({
+          name:     it.medicine?.name || "",
+          qty:      it.qty,
+          quantity: it.qty,
+          price:    it.price,
+        })),
+      });
+
+      toast.success("Order added successfully!");
+      onClose();
+    } catch (err) {
+      console.error("Create order error:", err.response?.data || err);
+      toast.error(err.response?.data?.message || "Failed to create order.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!open) return null;
@@ -329,7 +341,6 @@ function AddOrderModal({ open, onClose, onAdd, defaultCustomerName = "" }) {
     >
       <div className="max-h-[95vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-xl sm:max-h-[90vh] sm:w-[90%] sm:rounded-2xl md:w-[75%] lg:w-[60%] xl:max-w-2xl">
 
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <h3 className="text-base font-semibold text-gray-800 sm:text-lg">Add New Order</h3>
           <button
@@ -342,7 +353,6 @@ function AddOrderModal({ open, onClose, onAdd, defaultCustomerName = "" }) {
 
         <div className="space-y-5 p-5">
 
-          {/* Customer Name + Order Date */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -368,7 +378,6 @@ function AddOrderModal({ open, onClose, onAdd, defaultCustomerName = "" }) {
             </div>
           </div>
 
-          {/* Order Items */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <label className="text-sm font-medium text-gray-700">
@@ -384,7 +393,6 @@ function AddOrderModal({ open, onClose, onAdd, defaultCustomerName = "" }) {
               </button>
             </div>
 
-            {/* Column headers */}
             <div className="mb-1 grid grid-cols-12 gap-2 px-1 text-xs font-medium text-gray-400">
               <span className="col-span-6">Medicine</span>
               <span className="col-span-2 text-center">Qty</span>
@@ -398,7 +406,6 @@ function AddOrderModal({ open, onClose, onAdd, defaultCustomerName = "" }) {
                   key={idx}
                   className="grid grid-cols-12 items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 p-2"
                 >
-                  {/* Medicine Search */}
                   <MedicineSearchInput
                     value={item.medicine}
                     onChange={() => {}}
@@ -406,7 +413,6 @@ function AddOrderModal({ open, onClose, onAdd, defaultCustomerName = "" }) {
                     medicines={medicines}
                   />
 
-                  {/* Qty */}
                   <input
                     type="number"
                     min={1}
@@ -419,14 +425,12 @@ function AddOrderModal({ open, onClose, onAdd, defaultCustomerName = "" }) {
                     className="col-span-2 rounded-lg border border-gray-200 bg-white px-1 py-2 text-center text-xs focus:border-secondary focus:outline-none focus:ring-1 focus:ring-secondary/20"
                   />
 
-                  {/* Price (read-only, auto-calculated) */}
                   <div className="col-span-3 flex items-center rounded-lg border border-gray-100 bg-white px-2 py-2">
                     <span className="w-full text-center text-xs font-semibold text-secondary">
                       {item.price || "0.00"} EGP
                     </span>
                   </div>
 
-                  {/* Remove */}
                   <button
                     type="button"
                     onClick={() => removeItem(idx)}
@@ -440,28 +444,37 @@ function AddOrderModal({ open, onClose, onAdd, defaultCustomerName = "" }) {
             </div>
           </div>
 
-          {/* Total */}
           <div className="flex items-center justify-between rounded-xl border border-secondary/20 bg-secondary/5 px-4 py-3">
             <span className="text-sm font-medium text-gray-600">Total Price</span>
             <span className="text-lg font-bold text-secondary">{calcTotal()} EGP</span>
           </div>
 
-          {/* Actions */}
           <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full border border-gray-200 px-5 py-2 text-sm text-gray-600 transition hover:bg-gray-50"
+              disabled={submitting}
+              className="rounded-full border border-gray-200 px-5 py-2 text-sm text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSubmit}
-              className="flex items-center gap-2 rounded-full bg-secondary px-6 py-2 text-sm font-medium text-white transition hover:opacity-90"
+              disabled={submitting}
+              className="flex items-center gap-2 rounded-full bg-secondary px-6 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              <PlusCircle className="h-4 w-4" />
-              Add Order
+              {submitting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <PlusCircle className="h-4 w-4" />
+                  Add Order
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -484,18 +497,18 @@ export default function Customers() {
     refetch,
   } = useCustomers(pharmacyId);
 
-  const [modalOpen, setModalOpen]                   = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen]       = useState(false);
-  const [deleteTarget, setDeleteTarget]             = useState(null);
-  const [editing, setEditing]                       = useState(null);
-  const [searchPhone, setSearchPhone]               = useState("");
-  const [filteredCustomers, setFilteredCustomers]   = useState([]);
-  const [notification, setNotification]             = useState(null);
-  const [form, setForm]                             = useState({ name: "", email: "", phoneNumber: "" });
-  const [localOrders, setLocalOrders]               = useState([]);
-  const [orderModalOpen, setOrderModalOpen]         = useState(false);
+  const [modalOpen, setModalOpen]                       = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen]           = useState(false);
+  const [deleteTarget, setDeleteTarget]                 = useState(null);
+  const [editing, setEditing]                           = useState(null);
+  const [searchPhone, setSearchPhone]                   = useState("");
+  const [filteredCustomers, setFilteredCustomers]       = useState([]);
+  const [notification, setNotification]                 = useState(null);
+  const [form, setForm]                                 = useState({ name: "", email: "", phoneNumber: "" });
+  const [localOrders, setLocalOrders]                   = useState([]);
+  const [orderModalOpen, setOrderModalOpen]             = useState(false);
   const [orderDefaultCustomer, setOrderDefaultCustomer] = useState("");
-  const [selectedCustomer, setSelectedCustomer]     = useState(null);
+  const [selectedCustomer, setSelectedCustomer]         = useState(null);
 
   useEffect(() => { setFilteredCustomers(customers); }, [customers]);
 
@@ -790,7 +803,7 @@ export default function Customers() {
               </button>
               <button
                 onClick={handleSubmit}
-                className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition hover:bg-blue-700 sm:px-4 sm:text-base"
+                className="rounded-lg bg-secondary px-3 py-2 text-sm text-white transition hover:bg-secondary sm:px-4 sm:text-base"
               >
                 {editing ? "Update" : "Add"}
               </button>
@@ -837,12 +850,13 @@ export default function Customers() {
         onAddOrder={openAddOrder}
       />
 
-      {/* Add Order Modal */}
+      {/* ✅ pharmacyId اتضاف هنا */}
       <AddOrderModal
         open={orderModalOpen}
         onClose={() => setOrderModalOpen(false)}
         defaultCustomerName={orderDefaultCustomer}
         onAdd={(newOrder) => setLocalOrders((prev) => [newOrder, ...prev])}
+        pharmacyId={pharmacyId}
       />
     </div>
   );
