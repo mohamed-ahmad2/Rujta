@@ -1,6 +1,7 @@
 ﻿using Rujta.Application.DTOs.CustomerDtos;
 using Rujta.Application.DTOs.OrderDto;
 using Rujta.Application.Interfaces.InterfaceServices.IOrder;
+using System.Security.Cryptography.Xml;
 
 namespace Rujta.Application.Services
 {
@@ -147,26 +148,24 @@ namespace Rujta.Application.Services
 
             if (customer == null)
             {
-                isNewCustomer = true;
-                customer = new Customer
-                {
-                    Id = Guid.NewGuid(),
-                    Name = request.FullName,
-                    PhoneNumber = request.PhoneNumber,
-                    PharmacyId = request.PharmacyId
-                };
-                await _unitOfWork.Customers.AddAsync(customer, cancellationToken);
-                await _unitOfWork.SaveAsync(cancellationToken);
+                throw new InvalidOperationException("Customer not found.");
             }
 
             var orderDto = new CreateOrderDto
             {
                 PharmacyID = request.PharmacyId,
-                OrderItems = request.Items.Select(i => new OrderItemDto { MedicineID = i.MedicineID, Quantity = i.Quantity }).ToList(),
-                DeliveryAddressId = null
+                OrderItems = request.Items.Select(i => new OrderItemDto
+                {
+                    MedicineID = i.MedicineID,
+                    Quantity = i.Quantity
+                }).ToList(),
+
+                DeliveryAddressId = null,
+
+                IsInStore = true
             };
 
-            var order = await _orderService.CreateOrderAsync(orderDto, customer.Id, cancellationToken);
+            var order = await _orderService.CreateOrderAsync(orderDto, customer!.Id, cancellationToken);
 
             return new CustomerOrderResponse
             {
