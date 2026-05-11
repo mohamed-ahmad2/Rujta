@@ -49,6 +49,7 @@ namespace Rujta.Infrastructure.Repositories
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Medicine)
                 .Include(o => o.User)
+                .Include(o => o.Customer)
                 .Include(o => o.Pharmacy)
                 .Where(o => o.PharmacyId == pharmacyId)
                 .OrderByDescending(o => o.OrderDate)
