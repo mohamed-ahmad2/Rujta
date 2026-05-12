@@ -34,7 +34,6 @@ export const useCheckout = () => {
     reset: resetPayment,
   } = usePayment();
 
-  // ── Address & UI States ──────────────────────────────────────────
   const [pharmaciesRange, setPharmaciesRange]           = useState(5);
   const [showLocationPrompt, setShowLocationPrompt]     = useState(false);
   const [showAddressSelection, setShowAddressSelection] = useState(true);
@@ -45,7 +44,7 @@ export const useCheckout = () => {
     Street: "", BuildingNo: "", City: "", Governorate: "", IsDefault: false,
   });
 
-  // ── Pharmacy / Order States ──────────────────────────────────────
+
   const [expandedPharmacies, setExpandedPharmacies]                 = useState({});
   const [showPaymentModal, setShowPaymentModal]                     = useState(false);
   const [showPaymentIframe, setShowPaymentIframe]                   = useState(false);
@@ -55,14 +54,14 @@ export const useCheckout = () => {
   const [selectedMedicines, setSelectedMedicines]                   = useState({});
   const [pendingOrderId, setPendingOrderId]                         = useState(null);
 
-  // ── Map States ───────────────────────────────────────────────────
+  const [pendingOrderDtos, setPendingOrderDtos] = useState(null);
+
   const [userLocation, setUserLocation]                       = useState(null);
   const [deliveryAddressLocation, setDeliveryAddressLocation] = useState(null);
   const [deliveryAddress, setDeliveryAddress]                 = useState(null);
   const [hoveredPharmacyId, setHoveredPharmacyId]             = useState(null);
   const [routeData, setRouteData]                             = useState({});
 
-  // ── Toast ────────────────────────────────────────────────────────
   const [toast, setToast] = useState(null);
 
   const showToast = useCallback((type, message) => {
@@ -70,7 +69,6 @@ export const useCheckout = () => {
     if (type !== "error") setTimeout(() => setToast(null), 3200);
   }, []);
 
-  // ── Derived State ────────────────────────────────────────────────
   const selectedPharmacies = useMemo(
     () =>
       Object.entries(selectedMedicines)
@@ -97,7 +95,6 @@ export const useCheckout = () => {
     return res;
   }, [selectedMedicines]);
 
-  // ── Medicine / Pharmacy Toggles ──────────────────────────────────
   const handleToggleMedicine = useCallback((pharmacyId, medicine) => {
     setSelectedMedicines((prev) => {
       const current = prev[pharmacyId] ?? {};
@@ -129,7 +126,6 @@ export const useCheckout = () => {
     });
   }, []);
 
-  // ── Route Fetching ───────────────────────────────────────────────
   const fetchRoute = useCallback((pharmacy) => {
     const start = deliveryAddressLocation || userLocation;
     if (!start || !pharmacy) return;
@@ -155,7 +151,6 @@ export const useCheckout = () => {
     });
   }, [deliveryAddressLocation, userLocation]);
 
-  // ── Effects ──────────────────────────────────────────────────────
   useEffect(() => { if (pharmacies.length > 0) pharmacies.forEach(fetchRoute); }, [pharmacies, fetchRoute]);
 
   useEffect(() => {
@@ -177,11 +172,6 @@ export const useCheckout = () => {
     if (msg.includes("location not set")) setShowLocationPrompt(true);
   }, [error]);
 
-  useEffect(() => {
-    if (paymentResult?.iframeUrl) { setShowPaymentModal(false); setShowPaymentIframe(true); }
-  }, [paymentResult]);
-
-  // ── Handlers ─────────────────────────────────────────────────────
   const handleSetLocation = () => {
     navigator.geolocation?.getCurrentPosition(async ({ coords }) => {
       try {
@@ -226,7 +216,6 @@ export const useCheckout = () => {
     if (selectedAddressId && cart.length > 0) await fetchPharmacies(cart, selectedAddressId, newRange);
   };
 
-  // ── Order Click — single pharmacy → PaymentModal مباشرة ─────────
   const handleOrderClick = (pharmacy) => {
     const medsMap = {};
     pharmacy.foundMedicines.forEach((m) => { medsMap[m.medicineId] = getAvailableQty(m); });
@@ -235,7 +224,6 @@ export const useCheckout = () => {
     setShowPaymentModal(true);
   };
 
-  // ── Multi Order Click — bottom bar → PaymentModal مباشرة ─────────
   const handleMultiOrderClick = () => {
     const hasSelections = Object.values(selectedMedicines).some(
       (medsMap) => Object.keys(medsMap).length > 0
@@ -244,7 +232,6 @@ export const useCheckout = () => {
     setShowPaymentModal(true);
   };
 
-  // ── Create Orders ────────────────────────────────────────────────
   const createOrders = async () => {
     if (!cart.length)               throw new Error("Your cart is empty!");
     if (!selectedAddressId)         throw new Error("No delivery address selected!");
@@ -270,7 +257,7 @@ export const useCheckout = () => {
     return { results, orderDtos };
   };
 
-  const clearCartAfterOrder = async (orderDtos) => {
+  const clearCartAfterOrder = useCallback(async (orderDtos) => {
     const orderedIds = new Set(orderDtos.flatMap((d) => d.OrderItems.map((i) => String(i.MedicineID))));
     const updatedCart = cart.filter((item) => !orderedIds.has(String(item.id)));
     localStorage.setItem(`cart_${user.email}`, JSON.stringify(updatedCart));
@@ -278,9 +265,8 @@ export const useCheckout = () => {
     setCart(updatedCart);
     setSelectedMedicines({});
     await fetchUser();
-  };
+  }, [cart, user, fetchUser]);
 
-  // ── Cash Flow ────────────────────────────────────────────────────
   const handleConfirmOrders = async () => {
     setCreatingOrder(true);
     try {
@@ -289,19 +275,34 @@ export const useCheckout = () => {
         await clearCartAfterOrder(orderDtos);
         showToast("success", `${results.length} order${results.length > 1 ? "s" : ""} placed! 🎉`);
         setTimeout(() => window.location.reload(), 3200);
-      } else { showToast("error", "Failed to create orders. Please try again."); }
-    } catch (err) { console.error("Order error:", err); showToast("error", err.message || "Failed to create orders."); }
-    finally { setCreatingOrder(false); }
+      } else {
+        showToast("error", "Failed to create orders. Please try again.");
+      }
+    } catch (err) {
+      console.error("Order error:", err);
+      showToast("error", err.message || "Failed to create orders.");
+    } finally {
+      setCreatingOrder(false);
+    }
   };
 
-  // ── Online Payment Flow ──────────────────────────────────────────
   const handleOnlinePayment = async () => {
     setCreatingOrder(true);
     try {
+      
       const { results, orderDtos } = await createOrders();
-      if (!results?.length) { showToast("error", "Failed to create orders. Please try again."); return; }
+      if (!results?.length) {
+        showToast("error", "Failed to create orders. Please try again.");
+        return;
+      }
+
+  
+      setPendingOrderDtos(orderDtos);
+
       const firstOrderId = results[0]?.id ?? results[0]?.orderId ?? results[0];
       setPendingOrderId(firstOrderId);
+
+    
       const fullAddress = await fetchById(selectedAddressId);
       const billingData = {
         FirstName:      user?.firstName || user?.name?.split(" ")[0] || "Customer",
@@ -316,20 +317,70 @@ export const useCheckout = () => {
         Country: "EG",
         State:   fullAddress?.governorate || "Cairo",
       };
+
       const totalAmount = results.reduce((sum, order) => sum + (order.totalPrice ?? 0), 0);
-      await initiate({ Type: "Order", OrderId: firstOrderId, Amount: totalAmount, Currency: "EGP", BillingData: billingData });
-      await clearCartAfterOrder(orderDtos);
-    } catch (err) { console.error("Online payment error:", err); showToast("error", err.message || "Failed to initiate payment."); }
-    finally { setCreatingOrder(false); }
+
+      await initiate({
+        Type: "Order",
+        OrderId: firstOrderId,
+        Amount: totalAmount,
+        Currency: "EGP",
+        BillingData: billingData,
+      });
+
+      setShowPaymentModal(false);
+      setShowPaymentIframe(true);
+
+    } catch (err) {
+      console.error("Online payment error:", err);
+      showToast("error", err.message || "Failed to initiate payment.");
+    } finally {
+      setCreatingOrder(false);
+    }
   };
 
-  // ── Payment Modal Confirm ────────────────────────────────────────
+  const handlePaymentSuccess = useCallback(async () => {
+    try {
+      if (pendingOrderDtos) {
+        await clearCartAfterOrder(pendingOrderDtos);
+      }
+      showToast("success", "Payment successful! Your order is confirmed. 🎉");
+      setShowPaymentIframe(false);
+      resetPayment();
+      setPendingOrderId(null);
+      setPendingOrderDtos(null);
+      setTimeout(() => window.location.reload(), 3200);
+    } catch (err) {
+      console.error("Post-payment cleanup error:", err);
+      showToast("success", "Payment successful! 🎉");
+      setTimeout(() => window.location.reload(), 3200);
+    }
+  }, [pendingOrderDtos, clearCartAfterOrder, showToast, resetPayment]);
+
+  const handlePaymentFailed = useCallback(() => {
+    showToast("error", "Payment failed. Your order is pending — please try again from your orders.");
+    setShowPaymentIframe(false);
+    resetPayment();
+    setPendingOrderId(null);
+    setPendingOrderDtos(null);
+  }, [showToast, resetPayment]);
+
   const handlePaymentConfirm = async () => {
-    if (paymentMethod === "Cash") { setShowPaymentModal(false); await handleConfirmOrders(); }
-    else { await handleOnlinePayment(); }
+    if (paymentMethod === "Cash") {
+      setShowPaymentModal(false);
+      await handleConfirmOrders();
+    } else {
+      await handleOnlinePayment();
+    }
   };
 
-  const handleCloseIframe = () => { setShowPaymentIframe(false); resetPayment(); setPendingOrderId(null); };
+  const handleCloseIframe = () => {
+    showToast("error", "Payment cancelled. Your order is pending — you can retry from your orders.");
+    setShowPaymentIframe(false);
+    resetPayment();
+    setPendingOrderId(null);
+    setPendingOrderDtos(null);
+  };
 
   // ── Return ───────────────────────────────────────────────────────
   return {
@@ -350,5 +401,6 @@ export const useCheckout = () => {
     handleConfirmAddress, handleExpandRange, handleTogglePharmacy,
     handleToggleMedicine, handleUpdateQty, handleOrderClick,
     handleMultiOrderClick, handlePaymentConfirm, handleCloseIframe,
+    handlePaymentSuccess, handlePaymentFailed,
   };
 };
