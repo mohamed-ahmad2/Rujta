@@ -1,22 +1,28 @@
 // src/features/user/components/CartDrawerUser.jsx
-import React, { useState, useRef } from "react";
+import React, {useEffect, useState, useRef } from "react";
 import { IoMdClose } from "react-icons/io";
 import { FaPlus, FaMinus, FaPills } from "react-icons/fa";
 import { MdShoppingCartCheckout } from "react-icons/md";
 import { RiDeleteBin6Line } from "react-icons/ri";
-import { useNavigate } from "react-router-dom";
+
 import audio from "../../../assets/audio.wav";
 import useDrugInteraction from "../../druginteraction/hook/useDrugInteraction";
 import DrugInteractionModal from "../../user/pages/DrugInteractionModal";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
-  const navigate   = useNavigate();
+  const navigate = useNavigate();
+  const location = useLocation();
   const clickSound = useRef(new Audio(audio));
 
   const [isNavigating, setIsNavigating] = useState(false);
-  const [showModal,    setShowModal]    = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
-  // ── Drug interaction hook ─────────────────────────────────────────────────
+  useEffect(() => {
+    setIsNavigating(false);
+    setShowModal(false);
+  }, [location.pathname]);
+
   const {
     result: interactionResult,
     loading: interactionLoading,
@@ -25,18 +31,20 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     reset: resetInteraction,
   } = useDrugInteraction();
 
-  // ── Cart operations ───────────────────────────────────────────────────────
-
   const handleIncrease = (id) =>
     setCart((prev) =>
-      prev.map((item) => item.id === id ? { ...item, quantity: item.quantity + 1 } : item)
+      prev.map((item) =>
+        item.id === id ? { ...item, quantity: item.quantity + 1 } : item,
+      ),
     );
 
   const handleDecrease = (id) =>
     setCart((prev) =>
       prev
-        .map((item) => item.id === id ? { ...item, quantity: item.quantity - 1 } : item)
-        .filter((item) => item.quantity > 0)
+        .map((item) =>
+          item.id === id ? { ...item, quantity: item.quantity - 1 } : item,
+        )
+        .filter((item) => item.quantity > 0),
     );
 
   const handleRemove = (id) =>
@@ -47,7 +55,6 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     navigate(`/user/medicine/${id}`);
   };
 
-  // ── navigate لصفحة Checkout ───────────────────────────────────────────────
   const goToCheckout = () => {
     setIsNavigating(true);
     clickSound.current.play();
@@ -58,19 +65,11 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     }, 400);
   };
 
-  // ── Proceed to Checkout ───────────────────────────────────────────────────
-  //
-  // الـ flow:
-  //  1. بيجمع الـ drug IDs من الكارت
-  //  2. بيبعت check-order + check-history بالتوازي
-  //  3. لو hasInteractions = true  → يظهر الـ modal بتابين
-  //  4. لو hasInteractions = false → يروح Checkout مباشرة بدون modal
   const handleCheckout = async () => {
     if (isNavigating || interactionLoading) return;
 
     const medicineIds = cart.map((item) => item.id).filter(Boolean);
 
-    // لو الكارت فاضي أو مفيش IDs → اروح Checkout مباشرة
     if (medicineIds.length === 0) {
       goToCheckout();
       return;
@@ -81,13 +80,11 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     const { hasInteractions } = await checkOrderAndHistory(medicineIds, 0.5);
 
     if (hasInteractions) {
-      setShowModal(true);   // يظهر الـ modal بس لو في interactions
+      setShowModal(true);
     } else {
-      goToCheckout();       // مفيش مشكلة، يكمل مباشرة
+      goToCheckout();
     }
   };
-
-  // ── Modal actions ─────────────────────────────────────────────────────────
 
   const handleModalProceed = () => goToCheckout();
 
@@ -96,11 +93,8 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     resetInteraction();
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   return (
     <>
-      {/* ── Backdrop ───────────────────────────────────────────── */}
       {isOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
@@ -108,13 +102,11 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
         />
       )}
 
-      {/* ── Drawer ─────────────────────────────────────────────── */}
       <div
         className={`fixed right-0 top-0 z-50 flex h-full w-[360px] flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out dark:bg-gray-900 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        {/* ── Header ───────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-6 pb-4 pt-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary/10">
@@ -151,10 +143,8 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* ── Divider ──────────────────────────────────────────── */}
         <div className="mx-6 h-px bg-gray-100 dark:bg-gray-800" />
 
-        {/* ── Items ────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-4 pt-24">
@@ -162,8 +152,12 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
                 🛒
               </div>
               <div className="text-center">
-                <p className="font-bold text-gray-600 dark:text-gray-300">Cart is empty</p>
-                <p className="mt-1 text-sm text-gray-400">Add some medicines to continue</p>
+                <p className="font-bold text-gray-600 dark:text-gray-300">
+                  Cart is empty
+                </p>
+                <p className="mt-1 text-sm text-gray-400">
+                  Add some medicines to continue
+                </p>
               </div>
             </div>
           ) : (
@@ -175,7 +169,6 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
                   className="relative cursor-pointer overflow-hidden rounded-2xl border border-gray-100 bg-gray-50/80 p-4 transition-all duration-200 hover:border-secondary/20 hover:bg-white hover:shadow-md dark:border-gray-700/50 dark:bg-gray-800/60"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  {/* ROW 1: Image + Name + Delete */}
                   <div className="flex items-center gap-3">
                     <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-secondary/10 to-secondary/5 shadow-sm dark:bg-gray-700">
                       {item.image || item.imageUrl ? (
@@ -191,25 +184,32 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
                       ) : null}
                       <div
                         className="absolute inset-0 flex items-center justify-center"
-                        style={{ display: item.image || item.imageUrl ? "none" : "flex" }}
+                        style={{
+                          display:
+                            item.image || item.imageUrl ? "none" : "flex",
+                        }}
                       >
                         <FaPills className="text-lg text-secondary" />
                       </div>
                     </div>
 
                     <div className="flex-1 overflow-hidden">
-                      <p className="text-sm font-bold text-gray-800 dark:text-white">{item.name}</p>
+                      <p className="text-sm font-bold text-gray-800 dark:text-white">
+                        {item.name}
+                      </p>
                     </div>
 
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleRemove(item.id); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemove(item.id);
+                      }}
                       className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-300 transition-all hover:bg-red-100 hover:text-red-500 dark:bg-red-900/10 dark:text-red-400"
                     >
                       <RiDeleteBin6Line className="text-base" />
                     </button>
                   </div>
 
-                  {/* ROW 2: Quantity + Controls */}
                   <div
                     className="mt-3 flex items-center justify-between"
                     onClick={(e) => e.stopPropagation()}
@@ -245,11 +245,12 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
           )}
         </div>
 
-        {/* ── Footer ───────────────────────────────────────────── */}
         {cart.length > 0 && (
           <div className="px-5 pb-6 pt-3">
             <div className="mb-3 flex items-center justify-between rounded-2xl bg-secondary/5 px-4 py-3">
-              <span className="text-sm font-medium text-gray-500">Total items</span>
+              <span className="text-sm font-medium text-gray-500">
+                Total items
+              </span>
               <span className="text-sm font-extrabold text-secondary">
                 {cart.reduce((sum, item) => sum + item.quantity, 0)} units
               </span>
@@ -285,8 +286,6 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
         )}
       </div>
 
-      {/* ── Drug Interaction Modal ────────────────────────────────
-          بيظهر بس لو في interactions — مش دايما              */}
       {showModal && (
         <DrugInteractionModal
           result={interactionResult}
