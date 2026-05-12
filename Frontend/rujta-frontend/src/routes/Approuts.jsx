@@ -280,7 +280,7 @@ const AppRoutes = ({ cart, setCart, isCartOpen, setIsCartOpen }) => {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Overview />} />
+        <Route index element={<Navigate to="pharmacies" replace />} /> {/* ✅ ADD THIS LINE */}
           <Route path="pharmacies" element={<Pharmacies />} />
           <Route path="reports" element={<Reports />} />
           <Route path="service-pricing" element={<ServicePricing />} />

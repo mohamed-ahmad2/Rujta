@@ -26,6 +26,7 @@ export const getAllAds      = ()       => apiClient.get("/ads");
 export const getAdById      = (id)     => apiClient.get(`/ads/${id}`);
 export const getActiveAds   = ()       => apiClient.get("/ads");
 export const getAdsByPharmacy = (id)   => apiClient.get(`/ads/pharmacy/${id}`);
+export const getMyPharmacyAds = () => apiClient.get("/ads/my-pharmacy");
 
 export const createAd = (data) => {
   const dto = toAdDto(data);

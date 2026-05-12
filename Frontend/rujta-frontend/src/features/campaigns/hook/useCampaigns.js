@@ -1,7 +1,14 @@
 import { useState, useCallback } from "react";
 import {
-  getAllAds, getAdById, getActiveAds, getAdsByPharmacy,
-  createAd, updateAd, deleteAd, toggleAdStatus,
+  getAllAds,
+  getAdById,
+  getActiveAds,
+  getAdsByPharmacy,
+  getMyPharmacyAds,       // ← was missing
+  createAd,
+  updateAd,
+  deleteAd,
+  toggleAdStatus,
 } from "../api/campaignsApi";
 
 export default function useCampaigns() {
@@ -60,14 +67,28 @@ export default function useCampaigns() {
     }
   }, []);
 
+  // ← NEW: fetches only this pharmacy's ads via JWT claim
+  const fetchMyPharmacyAds = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await getMyPharmacyAds();
+      setAds(res.data);
+      setError(null);
+    } catch (err) {
+      setError(err.message || "Failed to load your pharmacy ads");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const create = async (data) => {
     try {
       setLoading(true);
       const res = await createAd(data);
-       console.log("✅ createAd response:", JSON.stringify(res.data, null, 2));
-      const created = res.data; // ✅ grab BEFORE fetchAll
+      console.log("✅ createAd response:", JSON.stringify(res.data, null, 2));
+      const created = res.data;
       await fetchAll();
-      return created;           // ✅ return actual ad object with id
+      return created;
     } catch (err) {
       setError(err.message || "Failed to create ad");
       throw err;
@@ -112,9 +133,10 @@ export default function useCampaigns() {
     }
   };
 
+  // ← return is INSIDE the function body
   return {
     ads, loading, error,
-    fetchAll, fetchById, fetchActive, fetchByPharmacy,
+    fetchAll, fetchById, fetchActive, fetchByPharmacy, fetchMyPharmacyAds,
     create, update, remove, toggle,
   };
 }
