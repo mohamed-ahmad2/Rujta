@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.Extensions.Logging;
 using Rujta.Application.DTOs.CustomerDtos;
 using Rujta.Application.DTOs.OrderDto;

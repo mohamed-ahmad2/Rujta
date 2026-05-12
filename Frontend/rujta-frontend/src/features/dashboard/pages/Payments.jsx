@@ -136,27 +136,29 @@ const normalizePayment = (raw) => {
 };
 
 // ─── Paymob Callback Handler ──────────────────────────────────────────────────
+// Reads ?success=true&id=... query params Paymob appends on redirect
 
 function usePaymobCallback(refetchAll) {
-  const [callbackResult, setCallbackResult] = useState(null);
+  const [callbackResult, setCallbackResult] = useState(null); // null | 'success' | 'fail'
   const [callbackTxId,   setCallbackTxId]   = useState(null);
 
   useEffect(() => {
     const params  = new URLSearchParams(window.location.search);
     const success = params.get("success");
-    if (success === null) return;
+    if (success === null) return; // no Paymob redirect params present
 
     const txId = params.get("id") || params.get("order");
 
     if (success === "true") {
       setCallbackResult("success");
       setCallbackTxId(txId);
-      refetchAll();
+      refetchAll(); // reload lists after successful payment
     } else {
       setCallbackResult("fail");
       setCallbackTxId(txId);
     }
 
+    // Clean URL so a page refresh doesn't re-trigger this
     window.history.replaceState({}, "", window.location.pathname);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -394,19 +396,15 @@ function AdsSection({ ads, activeCount }) {
         </div>
       ) : (
         <>
-          {visible.map((ad) => (
-            <AdCard key={ad.id} ad={ad} />
-          ))}
+          {visible.map((ad) => <AdCard key={ad.id} ad={ad} />)}
           {hasMore && (
             <button
               onClick={() => setShowAll((v) => !v)}
               className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-gray-200 bg-white py-2.5 text-xs font-medium text-gray-500 transition hover:bg-gray-50"
             >
-              {showAll ? (
-                <><ChevronUp size={14} /> Show less</>
-              ) : (
-                <><ChevronDown size={14} /> Show all {ads.length} campaigns</>
-              )}
+              {showAll
+                ? <><ChevronUp size={14} /> Show less</>
+                : <><ChevronDown size={14} /> Show all {ads.length} campaigns</>}
             </button>
           )}
         </>
@@ -435,7 +433,7 @@ function HistoryTable({ data }) {
 
   const handleExport = () => {
     const rows = [
-      ["Invoice", "Date", "Type", "Amount (EGP)"],
+      ["Invoice", "Date", "Description", "Type", "Amount (EGP)", "Status"],
       ...filtered.map((r) => [r.id, fmtDate(r.date), r.type, r.amount]),
     ];
     const csv  = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -458,6 +456,7 @@ function HistoryTable({ data }) {
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm border border-gray-100">
+      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div className="flex items-center gap-2">
           <CreditCard size={18} className="text-secondary" />
@@ -483,6 +482,7 @@ function HistoryTable({ data }) {
         </div>
       </div>
 
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
@@ -511,6 +511,7 @@ function HistoryTable({ data }) {
         </table>
       </div>
 
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
           <p className="text-xs text-gray-400">Page {page} of {totalPages}</p>
