@@ -1,5 +1,5 @@
 // src/features/user/components/CartDrawerUser.jsx
-import React, {useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { IoMdClose } from "react-icons/io";
 import { FaPlus, FaMinus, FaPills } from "react-icons/fa";
 import { MdShoppingCartCheckout } from "react-icons/md";
@@ -9,11 +9,13 @@ import audio from "../../../assets/audio.wav";
 import useDrugInteraction from "../../druginteraction/hook/useDrugInteraction";
 import DrugInteractionModal from "../../user/pages/DrugInteractionModal";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../auth/hooks/useAuth";
 
 const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const clickSound = useRef(new Audio(audio));
+  const { user } = useAuth();
 
   const [isNavigating, setIsNavigating] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -22,6 +24,20 @@ const CartDrawerUser = ({ cart, setCart, isOpen, onClose }) => {
     setIsNavigating(false);
     setShowModal(false);
   }, [location.pathname]);
+
+  // ── Sync cart when useCheckout clears it after a successful order ──
+  useEffect(() => {
+    const handleCartUpdated = (e) => {
+      if (user?.email && e.detail?.key === `cart_${user.email}`) {
+        const updated =
+          JSON.parse(localStorage.getItem(`cart_${user.email}`)) || [];
+        setCart(updated);
+      }
+    };
+
+    window.addEventListener("cartUpdated", handleCartUpdated);
+    return () => window.removeEventListener("cartUpdated", handleCartUpdated);
+  }, [user?.email, setCart]);
 
   const {
     result: interactionResult,
