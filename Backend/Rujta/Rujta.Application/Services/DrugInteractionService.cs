@@ -36,6 +36,7 @@ public class DrugInteractionService : IDrugInteractionService
         _drugHistoryRepo = drugHistoryRepo;
     }
 
+    // ── PAGE 2: Check new order drugs against patient history ────────────────
     public async Task<OrderDrugInteractionResponseDto> CheckOrderInteractionsAsync(
         IEnumerable<int> newOrderMedicineIds,
         Guid patientUserId,
@@ -48,41 +49,45 @@ public class DrugInteractionService : IDrugInteractionService
         var historicalMedicines = await _drugHistoryRepo
             .GetPatientDrugHistoryAsync(patientUserId, ct);
 
+        // Medicine.Id is string — track new-order IDs in a HashSet<string>
         var newIds = newMedicines.Select(m => m.Id).ToHashSet();
 
-        var allDrugs = newMedicines
-            .Concat(historicalMedicines)
-            .GroupBy(d => d.Id)
-            .Select(g => g.First())
+        // FIX 1: Exclude drugs already in the new order from history
+        //        to avoid duplicate pairs and wrong IsFromHistory flags
+        var uniqueHistorical = historicalMedicines
+            .Where(h => !newIds.Contains(h.Id))
             .ToList();
 
         _logger.LogInformation(
-            "Drug interaction check — new: {New}, history: {History}, total unique: {Total}",
-            newMedicines.Count, historicalMedicines.Count, allDrugs.Count);
+            "Drug interaction check — new: {New}, unique history: {History}",
+            newMedicines.Count, uniqueHistorical.Count);
 
-        if (allDrugs.Count < 2)
+        // Need at least one new drug and one history drug to compare
+        if (newMedicines.Count == 0 || uniqueHistorical.Count == 0)
         {
             return new OrderDrugInteractionResponseDto
             {
-                TotalDrugsChecked = allDrugs.Count,
+                TotalDrugsChecked = newMedicines.Count + uniqueHistorical.Count,
                 TotalPairsChecked = 0,
                 InteractionsFound = 0,
                 Interactions = new List<DrugInteractionResultDto>()
             };
         }
 
-        var pairs = new List<object>();
-        for (int i = 0; i < allDrugs.Count; i++)
-            for (int j = i + 1; j < allDrugs.Count; j++)
-                pairs.Add(new
-                {
-                    smiles1 = allDrugs[i].Smiles,
-                    name1 = allDrugs[i].Name,
-                    smiles2 = allDrugs[j].Smiles,
-                    name2 = allDrugs[j].Name,
-                });
+        // FIX 2: Only build cross pairs — new x history (not new×new or history×history)
+        var pairs = newMedicines
+            .SelectMany(newDrug => uniqueHistorical.Select(histDrug => new
+            {
+                smiles1 = newDrug.Smiles,
+                name1 = newDrug.Name,
+                smiles2 = histDrug.Smiles,
+                name2 = histDrug.Name,
+            }))
+            .ToList();
 
-        var batchRequest = new { pairs };
+        // FIX 3: Include threshold in the ML request body
+        var batchRequest = new { pairs, threshold };
+
         BatchMlResponseDto? mlResponse = null;
         bool mlUnavailable = false;
 
@@ -105,37 +110,50 @@ public class DrugInteractionService : IDrugInteractionService
         if (mlUnavailable || mlResponse is null)
             return new OrderDrugInteractionResponseDto
             {
-                TotalDrugsChecked = allDrugs.Count,
+                TotalDrugsChecked = newMedicines.Count + uniqueHistorical.Count,
                 MlServiceUnavailable = true,
                 Interactions = new List<DrugInteractionResultDto>()
             };
 
+        // Combined lookup list for resolving ML result names back to entities
+        var allDrugs = newMedicines.Concat(uniqueHistorical).ToList();
+
+        // FIX 4 + 5: Id is string so use int.TryParse for the DTO int field.
+        //            IsFromHistory uses string HashSet comparison — works correctly now.
         var interactions = mlResponse.Results
             .Where(r => r.Interaction == true && r.Error == null)
-            .Select(r => new DrugInteractionResultDto
+            .Select(r =>
             {
-                Drug1Id = int.TryParse(allDrugs.FirstOrDefault(d => d.Name == r.Drug1)?.Id, out var d1) ? d1 : 0,
-                Drug1Name = r.Drug1,
-                Drug1IsFromHistory = !newIds.Contains(allDrugs.FirstOrDefault(d => d.Name == r.Drug1)?.Id ?? ""),
+                var drug1 = allDrugs.FirstOrDefault(d => d.Name == r.Drug1);
+                var drug2 = allDrugs.FirstOrDefault(d => d.Name == r.Drug2);
 
-                Drug2Id = int.TryParse(allDrugs.FirstOrDefault(d => d.Name == r.Drug2)?.Id, out var d2) ? d2 : 0,
-                Drug2Name = r.Drug2,
-                Drug2IsFromHistory = !newIds.Contains(allDrugs.FirstOrDefault(d => d.Name == r.Drug2)?.Id ?? ""),
+                return new DrugInteractionResultDto
+                {
+                    Drug1Id = int.TryParse(drug1?.Id, out var id1) ? id1 : 0,
+                    Drug1Name = r.Drug1,
+                    Drug1IsFromHistory = drug1 != null && !newIds.Contains(drug1.Id),
 
-                Probability = r.Probability ?? 0,
-                Interacts = r.Interaction ?? false,
-                Confidence = r.Confidence,
-            }).ToList();
+                    Drug2Id = int.TryParse(drug2?.Id, out var id2) ? id2 : 0,
+                    Drug2Name = r.Drug2,
+                    Drug2IsFromHistory = drug2 != null && !newIds.Contains(drug2.Id),
+
+                    Probability = r.Probability ?? 0,
+                    Interacts = r.Interaction ?? false,
+                    Confidence = r.Confidence,
+                };
+            })
+            .ToList();
 
         return new OrderDrugInteractionResponseDto
         {
-            TotalDrugsChecked = allDrugs.Count,
+            TotalDrugsChecked = newMedicines.Count + uniqueHistorical.Count,
             TotalPairsChecked = mlResponse.Total,
             InteractionsFound = interactions.Count,
             Interactions = interactions,
         };
     }
 
+    // ── PAGE 1: Check interactions within the new order only ─────────────────
     public async Task<OrderDrugInteractionResponseDto> CheckNewOrderOnlyAsync(
         IEnumerable<int> medicineIds,
         double threshold = 0.5,
@@ -152,6 +170,7 @@ public class DrugInteractionService : IDrugInteractionService
                 Interactions = new List<DrugInteractionResultDto>()
             };
 
+        // All pairs within the new order — correct for page 1
         var pairs = new List<object>();
         for (int i = 0; i < drugs.Count; i++)
             for (int j = i + 1; j < drugs.Count; j++)
@@ -163,7 +182,9 @@ public class DrugInteractionService : IDrugInteractionService
                     name2 = drugs[j].Name,
                 });
 
-        var batchRequest = new { pairs };
+        // FIX 3: Include threshold in the ML request body
+        var batchRequest = new { pairs, threshold };
+
         BatchMlResponseDto? mlResponse = null;
 
         try
@@ -187,16 +208,27 @@ public class DrugInteractionService : IDrugInteractionService
 
         var interactions = mlResponse!.Results
             .Where(r => r.Interaction == true && r.Error == null)
-            .Select(r => new DrugInteractionResultDto
+            .Select(r =>
             {
-                Drug1Name = r.Drug1,
-                Drug1IsFromHistory = false,
-                Drug2Name = r.Drug2,
-                Drug2IsFromHistory = false,
-                Probability = r.Probability ?? 0,
-                Interacts = r.Interaction ?? false,
-                Confidence = r.Confidence,
-            }).ToList();
+                var drug1 = drugs.FirstOrDefault(d => d.Name == r.Drug1);
+                var drug2 = drugs.FirstOrDefault(d => d.Name == r.Drug2);
+
+                return new DrugInteractionResultDto
+                {
+                    Drug1Id = int.TryParse(drug1?.Id, out var id1) ? id1 : 0,
+                    Drug1Name = r.Drug1,
+                    Drug1IsFromHistory = false, // always false — no history involved here
+
+                    Drug2Id = int.TryParse(drug2?.Id, out var id2) ? id2 : 0,
+                    Drug2Name = r.Drug2,
+                    Drug2IsFromHistory = false,
+
+                    Probability = r.Probability ?? 0,
+                    Interacts = r.Interaction ?? false,
+                    Confidence = r.Confidence,
+                };
+            })
+            .ToList();
 
         return new OrderDrugInteractionResponseDto
         {
@@ -207,6 +239,7 @@ public class DrugInteractionService : IDrugInteractionService
         };
     }
 
+    // ── Health check ──────────────────────────────────────────────────────────
     public async Task<bool> IsMlServiceHealthyAsync(CancellationToken ct = default)
     {
         try

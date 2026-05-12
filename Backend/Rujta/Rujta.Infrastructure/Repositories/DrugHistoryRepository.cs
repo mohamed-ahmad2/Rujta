@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿using Itinero;
 // ─────────────────────────────────────────────────────────────────────────────
 // FILE: Rujta.Infrastructure/Repositories/DrugHistoryRepository.cs
 // ─────────────────────────────────────────────────────────────────────────────
@@ -12,6 +7,11 @@ using Microsoft.EntityFrameworkCore;
 using Rujta.Application.DTOs;
 using Rujta.Application.Interfaces;
 using Rujta.Infrastructure.Data;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Rujta.Infrastructure.Repositories;
 
@@ -42,15 +42,18 @@ public class DrugHistoryRepository : IDrugHistoryRepository
     }
 
     public async Task<List<MlDrugInputDto>> GetPatientDrugHistoryAsync(
-        Guid patientUserId,
-        CancellationToken ct = default)
+    Guid patientUserId,
+    CancellationToken ct = default)
     {
-        return await _db.OrderItems
-            .Include(oi => oi.Order)
-            .Include(oi => oi.Medicine)
-            .Where(oi =>
-                oi.Order.UserId == patientUserId &&
-                oi.Medicine.Smiles != null)
+        var orders = await _db.Orders
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Medicine)
+            .Where(o => o.UserId == patientUserId)
+            .ToListAsync(ct);
+
+        return orders
+            .SelectMany(o => o.OrderItems)
+            .Where(oi => oi.Medicine != null && oi.Medicine.Smiles != null)
             .Select(oi => new MlDrugInputDto
             {
                 Id = oi.Medicine.Id.ToString(),
@@ -59,6 +62,6 @@ public class DrugHistoryRepository : IDrugHistoryRepository
             })
             .GroupBy(d => d.Id)
             .Select(g => g.First())
-            .ToListAsync(ct);
+            .ToList();
     }
 }
