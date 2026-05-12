@@ -24,15 +24,7 @@ export default function DashboardLayout() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ✅ Redirect AFTER all hooks
-  if (
-    location.pathname === "/superadmin" ||
-    location.pathname === "/superadmin/"
-  ) {
-    return <Navigate to="/superadmin/pharmacies" replace />;
-  }
-
-  // ✅ يقفل في الموبايل عند تغيير الصفحة
+  
   useEffect(() => {
     if (window.innerWidth < 768) {
       setSidebarOpen(false);
