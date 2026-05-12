@@ -16,7 +16,7 @@ import CustomersCard from "../components/CustomersCard";
 import { useSpring, animated } from "@react-spring/web";
 import { toast } from "react-toastify";
 import useMedicine from "../../medicines/hook/useMedicines";
-import { createOrder } from "../../customerOrders/api/customerOrdersApi";
+//import { createOrder } from "../../customerOrders/api/customerOrdersApi";
 
 // ─── Toast Component ─────────────────────────────────────────────────────────
 const Toast = ({ type, message, onClose }) => (

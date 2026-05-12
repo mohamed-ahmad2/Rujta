@@ -21,10 +21,11 @@ public class DrugInteractionController : ControllerBase
         _drugInteractionService = drugInteractionService;
     }
 
-    /// <summary>
-    /// Health check — is the Python ML service reachable?
-    /// GET /api/druginteraction/health
-    /// </summary>
+    // ── same helper used in NotificationController ────────────────────────────
+    private string? GetUserId()
+        => User.FindFirstValue("domainPersonId")
+           ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+
     [HttpGet("health")]
     [AllowAnonymous]
     public async Task<IActionResult> Health(CancellationToken ct)
@@ -35,11 +36,6 @@ public class DrugInteractionController : ControllerBase
             : StatusCode(503, new { status = "degraded", mlService = "unreachable" });
     }
 
-    /// <summary>
-    /// PAGE 1 — Check interactions within the new order drugs only (no history).
-    /// POST /api/druginteraction/check-order
-    /// Body: { "medicineIds": [1, 2, 3], "threshold": 0.5 }
-    /// </summary>
     [HttpPost("check-order")]
     [ProducesResponseType(typeof(OrderDrugInteractionResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -53,18 +49,13 @@ public class DrugInteractionController : ControllerBase
         var result = await _drugInteractionService.CheckNewOrderOnlyAsync(
             request.MedicineIds,
             request.Threshold,
-            ct
-        );
+            ct);
+
         return Ok(result);
     }
 
-    /// <summary>
-    /// PAGE 2 — Check new order drugs against the user's past history.
-    /// POST /api/druginteraction/check-history
-    /// Headers: Authorization: Bearer YOUR_TOKEN
-    /// Body: { "medicineIds": [1, 2, 3], "threshold": 0.5 }
-    /// </summary>
     [HttpPost("check-history")]
+    [Authorize]
     [ProducesResponseType(typeof(OrderDrugInteractionResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -72,11 +63,10 @@ public class DrugInteractionController : ControllerBase
         [FromBody] CheckInteractionsRequest request,
         CancellationToken ct)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)
-                       ?? User.FindFirst("sub")
-                       ?? User.FindFirst("uid");
+        // Use the same claim strategy as NotificationController
+        var userIdStr = GetUserId();
 
-        if (userIdClaim is null || !Guid.TryParse(userIdClaim.Value, out var userId))
+        if (userIdStr is null || !Guid.TryParse(userIdStr, out var userId))
             return Unauthorized("Could not extract user ID from token.");
 
         if (request.MedicineIds is null || !request.MedicineIds.Any())
@@ -86,8 +76,8 @@ public class DrugInteractionController : ControllerBase
             request.MedicineIds,
             userId,
             request.Threshold,
-            ct
-        );
+            ct);
+
         return Ok(result);
     }
 }

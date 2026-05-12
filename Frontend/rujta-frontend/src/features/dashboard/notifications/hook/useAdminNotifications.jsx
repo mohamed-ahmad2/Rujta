@@ -1,10 +1,8 @@
 import { useEffect, useState, useCallback, useContext, useRef } from "react";
 import { NotificationContext } from "../../../../context/NotificationContext";
 import { useAuth } from "../../../auth/hooks/useAuth";
-import { toastEmitter } from "../../../../context/toastEmitter";
 import {
   getMyNotifications,
-  getUnreadCount,
   markNotificationAsRead,
 } from "../../../notifications/api/notificationsApi";
 
@@ -14,35 +12,37 @@ export const useAdminNotifications = ({
 } = {}) => {
   const { user } = useAuth();
 
-  const { connection, notifications, setNotifications } =
+  const { connection, notifications, setNotifications, lastConnectedAt } =
     useContext(NotificationContext);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [serverUnreadCount, setServerUnreadCount] = useState(null);
 
-  const isSuperAdmin = user?.role === "SuperAdmin";
-
-  const onNewDrugRequestRef = useRef(onNewDrugRequest);
+  // ── Refs so handlers always see the latest values without re-registering ──
+  const isSuperAdminRef          = useRef(false);
+  const setNotificationsRef      = useRef(setNotifications);
+  const onNewDrugRequestRef      = useRef(onNewDrugRequest);
   const onDrugRequestReviewedRef = useRef(onDrugRequestReviewed);
 
   useEffect(() => {
-    onNewDrugRequestRef.current = onNewDrugRequest;
+    isSuperAdminRef.current          = user?.role === "SuperAdmin";
+    setNotificationsRef.current      = setNotifications;
+    onNewDrugRequestRef.current      = onNewDrugRequest;
     onDrugRequestReviewedRef.current = onDrugRequestReviewed;
   });
 
-  // ─── Fetch from DB — MERGE not replace ───────────────────────────
+  const isSuperAdmin = user?.role === "SuperAdmin";
+
+  // ─── Fetch from DB ────────────────────────────────────────────────────────
   const fetchNotifications = useCallback(async () => {
     if (!user || isSuperAdmin) return;
-
     setLoading(true);
     setError(null);
     try {
-      const res = await getMyNotifications();
+      const res    = await getMyNotifications();
       const fromDb = res.data || [];
-
       setNotifications((prev) => {
-        const dbIds = new Set(fromDb.map((n) => n.id ?? n.Id));
+        const dbIds        = new Set(fromDb.map((n) => n.id ?? n.Id));
         const realtimeOnly = prev.filter((n) => !dbIds.has(n.id ?? n.Id));
         return [...fromDb, ...realtimeOnly];
       });
@@ -54,104 +54,95 @@ export const useAdminNotifications = ({
     }
   }, [user, isSuperAdmin, setNotifications]);
 
-  const fetchUnreadCount = useCallback(async () => {
-    if (!user || isSuperAdmin) return;
-    try {
-      const res = await getUnreadCount();
-      setServerUnreadCount(res.data?.unreadCount ?? 0);
-    } catch (err) {
-      console.error("Failed to fetch unread count", err);
-    }
-  }, [user, isSuperAdmin]);
+  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
   useEffect(() => {
+    if (!lastConnectedAt) return;
     fetchNotifications();
-    fetchUnreadCount();
-  }, [fetchNotifications, fetchUnreadCount]);
+  }, [lastConnectedAt, fetchNotifications]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") fetchNotifications();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [fetchNotifications]);
+
+  // ─── SignalR handlers — deps = [connection] ONLY ──────────────────────────
+  //
+  // Previously deps included `isSuperAdmin` and `setNotifications`.
+  // Every time those changed, the effect tore down and re-registered the handler.
+  // Combined with `Date.now()` in the DTO id (always unique), the duplicate
+  // guard `prev.some(n => n.id === dto.id)` never fired → same notification
+  // appeared once per registration = 3 times in your screenshot.
+  //
+  // Fix:
+  //   1. deps = [connection] only — handler registered exactly once per connection
+  //   2. Stable IDs (no Date.now()) — duplicate guard works correctly
+  //   3. Read isSuperAdmin and setNotifications via refs inside the handler
 
   useEffect(() => {
     if (!connection) return;
-    const handleReconnected = () => {
-      fetchNotifications();
-      fetchUnreadCount();
-    };
-    connection.onreconnected(handleReconnected);
-  }, [connection, fetchNotifications, fetchUnreadCount]);
 
-  // ─── NewDrugRequest (SuperAdmin only) ────────────────────────────
-  useEffect(() => {
-    if (!connection || !isSuperAdmin) return;
-
+    // ── NewDrugRequest (SuperAdmin only) ──
     const handleNewDrugRequest = (data) => {
-      console.log("💊 New drug request received:", data);
+      if (!isSuperAdminRef.current) return;
+      console.log("💊 NewDrugRequest received:", data);
 
       const dto = {
-        id: `drug-${data.requestId}-${Date.now()}`,
-        title: "New Drug Request",
-        message: `"${data.drugName}" requested by Pharmacy #${data.pharmacyId}`,
+        // Stable ID — no Date.now()
+        id:        `drug-${data.requestId}`,
+        title:     "New Drug Request",
+        message:   `"${data.drugName}" requested by Pharmacy #${data.pharmacyId}`,
         createdAt: data.submittedAt,
-        isRead: false,
+        isRead:    false,
       };
 
-      setNotifications((prev) => {
-        if (prev.some((n) => n.id === dto.id)) return prev;
+      setNotificationsRef.current((prev) => {
+        if (prev.some((n) => n.id === dto.id)) return prev; // duplicate guard works now
         return [dto, ...prev];
       });
 
-      setServerUnreadCount((c) => (c === null ? null : c + 1));
-      toastEmitter.emit({ title: dto.title, message: dto.message });
-
-      try {
-        onNewDrugRequestRef.current?.(data);
-      } catch (e) {
-        console.error("onNewDrugRequest callback error:", e);
-      }
+      try { onNewDrugRequestRef.current?.(data); } catch (e) { console.error(e); }
     };
 
-    connection.on("NewDrugRequest", handleNewDrugRequest);
-    return () => connection.off("NewDrugRequest", handleNewDrugRequest);
-  }, [connection, isSuperAdmin, setNotifications]);
+    // ── DrugRequestReviewed ──
+    const handleDrugRequestReviewed = (data) => {
+      console.log("💊 DrugRequestReviewed received:", data);
 
-  // ─── DrugRequestReviewed ─────────────────────────────────────────
-  useEffect(() => {
-    if (!connection) return;
-
-    const handleReviewed = (data) => {
-      console.log("💊 Drug request reviewed:", data);
-
-      if (!isSuperAdmin) {
+      if (!isSuperAdminRef.current) {
         const isApproved = data.status === "Approved";
         const dto = {
-          id: `drug-review-${data.requestId}-${Date.now()}`,
-          title: isApproved ? "Drug Request Approved ✅" : "Drug Request Rejected ❌",
-          message: isApproved
+          // Stable ID — no Date.now()
+          id:        `drug-review-${data.requestId}`,
+          title:     isApproved ? "Drug Request Approved ✅" : "Drug Request Rejected ❌",
+          message:   isApproved
             ? `"${data.drugName}" has been approved and added to the database.`
             : `"${data.drugName}" was rejected. Reason: ${data.rejectionReason || "No reason provided"}`,
           createdAt: new Date().toISOString(),
-          isRead: false,
+          isRead:    false,
         };
 
-        setNotifications((prev) => {
-          if (prev.some((n) => n.id === dto.id)) return prev;
+        setNotificationsRef.current((prev) => {
+          if (prev.some((n) => n.id === dto.id)) return prev; // duplicate guard works now
           return [dto, ...prev];
         });
-
-        setServerUnreadCount((c) => (c === null ? null : c + 1));
-        toastEmitter.emit({ title: dto.title, message: dto.message });
       }
 
-      try {
-        onDrugRequestReviewedRef.current?.(data);
-      } catch (e) {
-        console.error("onDrugRequestReviewed callback error:", e);
-      }
+      try { onDrugRequestReviewedRef.current?.(data); } catch (e) { console.error(e); }
     };
 
-    connection.on("DrugRequestReviewed", handleReviewed);
-    return () => connection.off("DrugRequestReviewed", handleReviewed);
-  }, [connection, isSuperAdmin, setNotifications]);
+    connection.on("NewDrugRequest",       handleNewDrugRequest);
+    connection.on("DrugRequestReviewed",  handleDrugRequestReviewed);
 
-  // ─── Mark As Read ─────────────────────────────────────────────────
+    return () => {
+      connection.off("NewDrugRequest",      handleNewDrugRequest);
+      connection.off("DrugRequestReviewed", handleDrugRequestReviewed);
+    };
+  }, [connection]); // ← only connection; everything else accessed via refs
+
+  // ─── Mark As Read ─────────────────────────────────────────────────────────
   const markAsRead = useCallback(
     async (id) => {
       const isClientOnly = typeof id === "string" && id.startsWith("drug-");
@@ -159,7 +150,6 @@ export const useAdminNotifications = ({
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
-      setServerUnreadCount((c) => (c === null ? null : Math.max(0, c - 1)));
 
       if (isClientOnly) return;
 
@@ -170,14 +160,12 @@ export const useAdminNotifications = ({
         setNotifications((prev) =>
           prev.map((n) => (n.id === id ? { ...n, isRead: false } : n))
         );
-        setServerUnreadCount((c) => (c === null ? null : c + 1));
       }
     },
     [setNotifications]
   );
 
-  const localUnreadCount = notifications.filter((n) => !n.isRead).length;
-  const unreadCount = serverUnreadCount !== null ? serverUnreadCount : localUnreadCount;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return {
     notifications,
@@ -185,7 +173,6 @@ export const useAdminNotifications = ({
     loading,
     error,
     fetchNotifications,
-    fetchUnreadCount,
     markAsRead,
   };
 };
