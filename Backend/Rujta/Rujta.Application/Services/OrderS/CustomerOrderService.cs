@@ -25,7 +25,6 @@ namespace Rujta.Application.Services
             _logger = logger;
         }
 
-        // ========================= GET ALL CUSTOMERS =========================
         public async Task<IEnumerable<CustomerDto>> GetAllCustomersAsync(int pharmacyId)
         {
             _logger.LogInformation("Start GetAllCustomersAsync for PharmacyId: {PharmacyId}", pharmacyId);
@@ -64,7 +63,6 @@ namespace Rujta.Application.Services
             return list;
         }
 
-        // ========================= GET BY ID =========================
         public async Task<CustomerDto?> GetCustomerByIdAsync(int pharmacyId, Guid id)
         {
             _logger.LogInformation("GetCustomerByIdAsync started | CustomerId: {CustomerId} | PharmacyId: {PharmacyId}", id, pharmacyId);
@@ -102,7 +100,6 @@ namespace Rujta.Application.Services
             return result;
         }
 
-        // ========================= CREATE CUSTOMER =========================
         public async Task<CustomerDto> CreateCustomerAsync(CreateCustomerDto dto)
         {
             _logger.LogInformation("CreateCustomerAsync started | Phone: {Phone}", dto.PhoneNumber);
@@ -133,7 +130,6 @@ namespace Rujta.Application.Services
             };
         }
 
-        // ========================= UPDATE CUSTOMER =========================
         public async Task<CustomerDto?> UpdateCustomerAsync(int pharmacyId, Guid id, UpdateCustomerDto dto)
         {
             _logger.LogInformation("UpdateCustomerAsync started | CustomerId: {CustomerId}", id);
@@ -160,7 +156,6 @@ namespace Rujta.Application.Services
             return await GetCustomerByIdAsync(pharmacyId, id);
         }
 
-        // ========================= DELETE CUSTOMER =========================
         public async Task<bool> DeleteCustomerAsync(int pharmacyId, Guid id)
         {
             _logger.LogInformation("DeleteCustomerAsync started | CustomerId: {CustomerId}", id);
@@ -182,7 +177,6 @@ namespace Rujta.Application.Services
             return true;
         }
 
-        // ========================= STATS =========================
         public async Task<CustomerStatsDto> GetCustomerStatsAsync(int pharmacyId)
         {
             _logger.LogInformation("GetCustomerStatsAsync started | PharmacyId: {PharmacyId}", pharmacyId);
@@ -206,7 +200,6 @@ namespace Rujta.Application.Services
             };
         }
 
-        // ========================= CREATE CUSTOMER ORDER =========================
         public async Task<CustomerOrderResponse> CreateCustomerOrderAsync(
             CreateCustomerOrderRequest request,
             CancellationToken cancellationToken = default)
@@ -257,7 +250,7 @@ namespace Rujta.Application.Services
 
             _logger.LogInformation("Creating order for customer {CustomerId}", customer.Id);
 
-            var order = await _orderService.CreateOrderAsync(orderDto, customer.Id, cancellationToken);
+            var order = await _orderService.CreateOrderAsync(orderDto, Guid.Empty, cancellationToken);
 
             _logger.LogInformation("Order created successfully | OrderId: {OrderId}", order.Id);
 
@@ -273,7 +266,7 @@ namespace Rujta.Application.Services
             };
         }
 
-        // ========================= CHECK CUSTOMER =========================
+ 
         public async Task<CheckCustomerResponse> CheckCustomerByPhoneAsync(
             int pharmacyId,
             string phoneNumber,
@@ -301,7 +294,6 @@ namespace Rujta.Application.Services
             return new CheckCustomerResponse { Exists = false };
         }
 
-        // ========================= GET CUSTOMER ORDERS =========================
         public async Task<IEnumerable<OrderDto>> GetCustomerOrdersAsync(
             Guid customerId,
             int pharmacyId,

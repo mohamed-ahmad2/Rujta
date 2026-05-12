@@ -1,4 +1,5 @@
 using Rujta.Application.DTOs.OrderDto;
+using Rujta.Domain.Common;
 
 namespace Rujta.Application.Services.OrderS
 {
@@ -13,8 +14,21 @@ namespace Rujta.Application.Services.OrderS
             {
                 _logger.LogInformation("Creating new order for UserId {UserId}", userId);
 
-                var appUser = await _unitOfWork.People.GetByGuidAsync(userId, cancellationToken)
-                    ?? throw new InvalidOperationException($"User with ID {userId} not found.");
+                bool isCustomerOrder = userId == Guid.Empty;
+
+                Person? appPerson = null;
+
+                if (!isCustomerOrder)
+                {
+                    appPerson = await _unitOfWork.People.GetByGuidAsync(userId, cancellationToken)
+                        ?? throw new InvalidOperationException($"User with ID {userId} not found.");
+                }
+                else if (createOrderDto.CustomerId.HasValue)
+                {
+                    appPerson = await _unitOfWork.People.GetByGuidAsync(
+                        createOrderDto.CustomerId.Value,
+                        cancellationToken);
+                }
 
                 var pharmacy = await _unitOfWork.Pharmacies.GetByIdWithAddressAsync(
                     createOrderDto.PharmacyID,
@@ -45,7 +59,7 @@ namespace Rujta.Application.Services.OrderS
 
                 var order = new Order
                 {
-                    UserId = userId,
+                    UserId = isCustomerOrder ? null : userId,
                     CustomerId = createOrderDto.CustomerId,
                     PharmacyId = createOrderDto.PharmacyID,
                     OrderDate = DateTime.UtcNow,
@@ -64,17 +78,20 @@ namespace Rujta.Application.Services.OrderS
                 }, cancellationToken);
 
                 var orderDto = _mapper.Map<OrderDto>(savedOrder);
-                orderDto.UserName = appUser.Name;
+                orderDto.UserName = appPerson?.Name ?? "";
                 orderDto.PharmacyName = pharmacy.Name;
 
                 await _notificationService.NotifyNewOrderAsync(createOrderDto.PharmacyID, orderDto.Id);
                 await _notificationService.NotifyOrderItemChangedAsync(savedOrder.Id);
 
-                await NotifyService.SendNotificationAsync(
-                    userId.ToString(),
-                    "Order Created",
-                    $"Your order #{savedOrder.Id} has been created successfully.",
-                    savedOrder.Id.ToString());
+                if (!isCustomerOrder)
+                {
+                    await NotifyService.SendNotificationAsync(
+                        userId.ToString(),
+                        "Order Created",
+                        $"Your order #{savedOrder.Id} has been created successfully.",
+                        savedOrder.Id.ToString());
+                }
 
                 await NotifyService.SendNotificationToPharmacyAsync(
                     createOrderDto.PharmacyID.ToString(),
