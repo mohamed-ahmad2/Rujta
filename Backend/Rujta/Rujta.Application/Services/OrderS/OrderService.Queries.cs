@@ -52,9 +52,7 @@ namespace Rujta.Application.Services.OrderS
             }
         }
 
-        public async Task<IEnumerable<OrderDto>> GetPharmacyOrdersAsync(
-            int pharmacyId,
-            CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<OrderDto>> GetPharmacyOrdersAsync(int pharmacyId, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -108,6 +106,7 @@ namespace Rujta.Application.Services.OrderS
 
             return groups;
         }
+        
 
         public async Task<bool> CanAccessOrderAsync(int orderId, string? userId, string? pharmacyId)
         {

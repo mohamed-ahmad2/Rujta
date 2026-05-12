@@ -18,6 +18,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { usePayment } from "../../payment/hooks/usePayment";
+import useCampaigns from "../../campaigns/hook/useCampaigns";
+import { useSubscription } from "../../subscriptions/hooks/useSubscription";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -42,9 +44,11 @@ const daysLeft = (endDate) => {
 
 const normalizeSubscription = (raw) => {
   if (!raw) return null;
-  const start = raw.startDate  || raw.start_date  || raw.createdAt;
-  const end   = raw.endDate    || raw.end_date    || raw.expiryDate || raw.expiry_date;
-  const total = raw.daysTotal  || raw.days_total  || raw.durationDays || 365;
+
+  const start = raw.startDate   || raw.start_date  || raw.createdAt  || raw.startedAt;
+  const end   = raw.endDate     || raw.end_date     || raw.expiryDate ||
+                raw.expiry_date || raw.expiresAt    || raw.renewalDate;
+  const total = raw.daysTotal   || raw.days_total   || raw.durationDays || 365;
 
   const usedRaw = raw.daysUsed || raw.days_used;
   const used =
@@ -54,22 +58,32 @@ const normalizeSubscription = (raw) => {
       ? Math.max(0, Math.ceil((new Date() - new Date(start)) / (1000 * 60 * 60 * 24)))
       : 0;
 
+  // support string status OR boolean isActive / pharmacyIsActive
+  const rawStatus = (raw.status || raw.subscriptionStatus || "").toLowerCase();
+  const isActive  = raw.isActive ?? raw.pharmacyIsActive;
+  const status =
+    isActive === false       ? "expired"
+    : isActive === true      ? "active"
+    : rawStatus === "active" ? "active"
+    : rawStatus === "expired" ? "expired"
+    : "active"; // default if we have data but unknown status
+
   return {
-    plan:      raw.plan      || raw.planName || "Yearly",
-    amount:    raw.amount    || raw.price    || 0,
+    plan:      raw.plan      || raw.planName  || raw.planType || "Yearly",
+    amount:    raw.amount    || raw.price     || raw.totalAmount || 0,
     currency:  raw.currency  || "EGP",
     startDate: start,
     endDate:   end,
-    
     daysTotal: total,
     daysUsed:  Math.min(used, total),
+    status,
   };
 };
 
 const normalizeAd = (raw, idx) => {
-  const endDate   = raw.endDate   || raw.end_date;
-  const startDate = raw.startDate || raw.start_date;
-  const daysTotal = raw.daysTotal || raw.days_total || raw.durationDays || 7;
+  const endDate   = raw.expiresAt    || raw.endDate   || raw.end_date;
+  const startDate = raw.startsAt     || raw.startDate || raw.start_date;
+  const daysTotal = raw.durationDays || raw.daysTotal  || raw.days_total || 7;
 
   const usedRaw = raw.daysUsed || raw.days_used;
   const daysUsed =
@@ -80,24 +94,28 @@ const normalizeAd = (raw, idx) => {
       : 0;
 
   const computedLeft = daysLeft(endDate);
-  const rawStatus    = raw.status || "active";
+  const rawStatus    = raw.isActive === false ? "inactive"
+                     : raw.isActive === true  ? "active"
+                     : raw.status || "active";
   const status =
-    computedLeft === 0 && rawStatus !== "cancelled" ? "expired" : rawStatus;
+    computedLeft === 0 && rawStatus !== "cancelled" && rawStatus !== "inactive"
+      ? "expired"
+      : rawStatus;
 
   return {
-    id:        raw.id        || `ad-${idx}`,
-    title:     raw.title     || raw.name       || "Ad Campaign",
-    target:    raw.target    || raw.targetName || raw.medicineName || "—",
-    plan:      raw.plan      || raw.duration   || "—",
-    amount:    raw.amount    || raw.price      || 0,
+    id:       raw.id          || `ad-${idx}`,
+    title:    raw.headline    || raw.title      || raw.name       || "Ad Campaign",
+    target:   raw.medicineName || raw.target    || raw.targetName || "—",
+    plan:     `${daysTotal}d`,
+    amount:   raw.price       || raw.amount     || 0,
     startDate,
     endDate,
     daysTotal,
-    daysUsed:  Math.min(daysUsed, daysTotal),
-    daysLeft:  computedLeft,
+    daysUsed: Math.min(daysUsed, daysTotal),
+    daysLeft: computedLeft,
     status,
-    emoji:     raw.emoji     || "📢",
-    color:     raw.color     || "#fef3c7",
+    emoji:    "📢",
+    color:    "#fef3c7",
   };
 };
 
@@ -110,37 +128,37 @@ const normalizePayment = (raw) => {
     "subscription";
 
   return {
-    id:          raw.id          || raw.invoiceId  || "—",
-    date:        raw.date        || raw.createdAt  || raw.paymentDate,
-   
-    type:        type.toLowerCase(),
-    amount:      raw.amount      || raw.price      || 0,
-   
+    id:     raw.id     || raw.invoiceId || "—",
+    date:   raw.date   || raw.createdAt || raw.paymentDate,
+    type:   type.toLowerCase(),
+    amount: raw.amount || raw.price     || 0,
   };
 };
 
 // ─── Paymob Callback Handler ──────────────────────────────────────────────────
+// Reads ?success=true&id=... query params Paymob appends on redirect
 
 function usePaymobCallback(refetchAll) {
-  const [callbackResult, setCallbackResult] = useState(null);
+  const [callbackResult, setCallbackResult] = useState(null); // null | 'success' | 'fail'
   const [callbackTxId,   setCallbackTxId]   = useState(null);
 
   useEffect(() => {
     const params  = new URLSearchParams(window.location.search);
     const success = params.get("success");
-    if (success === null) return;
+    if (success === null) return; // no Paymob redirect params present
 
     const txId = params.get("id") || params.get("order");
 
     if (success === "true") {
       setCallbackResult("success");
       setCallbackTxId(txId);
-      refetchAll();
+      refetchAll(); // reload lists after successful payment
     } else {
       setCallbackResult("fail");
       setCallbackTxId(txId);
     }
 
+    // Clean URL so a page refresh doesn't re-trigger this
     window.history.replaceState({}, "", window.location.pathname);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -181,6 +199,7 @@ function PaymentResultBanner({ result, txId, onDismiss }) {
 function StatusBadge({ status }) {
   const map = {
     active:    { label: "Active",    cls: "bg-green-100 text-green-700",   dot: "bg-green-500"  },
+    inactive:  { label: "Inactive",  cls: "bg-gray-100 text-gray-500",     dot: "bg-gray-400"   },
     expired:   { label: "Expired",   cls: "bg-gray-100 text-gray-500",     dot: "bg-gray-400"   },
     cancelled: { label: "Cancelled", cls: "bg-red-100 text-red-600",       dot: "bg-red-500"    },
     paid:      { label: "Paid",      cls: "bg-green-100 text-green-700",   dot: "bg-green-500"  },
@@ -308,10 +327,12 @@ function SubscriptionCard({ sub }) {
 // ─── Ad Card ──────────────────────────────────────────────────────────────────
 
 function AdCard({ ad }) {
-  const isExpired = ad.status?.toLowerCase() === "expired";
+  const isExpired  = ad.status?.toLowerCase() === "expired";
+  const isInactive = ad.status?.toLowerCase() === "inactive";
+  const isDim      = isExpired || isInactive;
 
   return (
-    <div className={`rounded-2xl p-4 border transition-all ${isExpired ? "bg-gray-50 border-gray-100 opacity-70" : "bg-white border-gray-100 shadow-sm"}`}>
+    <div className={`rounded-2xl p-4 border transition-all ${isDim ? "bg-gray-50 border-gray-100 opacity-70" : "bg-white border-gray-100 shadow-sm"}`}>
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5">
           <div
@@ -330,7 +351,7 @@ function AdCard({ ad }) {
 
       <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
         <span>{ad.plan} · {fmt(ad.amount)} EGP</span>
-        {!isExpired ? (
+        {!isDim ? (
           <span
             className="font-medium"
             style={{ color: ad.daysLeft <= 3 ? "#ef4444" : ad.daysLeft <= 7 ? "#f59e0b" : "#6b7280" }}
@@ -338,11 +359,13 @@ function AdCard({ ad }) {
             {ad.daysLeft} {ad.daysLeft === 1 ? "day" : "days"} left
           </span>
         ) : (
-          <span className="text-gray-400">Ended {fmtDate(ad.endDate)}</span>
+          <span className="text-gray-400">
+            {isExpired ? `Ended ${fmtDate(ad.endDate)}` : "Not yet activated"}
+          </span>
         )}
       </div>
 
-      <ProgressBar used={ad.daysUsed} total={ad.daysTotal} color={isExpired ? "#d1d5db" : "#f59e0b"} />
+      <ProgressBar used={ad.daysUsed} total={ad.daysTotal} color={isDim ? "#d1d5db" : "#f59e0b"} />
     </div>
   );
 }
@@ -373,19 +396,15 @@ function AdsSection({ ads, activeCount }) {
         </div>
       ) : (
         <>
-          {visible.map((ad) => (
-            <AdCard key={ad.id} ad={ad} />
-          ))}
+          {visible.map((ad) => <AdCard key={ad.id} ad={ad} />)}
           {hasMore && (
             <button
               onClick={() => setShowAll((v) => !v)}
               className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-gray-200 bg-white py-2.5 text-xs font-medium text-gray-500 transition hover:bg-gray-50"
             >
-              {showAll ? (
-                <><ChevronUp size={14} /> Show less</>
-              ) : (
-                <><ChevronDown size={14} /> Show all {ads.length} campaigns</>
-              )}
+              {showAll
+                ? <><ChevronUp size={14} /> Show less</>
+                : <><ChevronDown size={14} /> Show all {ads.length} campaigns</>}
             </button>
           )}
         </>
@@ -414,7 +433,7 @@ function HistoryTable({ data }) {
 
   const handleExport = () => {
     const rows = [
-      ["Invoice", "Date", "Type", "Amount (EGP)"],
+      ["Invoice", "Date", "Description", "Type", "Amount (EGP)", "Status"],
       ...filtered.map((r) => [r.id, fmtDate(r.date), r.type, r.amount]),
     ];
     const csv  = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -437,6 +456,7 @@ function HistoryTable({ data }) {
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm border border-gray-100">
+      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div className="flex items-center gap-2">
           <CreditCard size={18} className="text-secondary" />
@@ -452,7 +472,6 @@ function HistoryTable({ data }) {
             <option value="all">All types</option>
             <option value="subscription">Subscription</option>
             <option value="ad">Ad</option>
-            
           </select>
           <button
             onClick={handleExport}
@@ -463,6 +482,7 @@ function HistoryTable({ data }) {
         </div>
       </div>
 
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
@@ -476,16 +496,14 @@ function HistoryTable({ data }) {
           </thead>
           <tbody>
             {pageData.length === 0 ? (
-              <tr><td colSpan={6} className="py-8 text-center text-sm text-gray-400">No records found.</td></tr>
+              <tr><td colSpan={4} className="py-8 text-center text-sm text-gray-400">No records found.</td></tr>
             ) : (
               pageData.map((r, i) => (
                 <tr key={r.id || i} className="border-b border-gray-50 transition hover:bg-gray-50/60">
                   <td className="py-3 pr-4 font-mono text-xs text-gray-400">{r.id}</td>
                   <td className="py-3 pr-4 text-xs text-gray-500 whitespace-nowrap">{fmtDate(r.date)}</td>
-                  
                   <td className="py-3 pr-4"><TypeBadge type={r.type} /></td>
                   <td className="py-3 pr-4 text-sm font-semibold text-gray-800 whitespace-nowrap">{fmt(r.amount)} EGP</td>
-                 
                 </tr>
               ))
             )}
@@ -493,6 +511,7 @@ function HistoryTable({ data }) {
         </table>
       </div>
 
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
           <p className="text-xs text-gray-400">Page {page} of {totalPages}</p>
@@ -529,14 +548,14 @@ function Skeleton({ className = "" }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Payments() {
-  const allPayments = usePayment();
-  const subPayments = usePayment();
-  const adPayments  = usePayment();
+  const allPayments  = usePayment();
+  const subscription = useSubscription(); // ← real subscription via GET /subscription/status
+  const campaigns    = useCampaigns();
 
   const refetchAll = () => {
     allPayments.fetchMyPayments();
-    subPayments.fetchSubscriptionPayments();
-    adPayments.fetchAdPayments();
+    subscription.fetchStatus();     // ← fetches subscription.status
+    campaigns.fetchMyPharmacyAds(); // ← fetches campaigns.ads
   };
 
   useEffect(() => {
@@ -545,26 +564,24 @@ export default function Payments() {
 
   const { callbackResult, callbackTxId, dismiss } = usePaymobCallback(refetchAll);
 
-  const isLoading = allPayments.loading || subPayments.loading || adPayments.loading;
-  const hasError  = allPayments.error   || subPayments.error   || adPayments.error;
+  const isLoading = allPayments.loading || subscription.loading || campaigns.loading;
+  const hasError  = allPayments.error   || subscription.error   || campaigns.error;
 
-  // ── Derived values ──
+  // subscription.status is the raw object set by fetchStatus → setStatus(res.data)
+  const normalizedSub = useMemo(
+    () => normalizeSubscription(subscription.status),
+    [subscription.status]
+  );
+
   const normalizedPayments = useMemo(
     () => (allPayments.payments ?? []).map(normalizePayment),
     [allPayments.payments]
   );
 
   const normalizedAds = useMemo(
-    () => (adPayments.payments ?? []).map((a, i) => normalizeAd(a, i)),
-    [adPayments.payments]
+    () => (campaigns.ads ?? []).map((a, i) => normalizeAd(a, i)),
+    [campaigns.ads]
   );
-
-  const normalizedSub = useMemo(() => {
-    const active = (subPayments.payments ?? []).find(
-      (s) => String(s.status || "").toLowerCase() === "active"
-    ) || (subPayments.payments ?? [])[0] || null;
-    return normalizeSubscription(active);
-  }, [subPayments.payments]);
 
   const totalPaid = normalizedPayments.reduce((s, r) => s + Number(r.amount || 0), 0);
   const activeAds = normalizedAds.filter((a) => a.status?.toLowerCase() === "active").length;
@@ -595,7 +612,7 @@ export default function Payments() {
       <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
         <AlertTriangle size={32} className="text-red-400" />
         <p className="text-sm font-medium text-red-500">
-          {allPayments.error ?? subPayments.error ?? adPayments.error}
+          {allPayments.error ?? subscription.error ?? campaigns.error}
         </p>
         <button
           onClick={refetchAll}
@@ -635,7 +652,7 @@ export default function Payments() {
           value={normalizedSub?.plan || "—"}
           sub={
             normalizedSub
-              ? `Active · renews ${fmtDate(normalizedSub.endDate)}`
+              ? `${normalizedSub.status === "active" ? "Active" : "Expired"} · renews ${fmtDate(normalizedSub.endDate)}`
               : "No active plan"
           }
         />

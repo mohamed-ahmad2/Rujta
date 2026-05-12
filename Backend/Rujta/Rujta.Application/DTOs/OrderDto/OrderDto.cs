@@ -1,4 +1,4 @@
-﻿using Rujta.Domain.Enums;
+using Rujta.Domain.Enums;
 namespace Rujta.Application.DTOs.OrderDto
 {
     public class OrderDto : BaseEntityDto
@@ -10,10 +10,11 @@ namespace Rujta.Application.DTOs.OrderDto
         public decimal TotalPrice { get; set; }
         public string? DeliveryAddress { get; set; } = string.Empty;
         public OrderStatus Status { get; set; }
-        public PaymentMethod PaymentMethod { get; set; }  // ✅
-        public PaymentStatus PaymentStatus { get; set; }  // ✅
+        public PaymentMethod PaymentMethod { get; set; }  
+        public PaymentStatus PaymentStatus { get; set; }  
         public string PharmacyName { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
         public List<OrderItemDto> OrderItems { get; set; } = new();
     }
 }

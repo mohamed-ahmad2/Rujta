@@ -130,5 +130,22 @@ namespace Rujta.API.Controllers
             var result = await _service.CheckCustomerByPhoneAsync(pharmacyId, phoneNumber, cancellationToken);
             return Ok(result);
         }
+
+        // GET: api/customers/{id}/orders
+        [HttpGet("{id}/orders")]
+        public async Task<IActionResult> GetCustomerOrders(
+            Guid id,
+            CancellationToken cancellationToken)
+        {
+            if (!TryGetPharmacyId(out int pharmacyId))
+                return Unauthorized(new { message = "PharmacyId claim missing in JWT." });
+
+            var customer = await _service.GetCustomerByIdAsync(pharmacyId, id);
+            if (customer == null)
+                return NotFound(new { message = "Customer not found." });
+
+            var orders = await _service.GetCustomerOrdersAsync(id, pharmacyId, cancellationToken);
+            return Ok(orders);
+        }
     }
 }

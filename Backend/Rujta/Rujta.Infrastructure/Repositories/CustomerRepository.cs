@@ -16,12 +16,19 @@
                     c.PhoneNumber.Trim() == normalizedPhone &&
                     c.PharmacyId == pharmacyId);
         }
-
-        public async Task<IEnumerable<Order>> GetCustomerOrdersAsync(Guid customerId) =>
-            await _context.Orders
-                .Include(o => o.OrderItems)
-                .Where(o => o.CustomerId == customerId)
-                .ToListAsync();
         
+        public async Task<IEnumerable<Order>> GetCustomerOrdersAsync(
+    Guid customerId,
+    int pharmacyId,
+    CancellationToken cancellationToken = default)
+        {
+            return await _context.Orders
+                .Where(o => o.CustomerId == customerId && o.PharmacyId == pharmacyId)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Medicine)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+
     }
 }

@@ -124,5 +124,27 @@ namespace Rujta.API.Controllers
             User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Name)
             ?? User.Identity?.Name
             ?? AuthMessages.UnknownUser;
+
+        [Authorize(Roles = $"{nameof(UserRole.SuperAdmin)},{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
+        [HttpGet("my-pharmacy")]
+        public async Task<ActionResult<IEnumerable<AdDto>>> GetMyPharmacyAds(CancellationToken cancellationToken)
+        {
+            var pharmacyIdClaim = User.FindFirst("PharmacyId")?.Value;
+            if (string.IsNullOrEmpty(pharmacyIdClaim) || !int.TryParse(pharmacyIdClaim, out var pharmacyId))
+                return Unauthorized("PharmacyId claim is missing or invalid in token.");
+
+            try
+            {
+                var ads = await _adService.GetByPharmacyIdAsync(pharmacyId, cancellationToken);
+                await _logService.AddLogAsync(GetUser(), $"Fetched ads for own pharmacy ID={pharmacyId}");
+                return Ok(ads);
+            }
+            catch (Exception ex)
+            {
+                await _logService.AddLogAsync(GetUser(), $"Error fetching ads for pharmacy ID={pharmacyId}: {ex.Message}");
+                return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
+            }
+        }
     }
+
 }

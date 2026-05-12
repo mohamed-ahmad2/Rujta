@@ -1,3 +1,5 @@
+// customerOrders/api/customerOrdersApi.js
+
 import apiClient from "../../../shared/api/apiClient";
 
 export const getCustomers = () => apiClient.get(`/customers`);
@@ -25,3 +27,6 @@ export const createCustomerOrder = (orderData) =>
   apiClient.post(`/customers/order`, orderData, {
     headers: { "Content-Type": "application/json" },
   });
+
+export const getCustomerOrders = (customerId) =>
+  apiClient.get(`/customers/${customerId}/orders`);
