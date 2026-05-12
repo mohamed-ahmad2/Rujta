@@ -105,7 +105,7 @@ const Discounts = () => {
       selectedScope === DiscountScope.Medicine &&
       selectedItem
     ) {
-      return `Medicine price: $${selectedMedicinePrice.toFixed(2)} (discount must be less)`;
+      return `Medicine price: ${selectedMedicinePrice.toFixed(2)} (discount must be less)`;
     }
     if (discountType === DiscountType.Fixed)
       return "Must be less than medicine price";
@@ -213,7 +213,7 @@ const Discounts = () => {
                             fontSize: 13,
                           }}
                         >
-                          (${selectedMedicinePrice.toFixed(2)})
+                          ({selectedMedicinePrice.toFixed(2)})
                         </span>
                       )}
                   </span>
@@ -309,7 +309,7 @@ const Discounts = () => {
               }}
             />
             <span style={s.discountSuffix}>
-              {discountType === DiscountType.Percentage ? "%" : "$"}
+              {discountType === DiscountType.Percentage ? "%" : ""}
             </span>
           </div>
 
@@ -348,7 +348,7 @@ const Discounts = () => {
                 setErrors((p) => ({ ...p, discount: null }));
               }}
             >
-              $ Fixed
+               Fixed
             </button>
           </div>
         </div>

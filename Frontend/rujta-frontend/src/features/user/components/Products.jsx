@@ -260,7 +260,7 @@ const Products = ({ cart, setCart }) => {
               letterSpacing: "-0.4px",
             }}
           >
-            Top Rated Medicines
+            Medical Products
           </h2>
           <p className="mx-auto mt-3 max-w-[520px] text-sm leading-relaxed text-gray-400 sm:text-base">
             Discover our most trusted medicines and healthcare products.

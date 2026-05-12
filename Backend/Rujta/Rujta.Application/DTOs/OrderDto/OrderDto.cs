@@ -1,4 +1,4 @@
-﻿using Rujta.Domain.Enums;
+using Rujta.Domain.Enums;
 namespace Rujta.Application.DTOs.OrderDto
 {
     public class OrderDto : BaseEntityDto

@@ -54,6 +54,11 @@ export default function Orders() {
   const [showMoreGroups, setShowMoreGroups] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("active");
+  const [confirmModal, setConfirmModal] = useState({
+  open: false,
+  type: "",
+  payload: null,
+});
 
   // ✅ Fix: إزالة fetchAll و fetchUser من dependencies لتجنب infinite loop
   useEffect(() => {
@@ -78,19 +83,25 @@ export default function Orders() {
   const handleCancelGroup = async (orders) => {
     const cancellable = orders.filter((o) => canCancel(o?.status));
     if (!cancellable.length) return;
-    if (
-      !window.confirm(
-        "Are you sure you want to cancel all cancellable orders in this group?",
-      )
-    )
-      return;
+    setConfirmModal({
+  open: true,
+  type: "group",
+  payload: orders,
+});
+
+return;
     for (const order of cancellable) await cancelByUser(order?.id);
     fetchUser();
   };
 
   const handleCancelOrder = async (order) => {
-    if (!window.confirm(`Are you sure you want to cancel Order #${order?.id}?`))
-      return;
+   setConfirmModal({
+  open: true,
+  type: "single",
+  payload: order,
+});
+
+return;
     await cancelByUser(order?.id);
     fetchUser();
   };
@@ -439,6 +450,63 @@ export default function Orders() {
           );
         })}
       </div>
+      {confirmModal.open && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="w-[90%] max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+      <h3 className="text-lg font-bold text-gray-800">
+        Confirm Cancellation
+      </h3>
+
+      <p className="mt-3 text-sm text-gray-600">
+        {confirmModal.type === "single"
+          ? `Are you sure you want to cancel Order #${confirmModal.payload?.id}?`
+          : "Are you sure you want to cancel all cancellable orders in this group?"}
+      </p>
+
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          onClick={() =>
+            setConfirmModal({
+              open: false,
+              type: "",
+              payload: null,
+            })
+          }
+          className="rounded-lg border border-gray-300 px-4 py-2 text-sm"
+        >
+          No
+        </button>
+
+        <button
+          onClick={async () => {
+            if (confirmModal.type === "single") {
+              await cancelByUser(confirmModal.payload?.id);
+            } else {
+              const cancellable = confirmModal.payload.filter((o) =>
+                canCancel(o?.status),
+              );
+
+              for (const order of cancellable) {
+                await cancelByUser(order?.id);
+              }
+            }
+
+            fetchUser();
+
+            setConfirmModal({
+              open: false,
+              type: "",
+              payload: null,
+            });
+          }}
+          className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600"
+        >
+          Yes, Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </section>
   );
 }
