@@ -3,7 +3,7 @@ using Rujta.Infrastructure.Identity;
 
 namespace Rujta.API.Controllers
 {
-    [Authorize(Roles = nameof(UserRole.PharmacyAdmin))]
+    [Authorize(Roles = $"{nameof(UserRole.PharmacyAdmin)},{nameof(UserRole.Pharmacist)}")]
     [ApiController]
     [Route("api/[controller]")]
     [EnableRateLimiting("Fixed")]
