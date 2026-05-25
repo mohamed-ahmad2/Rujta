@@ -261,16 +261,16 @@ Rujta/
 
 ---
 
-## 🔮 Roadmap & Future Enhancements
+## 🔮 Roadmap 
 
 - [x] AI/ML Prescription Image Analysis (ml-service integrated)
 - [x] Docker containerization
 - [x] CI/CD pipeline with GitHub Actions
 - [x] Live deployment on Vercel
-- [ ] Payment Gateway integration
-- [ ] Logistics & Delivery API integration
-- [ ] Advanced AI-driven analytics & trend predictions
-- [ ] Multi-Language Support for global accessibility
+- [x] Payment Gateway integration
+- [x] Logistics & Delivery API integration
+- [x] Advanced AI-driven analytics & trend predictions
+- [x] Multi-Language Support for global accessibility
 
 ---
 
@@ -283,7 +283,7 @@ Rujta/
 | Youssef Wael      | Backend Developer    |
 | Sabah Saber       | Frontend Developer   |
 
-**Supervisor**: Dr. Mohamed Fakhry
+**Supervisor**: Dr. Mohamed Fakhry &  Dr. Nesreen Ahmed
 
 > This is an academic graduation project focused on real-world pharmacy solutions — built as part of the Computer Science program at Ain Shams University.
 
